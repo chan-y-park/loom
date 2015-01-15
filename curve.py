@@ -21,6 +21,18 @@ class PuncturePoint:
         self.z = z
         self.cutoff = cutoff
 
+class SWDiff:
+    """
+        Define a Seiberg-Witten differential of the form 
+            \lambda = v(x, z) dz
+    """
+    def __init__(self, config_data):
+        self.sym_v = sympy.sympify(config_data.sw_diff_v_string)
+        self.parameters = config_data.sw_parameters 
+        self.num_v = self.sym_v.subs(self.parameters)
+        logging.info('\nSeiberg-Witten differential: %s dz\n',
+                     sympy.latex(self.num_v))
+
 class SWCurve:
     """
     a class containing a Seiberg-Witten curve and relevant information.
@@ -35,13 +47,17 @@ class SWCurve:
         find_ramification_points
     """
     def __init__(self, config_data):
-        self.sym_equation = sympy.sympify(config_data.curve_eq_string)
-        self.parameters = config_data.curve_parameters 
+        self.sym_eq = sympy.sympify(config_data.sw_curve_eq_string)
+        self.parameters = config_data.sw_parameters 
+        self.num_eq = self.sym_eq.subs(self.parameters)
+        logging.info('\nSeiberg-Witten curve: %s = 0\n',
+                     sympy.latex(self.num_eq))
+        self.accuracy = config_data.accuracy
         self.ramification_points = []
         self.puncture_points = []
 
-    def find_ramification_points(self, accuracy):
-        f = self.sym_equation.subs(self.parameters)
+    def find_ramification_points(self):
+        f = self.num_eq
         # NOTE: solve_poly_system vs. solve
         #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
         #logging.debug('sympy.solve_poly_system: %s\n', sols)
@@ -52,7 +68,8 @@ class SWCurve:
             fx_at_z0 = f.subs(z, z0)
             fx_at_z0_coeffs = map(complex, 
                                   sympy.Poly(fx_at_z0, x).all_coeffs())
-            m = get_root_multiplicity(fx_at_z0_coeffs, complex(x0), accuracy) 
+            m = get_root_multiplicity(fx_at_z0_coeffs, complex(x0), 
+                                      self.accuracy) 
             if m > 1:
                 rp = RamificationPoint(complex(z0), complex(x0), m)
                 logging.debug('rp = %s', rp)

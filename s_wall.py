@@ -10,7 +10,7 @@ class SWall(object):
         self.x1 = [x1_0,]
         self.x2 = [x2_0,]
 
-    def evolve(self, t, step=None, relax=None, integrator='zvode',
+    def grow(self, t, step=None, relax=None, integrator='zvode',
                method='adams', with_jacobian=False):
         logging.debug('need to implement')
 

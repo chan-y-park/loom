@@ -1,29 +1,30 @@
-from Tkinter import Tk, Frame, Button
+import Tkinter as tk
+#from Tkinter import Tk, Entry, Frame, Button
 
-class Application(Frame):
-    def __init__(self, opts, master=None):
-        Frame.__init__(self, master)
-        self.opts = opts
+from spectral_network import generate_spectral_network
+
+class Application(tk.Frame):
+    def __init__(self, config_data, master=None):
+        tk.Frame.__init__(self, master)
+        self.config_data = config_data
         self.pack()
         self.createWidgets()
 
     def createWidgets(self):
-        self.QUIT = Button(self)
-        self.QUIT['text'] = 'QUIT'
-        self.QUIT['fg'] = 'red'
-        self.QUIT['command'] = self.quit
-        self.QUIT.pack({'side': 'left'})
+        tk.Label(self, text='curve').grid(row=0, column=0)
 
-        self.show_opts = Button(self)
-        self.show_opts['text'] = 'Show options'
-        self.show_opts['command'] = self.print_opts
-        self.show_opts.pack({'side': 'left'})
+        self.entry_curve_text = tk.StringVar()
+        self.entry_curve = tk.Entry(self, textvariable=self.entry_curve_text) 
+        self.entry_curve_text.set(self.config_data.curve_eq_string)
+        self.entry_curve.grid(row=0, column=1)
 
-    def print_opts(self):
-        print self.opts
+        self.button_generate = tk.Button(
+            self, text='generate',
+            command=lambda: generate_spectral_network(self.config_data),
+        )
+        self.button_generate.grid(row=1, column=2, sticky=tk.E)
 
-def open_gui(opts):
-    root = Tk()
-    app = Application(opts, master=root)
+def open_gui(config_data):
+    root = tk.Tk()
+    app = Application(config_data, master=root)
     app.mainloop()
-    root.destroy()
