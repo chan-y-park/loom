@@ -8,7 +8,7 @@ from fractions import Fraction
 
 from curve import RamificationPoint, SWCurve, SWDiff
 from s_wall import SWall
-from misc import cpow, remove_duplicate
+from misc import cpow, remove_duplicate, LocalDiffError
 
 x, z = sympy.symbols('x z')
 
@@ -23,10 +23,6 @@ class SpectralNetwork:
 
     def set_ode_f(self):
         logging.debug('need to implement')
-
-    def generate_from_ramification_points(self):
-        for rp in self.sw_curve.ramification_points:
-            self.get_s_wall_seeds(rp)
 
 # NOTE: tried SymPy exact numbers but didn't work.
 #    def get_s_wall_seeds(self, ramification_point):
@@ -75,9 +71,9 @@ class SpectralNetwork:
         theta = self.theta
 
         ###
-        # 1. find the first-order approximations of the starting points 
+        # 1. Find the first-order approximations of the starting points 
         # of S-walls around a given ramification point, which is of the form
-        # \Delta x = c_i / (\lambda_0)^(rp.i/(rp.i+1))
+        # \Delta z_i = c_i / (\lambda_0)^(rp.i/(rp.i+1))
         ###
 
         # 1.1 find c_i, a phase factor for each S-wall.
@@ -106,20 +102,35 @@ class SpectralNetwork:
                 new_locs += [new_loc*beta_i for beta_i in beta]
             # End of j loop
             logging.debug('len(new_locs) = %d', len(new_locs))
-            #pdb.set_trace()
             new_locs = remove_duplicate(new_locs, 
                              lambda l1, l2: abs(l1 - l2) < self.accuracy)
-            #pdb.set_trace()
             logging.debug('len(new_locs) = %d', len(new_locs))
             cs += new_locs
 
         logging.debug('list of c = %s, # = %d', cs, len(cs))
 
-        # 1.2 find \lambda_0, the coefficient of the leading term
+        # 1.2 find the coefficient and the exponent of the leading term
         # of the SW differential at the ramification point.
+        lambda_0, diff_e = self.get_local_diff(rp)
+        if(diff_e != sympy.Rational(1, rp.i)):
+            logging.error('unknown form of sw_diff at rp ({}, {}): '
+                          '{} != 1/rp.i = 1/{}'.format(rp.z, rp.x, diff_e, 
+                                                       rp,i)
+                         )
+            raise LocalDiffError(diff_e)
+        pdb.set_trace()
+
+        # 2. Now calculate \Delta z_i for each S-wall and 
+        # find the two points on the curve that are projected onto it.  
+        for c in cs:
+            Delta_x = c/cpow(lambda_0, rp.i, rp.i+1)
+
+    def get_local_diff(self, ramification_point):
+        rp = ramification_point
         local_curve = self.sw_curve.num_eq.series(x, rp.x, rp.i+1)
         local_curve = local_curve.series(z, rp.z, 2).removeO()
-        logging.debug('local curve at z = {}: {}'.format(rp.z, local_curve))
+        logging.debug('local curve at rp = ({}, {}): '
+                      '{}'.format(rp.z, rp.x, local_curve))
         # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
         a = local_curve.coeff(z).coeff(x, 0)
         b = local_curve.coeff(x**rp.i).coeff(z, 0)
@@ -139,7 +150,13 @@ class SpectralNetwork:
             # remove the constant term from the local_diff
             local_diff -= local_diff.subs(z, 0)
             (diff_c, diff_e) = local_diff.leadterm(z)
-        pdb.set_trace()
+
+        return (complex(diff_c), diff_e)
+
+
+    def generate_from_ramification_points(self):
+        for rp in self.sw_curve.ramification_points:
+            self.get_s_wall_seeds(rp)
 
     def generate_from_punctures(self, **params):
         logging.debug('need to implement')
