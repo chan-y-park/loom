@@ -120,17 +120,19 @@ class SpectralNetwork:
         local_curve = self.sw_curve.num_eq.series(x, rp.x, rp.i+1)
         local_curve = local_curve.series(z, rp.z, 2).removeO()
         logging.debug('local curve at z = {}: {}'.format(rp.z, local_curve))
-        # lambda_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
-        a = local_curve.coeff(z)
-        b = local_curve.coeff(x**rp.i)
+        # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
+        a = local_curve.coeff(z).coeff(x, 0)
+        b = local_curve.coeff(x**rp.i).coeff(z, 0)
         logging.debug('a = {}, b = {}'.format(a, b))
         local_x = rp.x + (-(a/b)*(z - rp.z))**sympy.Rational(1, rp.i)
         # substitute x with x(z)
         local_diff = self.sw_diff.num_v.subs(x, local_x)
         # series expansion in z at rp.z
         local_diff = local_diff.series(z, rp.z, 1)
-        # translate z such that rp.z = 0
-        local_diff = local_diff.subs(z, z+rp.z)
+        if local_diff.getO() is None:
+            # series expansion didn't occur.
+            # translate z such that rp.z = 0
+            local_diff = local_diff.subs(z, z+rp.z)
         # get the coefficient and the exponent of the leading term
         (diff_c, diff_e) = local_diff.leadterm(z)
         if diff_e == 0:
