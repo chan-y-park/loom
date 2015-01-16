@@ -63,15 +63,15 @@ class SWCurve:
         #logging.debug('sympy.solve_poly_system: %s\n', sols)
         sols = sympy.solve([f, f.diff(x)], z, x)
         logging.debug('sympy.solve: %s\n', sols)
-        for z0, x0 in sols:
-            logging.debug('sympy: z0 = %s, x0 = %s', z0, x0)
-            fx_at_z0 = f.subs(z, z0)
-            fx_at_z0_coeffs = map(complex, 
-                                  sympy.Poly(fx_at_z0, x).all_coeffs())
-            m = get_root_multiplicity(fx_at_z0_coeffs, complex(x0), 
+        for z_0, x_0 in sols:
+            logging.debug('sympy: z_0 = %s, x_0 = %s', z_0, x_0)
+            fx_at_z_0 = f.subs(z, z_0)
+            fx_at_z_0_coeffs = map(complex, 
+                                  sympy.Poly(fx_at_z_0, x).all_coeffs())
+            m = get_root_multiplicity(fx_at_z_0_coeffs, complex(x_0), 
                                       self.accuracy) 
             if m > 1:
-                rp = RamificationPoint(complex(z0), complex(x0), m)
+                rp = RamificationPoint(complex(z_0), complex(x_0), m)
                 logging.debug('rp = %s', rp)
                 self.ramification_points.append(rp)
 

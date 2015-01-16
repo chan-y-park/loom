@@ -53,9 +53,33 @@ def gather(a_list, compare, result=None):
     else:
         return gather(next_list, compare, result)
     
-
 def remove_duplicate(a_list, compare):
     return [e[0] for e in gather(a_list, compare)]
+
+def n_nearest(a_list, value, n):
+    """
+    Find n elements of a_list nearest to value and return their indices.
+    """
+    
+    compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
+    key = lambda k: a_list[k]
+    sorted_indices = sorted(range(len(a_list)), compare, key)
+
+    min_indices = sorted_indices[:n]
+
+    size = sympy.sqrt(len(a_list))
+    if not size.is_Integer:
+        logging.error('a_list is not a square matrix.')
+        raise NNearestError(size)
+    else:
+        size = int(size)
+    result = []
+    for k in min_indices:
+        i = k / size
+        j = k % size
+        result.append((i, j))
+
+    return result
 
 class LocalDiffError(Exception):
     def __init__(self, value):
@@ -63,8 +87,17 @@ class LocalDiffError(Exception):
     def __str__(self):
         return repr(self.value)
 
+class NNearestError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
 #from random import randint
 
-#l = [randint(1, 3) for i in range(5)]
+#l = [randint(1, 9) for i in range(9)]
+#print l
+#print n_nearest(l, 2, 3)
 #print gather(l, lambda x, y: x == y)
 #print remove_duplicate(l, lambda x, y: x == y)
+

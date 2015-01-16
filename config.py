@@ -49,6 +49,15 @@ class ConfigData:
             self.sw_parameters[param] = config_parser.getfloat(
                 'Seiberg-Witten parameters', param
             )
-
+        
+        # numerical parameters
+        self.size_of_small_step = config_parser.getfloat(
+            'numerical parameters',
+            'size_of_small_step'
+        )
+        self.size_of_large_step = config_parser.getfloat(
+            'numerical parameters',
+            'size_of_large_step'
+        )
         self.accuracy = config_parser.getfloat('numerical parameters',
-                                          'accuracy')
+                                               'accuracy')
