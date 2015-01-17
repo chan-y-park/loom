@@ -10,14 +10,14 @@ def get_root_multiplicity(coefficients, root_0, accuracy):
     defined by the list 'coefficients' according to numpy.roots
     """
     multiplicity = 0
-    logging.debug('accuracy = %f', accuracy)
+    #logging.debug('accuracy = %f', accuracy)
     roots = numpy.roots(coefficients)
-    logging.debug('numpy.roots -> %s', roots)
+    #logging.debug('numpy.roots -> %s', roots)
     for root_i in roots:
         if abs(root_0 - root_i) < accuracy:
             multiplicity += 1
 
-    logging.debug('multiplicity = %d', multiplicity)
+    #logging.debug('multiplicity = %d', multiplicity)
     return multiplicity
 
 def cpow(base, exponent_numerator, exponent_denominator=1):
@@ -82,6 +82,12 @@ def n_nearest(a_list, value, n):
     return result
 
 class LocalDiffError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
+class GetSWallSeedsError(Exception):
     def __init__(self, value):
         self.value = value
     def __str__(self):

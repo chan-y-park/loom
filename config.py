@@ -59,5 +59,9 @@ class ConfigData:
             'numerical parameters',
             'size_of_large_step'
         )
+        self.size_of_bin = config_parser.getfloat(
+            'numerical parameters',
+            'size_of_bin'
+        )
         self.accuracy = config_parser.getfloat('numerical parameters',
                                                'accuracy')

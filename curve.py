@@ -8,18 +8,21 @@ from misc import get_root_multiplicity
 x, z = sympy.symbols('x z')
 
 class RamificationPoint:
-    def __init__(self, z, x, i):
+    def __init__(self, z, x, i, label, is_puncture=False):
         self.z = z
         self.x = x
         self.i = i
+        self.label = label
+        self.is_puncture = is_puncture
 
     def __str__(self):
         return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
 
 class PuncturePoint:
-    def __init__(self, z, cutoff):
+    def __init__(self, z, cutoff, label):
         self.z = z
         self.cutoff = cutoff
+        self.label = label
 
 class SWDiff:
     """
@@ -62,16 +65,18 @@ class SWCurve:
         #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
         #logging.debug('sympy.solve_poly_system: %s\n', sols)
         sols = sympy.solve([f, f.diff(x)], z, x)
-        logging.debug('sympy.solve: %s\n', sols)
+        #logging.debug('sympy.solve: %s\n', sols)
         for z_0, x_0 in sols:
-            logging.debug('sympy: z_0 = %s, x_0 = %s', z_0, x_0)
+            #logging.debug('sympy: z_0 = %s, x_0 = %s', z_0, x_0)
             fx_at_z_0 = f.subs(z, z_0)
             fx_at_z_0_coeffs = map(complex, 
                                   sympy.Poly(fx_at_z_0, x).all_coeffs())
             m = get_root_multiplicity(fx_at_z_0_coeffs, complex(x_0), 
                                       self.accuracy) 
             if m > 1:
-                rp = RamificationPoint(complex(z_0), complex(x_0), m)
-                logging.debug('rp = %s', rp)
+                label = 'ramification point #{}'.format(
+                    len(self.ramification_points)
+                )
+                rp = RamificationPoint(complex(z_0), complex(x_0), m, label)
                 self.ramification_points.append(rp)
 
