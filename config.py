@@ -3,6 +3,8 @@ import os
 import sys
 import logging
 
+from math import pi
+
 CONFIG_FILE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                               'config_file')
 
@@ -51,6 +53,10 @@ class ConfigData:
             )
         
         # numerical parameters
+        self.z_range_limits = eval(config_parser.get(
+            'numerical parameters',
+            'z_range_limits'
+        ))
         self.size_of_small_step = config_parser.getfloat(
             'numerical parameters',
             'size_of_small_step'

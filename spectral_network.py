@@ -10,6 +10,7 @@ from curve import RamificationPoint, SWCurve, SWDiff
 from s_wall import SWall
 from misc import (cpow, gather, remove_duplicate, n_nearest, LocalDiffError,)
 from intersection import HitTable
+from plotting import SpectralNetworkPlot
 
 x, z = sympy.symbols('x z')
 
@@ -32,7 +33,6 @@ class SpectralNetwork:
             for z_0, x1_0, x2_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(SWall(z_0, x1_0, x2_0, rp, label))
-        pdb.set_trace()
 
     def set_ode_f(self):
         logging.debug('need to implement')
@@ -44,9 +44,6 @@ class SpectralNetwork:
         logging.debug('need to implement')
 
     def grow(self, **params):
-        logging.debug('need to implement')
-
-    def plot(self):
         logging.debug('need to implement')
 
 # NOTE: tried SymPy exact numbers but didn't work.
@@ -227,6 +224,8 @@ def generate_spectral_network(config_data):
     if(config_data.single_network == True):
         spectral_network = SpectralNetwork(sw_curve, sw_diff, 
                                            config_data.phase, config_data) 
-        #spectral_network.plot()
-
-
+        spectral_network_plot = SpectralNetworkPlot(
+            spectral_network,
+            plot_data_points=True,
+        )
+        spectral_network_plot.show()
