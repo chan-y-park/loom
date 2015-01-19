@@ -6,6 +6,8 @@ import pdb
 from itertools import combinations
 from cmath import exp, pi, phase
 
+from scipy import integrate
+
 from curve import RamificationPoint, SWCurve, SWDiff
 from s_wall import SWall
 from misc import (cpow, gather, remove_duplicate, n_nearest, LocalDiffError,)
@@ -25,8 +27,8 @@ class SpectralNetwork:
         self.s_walls = []
         self.joints = []
 
-        self.set_ode_f()
-        # Initialize S-walls at ramification points
+        self.set_ode()
+        ### Initialize S-walls at ramification points
         for rp in self.sw_curve.ramification_points:
             s_wall_seeds = get_s_wall_seeds(self.sw_curve, self.sw_diff, 
                                             self.theta, rp, self.config_data)
@@ -34,8 +36,31 @@ class SpectralNetwork:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(SWall(z_0, x1_0, x2_0, rp, label))
 
-    def set_ode_f(self):
-        logging.debug('need to implement')
+    def set_ode(self):
+        f = self.sw_curve.num_eq
+        df_dz = f.diff(z)
+        df_dx = f.diff(x)
+        ### F = -(\partial f/\partial z)/(\partial f/\partial x)
+        F = sympy.lambdify((z, x), -df_dz/df_dx)
+        v = sympy.lambdify((z, x), self.sw_diff.num_v)
+#        def F(z_i, x_i):
+#            n = -df_dz.subs(z, z_i).subs(x, x_i)
+#            d = df_dx.subs(z, z_i).subs(x, x_i)
+#            return n/d
+#        def v(z_i, x_i):
+#            return self.sw_diff.num_v.subs(z, z_i).subs(x, x_i)
+        def ode_f(t, zx1x2):
+            z_i = zx1x2[0]
+            x1_i = zx1x2[1]
+            x2_i = zx1x2[2]
+            dz_i_dt = exp(self.theta*1j)/(v(z_i, x1_i) - v(z_i, x2_i)) 
+            dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+            dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+            return [dz_i_dt, dx1_i_dt, dx2_i_dt]
+        self.ode = integrate.ode(ode_f)
+        self.ode.set_integrator('zvode',
+            #method='adams',
+        )
 
     def find_joints(self):
         logging.debug('need to implement')
@@ -43,8 +68,14 @@ class SpectralNetwork:
     def generate_from_joints(self, **params):
         logging.debug('need to implement')
 
-    def grow(self, **params):
-        logging.debug('need to implement')
+    def grow(self, t_f, dt):
+        for i in range(len(self.s_walls)):
+            self.ode.set_initial_value(self.s_walls[i].data[-1])
+            while self.ode.successful() and self.ode.t < t_f:
+                #z_i, x1_i, x2_i = self.ode.integrate(self.ode.t + dt)
+                self.s_walls[i].data.append(
+                    self.ode.integrate(self.ode.t + dt) 
+                )
 
 # NOTE: tried SymPy exact numbers but didn't work.
 #    def get_s_wall_seeds(self, ramification_point):
@@ -91,25 +122,22 @@ def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
     rp = ramification_point
     local_curve = sw_curve.num_eq.series(x, rp.x, rp.i+1)
     local_curve = local_curve.series(z, rp.z, 2).removeO()
-    #logging.debug('local curve at rp = ({}, {}): '
-    #              '{}'.format(rp.z, rp.x, local_curve))
-    # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
+    ### curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
     a = local_curve.coeff(z).coeff(x, 0)
     b = local_curve.coeff(x**rp.i).coeff(z, 0)
-    #logging.debug('a = {}, b = {}'.format(a, b))
     local_x = rp.x + (-(a/b)*(z - rp.z))**sympy.Rational(1, rp.i)
-    # substitute x with x(z)
+    ### substitute x with x(z)
     local_diff = sw_diff.num_v.subs(x, local_x)
-    # series expansion in z at rp.z
+    ### series expansion in z at rp.z
     local_diff = local_diff.series(z, rp.z, 1)
     if local_diff.getO() is None:
-        # series expansion didn't occur.
-        # translate z such that rp.z = 0
+        ### series expansion didn't occur.
+        ### translate z such that rp.z = 0
         local_diff = local_diff.subs(z, z+rp.z)
-    # get the coefficient and the exponent of the leading term
+    ### get the coefficient and the exponent of the leading term
     (diff_c, diff_e) = local_diff.leadterm(z)
     if diff_e == 0:
-        # remove the constant term from the local_diff
+        ### remove the constant term from the local_diff
         local_diff -= local_diff.subs(z, 0)
         (diff_c, diff_e) = local_diff.leadterm(z)
 
@@ -224,6 +252,7 @@ def generate_spectral_network(config_data):
     if(config_data.single_network == True):
         spectral_network = SpectralNetwork(sw_curve, sw_diff, 
                                            config_data.phase, config_data) 
+        spectral_network.grow(config_data.ode_t_f, config_data.ode_dt)
         spectral_network_plot = SpectralNetworkPlot(
             spectral_network,
             plot_data_points=True,

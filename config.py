@@ -57,6 +57,14 @@ class ConfigData:
             'numerical parameters',
             'z_range_limits'
         ))
+        self.ode_t_f = config_parser.getfloat(
+            'numerical parameters',
+            'ode_t_f'
+        )
+        self.ode_dt = config_parser.getfloat(
+            'numerical parameters',
+            'ode_dt'
+        )
         self.size_of_small_step = config_parser.getfloat(
             'numerical parameters',
             'size_of_small_step'
