@@ -37,6 +37,10 @@ class SpectralNetwork:
                 self.s_walls.append(SWall(z_0, x1_0, x2_0, rp, label))
 
     def set_ode(self):
+        ode_absolute_tolerance = self.config_data.accuracy
+        #ode_min_step = self.config_data.size_of_small_step
+        #ode_max_step = self.config_data.size_of_large_step
+
         f = self.sw_curve.num_eq
         df_dz = f.diff(z)
         df_dx = f.diff(x)
@@ -60,6 +64,9 @@ class SpectralNetwork:
         self.ode = integrate.ode(ode_f)
         self.ode.set_integrator('zvode',
             #method='adams',
+            atol = ode_absolute_tolerance,
+            #min_step = ode_min_step,
+            #max_step = ode_max_step,
         )
 
     def find_joints(self):
@@ -68,14 +75,23 @@ class SpectralNetwork:
     def generate_from_joints(self, **params):
         logging.debug('need to implement')
 
-    def grow(self, t_f, dt):
-        for i in range(len(self.s_walls)):
-            self.ode.set_initial_value(self.s_walls[i].data[-1])
-            while self.ode.successful() and self.ode.t < t_f:
-                #z_i, x1_i, x2_i = self.ode.integrate(self.ode.t + dt)
-                self.s_walls[i].data.append(
-                    self.ode.integrate(self.ode.t + dt) 
-                )
+    def grow(self):
+        rpzs = []
+        ppzs = []
+        for rp in self.sw_curve.ramification_points:
+            if rp.is_puncture is False:
+                rpzs.append(rp.z)
+            elif rp.is_puncture is True:
+                ppzs.append(rp.z)
+        for s_wall in self.s_walls:
+            s_wall.grow(
+                self.ode, rpzs, ppzs, 
+                z_range_limits = self.config_data.z_range_limits,
+                num_of_steps = self.config_data.num_of_steps,
+                size_of_small_step = self.config_data.size_of_small_step,
+                size_of_large_step = self.config_data.size_of_large_step,
+                size_of_neighborhood = self.config_data.size_of_neighborhood,
+            )  
 
 # NOTE: tried SymPy exact numbers but didn't work.
 #    def get_s_wall_seeds(self, ramification_point):
@@ -147,7 +163,7 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point,
                      config_data,):
     rp = ramification_point
     delta = config_data.accuracy
-    dz = config_data.size_of_small_step
+    dt = config_data.size_of_small_step
 
     ###
     # 1. Find the first-order approximations of the starting points 
@@ -194,7 +210,7 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point,
         # the branch point is a massless regular puncture
         # go over pairs of omegas that differ by \omega_1^i
         for i in range(1, rp.i):
-            cs.append(exp(rp.i*theta1*1j)/
+            cs.append(exp(rp.i*theta*1j)/
                       cpow(((omega[0]-omega[i])*lambda_0), rp.i))
 
     else:
@@ -212,7 +228,7 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point,
         cv = c[0] # value of c
         cm = c[1] # multiplicity of c
         # resize to the size of the small step 
-        Delta_z = cv/abs(cv)*dz
+        Delta_z = cv/abs(cv)*dt
         z_0 = rp.z + Delta_z
         fx_at_z_0 = sw_curve.num_eq.subs(z, z_0)
         fx_at_z_0_coeffs = map(complex, 
@@ -223,13 +239,13 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point,
         dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
         for i in range(len(xs_at_z_0)):
             diffx = sw_diff.num_v.subs(z, z_0) 
-            v_i = diffx.subs(x, xs_at_z_0[i])
+            v_i = complex(diffx.subs(x, xs_at_z_0[i]))
             for j in range(len(xs_at_z_0)):
                 if i == j:
                     continue
                 else:
-                    v_j = diffx.subs(x, xs_at_z_0[j]) 
-                    delta_z = exp(theta)/(v_i - v_j)
+                    v_j = complex(diffx.subs(x, xs_at_z_0[j])) 
+                    delta_z = exp(1j*theta)/(v_i - v_j)*dt
                     # flattened index
                     fij = i*len(xs_at_z_0) + j
                     dev_phases[fij] = phase((delta_z/Delta_z))
@@ -252,9 +268,9 @@ def generate_spectral_network(config_data):
     if(config_data.single_network == True):
         spectral_network = SpectralNetwork(sw_curve, sw_diff, 
                                            config_data.phase, config_data) 
-        spectral_network.grow(config_data.ode_t_f, config_data.ode_dt)
+        spectral_network.grow()
         spectral_network_plot = SpectralNetworkPlot(
             spectral_network,
-            plot_data_points=True,
+            #plot_data_points=True,
         )
         spectral_network_plot.show()

@@ -57,25 +57,27 @@ class ConfigData:
             'numerical parameters',
             'z_range_limits'
         ))
-        self.ode_t_f = config_parser.getfloat(
+        self.num_of_steps = config_parser.getint(
             'numerical parameters',
-            'ode_t_f'
+            'num_of_steps'
         )
-        self.ode_dt = config_parser.getfloat(
-            'numerical parameters',
-            'ode_dt'
-        )
-        self.size_of_small_step = config_parser.getfloat(
+        self.size_of_small_step = eval(config_parser.get(
             'numerical parameters',
             'size_of_small_step'
-        )
-        self.size_of_large_step = config_parser.getfloat(
+        ))
+        self.size_of_large_step = eval(config_parser.get(
             'numerical parameters',
             'size_of_large_step'
-        )
-        self.size_of_bin = config_parser.getfloat(
+        ))
+        self.size_of_neighborhood = eval(config_parser.get(
+            'numerical parameters',
+            'size_of_neighborhood'
+        ))
+        self.size_of_bin = eval(config_parser.get(
             'numerical parameters',
             'size_of_bin'
-        )
-        self.accuracy = config_parser.getfloat('numerical parameters',
-                                               'accuracy')
+        ))
+        self.accuracy = eval(config_parser.get(
+            'numerical parameters',
+            'accuracy'
+        ))
