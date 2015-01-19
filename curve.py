@@ -8,7 +8,7 @@ from misc import get_root_multiplicity
 x, z = sympy.symbols('x z')
 
 class RamificationPoint:
-    def __init__(self, z, x, i, label, is_puncture=False):
+    def __init__(self, z, x, i, label=None, is_puncture=False):
         self.z = z
         self.x = x
         self.i = i
@@ -18,11 +18,18 @@ class RamificationPoint:
     def __str__(self):
         return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
 
+    def __eq__(self, other):
+        return self.label == other.label
+
+
 class PuncturePoint:
     def __init__(self, z, cutoff, label):
         self.z = z
         self.cutoff = cutoff
         self.label = label
+
+    def __eq__(self, other):
+        return self.label == other.label
 
 class SWDiff:
     """

@@ -5,9 +5,9 @@ Objects and functions to find intersections of real 1-dim curves
 on a real 2-dim plane.
 
 This module is based on the following libraries:
-NumPy 1.9.0
-SciPy 0.14.0
-SymPy 0.7.5
+NumPy 1.8.2
+SciPy 0.15.1
+SymPy 0.7.6
 """
 import logging
 from numpy import __version__ as numpy_version
@@ -23,11 +23,6 @@ from sympy import Interval, Intersection
 from math import floor
 from itertools import combinations
 from warnings import warn
-
-### temporarily muting these warnings, 
-### they show up when I'm loading f_recover
-### which is a bit annoying when doing debugging
-### TO FIX
 
 # Library version checks.
 # if numpy_version < '1.9.0':

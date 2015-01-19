@@ -1,6 +1,18 @@
 import logging
 
 
+class Joint:
+    def __init__(self, z, x1, x2, parents=None, label=None,):
+        self.z = z
+        self.x1 = x1
+        self.x2 = x2
+        self.parents = []
+        self.label = label
+
+    def __eq__(self, other):
+        return self.label == other.label
+
+
 class SWall(object):
     def __init__(self, z_0=None, x1_0=None, x2_0=None, parent=None,
                  label=None,):
@@ -28,6 +40,7 @@ class SWall(object):
         size_of_neighborhood=None,
     ):
         steps = 0
+        previous_length = len(self.data)
         rpzs = ramification_point_zs
         ppzs = puncture_point_zs
         z_i, x1_i, x2_i = self.data[-1]
@@ -42,3 +55,5 @@ class SWall(object):
             z_i, x1_i, x2_i = ode.integrate(ode.t + dt)
             self.data.append([z_i, x1_i, x2_i])
             steps += 1
+
+        return previous_length

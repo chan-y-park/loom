@@ -3,14 +3,14 @@ import sympy
 import logging
 import pdb
 
-from itertools import combinations
 from cmath import exp, pi, phase
 
 from scipy import integrate
 
 from curve import RamificationPoint, SWCurve, SWDiff
 from s_wall import SWall
-from misc import (cpow, gather, remove_duplicate, n_nearest, LocalDiffError,)
+from misc import (cpow, gather, remove_duplicate, n_nearest, LocalDiffError,
+                  GetSWallSeedsError)
 from intersection import HitTable
 from plotting import SpectralNetworkPlot
 
@@ -69,11 +69,12 @@ class SpectralNetwork:
             #max_step = ode_max_step,
         )
 
-    def find_joints(self):
-        logging.debug('need to implement')
-
-    def generate_from_joints(self, **params):
-        logging.debug('need to implement')
+    def find_joints(self, current_s_wall_index, previous_length):
+        """
+        Find joints between the newly grown segment of the given S-wall
+        and the other S-walls.
+        """
+        pass
 
     def grow(self):
         rpzs = []
@@ -83,15 +84,16 @@ class SpectralNetwork:
                 rpzs.append(rp.z)
             elif rp.is_puncture is True:
                 ppzs.append(rp.z)
-        for s_wall in self.s_walls:
-            s_wall.grow(
+        for i in range(len(self.s_walls)):
+            previous_length = self.s_walls[i].grow(
                 self.ode, rpzs, ppzs, 
                 z_range_limits = self.config_data.z_range_limits,
                 num_of_steps = self.config_data.num_of_steps,
                 size_of_small_step = self.config_data.size_of_small_step,
                 size_of_large_step = self.config_data.size_of_large_step,
                 size_of_neighborhood = self.config_data.size_of_neighborhood,
-            )  
+            )
+            self.joints.append(self.find_joints(i, previous_length))
 
 # NOTE: tried SymPy exact numbers but didn't work.
 #    def get_s_wall_seeds(self, ramification_point):
@@ -139,17 +141,19 @@ def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
     local_curve = sw_curve.num_eq.series(x, rp.x, rp.i+1)
     local_curve = local_curve.series(z, rp.z, 2).removeO()
     ### curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
-    a = local_curve.coeff(z).coeff(x, 0)
-    b = local_curve.coeff(x**rp.i).coeff(z, 0)
+    ### translate z such that rp.z = 0
+    a = local_curve.subs(z, z+rp.z).coeff(z).coeff(x, 0)
+    ### translate x such that rp.x = 0
+    b = local_curve.subs(x, x+rp.x).coeff(x**rp.i).coeff(z, 0)
     local_x = rp.x + (-(a/b)*(z - rp.z))**sympy.Rational(1, rp.i)
     ### substitute x with x(z)
     local_diff = sw_diff.num_v.subs(x, local_x)
     ### series expansion in z at rp.z
-    local_diff = local_diff.series(z, rp.z, 1)
-    if local_diff.getO() is None:
-        ### series expansion didn't occur.
-        ### translate z such that rp.z = 0
-        local_diff = local_diff.subs(z, z+rp.z)
+    local_diff = local_diff.series(z, rp.z, 1).subs(z, z+rp.z)
+#    if local_diff.getO() is None:
+#        ### series expansion didn't occur.
+#        ### translate z such that rp.z = 0
+#        local_diff = local_diff.subs(z, z+rp.z)
     ### get the coefficient and the exponent of the leading term
     (diff_c, diff_e) = local_diff.leadterm(z)
     if diff_e == 0:

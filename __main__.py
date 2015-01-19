@@ -1,6 +1,11 @@
 """
 Main module. Run 'python -m loom' at the directory that contains the
 directory 'loom'.
+
+This module is based on the following libraries:
+NumPy 1.8.2
+SciPy 0.15.1
+SymPy 0.7.6 -> must be installed
 """
 import sys
 import logging

@@ -61,6 +61,10 @@ class ConfigData:
             'numerical parameters',
             'num_of_steps'
         )
+        self.num_of_iterations = config_parser.getint(
+            'numerical parameters',
+            'num_of_iterations'
+        )
         self.size_of_small_step = eval(config_parser.get(
             'numerical parameters',
             'size_of_small_step'
