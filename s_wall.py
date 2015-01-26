@@ -1,4 +1,5 @@
 import logging
+import pdb
 
 
 class Joint:
@@ -6,7 +7,7 @@ class Joint:
         self.z = z
         self.x1 = x1
         self.x2 = x2
-        self.parents = []
+        self.parents = parents 
         self.label = label
 
     def __eq__(self, other):
@@ -21,12 +22,39 @@ class SWall(object):
         self.label = label
 
     def get_zs(self, ti=0, tf=None):
+        """
+        return a list of (z.real, z.imag)
+        """
         if tf is None:
             tf = len(self.data)
         zs = []
         for t in range(ti, tf):
-            zs.append(self.data[t][0])
+            z = self.data[t][0]
+            zs.append(z)
         return zs
+
+    def get_zxzys(self, ti=0, tf=None):
+        """
+        return a list of (z.real, z.imag)
+        """
+        if tf is None:
+            tf = len(self.data)
+        zxzys = []
+        for t in range(ti, tf):
+            z = self.data[t][0]
+            zxzys.append((z.real, z.imag))
+        return zxzys
+
+    def out_of_range(self, z_range_limits):
+        z_f = self.data[-1][0]
+        z_real_min, z_real_max, z_imag_min, z_imag_max = z_range_limits
+        if (z_f.real < z_real_min or
+            z_f.real > z_real_max or
+            z_f.imag < z_imag_min or
+            z_f.imag > z_imag_max):
+            return True
+        else:
+            return False
 
     def grow(
         self,

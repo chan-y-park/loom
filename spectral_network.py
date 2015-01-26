@@ -4,14 +4,15 @@ import logging
 import pdb
 
 from cmath import exp, pi, phase
+from itertools import combinations
 
 from scipy import integrate
 
 from curve import RamificationPoint, SWCurve, SWDiff
-from s_wall import SWall
-from misc import (cpow, gather, remove_duplicate, n_nearest, LocalDiffError,
-                  GetSWallSeedsError)
-from intersection import HitTable
+from s_wall import SWall, Joint
+from misc import (cpow, gather, remove_duplicate, n_nearest, n_nearest_indices,
+                  unravel, find_xs_at_z_0, LocalDiffError, GetSWallSeedsError)
+from intersection import HitTable, NoIntersection, find_intersection_of_segments
 from plotting import SpectralNetworkPlot
 
 x, z = sympy.symbols('x z')
@@ -69,32 +70,128 @@ class SpectralNetwork:
             #max_step = ode_max_step,
         )
 
-    def find_joints(self, current_s_wall_index, previous_length):
+    def get_new_joints(self, current_s_wall_index, previous_length):
         """
         Find joints between the newly grown segment of the given S-wall
-        and the other S-walls.
+        and the other S-walls. This checks joints that are formed by two
+        S-walls only, not considering the possibility of a joint of three
+        S-walls, which in principle can happen but is unlikely in a numerical
+        setup.
         """
-        pass
+        i_c = current_s_wall_index
+        t_0 = previous_length
+        new_joints = []
+        new_curve  = self.s_walls[i_c].get_zxzys(t_0-1)
+        new_bin_keys = self.hit_table.fill(i_c, new_curve, t_0-1)
+
+        # first get the intersections on the z-plane
+        for bin_key in new_bin_keys:
+            if len(self.hit_table[bin_key]) == 1:
+                # only one S-wall in the bin, skip the rest.
+                continue
+            for i_a, i_b in combinations(self.hit_table[bin_key], 2):
+                # don't check self-intersections.
+                if i_a == i_c:  
+                    i_d = i_b   # i_b != i_c
+                elif i_b == i_c:
+                    i_d = i_a   # i_a != i_c
+                else:
+                    # both segments are not in the newly added curve.
+                    # don't check the intersection.
+                    continue
+                for t_c_i, t_c_f in self.hit_table[bin_key][i_c]:
+                    if t_0 > t_c_i:
+                        # this segment is not a new one.
+                        continue
+                    for t_d_i, t_d_f in self.hit_table[bin_key][i_d]:
+                        segment_c = self.s_walls[i_c].get_zxzys(t_c_i, t_c_f+1)
+                        segment_d = self.s_walls[i_d].get_zxzys(t_d_i, t_d_f+1)
+
+                        try:
+                            # find an intersection on the z-plane.
+                            ip_x, ip_y = find_intersection_of_segments(
+                                segment_c,
+                                segment_d,
+                                self.hit_table.get_bin_location(bin_key),
+                                self.hit_table.get_bin_size()
+                            )
+                            ip_z = ip_x + 1j*ip_y
+
+                            # segment_c
+                            zs_c = self.s_walls[i_c].get_zs(t_c_i, t_c_f+1)
+                            ip_t_c = (n_nearest_indices(zs_c, ip_z, 1)[0] + 
+                                      t_c_i)
+                            z_c, x1_c, x2_c = self.s_walls[i_c].data[ip_t_c]
+
+                            # segment_d
+                            zs_d = self.s_walls[i_d].get_zs(t_d_i, t_d_f+1)
+                            ip_t_d = (n_nearest_indices(zs_d, ip_z, 1)[0] + 
+                                      t_d_i)
+                            z_d, x1_d, x2_d = self.s_walls[i_d].data[ip_t_d]
+
+                            # TODO: need to put the joint into the parent 
+                            # S-walls?
+
+                            # find the values of x at z = ip_z.
+                            ip_xs = find_xs_at_z_0(self.sw_curve.num_eq, ip_z)
+                            ip_x1_c = n_nearest(ip_xs, x1_c, 1)[0]
+                            ip_x2_c = n_nearest(ip_xs, x2_c, 1)[0]
+                            ip_x1_d = n_nearest(ip_xs, x1_d, 1)[0]
+                            ip_x2_d = n_nearest(ip_xs, x2_d, 1)[0]
+                            
+                            a_joint_label = ('joint ' +
+                                             '#{}'.format(len(self.joints)))
+                            a_joint = get_joint(ip_z,
+                                                ip_x1_c, ip_x2_c,
+                                                ip_x1_d, ip_x2_d,
+                                                self.s_walls[i_c],
+                                                self.s_walls[i_d],
+                                                self.config_data.accuracy,
+                                                label=a_joint_label)
+
+                            if(a_joint is None):
+                                continue
+                            else:
+                                self.joints.append(a_joint)
+                                new_joints.append(a_joint)
+                            
+                        except NoIntersection:
+                            pass
+
+        return new_joints
 
     def grow(self):
         rpzs = []
         ppzs = []
+
         for rp in self.sw_curve.ramification_points:
             if rp.is_puncture is False:
                 rpzs.append(rp.z)
             elif rp.is_puncture is True:
                 ppzs.append(rp.z)
-        for i in range(len(self.s_walls)):
-            previous_length = self.s_walls[i].grow(
-                self.ode, rpzs, ppzs, 
-                z_range_limits = self.config_data.z_range_limits,
-                num_of_steps = self.config_data.num_of_steps,
-                size_of_small_step = self.config_data.size_of_small_step,
-                size_of_large_step = self.config_data.size_of_large_step,
-                size_of_neighborhood = self.config_data.size_of_neighborhood,
-            )
-            self.joints.append(self.find_joints(i, previous_length))
+        for iteration in range(self.config_data.num_of_iterations):
+            new_joints = []
+            for i in range(len(self.s_walls)):
+                if self.s_walls[i].out_of_range(
+                    self.config_data.z_range_limits
+                ):
+                    continue
+                previous_length = self.s_walls[i].grow(
+                    self.ode, rpzs, ppzs, 
+                    z_range_limits=self.config_data.z_range_limits,
+                    num_of_steps=self.config_data.num_of_steps,
+                    size_of_small_step=self.config_data.size_of_small_step,
+                    size_of_large_step=self.config_data.size_of_large_step,
+                    size_of_neighborhood=self.config_data.size_of_neighborhood,
+                )
+                new_joints += self.get_new_joints(i, previous_length)
 
+            for joint in new_joints:
+                label = 'S-wall #{}'.format(len(self.s_walls))
+                self.s_walls.append(
+                    SWall(joint.z, joint.x1, joint.x2, joint.parents, label)
+                )
+                
 # NOTE: tried SymPy exact numbers but didn't work.
 #    def get_s_wall_seeds(self, ramification_point):
 #        rp = ramification_point
@@ -234,12 +331,7 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point,
         # resize to the size of the small step 
         Delta_z = cv/abs(cv)*dt
         z_0 = rp.z + Delta_z
-        fx_at_z_0 = sw_curve.num_eq.subs(z, z_0)
-        fx_at_z_0_coeffs = map(complex, 
-                              sympy.Poly(fx_at_z_0, x).all_coeffs())
-        xs_at_z_0 = sorted(numpy.roots(fx_at_z_0_coeffs),
-                           lambda x1, x2: cmp(abs(x1 - rp.x),
-                                              abs(x2 - rp.x)))[:rp.i]
+        xs_at_z_0 = find_xs_at_z_0(sw_curve.num_eq, z_0, rp.x, rp.i)
         dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
         for i in range(len(xs_at_z_0)):
             diffx = sw_diff.num_v.subs(z, z_0) 
@@ -253,11 +345,27 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point,
                     # flattened index
                     fij = i*len(xs_at_z_0) + j
                     dev_phases[fij] = phase((delta_z/Delta_z))
-        min_dev_indices = n_nearest(dev_phases, 0.0, cm)
-        for i, j in min_dev_indices:
+        min_dev_indices = n_nearest_indices(dev_phases, 0.0, cm)
+        for k in min_dev_indices:
+            i, j = unravel(k, len(xs_at_z_0))
             seeds.append((z_0, xs_at_z_0[i], xs_at_z_0[j]))
         
     return seeds
+
+def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy, 
+              spectral_network_type='A', label=None):
+    """
+    return a joint if formed, otherwise return None.
+    """
+    # TODO: implementation of joint rule changes according to the spectral
+    # network type.
+    if(abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
+        return None
+    elif(abs(x2_i - x1_j) < accuracy):
+        return Joint(z, x1_i, x2_j, [parent_i, parent_j], label)
+    elif(abs(x2_j - x1_i) < accuracy):
+        return Joint(z, x1_j, x2_i, [parent_j, parent_i], label)
+
 
 def generate_spectral_network(config_data):
     sw_curve = SWCurve(config_data)

@@ -10,6 +10,8 @@ SciPy 0.15.1
 SymPy 0.7.6
 """
 import logging
+import pdb
+
 from numpy import __version__ as numpy_version
 from scipy import __version__ as scipy_version
 from sympy import __version__ as sympy_version
@@ -25,23 +27,23 @@ from itertools import combinations
 from warnings import warn
 
 # Library version checks.
-# if numpy_version < '1.9.0':
-#     message = ('Current NumPy version ' + str(numpy_version) +
-#                ' is lower than 1.9.0; '
-#                'this module may not work properly.')
-#     warn(message, Warning)
+if numpy_version < '1.9.0':
+    message = ('Current NumPy version ' + str(numpy_version) +
+               ' is lower than 1.9.0; '
+               'this module may not work properly.')
+    warn(message, Warning)
 
-# if scipy_version < '0.14.0':
-#     message = ('Current SciPy version ' + str(scipy_version) +
-#                ' is lower than 0.14.0; '
-#                'this module may not work properly.')
-#     warn(message, Warning)
+if scipy_version < '0.14.0':
+    message = ('Current SciPy version ' + str(scipy_version) +
+               ' is lower than 0.14.0; '
+               'this module may not work properly.')
+    warn(message, Warning)
 
-# if sympy_version < '0.7.5':
-#     message = ('Current SymPy version ' + str(sympy_version) +
-#                ' is lower than 0.7.5; '
-#                'this module may not work properly.')
-#     warn(message, Warning)
+if sympy_version < '0.7.5':
+    message = ('Current SymPy version ' + str(sympy_version) +
+               ' is lower than 0.7.5; '
+               'this module may not work properly.')
+    warn(message, Warning)
 
 
 class NoIntersection(Exception):
@@ -158,21 +160,29 @@ class HitTable:
 
         self._hit_table[bin_key][curve_index].append(segment_range)
 
-    def fill(self, curve_index, curve):
-        t_i = t_0 = 0
-        x_0, y_0 = curve[t_0]
+    def fill(self, curve_index, curve_part, t_0=0):
+        """
+        curve_part[0] == curve[t_0] to fill the hit table 
+        incrementally as a curve grows.
+
+        return a list of bin_key's that are put into the table.
+        """
+        t_i = t_0
+        x_0, y_0 = curve_part[0]
         prev_bin_key = self.get_bin_key([x_0, y_0])
-        for t_n, [x_n, y_n] in enumerate(curve):
+        new_bin_keys = []
+        for t_n, [x_n, y_n] in enumerate(curve_part):
             try:
                 bin_key = self.get_bin_key([x_n, y_n])
             except TypeError:
                 logging.debug('t_n, x_n, y_n = %d, %.8f, %.8f',
                               t_n, x_n, y_n)
                 raise
-            # Cut the curve into a segment where it goes over the current
+            # Cut the curve into segments where it goes over the current
             # bin or where it has a turning point.
             if prev_bin_key != bin_key:
-                # curve[t_n - 1] and curve[t_n] are in different bins.
+                # curve[t_0 + t_n - 1] and curve[t_0 + t_n] are in different 
+                # bins.
                 # NOTE: bin_fill_offset = 0 gives segments that go over the
                 # boundaries of bins. A nonzero offset can result in
                 # missing an intersection when it is near the boundary
@@ -184,7 +194,9 @@ class HitTable:
                         # current bin by one step.
                         t_i -= 1
                     if t_i < t_f:
-                        self.put(prev_bin_key, curve_index, [t_i, t_f])
+                        self.put(prev_bin_key, curve_index,
+                                 [t_0 + t_i, t_0 + t_f])
+                        new_bin_keys.append(prev_bin_key)
                 except KeyError as e:
                     logging.debug('prev_bin_key, bin_key = %s, %s',
                                   prev_bin_key, bin_key)
@@ -192,9 +204,15 @@ class HitTable:
                     pass
                 t_i = t_n
                 prev_bin_key = bin_key
-            elif is_turning_point(curve, t_n):
+            elif is_turning_point(curve_part, t_0 + t_n):
+                # NOTE: when a curve has a turning point inside a bin,
+                # there will be two segments in the bin from the same curve.
+                # This is OK when we don't check a self-intersection
+                # of a curve, which is fine when there is no branch cut
+                # inside a bin.
                 try:
-                    self.put(prev_bin_key, curve_index, [t_i, t_n])
+                    self.put(prev_bin_key, curve_index, [t_0 + t_i, t_0 + t_n])
+                    new_bin_keys.append(prev_bin_key)
                 except KeyError as e:
                     logging.debug('prev_bin_key, bin_key = %s, %s',
                                   prev_bin_key, bin_key)
@@ -202,16 +220,18 @@ class HitTable:
                     pass
                 t_i = t_n
             else:
-                # curve[t_n] is not the end of the segment.
+                # curve[t_0 + t_n] is not the end of the segment.
                 continue
         # Take care of the last segment, if any.
         if t_i < t_n:
             try:
-                self.put(prev_bin_key, curve_index, [t_i, t_n])
+                self.put(prev_bin_key, curve_index, [t_0 + t_i, t_0 + t_n])
+                new_bin_keys.append(prev_bin_key)
             except KeyError as e:
                 print str(e)
                 pass
 
+        return new_bin_keys
 
 def is_turning_point(curve, t):
     """Check whether curve[t] is the turning point or not."""
@@ -219,7 +239,11 @@ def is_turning_point(curve, t):
     if t_max < 2 or t == 0 or t == t_max:
         return False
 
-    x, y = [list(c) for c in zip(*curve[t-1:t+2])]
+    curve_near_t = curve[t-1:t+2]
+    if len(curve_near_t) != 3:
+        return False
+
+    x, y = [list(c) for c in zip(*curve_near_t)]
 
     # Check if dx/dy = 0
     if (x[1] - x[0]) * (x[2] - x[1]) < 0:
