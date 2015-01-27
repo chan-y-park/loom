@@ -32,6 +32,7 @@ class SpectralNetwork:
         self.s_walls = []
         self.joints = []
 
+        #self.ode = set_ode(self)
         self.set_ode()
         # Initialize S-walls at ramification points
         for rp in self.sw_curve.ramification_points:
@@ -40,6 +41,17 @@ class SpectralNetwork:
             for z_0, x1_0, x2_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(SWall(z_0, x1_0, x2_0, rp, label))
+    
+    def get_data(self):
+        data = {
+            'sw_curve': self.sw_curve,
+            'sw_diff': self.sw_diff,
+            'phase': self.theta,
+            'config_data': self.config_data,
+            's_walls': self.s_walls,
+            'joints': self.joints,
+        }
+        return data
 
     def set_ode(self):
         ode_absolute_tolerance = self.config_data.accuracy
@@ -47,7 +59,7 @@ class SpectralNetwork:
         f = self.sw_curve.num_eq
         df_dz = f.diff(z)
         df_dx = f.diff(x)
-        # F = -(\partial f/\partial z)/(\partial f/\partial x)
+        #F = -(\partial f/\partial z)/(\partial f/\partial x)
         F = sympy.lambdify((z, x), -df_dz/df_dx)
         v = sympy.lambdify((z, x), self.sw_diff.num_v)
 
@@ -63,10 +75,10 @@ class SpectralNetwork:
         self.ode = integrate.ode(ode_f)
         self.ode.set_integrator(
             'zvode',
-            # method='adams',
+            #method='adams',
             atol=ode_absolute_tolerance,
-            # min_step = ode_min_step,
-            # max_step = ode_max_step,
+            #min_step = ode_min_step,
+            #max_step = ode_max_step,
         )
 
     def get_new_joints(self, current_s_wall_index, previous_length):
@@ -112,7 +124,8 @@ class SpectralNetwork:
                                 segment_c,
                                 segment_d,
                                 self.hit_table.get_bin_location(bin_key),
-                                self.hit_table.get_bin_size()
+                                self.hit_table.get_bin_size(),
+                                self.config_data.accuracy
                             )
                             ip_z = ip_x + 1j*ip_y
 
@@ -168,6 +181,7 @@ class SpectralNetwork:
                 rpzs.append(rp.z)
             elif rp.is_puncture is True:
                 ppzs.append(rp.z)
+
         for iteration in range(self.config_data.num_of_iterations):
             new_joints = []
             for i in range(len(self.s_walls)):
@@ -191,6 +205,37 @@ class SpectralNetwork:
                     SWall(joint.z, joint.x1, joint.x2, joint.parents, label)
                 )
                 
+
+#def set_ode(spectral_network):
+#    sn = spectral_network
+#    ode_absolute_tolerance = sn.config_data.accuracy
+#
+#    f = sn.sw_curve.num_eq
+#    df_dz = f.diff(z)
+#    df_dx = f.diff(x)
+#    # F = -(\partial f/\partial z)/(\partial f/\partial x)
+#    F = sympy.lambdify((z, x), -df_dz/df_dx)
+#    v = sympy.lambdify((z, x), sn.sw_diff.num_v)
+#
+#    def ode_f(t, zx1x2):
+#        z_i = zx1x2[0]
+#        x1_i = zx1x2[1]
+#        x2_i = zx1x2[2]
+#        dz_i_dt = exp(sn.theta*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
+#        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+#        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+#        return [dz_i_dt, dx1_i_dt, dx2_i_dt]
+#
+#    ode = integrate.ode(ode_f)
+#    ode.set_integrator(
+#        'zvode',
+#        # method='adams',
+#        atol=ode_absolute_tolerance,
+#        # min_step = ode_min_step,
+#        # max_step = ode_max_step,
+#    )
+#    return ode
+#
 
 def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
     rp = ramification_point
@@ -332,10 +377,10 @@ def init_process():
 
 def parallel_get_spectral_network(sw_curve, sw_diff, phase, config_data,
                                   shared_n_started_spectral_networks,
-                                  shared_n_finished_spectral_networks,):
+                                  shared_n_finished_spectral_networks):
     shared_n_started_spectral_networks.value += 1
-    logging.info('Start generating spectral network #{}.'.format(
-        shared_n_started_spectral_networks.value
+    logging.info('Start generating spectral network #{}: theta = {}.'.format(
+        shared_n_started_spectral_networks.value, phase
     ))
 
     spectral_network = SpectralNetwork(sw_curve, sw_diff, phase, config_data) 
@@ -346,7 +391,8 @@ def parallel_get_spectral_network(sw_curve, sw_diff, phase, config_data,
         shared_n_finished_spectral_networks.value
     ))
 
-    return spectral_network
+    #return spectral_network
+    return spectral_network.get_data()
 
 def generate_spectral_network(opts, config_data):
     sw_curve = SWCurve(config_data)
@@ -382,6 +428,8 @@ def generate_spectral_network(opts, config_data):
         shared_n_finished_spectral_networks = manager.Value('i', 0)
         if(config_data.n_processes == 0):
             n_processes = multiprocessing.cpu_count()
+        else:
+            n_processes = config_data.n_processes
         logging.info('Number of processes: {}'.format(n_processes))
         pool =  multiprocessing.Pool(n_processes, init_process)
         try:
@@ -408,6 +456,4 @@ def generate_spectral_network(opts, config_data):
             logging.warning('Caught ^C; terminates processes...')
             pool.terminate()
             pool.join()
-
-        pdb.set_trace()
 

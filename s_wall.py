@@ -15,10 +15,10 @@ class Joint:
 
 
 class SWall(object):
-    def __init__(self, z_0=None, x1_0=None, x2_0=None, parent=None,
+    def __init__(self, z_0=None, x1_0=None, x2_0=None, parents=None,
                  label=None,):
         self.data = [[z_0, x1_0, x2_0]]
-        self.parent = parent
+        self.parents = parents
         self.label = label
 
     def get_zs(self, ti=0, tf=None):

@@ -256,7 +256,7 @@ def is_turning_point(curve, t):
 
 
 def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
-                                  newton_maxiter=5):
+                                  accuracy, newton_maxiter=5):
     """
     Find an intersection of two segments of curves in the same bin.
 
@@ -300,8 +300,8 @@ def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
     bin_y_interval = Interval(bin_center_y - 0.5*bin_size,
                               bin_center_y + 0.5*bin_size)
 
-    x_range = Intersection(x1_interval, x2_interval, bin_x_interval)
-    y_range = Intersection(y1_interval, y2_interval, bin_y_interval)
+    x_range = x1_interval.intersect(x2_interval).intersect(bin_x_interval)
+    y_range = y1_interval.intersect(y2_interval).intersect(bin_y_interval)
 
     if (x_range.is_EmptySet or y_range.is_EmptySet or x_range.is_FiniteSet or
             y_range.is_FiniteSet):
@@ -379,4 +379,4 @@ def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
         if intersection_y not in y_range:
             raise NoIntersection()
 
-    return [intersection_x, float(intersection_y)]
+    return [float(intersection_x), float(intersection_y)]
