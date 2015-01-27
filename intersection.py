@@ -10,6 +10,7 @@ SciPy 0.15.1
 SymPy 0.7.6
 """
 import logging
+import warnings
 import pdb
 
 from numpy import __version__ as numpy_version
@@ -25,6 +26,9 @@ from sympy import Interval, Intersection
 from math import floor
 from itertools import combinations
 from warnings import warn
+
+# turn this on to capture warnings as exceptions.
+#warnings.filterwarnings('error')
 
 # Library version checks.
 if numpy_version < '1.8.2':
@@ -160,18 +164,15 @@ class HitTable:
 
         self._hit_table[bin_key][curve_index].append(segment_range)
 
-    def fill(self, curve_index, curve_part, t_0=0):
+    def fill(self, curve_index, curve):
         """
-        curve_part[0] == curve[t_0] to fill the hit table 
-        incrementally as a curve grows.
-
         return a list of bin_key's that are put into the table.
         """
-        t_i = t_0
-        x_0, y_0 = curve_part[0]
+        t_i = t_0 = 0
+        x_0, y_0 = curve[t_0]
         prev_bin_key = self.get_bin_key([x_0, y_0])
         new_bin_keys = []
-        for t_n, [x_n, y_n] in enumerate(curve_part):
+        for t_n, [x_n, y_n] in enumerate(curve):
             try:
                 bin_key = self.get_bin_key([x_n, y_n])
             except TypeError:
@@ -181,8 +182,7 @@ class HitTable:
             # Cut the curve into segments where it goes over the current
             # bin or where it has a turning point.
             if prev_bin_key != bin_key:
-                # curve[t_0 + t_n - 1] and curve[t_0 + t_n] are in different 
-                # bins.
+                # curve[t_n - 1] and curve[t_n] are in different bins.
                 # NOTE: bin_fill_offset = 0 gives segments that go over the
                 # boundaries of bins. A nonzero offset can result in
                 # missing an intersection when it is near the boundary
@@ -194,8 +194,7 @@ class HitTable:
                         # current bin by one step.
                         t_i -= 1
                     if t_i < t_f:
-                        self.put(prev_bin_key, curve_index,
-                                 [t_0 + t_i, t_0 + t_f])
+                        self.put(prev_bin_key, curve_index, [t_i, t_f])
                         new_bin_keys.append(prev_bin_key)
                 except KeyError as e:
                     logging.debug('prev_bin_key, bin_key = %s, %s',
@@ -204,14 +203,14 @@ class HitTable:
                     pass
                 t_i = t_n
                 prev_bin_key = bin_key
-            elif is_turning_point(curve_part, t_0 + t_n):
+            elif is_turning_point(curve, t_n):
                 # NOTE: when a curve has a turning point inside a bin,
                 # there will be two segments in the bin from the same curve.
                 # This is OK when we don't check a self-intersection
                 # of a curve, which is fine when there is no branch cut
                 # inside a bin.
                 try:
-                    self.put(prev_bin_key, curve_index, [t_0 + t_i, t_0 + t_n])
+                    self.put(prev_bin_key, curve_index, [t_i, t_n])
                     new_bin_keys.append(prev_bin_key)
                 except KeyError as e:
                     logging.debug('prev_bin_key, bin_key = %s, %s',
@@ -220,12 +219,12 @@ class HitTable:
                     pass
                 t_i = t_n
             else:
-                # curve[t_0 + t_n] is not the end of the segment.
+                # curve[t_n] is not the end of the segment.
                 continue
         # Take care of the last segment, if any.
         if t_i < t_n:
             try:
-                self.put(prev_bin_key, curve_index, [t_0 + t_i, t_0 + t_n])
+                self.put(prev_bin_key, curve_index, [t_i, t_n])
                 new_bin_keys.append(prev_bin_key)
             except KeyError as e:
                 print str(e)
@@ -370,6 +369,9 @@ def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
         except RuntimeError:
             # Newton's method fails to converge; declare no intersection
             raise NoIntersection()
+        #except RuntimeWarning:
+        #    pdb.set_trace()
+        #    pass
 
         # Check if the intersection is within the curve range.
         # If not, the intersecion is not valid.

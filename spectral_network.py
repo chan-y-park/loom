@@ -16,7 +16,7 @@ from misc import (cpow, gather, remove_duplicate, n_nearest, n_nearest_indices,
                   unravel, find_xs_at_z_0, LocalDiffError, GetSWallSeedsError)
 from intersection import (HitTable, NoIntersection,
                           find_intersection_of_segments)
-from plotting import SpectralNetworkPlot
+from plotting import SpectralNetworkPlot, plot_segments
 
 x, z = sympy.symbols('x z')
 
@@ -48,6 +48,7 @@ class SpectralNetwork:
             'sw_diff': self.sw_diff,
             'phase': self.theta,
             'config_data': self.config_data,
+            'hit_table': self.hit_table,
             's_walls': self.s_walls,
             'joints': self.joints,
         }
@@ -78,10 +79,10 @@ class SpectralNetwork:
             #method='adams',
             atol=ode_absolute_tolerance,
             #min_step = ode_min_step,
-            #max_step = ode_max_step,
+            #max_step = self.config_data.size_of_small_step,
         )
 
-    def get_new_joints(self, current_s_wall_index, previous_length):
+    def get_new_joints(self, new_s_wall_index):
         """
         Find joints between the newly grown segment of the given S-wall
         and the other S-walls. This checks joints that are formed by two
@@ -89,11 +90,10 @@ class SpectralNetwork:
         S-walls, which in principle can happen but is unlikely in a numerical
         setup.
         """
-        i_c = current_s_wall_index
-        t_0 = previous_length
+        i_c = new_s_wall_index
         new_joints = []
-        new_curve = self.s_walls[i_c].get_zxzys(t_0-1)
-        new_bin_keys = self.hit_table.fill(i_c, new_curve, t_0-1)
+        new_curve = self.s_walls[i_c].get_zxzys()
+        new_bin_keys = self.hit_table.fill(i_c, new_curve)
 
         # first get the intersections on the z-plane
         for bin_key in new_bin_keys:
@@ -110,10 +110,9 @@ class SpectralNetwork:
                     # both segments are not in the newly added curve.
                     # don't check the intersection.
                     continue
+                logging.debug('i_c, i_d = {}, {}'.format(i_c, i_d))
+
                 for t_c_i, t_c_f in self.hit_table[bin_key][i_c]:
-                    if t_0 > t_c_i:
-                        # this segment is not a new one.
-                        continue
                     for t_d_i, t_d_f in self.hit_table[bin_key][i_d]:
                         segment_c = self.s_walls[i_c].get_zxzys(t_c_i, t_c_f+1)
                         segment_d = self.s_walls[i_d].get_zxzys(t_d_i, t_d_f+1)
@@ -164,7 +163,7 @@ class SpectralNetwork:
                             if(a_joint is None):
                                 continue
                             else:
-                                self.joints.append(a_joint)
+                                #self.joints.append(a_joint)
                                 new_joints.append(a_joint)
                             
                         except NoIntersection:
@@ -182,14 +181,13 @@ class SpectralNetwork:
             elif rp.is_puncture is True:
                 ppzs.append(rp.z)
 
-        for iteration in range(self.config_data.num_of_iterations):
-            new_joints = []
-            for i in range(len(self.s_walls)):
-                if self.s_walls[i].out_of_range(
-                    self.config_data.z_range_limits
-                ):
-                    continue
-                previous_length = self.s_walls[i].grow(
+        n_finished_s_walls = 0 
+        iteration = 0
+        while(iteration < self.config_data.num_of_iterations):
+            new_joints = []     # number of new joints found in each iteration
+            # first grow seeded S-walls.
+            for i in range(n_finished_s_walls, len(self.s_walls)):
+                self.s_walls[i].grow(
                     self.ode, rpzs, ppzs, 
                     z_range_limits=self.config_data.z_range_limits,
                     num_of_steps=self.config_data.num_of_steps,
@@ -197,45 +195,29 @@ class SpectralNetwork:
                     size_of_large_step=self.config_data.size_of_large_step,
                     size_of_neighborhood=self.config_data.size_of_neighborhood,
                 )
-                new_joints += self.get_new_joints(i, previous_length)
+                new_joints += self.get_new_joints(i)
 
+            n_finished_s_walls = len(self.s_walls)
+            if(len(new_joints) == 0):
+                break
+
+            # then seed an S-wall for each new joint.
             for joint in new_joints:
+                joint_is_new = True
+                # check if this is not in the previous joint list
+                for old_joint in self.joints:
+                    if joint.is_equal_to(old_joint, self.config_data.accuracy):
+                        joint_is_new = False
+                        break
+                if not joint_is_new:
+                    continue
+                self.joints.append(joint)
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
                     SWall(joint.z, joint.x1, joint.x2, joint.parents, label)
                 )
-                
+            iteration += 1
 
-#def set_ode(spectral_network):
-#    sn = spectral_network
-#    ode_absolute_tolerance = sn.config_data.accuracy
-#
-#    f = sn.sw_curve.num_eq
-#    df_dz = f.diff(z)
-#    df_dx = f.diff(x)
-#    # F = -(\partial f/\partial z)/(\partial f/\partial x)
-#    F = sympy.lambdify((z, x), -df_dz/df_dx)
-#    v = sympy.lambdify((z, x), sn.sw_diff.num_v)
-#
-#    def ode_f(t, zx1x2):
-#        z_i = zx1x2[0]
-#        x1_i = zx1x2[1]
-#        x2_i = zx1x2[2]
-#        dz_i_dt = exp(sn.theta*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
-#        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
-#        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-#        return [dz_i_dt, dx1_i_dt, dx2_i_dt]
-#
-#    ode = integrate.ode(ode_f)
-#    ode.set_integrator(
-#        'zvode',
-#        # method='adams',
-#        atol=ode_absolute_tolerance,
-#        # min_step = ode_min_step,
-#        # max_step = ode_max_step,
-#    )
-#    return ode
-#
 
 def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
     rp = ramification_point
@@ -328,7 +310,7 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point,
         cv = c[0]   # value of c
         cm = c[1]   # multiplicity of c
         # resize to the size of the small step 
-        Delta_z = cv/abs(cv)*dt
+        Delta_z = cv/abs(cv)*delta
         z_0 = rp.z + Delta_z
         xs_at_z_0 = find_xs_at_z_0(sw_curve.num_eq, z_0, rp.x, rp.i)
         dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
@@ -412,8 +394,11 @@ def generate_spectral_network(opts, config_data):
 
         if(opts['show-plot'] is True):
             spectral_network_plot = SpectralNetworkPlot(
-                spectral_network,
-                # plot_data_points=True,
+                spectral_network.get_data(),
+                #plot_data_points=True,
+                #plot_joints=True,
+                #plot_bins=True,
+                #plot_segments=True,
             )
             spectral_network_plot.show()
 
@@ -421,7 +406,7 @@ def generate_spectral_network(opts, config_data):
         theta_i, theta_f, theta_n = config_data.phase_range
         phases = [theta_i + i * (theta_f - theta_i) / theta_n
                   for  i in range(theta_n)]
-        spectral_networks = []
+        spectral_network_data_lists = []
 
         manager = multiprocessing.Manager()
         shared_n_started_spectral_networks = manager.Value('i', 0)
@@ -446,7 +431,7 @@ def generate_spectral_network(opts, config_data):
             pool.close()
 
             for result in results:
-                spectral_networks.append(result.get())
+                spectral_network_data_lists.append(result.get())
                 logging.info('job progress: {}/{} finished.'.format(
                     shared_n_finished_spectral_networks.value,
                     theta_n
@@ -456,4 +441,6 @@ def generate_spectral_network(opts, config_data):
             logging.warning('Caught ^C; terminates processes...')
             pool.terminate()
             pool.join()
+
+        pdb.set_trace()
 
