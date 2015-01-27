@@ -27,9 +27,9 @@ from itertools import combinations
 from warnings import warn
 
 # Library version checks.
-if numpy_version < '1.9.0':
+if numpy_version < '1.8.2':
     message = ('Current NumPy version ' + str(numpy_version) +
-               ' is lower than 1.9.0; '
+               ' is lower than 1.8.2; '
                'this module may not work properly.')
     warn(message, Warning)
 
@@ -39,9 +39,9 @@ if scipy_version < '0.14.0':
                'this module may not work properly.')
     warn(message, Warning)
 
-if sympy_version < '0.7.5':
+if sympy_version < '0.7.6':
     message = ('Current SymPy version ' + str(sympy_version) +
-               ' is lower than 0.7.5; '
+               ' is lower than 0.7.6; '
                'this module may not work properly.')
     warn(message, Warning)
 

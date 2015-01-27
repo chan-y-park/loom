@@ -6,13 +6,17 @@ import logging
 from math import pi
 
 CONFIG_FILE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                              'config_file')
+                               'config_file')
+
 
 class ConfigData:
     def __init__(self, opts):
+        #self.phase = opts['phase']
+        #self.single_network = opts['single-network']
+        if(opts['phase'] is not None):
+            self.phase_range = None
+
         self.set_logger(opts['logging-level'])
-        self.phase = opts['phase']
-        self.single_network = opts['single-network']
         self.read_config_from_file(opts['config-file'])
         
     def set_logger(self, level):
@@ -30,11 +34,11 @@ class ConfigData:
             logging_format = '%(message)s'
 
         logging.basicConfig(level=logging_level, format=logging_format, 
-                           stream=sys.stdout)
+                            stream=sys.stdout)
         #self.logger = logging.getLogger('loom_log')
 
     def read_config_from_file(self, config_file):
-        if len(config_file) == 0:
+        if config_file is None:
             config_file = 'default.ini'
         config_parser = ConfigParser.SafeConfigParser()
         config_file_full_path = os.path.join(CONFIG_FILE_DIR, config_file)
@@ -53,6 +57,10 @@ class ConfigData:
             )
         
         # numerical parameters
+        self.phase_range = eval(config_parser.get(
+            'numerical parameters',
+            'phase_range'
+        ))
         self.z_range_limits = eval(config_parser.get(
             'numerical parameters',
             'z_range_limits'
@@ -85,3 +93,7 @@ class ConfigData:
             'numerical parameters',
             'accuracy'
         ))
+        self.n_processes = config_parser.getint(
+            'numerical parameters',
+            'n_processes'
+        )

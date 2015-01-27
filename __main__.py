@@ -28,11 +28,11 @@ longopts = [
 def run_with_optlist(optlist):
 
     opts = {
-        'config-file': '',
+        'config-file': None,
         'gui-mode': False,
         'logging-level': 'warning',
-        'phase': 0.0,
-        'single-network': False,
+        'phase': None,
+        #'single-network': False,
         'save-data': False,
         'show-plot': False,
     }
@@ -70,7 +70,7 @@ def run_with_optlist(optlist):
                 opts['logging-level'] = arg
             elif (opt == '-p' or opt == '--phase'):
                 opts['phase'] = float(arg)
-                opts['single-network'] = True
+                #opts['single-network'] = True
             elif opt == '-w':
                 opts['save-data'] = True
             elif opt == '--show-plot':
@@ -80,9 +80,9 @@ def run_with_optlist(optlist):
         config_data = ConfigData(opts)
 
         if opts['gui-mode'] == True:
-            open_gui(config_data)
+            open_gui(opts, config_data)
         else:
-            generate_spectral_network(config_data)
+            generate_spectral_network(opts, config_data)
 
 # Set options from sys.argv when running on the command line,
 # then start running the main code.

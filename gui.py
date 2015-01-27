@@ -24,7 +24,7 @@ class Application(tk.Frame):
         )
         self.button_generate.grid(row=1, column=2, sticky=tk.E)
 
-def open_gui(config_data):
+def open_gui(opts, config_data):
     root = tk.Tk()
     app = Application(config_data, master=root)
     app.mainloop()
