@@ -44,10 +44,10 @@ class SpectralNetwork:
     
     def get_data(self):
         data = {
-            'sw_curve': self.sw_curve,
-            'sw_diff': self.sw_diff,
+            #'sw_curve': self.sw_curve,
+            #'sw_diff': self.sw_diff,
             'phase': self.theta,
-            'config_data': self.config_data,
+            #'config_data': self.config_data,
             'hit_table': self.hit_table,
             's_walls': self.s_walls,
             'joints': self.joints,
@@ -394,19 +394,22 @@ def generate_spectral_network(opts, config_data):
 
         if(opts['show-plot'] is True):
             spectral_network_plot = SpectralNetworkPlot(
-                spectral_network.get_data(),
+                config_data,
+                sw_curve,
+                sw_diff,
                 #plot_data_points=True,
                 #plot_joints=True,
                 #plot_bins=True,
                 #plot_segments=True,
             )
+            spectral_network_plot.set_data(spectral_network.get_data())
             spectral_network_plot.show()
 
     elif(config_data.phase_range is not None):
         theta_i, theta_f, theta_n = config_data.phase_range
         phases = [theta_i + i * (theta_f - theta_i) / theta_n
                   for  i in range(theta_n)]
-        spectral_network_data_lists = []
+        spectral_network_data_list = []
 
         manager = multiprocessing.Manager()
         shared_n_started_spectral_networks = manager.Value('i', 0)
@@ -431,7 +434,7 @@ def generate_spectral_network(opts, config_data):
             pool.close()
 
             for result in results:
-                spectral_network_data_lists.append(result.get())
+                spectral_network_data_list.append(result.get())
                 logging.info('job progress: {}/{} finished.'.format(
                     shared_n_finished_spectral_networks.value,
                     theta_n
@@ -442,5 +445,18 @@ def generate_spectral_network(opts, config_data):
             pool.terminate()
             pool.join()
 
-        pdb.set_trace()
+
+        if(opts['show-plot'] is True):
+            spectral_network_plot = SpectralNetworkPlot(
+                config_data,
+                sw_curve,
+                sw_diff,
+                #plot_data_points=True,
+                #plot_joints=True,
+                #plot_bins=True,
+                #plot_segments=True,
+            )
+            for data in spectral_network_data_list:
+                spectral_network_plot.set_data(data)
+            spectral_network_plot.show()
 
