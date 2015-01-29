@@ -4,6 +4,7 @@ import logging
 import pdb
 import signal
 import multiprocessing
+import time
 
 from cmath import exp, pi, phase
 from itertools import combinations
@@ -381,6 +382,9 @@ def generate_spectral_network(opts, config_data):
     sw_curve.find_ramification_points()
     sw_diff = SWDiff(config_data)
 
+    start_time = time.time()
+    logging.info('start cpu time: %s', start_time)
+
     logging.info('\nList of ramification points')
     for rp in sw_curve.ramification_points:
         logging.info('%s', rp)
@@ -391,6 +395,10 @@ def generate_spectral_network(opts, config_data):
                                            config_data) 
 
         spectral_network.grow()
+
+        end_time = time.time()
+        logging.info('end cpu time: %.8f', end_time)
+        logging.info('elapsed cpu time: %.8f', end_time - start_time)
 
         if(opts['show-plot'] is True):
             spectral_network_plot = SpectralNetworkPlot(
@@ -445,6 +453,9 @@ def generate_spectral_network(opts, config_data):
             pool.terminate()
             pool.join()
 
+        end_time = time.time()
+        logging.info('end cpu time: %.8f', end_time)
+        logging.info('elapsed cpu time: %.8f', end_time - start_time)
 
         if(opts['show-plot'] is True):
             spectral_network_plot = SpectralNetworkPlot(
