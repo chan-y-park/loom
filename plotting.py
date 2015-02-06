@@ -75,7 +75,7 @@ class SpectralNetworkPlot:
         # End of plotting joints
 
         # If we have segments of curves, draw them in different colors.
-        if(self.plot_segments == True):
+        if(self.plot_segments is True):
             hit_table = spectral_network_data['hit_table']
             for bin_key in hit_table:
                 for curve_index in hit_table[bin_key]:

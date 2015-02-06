@@ -44,6 +44,10 @@ class ConfigData:
         config_file_full_path = os.path.join(CONFIG_FILE_DIR, config_file)
         logging.debug('config file full path: %s', config_file_full_path)
         config_parser.read(config_file_full_path)
+        # directories
+        self.root_dir = config_parser.get('directory', 'root_dir')
+        self.config_dir = config_parser.get('directory', 'config_dir')
+        self.data_dir = config_parser.get('directory', 'data_dir')
 
         self.sw_curve_eq_string = config_parser.get('analytic expressions',
                                                     'sw_curve')

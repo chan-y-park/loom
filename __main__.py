@@ -17,12 +17,13 @@ from config import ConfigData
 from gui import open_gui
 from spectral_network import generate_spectral_network
 
-shortopts = 'c:gl:p:w'
+shortopts = 'c:gl:p:'
 longopts = [
     'gui-mode',
     'logging-level',
     'phase',
     'show-plot',
+    'load-data',
 ]
 
 def run_with_optlist(optlist):
@@ -33,7 +34,7 @@ def run_with_optlist(optlist):
         'logging-level': 'warning',
         'phase': None,
         #'single-network': False,
-        'save-data': False,
+        'load-data': '',
         'show-plot': False,
     }
         
@@ -52,8 +53,8 @@ def run_with_optlist(optlist):
     -p, --phase THETA:
         generate a spectral network at the phase of THETA.
 
-    -w:
-        save data on a time-stamped file.
+    --load-data DATA_FILE:
+        load data from a file.
         
     --show-plot:
         diaplay the spectral network plot.
@@ -71,8 +72,8 @@ def run_with_optlist(optlist):
             elif (opt == '-p' or opt == '--phase'):
                 opts['phase'] = float(arg)
                 #opts['single-network'] = True
-            elif opt == '-w':
-                opts['save-data'] = True
+            elif opt == '--load-data':
+                opts['load-data'] = arg
             elif opt == '--show-plot':
                 opts['show-plot'] = True
         # End of option setting.
@@ -81,6 +82,8 @@ def run_with_optlist(optlist):
 
         if opts['gui-mode'] == True:
             open_gui(opts, config_data)
+        elif (len(opts['load-data']) > 0):
+            load_spectral_network(opts, config_data)
         else:
             generate_spectral_network(opts, config_data)
 

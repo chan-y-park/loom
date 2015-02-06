@@ -1,6 +1,7 @@
 import logging
 import pdb
 
+from misc import ctor2, r2toc
 
 class Joint:
     def __init__(self, z, x1, x2, parents=None, label=None,):
@@ -12,6 +13,15 @@ class Joint:
 
     def __eq__(self, other):
         return self.label == other.label
+
+    def get_json_data(self):
+        data = {
+            'z': ctor2(self.z),
+            'x1': ctor2(self.x1),
+            'x2': ctor2(self.x2),
+            'parents': [parent.label for parent in self.parents],
+            'label': self.label,
+        }
 
     def is_equal_to(self, other, accuracy):
         if(abs(self.z - other.z) < accuracy and
@@ -28,6 +38,15 @@ class SWall(object):
         self.data = [[z_0, x1_0, x2_0]]
         self.parents = parents
         self.label = label
+
+    def get_json_data(self):
+        data = {
+            'data': [[ctor2(z), ctor2(x1), ctor2(x2)] 
+                     for z, x1, x2 in self.data],
+            'parents': [parent.label for parent in self.parents],
+            'label': self.label,
+        }
+        return data
 
     def get_zs(self, ti=0, tf=None):
         """

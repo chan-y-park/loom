@@ -1,10 +1,13 @@
 import numpy
 import sympy
 import logging
-import pdb
 import signal
 import multiprocessing
 import time
+import os
+import time
+import zipfile, zlib
+import pdb
 
 from cmath import exp, pi, phase
 from itertools import combinations
@@ -18,6 +21,7 @@ from misc import (cpow, gather, remove_duplicate, n_nearest, n_nearest_indices,
 from intersection import (HitTable, NoIntersection,
                           find_intersection_of_segments)
 from plotting import SpectralNetworkPlot, plot_segments
+from data_io import save_spectral_network_data, load_spectral_network_data
 
 x, z = sympy.symbols('x z')
 
@@ -41,7 +45,7 @@ class SpectralNetwork:
                                             self.theta, rp, self.config_data)
             for z_0, x1_0, x2_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
-                self.s_walls.append(SWall(z_0, x1_0, x2_0, rp, label))
+                self.s_walls.append(SWall(z_0, x1_0, x2_0, [rp], label))
     
     def get_data(self):
         data = {
@@ -391,29 +395,34 @@ def generate_spectral_network(opts, config_data):
     logging.info('\n')
 
     if(opts['phase'] is not None):
+        # Generate a single spectral network.
         spectral_network = SpectralNetwork(sw_curve, sw_diff, opts['phase'], 
                                            config_data) 
 
         spectral_network.grow()
 
-        end_time = time.time()
-        logging.info('end cpu time: %.8f', end_time)
-        logging.info('elapsed cpu time: %.8f', end_time - start_time)
-
-        if(opts['show-plot'] is True):
-            spectral_network_plot = SpectralNetworkPlot(
-                config_data,
-                sw_curve,
-                sw_diff,
-                #plot_data_points=True,
-                #plot_joints=True,
-                #plot_bins=True,
-                #plot_segments=True,
-            )
-            spectral_network_plot.set_data(spectral_network.get_data())
-            spectral_network_plot.show()
-
+        spectral_network_data_list = [spectral_network.get_data()] 
+#
+#        end_time = time.time()
+#        logging.info('end cpu time: %.8f', end_time)
+#        logging.info('elapsed cpu time: %.8f', end_time - start_time)
+#
+#
+#        if(opts['show-plot'] is True):
+#            spectral_network_plot = SpectralNetworkPlot(
+#                config_data,
+#                sw_curve,
+#                sw_diff,
+#                #plot_data_points=True,
+#                #plot_joints=True,
+#                #plot_bins=True,
+#                #plot_segments=True,
+#            )
+#            spectral_network_plot.set_data(spectral_network.get_data())
+#            spectral_network_plot.show()
+#
     elif(config_data.phase_range is not None):
+        # Generate multiple spectral networks.
         theta_i, theta_f, theta_n = config_data.phase_range
         phases = [theta_i + i * (theta_f - theta_i) / theta_n
                   for  i in range(theta_n)]
@@ -452,22 +461,45 @@ def generate_spectral_network(opts, config_data):
             logging.warning('Caught ^C; terminates processes...')
             pool.terminate()
             pool.join()
+        # End of generating multiple spectral networks
 
-        end_time = time.time()
-        logging.info('end cpu time: %.8f', end_time)
-        logging.info('elapsed cpu time: %.8f', end_time - start_time)
+    end_time = time.time()
+    logging.info('end cpu time: %.8f', end_time)
+    logging.info('elapsed cpu time: %.8f', end_time - start_time)
 
-        if(opts['show-plot'] is True):
-            spectral_network_plot = SpectralNetworkPlot(
-                config_data,
-                sw_curve,
-                sw_diff,
-                #plot_data_points=True,
-                #plot_joints=True,
-                #plot_bins=True,
-                #plot_segments=True,
-            )
-            for data in spectral_network_data_list:
-                spectral_network_plot.set_data(data)
-            spectral_network_plot.show()
+    timestamp = str(int(time.time()))
+    data_file_name = os.path.join(
+        config_data.root_dir, 
+        config_data.data_dir, 
+        timestamp + '.json'
+    )
+    zipped_file_name = data_file_name + '.zip'
+    data_file = open(data_file_name, 'wb')
+    logging.info('Saving data to {}.'.format(data_file_name))
+    save_spectral_network_data(
+        spectral_network_data_list, 
+        data_file, 
+    )
+    data_file.close()
+
+    logging.info('Save compressed data to {}.'.format(zipped_file_name))
+    zipped_data_file = zipfile.ZipFile(zipped_file_name, 'w',
+                                       zipfile.ZIP_DEFLATED)
+    zipped_data_file.write(data_file_name)
+    zipped_data_file.close()
+
+    if(opts['show-plot'] is True):
+        spectral_network_plot = SpectralNetworkPlot(
+            config_data,
+            sw_curve,
+            sw_diff,
+            #plot_data_points=True,
+            #plot_joints=True,
+            #plot_bins=True,
+            #plot_segments=True,
+        )
+        for data in spectral_network_data_list:
+            spectral_network_plot.set_data(data)
+        spectral_network_plot.show()
+
 

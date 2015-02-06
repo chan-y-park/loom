@@ -109,6 +109,13 @@ class HitTable:
     def __len__(self):
         return len(self._hit_table)
 
+    def get_json_data(self):
+        data = {}
+        for bin_key, value in self._hit_table.iteritems():
+            str_key = str(bin_key)
+            data[str_key] = value
+        return data
+
     def get_bin_size(self):
         return self._bin_size
 
