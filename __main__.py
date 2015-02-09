@@ -78,13 +78,27 @@ def run_with_optlist(optlist):
                 opts['show-plot'] = True
         # End of option setting.
 
-        config_data = ConfigData(opts)
+        # Set logging.
+        if opts['logging-level'] == 'debug':
+            logging_level = logging.DEBUG
+            logging_format = '%(module)s@%(lineno)d: %(funcName)s: %(message)s'
+        elif opts['logging-level'] == 'info':
+            logging_level = logging.INFO
+            logging_format = '%(process)d: %(message)s'
+        else:
+            logging_level = logging.WARNING
+            logging_format = '%(message)s'
 
-        if opts['gui-mode'] == True:
+        logging.basicConfig(level=logging_level, format=logging_format, 
+                            stream=sys.stdout)
+
+        # Entry point branching
+        if opts['gui-mode'] is True:
             open_gui(opts, config_data)
         elif (len(opts['load-data']) > 0):
             load_spectral_network(opts, config_data)
         else:
+            config_data = ConfigData(opts)
             generate_spectral_network(opts, config_data)
 
 # Set options from sys.argv when running on the command line,

@@ -385,14 +385,30 @@ def generate_spectral_network(opts, config_data):
     sw_curve = SWCurve(config_data)
     sw_curve.find_ramification_points()
     sw_diff = SWDiff(config_data)
+    spectral_network_data_list = []
+    file_list = []
 
     start_time = time.time()
     logging.info('start cpu time: %s', start_time)
 
-    logging.info('\nList of ramification points')
+    logging.debug('\nList of ramification points')
     for rp in sw_curve.ramification_points:
-        logging.info('%s', rp)
-    logging.info('\n')
+        logging.debug('%s', rp)
+    logging.debug('\n')
+
+    # Prepare to save spectral network data to files.
+    timestamp = str(int(time.time()))
+    data_save_dir = os.path.join(
+        config_data.root_dir, 
+        config_data.data_dir, 
+        timestamp
+    )
+    os.makedirs(data_save_dir)
+    # Save configuration to a file.
+    config_file_name = os.path.join(data_save_dir, 'config.ini')
+    with open(config_file_name, 'wb') as fp:
+        config_data.config_parser.write(fp)
+        file_list.append(config_file_name)
 
     if(opts['phase'] is not None):
         # Generate a single spectral network.
@@ -401,32 +417,23 @@ def generate_spectral_network(opts, config_data):
 
         spectral_network.grow()
 
-        spectral_network_data_list = [spectral_network.get_data()] 
-#
-#        end_time = time.time()
-#        logging.info('end cpu time: %.8f', end_time)
-#        logging.info('elapsed cpu time: %.8f', end_time - start_time)
-#
-#
-#        if(opts['show-plot'] is True):
-#            spectral_network_plot = SpectralNetworkPlot(
-#                config_data,
-#                sw_curve,
-#                sw_diff,
-#                #plot_data_points=True,
-#                #plot_joints=True,
-#                #plot_bins=True,
-#                #plot_segments=True,
-#            )
-#            spectral_network_plot.set_data(spectral_network.get_data())
-#            spectral_network_plot.show()
-#
+        spectral_network_data = spectral_network.get_data()
+
+        # Save spectral network data to a file
+        data_file_name = os.path.join(data_save_dir, 'data_0.json')
+        logging.info('Saving data to {}.'.format(data_file_name))
+        with open(data_file_name, 'wb') as fp:
+            save_spectral_network_data(
+                spectral_network_data, 
+                fp, 
+            )
+            file_list.append(data_file_name)
+
     elif(config_data.phase_range is not None):
         # Generate multiple spectral networks.
         theta_i, theta_f, theta_n = config_data.phase_range
         phases = [theta_i + i * (theta_f - theta_i) / theta_n
                   for  i in range(theta_n)]
-        spectral_network_data_list = []
 
         manager = multiprocessing.Manager()
         shared_n_started_spectral_networks = manager.Value('i', 0)
@@ -467,27 +474,18 @@ def generate_spectral_network(opts, config_data):
     logging.info('end cpu time: %.8f', end_time)
     logging.info('elapsed cpu time: %.8f', end_time - start_time)
 
-    timestamp = str(int(time.time()))
-    data_file_name = os.path.join(
-        config_data.root_dir, 
-        config_data.data_dir, 
-        timestamp + '.json'
-    )
-    zipped_file_name = data_file_name + '.zip'
-    data_file = open(data_file_name, 'wb')
-    logging.info('Saving data to {}.'.format(data_file_name))
-    save_spectral_network_data(
-        spectral_network_data_list, 
-        data_file, 
-    )
-    data_file.close()
-
+    # Make a compressed data file.
+    zipped_file_name = data_save_dir + '.zip'
     logging.info('Save compressed data to {}.'.format(zipped_file_name))
-    zipped_data_file = zipfile.ZipFile(zipped_file_name, 'w',
-                                       zipfile.ZIP_DEFLATED)
-    zipped_data_file.write(data_file_name)
-    zipped_data_file.close()
+    #zipped_data_file = zipfile.ZipFile(zipped_file_name, 'w',
+    #                                   zipfile.ZIP_DEFLATED)
+    #zipped_data_file.write(data_file_name)
+    #zipped_data_file.close()
+    with zipfile.ZipFile(zipped_file_name, 'w', zipfile.ZIP_DEFLATED) as fp:
+        for a_file in file_list:
+            fp.write(a_file, os.path.relpath(a_file, data_save_dir))
 
+    # Plot spectral networks.
     if(opts['show-plot'] is True):
         spectral_network_plot = SpectralNetworkPlot(
             config_data,
@@ -498,8 +496,13 @@ def generate_spectral_network(opts, config_data):
             #plot_bins=True,
             #plot_segments=True,
         )
-        for data in spectral_network_data_list:
-            spectral_network_plot.set_data(data)
+
+        if (len(spectral_network_data_list) > 0):
+            for data in spectral_network_data_list:
+                spectral_network_plot.set_data(data)
+        else:
+            spectral_network_plot.set_data(spectral_network_data)
+
         spectral_network_plot.show()
 
 
