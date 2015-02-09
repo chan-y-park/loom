@@ -3,12 +3,12 @@ import sympy
 import numpy
 import logging
 
-from misc import get_root_multiplicity
+from misc import ctor2, r2toc, get_root_multiplicity
 
 x, z = sympy.symbols('x z')
 
 class RamificationPoint:
-    def __init__(self, z, x, i, label=None, is_puncture=False):
+    def __init__(self, z=None, x=None, i=None, label=None, is_puncture=False):
         self.z = z
         self.x = x
         self.i = i
@@ -20,6 +20,23 @@ class RamificationPoint:
 
     def __eq__(self, other):
         return self.label == other.label
+
+    def get_json_data(self):
+        json_data = {
+            'z': ctor2(self.z),
+            'x': ctor2(self.x),
+            'i': ctor2(self.i),
+            'label': self.label,
+            'is_puncture': self.is_puncture
+        }
+        return json_data
+
+    def set_json_data(self, json_data):
+        self.z = r2toc(json_data['z'])
+        self.x = r2toc(json_data['x'])
+        self.i = r2toc(json_data['i'])
+        self.label = json_data['label']
+        self.is_puncture = json_data['is_puncture']
 
 
 class PuncturePoint:
@@ -63,10 +80,11 @@ class SWCurve:
         logging.info('\nSeiberg-Witten curve: %s = 0\n',
                      sympy.latex(self.num_eq))
         self.accuracy = config_data.accuracy
-        self.ramification_points = []
-        self.puncture_points = []
+        #self.ramification_points = []
+        #self.puncture_points = []
 
-    def find_ramification_points(self):
+    def get_ramification_points(self):
+        ramification_points = []
         f = self.num_eq
         # NOTE: solve_poly_system vs. solve
         #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
@@ -81,8 +99,36 @@ class SWCurve:
                                       self.accuracy) 
             if m > 1:
                 label = 'ramification point #{}'.format(
-                    len(self.ramification_points)
+                    len(ramification_points)
                 )
                 rp = RamificationPoint(complex(z_0), complex(x_0), m, label)
-                self.ramification_points.append(rp)
+                ramification_points.append(rp)
+
+        return ramification_points
+
+
+def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
+    rp = ramification_point
+    local_curve = sw_curve.num_eq.series(x, rp.x, rp.i+1)
+    local_curve = local_curve.series(z, rp.z, 2).removeO()
+    # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
+    # translate z such that rp.z = 0
+    a = local_curve.subs(z, z+rp.z).coeff(z).coeff(x, 0)
+    # translate x such that rp.x = 0
+    b = local_curve.subs(x, x+rp.x).coeff(x**rp.i).coeff(z, 0)
+    local_x = rp.x + (-(a/b)*(z - rp.z))**sympy.Rational(1, rp.i)
+    # substitute x with x(z)
+    local_diff = sw_diff.num_v.subs(x, local_x)
+    # series expansion in z at rp.z
+    local_diff = local_diff.series(z, rp.z, 1).subs(z, z+rp.z)
+    # get the coefficient and the exponent of the leading term
+    (diff_c, diff_e) = local_diff.leadterm(z)
+    if diff_e == 0:
+        # remove the constant term from the local_diff
+        local_diff -= local_diff.subs(z, 0)
+        (diff_c, diff_e) = local_diff.leadterm(z)
+
+    return (complex(diff_c), diff_e)
+
+
 

@@ -108,12 +108,10 @@ def run_with_optlist(optlist):
             load_spectral_network(data_dir, config_data)
         else:
             if opts['config-file'] is None:
-                config_file = 'default.ini'
+                config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
             else:
                 config_file = opts['config-file']
-            config_data.read_config_from_file(
-                os.path.join(CONFIG_FILE_DIR, config_file)
-            )
+            config_data.read_config_from_file(config_file)
             generate_spectral_network(opts, config_data)
 
 # Set options from sys.argv when running on the command line,

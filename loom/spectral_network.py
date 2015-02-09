@@ -11,15 +11,14 @@ import glob
 import json
 import pdb
 
-from cmath import exp, pi, phase
+from cmath import exp
 from itertools import combinations
 
 from scipy import integrate
 
 from curve import RamificationPoint, SWCurve, SWDiff
-from s_wall import SWall, Joint
-from misc import (cpow, gather, remove_duplicate, n_nearest, n_nearest_indices,
-                  unravel, find_xs_at_z_0, LocalDiffError, GetSWallSeedsError)
+from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
+from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0)
 from intersection import (HitTable, NoIntersection,
                           find_intersection_of_segments)
 from plotting import SpectralNetworkPlot, plot_segments
@@ -29,54 +28,62 @@ x, z = sympy.symbols('x z')
 
 
 class SpectralNetwork:
-    def __init__(self, sw_curve, sw_diff, theta, config_data):
-        self.sw_curve = sw_curve
-        self.sw_diff = sw_diff
-        self.theta = theta
-        self.config_data = config_data
+    def __init__(
+        self,
+        #sw_curve,
+        #sw_diff,
+        phase=None,
+        ramification_points=[],
+        config_data=None
+    ):
+        #self.sw_curve = sw_curve
+        #self.sw_diff = sw_diff
+        self.phase = phase
+        self.ramification_points = ramification_points
+        #self.config_data = config_data
         self.hit_table = HitTable(config_data.size_of_bin)
 
+        self.ode = None
         self.s_walls = []
         self.joints = []
 
-        self.set_ode()
+        #self.set_ode()
 
-    def seed(self):
+    def seed(self, sw_curve, sw_diff, config_data):
         # Initialize S-walls at ramification points
-        for rp in self.sw_curve.ramification_points:
-            s_wall_seeds = get_s_wall_seeds(self.sw_curve, self.sw_diff,
-                                            self.theta, rp, self.config_data)
+        for rp in self.ramification_points:
+            s_wall_seeds = get_s_wall_seeds(
+                sw_curve, sw_diff, self.phase, rp, config_data
+            )
             for z_0, x1_0, x2_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
-                self.s_walls.append(SWall(z_0, x1_0, x2_0, [rp], label))
+                self.s_walls.append(SWall(z_0, x1_0, x2_0, [rp.label], label))
     
     def get_data(self):
         data = {
-            #'sw_curve': self.sw_curve,
-            #'sw_diff': self.sw_diff,
-            'phase': self.theta,
-            #'config_data': self.config_data,
-            'hit_table': self.hit_table,
+            'phase': self.phase,
+            'ramification_points' : self.ramification_points,
             's_walls': self.s_walls,
             'joints': self.joints,
+            'hit_table': self.hit_table,
         }
         return data
 
-    def set_ode(self):
-        ode_absolute_tolerance = self.config_data.accuracy
+    def set_ode(self, sw_curve, sw_diff, config_data):
+        ode_absolute_tolerance = config_data.accuracy
 
-        f = self.sw_curve.num_eq
+        f = sw_curve.num_eq
         df_dz = f.diff(z)
         df_dx = f.diff(x)
         #F = -(\partial f/\partial z)/(\partial f/\partial x)
         F = sympy.lambdify((z, x), -df_dz/df_dx)
-        v = sympy.lambdify((z, x), self.sw_diff.num_v)
+        v = sympy.lambdify((z, x), sw_diff.num_v)
 
         def ode_f(t, zx1x2):
             z_i = zx1x2[0]
             x1_i = zx1x2[1]
             x2_i = zx1x2[2]
-            dz_i_dt = exp(self.theta*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
+            dz_i_dt = exp(self.phase*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
             dx1_i_dt = F(z_i, x1_i) * dz_i_dt
             dx2_i_dt = F(z_i, x2_i) * dz_i_dt
             return [dz_i_dt, dx1_i_dt, dx2_i_dt]
@@ -90,7 +97,7 @@ class SpectralNetwork:
             #max_step = self.config_data.size_of_small_step,
         )
 
-    def get_new_joints(self, new_s_wall_index):
+    def get_new_joints(self, new_s_wall_index, sw_curve, sw_diff, config_data):
         """
         Find joints between the newly grown segment of the given S-wall
         and the other S-walls. This checks joints that are formed by two
@@ -132,7 +139,7 @@ class SpectralNetwork:
                                 segment_d,
                                 self.hit_table.get_bin_location(bin_key),
                                 self.hit_table.get_bin_size(),
-                                self.config_data.accuracy
+                                config_data.accuracy
                             )
                             ip_z = ip_x + 1j*ip_y
 
@@ -152,7 +159,7 @@ class SpectralNetwork:
                             # S-walls?
 
                             # find the values of x at z = ip_z.
-                            ip_xs = find_xs_at_z_0(self.sw_curve.num_eq, ip_z)
+                            ip_xs = find_xs_at_z_0(sw_curve.num_eq, ip_z)
                             ip_x1_c = n_nearest(ip_xs, x1_c, 1)[0]
                             ip_x2_c = n_nearest(ip_xs, x2_c, 1)[0]
                             ip_x1_d = n_nearest(ip_xs, x1_d, 1)[0]
@@ -165,13 +172,12 @@ class SpectralNetwork:
                                                 ip_x1_d, ip_x2_d,
                                                 self.s_walls[i_c],
                                                 self.s_walls[i_d],
-                                                self.config_data.accuracy,
+                                                config_data.accuracy,
                                                 label=a_joint_label)
 
                             if(a_joint is None):
                                 continue
                             else:
-                                #self.joints.append(a_joint)
                                 new_joints.append(a_joint)
                             
                         except NoIntersection:
@@ -179,11 +185,11 @@ class SpectralNetwork:
 
         return new_joints
 
-    def grow(self):
+    def grow(self, sw_curve, sw_diff, config_data):
         rpzs = []
         ppzs = []
 
-        for rp in self.sw_curve.ramification_points:
+        for rp in self.ramification_points:
             if rp.is_puncture is False:
                 rpzs.append(rp.z)
             elif rp.is_puncture is True:
@@ -191,19 +197,20 @@ class SpectralNetwork:
 
         n_finished_s_walls = 0 
         iteration = 0
-        while(iteration < self.config_data.num_of_iterations):
+        while(iteration < config_data.num_of_iterations):
             new_joints = []     # number of new joints found in each iteration
             # first grow seeded S-walls.
             for i in range(n_finished_s_walls, len(self.s_walls)):
                 self.s_walls[i].grow(
                     self.ode, rpzs, ppzs, 
-                    z_range_limits=self.config_data.z_range_limits,
-                    num_of_steps=self.config_data.num_of_steps,
-                    size_of_small_step=self.config_data.size_of_small_step,
-                    size_of_large_step=self.config_data.size_of_large_step,
-                    size_of_neighborhood=self.config_data.size_of_neighborhood,
+                    z_range_limits=config_data.z_range_limits,
+                    num_of_steps=config_data.num_of_steps,
+                    size_of_small_step=config_data.size_of_small_step,
+                    size_of_large_step=config_data.size_of_large_step,
+                    size_of_neighborhood=config_data.size_of_neighborhood,
                 )
-                new_joints += self.get_new_joints(i)
+                new_joints += self.get_new_joints(i, sw_curve, sw_diff,
+                                                  config_data)
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
@@ -214,7 +221,7 @@ class SpectralNetwork:
                 joint_is_new = True
                 # check if this is not in the previous joint list
                 for old_joint in self.joints:
-                    if joint.is_equal_to(old_joint, self.config_data.accuracy):
+                    if joint.is_equal_to(old_joint, config_data.accuracy):
                         joint_is_new = False
                         break
                 if not joint_is_new:
@@ -227,136 +234,6 @@ class SpectralNetwork:
             iteration += 1
 
 
-def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
-    rp = ramification_point
-    local_curve = sw_curve.num_eq.series(x, rp.x, rp.i+1)
-    local_curve = local_curve.series(z, rp.z, 2).removeO()
-    # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
-    # translate z such that rp.z = 0
-    a = local_curve.subs(z, z+rp.z).coeff(z).coeff(x, 0)
-    # translate x such that rp.x = 0
-    b = local_curve.subs(x, x+rp.x).coeff(x**rp.i).coeff(z, 0)
-    local_x = rp.x + (-(a/b)*(z - rp.z))**sympy.Rational(1, rp.i)
-    # substitute x with x(z)
-    local_diff = sw_diff.num_v.subs(x, local_x)
-    # series expansion in z at rp.z
-    local_diff = local_diff.series(z, rp.z, 1).subs(z, z+rp.z)
-    # get the coefficient and the exponent of the leading term
-    (diff_c, diff_e) = local_diff.leadterm(z)
-    if diff_e == 0:
-        # remove the constant term from the local_diff
-        local_diff -= local_diff.subs(z, 0)
-        (diff_c, diff_e) = local_diff.leadterm(z)
-
-    return (complex(diff_c), diff_e)
-
-
-def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point,
-                     config_data,):
-    rp = ramification_point
-    delta = config_data.accuracy
-    dt = config_data.size_of_small_step
-
-    ###
-    # 1. Find the first-order approximations of the starting points 
-    # of S-walls around a given branch point, which is of the form
-    # \Delta z_i = c_i / (\lambda_0)^(rp.i/(rp.i+1))
-    # at a branch point from a ramification point, and
-    # \Delta z_i = c_i / (\lambda_0)^(rp.i) exp(rp.i theta I)
-    # at a branch point from a massless regular puncture
-    ###
-
-    # 1.1 find the coefficient and the exponent of the leading term
-    # of the SW differential at the ramification point.
-    lambda_0, diff_e = get_local_sw_diff(sw_curve, sw_diff, rp)
-
-    # 1.2 find c_i, a phase factor for each S-wall.
-    omega_1 = exp(2*pi*1j/rp.i)
-    omega = [omega_1**k for k in range(rp.i)]
-
-    beta_1 = exp(rp.i*2*pi*1j/(rp.i+1))
-    beta = [beta_1**k for k in range(rp.i+1)]
-
-    cs = []
-    if diff_e == sympy.Rational(1, rp.i):
-        # the branch point is a ramification point
-        # go over pairs of omegas that differ by \omega_1^i
-        for i in range(1, rp.i):
-            new_locs = []
-            # and go over all the omegas
-            for j in range(rp.i): 
-                if j+i < rp.i:
-                    new_loc = 1/(omega[j]-omega[j+i])
-                else:
-                    new_loc = 1/(omega[j]-omega[j+i-rp.i])
-                new_loc = cpow(new_loc, rp.i, rp.i+1)
-                new_locs += [new_loc*beta_i for beta_i in beta]
-            new_locs = remove_duplicate(new_locs, 
-                                        lambda l1, l2: abs(l1 - l2) < delta)
-            cs += [(c*exp(theta*1j*sympy.Rational(rp.i, rp.i+1)) /
-                    cpow(lambda_0, rp.i, rp.i+1)) for c in new_locs]
-
-    elif diff_e == -1 + sympy.Rational(1, rp.i):
-        # the branch point is a massless regular puncture
-        # go over pairs of omegas that differ by \omega_1^i
-        for i in range(1, rp.i):
-            cs.append(exp(rp.i*theta*1j) /
-                      cpow(((omega[0]-omega[i])*lambda_0), rp.i))
-
-    else:
-        logging.error('unknown form of sw_diff at rp ({}, {}): '
-                      'diff_e  = {}'.format(rp.z, rp.x, diff_e))
-        raise GetSWallSeedsError(diff_e)
-        
-    cs = gather(cs, lambda c1, c2: abs(c1 - c2) < delta)
-    logging.debug('list of c = %s, # = %d', cs, len(cs))
-
-    # 2. Now calculate \Delta z_i for each S-wall and 
-    # find the two points on the curve that are projected onto it.  
-    seeds = []
-    for c in cs:
-        cv = c[0]   # value of c
-        cm = c[1]   # multiplicity of c
-        # resize to the size of the small step 
-        Delta_z = cv/abs(cv)*delta
-        z_0 = rp.z + Delta_z
-        xs_at_z_0 = find_xs_at_z_0(sw_curve.num_eq, z_0, rp.x, rp.i)
-        dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
-        for i in range(len(xs_at_z_0)):
-            diffx = sw_diff.num_v.subs(z, z_0) 
-            v_i = complex(diffx.subs(x, xs_at_z_0[i]))
-            for j in range(len(xs_at_z_0)):
-                if i == j:
-                    continue
-                else:
-                    v_j = complex(diffx.subs(x, xs_at_z_0[j])) 
-                    delta_z = exp(1j*theta)/(v_i - v_j)*dt
-                    # flattened index
-                    fij = i*len(xs_at_z_0) + j
-                    dev_phases[fij] = phase((delta_z/Delta_z))
-        min_dev_indices = n_nearest_indices(dev_phases, 0.0, cm)
-        for k in min_dev_indices:
-            i, j = unravel(k, len(xs_at_z_0))
-            seeds.append((z_0, xs_at_z_0[i], xs_at_z_0[j]))
-        
-    return seeds
-
-
-def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy, 
-              spectral_network_type='A', label=None):
-    """
-    return a joint if formed, otherwise return None.
-    """
-    # TODO: implementation of joint rule changes according to the spectral
-    # network type.
-    if(abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
-        return None
-    elif(abs(x2_i - x1_j) < accuracy):
-        return Joint(z, x1_i, x2_j, [parent_i, parent_j], label)
-    elif(abs(x2_j - x1_i) < accuracy):
-        return Joint(z, x1_j, x2_i, [parent_j, parent_i], label)
-
-
 def init_process():
     """
     Initializer of each process that generates a spectral network.
@@ -365,42 +242,68 @@ def init_process():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-def parallel_get_spectral_network(sw_curve, sw_diff, phase, config_data,
-                                  shared_n_started_spectral_networks,
-                                  shared_n_finished_spectral_networks):
+def parallel_get_spectral_network(
+    sw_curve, 
+    sw_diff,
+    phase,
+    ramification_points,
+    config_data,
+    data_save_dir,
+    shared_n_started_spectral_networks,
+    shared_n_finished_spectral_networks
+):
     shared_n_started_spectral_networks.value += 1
+    job_id = shared_n_started_spectral_networks.value
     logging.info('Start generating spectral network #{}: theta = {}.'.format(
-        shared_n_started_spectral_networks.value, phase
+        job_id, phase
     ))
 
-    spectral_network = SpectralNetwork(sw_curve, sw_diff, phase, config_data) 
-    spectral_network.seed()
-    spectral_network.grow()
+    spectral_network = SpectralNetwork(phase, ramification_points, config_data) 
+
+    spectral_network.seed(sw_curve, sw_diff, config_data)
+
+    spectral_network.set_ode(sw_curve, sw_diff, config_data)
+
+    spectral_network.grow(sw_curve, sw_diff, config_data)
 
     shared_n_finished_spectral_networks.value += 1
     logging.info('Finished generating spectral network #{}.'.format(
         shared_n_finished_spectral_networks.value
     ))
 
+    spectral_network_data = spectral_network.get_data()
+
+    # Save spectral network data to a file
+    data_file_name = os.path.join(data_save_dir,
+                                  'data_{}.json'.format(job_id))
+    logging.info('Saving data to {}.'.format(data_file_name))
+    with open(data_file_name, 'wb') as fp:
+        save_spectral_network_data(
+            spectral_network_data, 
+            fp, 
+        )
+
     #return spectral_network
-    return spectral_network.get_data()
+    return spectral_network_data
 
 
 def save_spectral_network_data(data, file_object, **kwargs):
     json_data = {}
     json_data['phase'] = data['phase']
-    json_data['hit_table'] = data['hit_table'].get_json_data()
+    json_data['ramification_points'] = [rp.get_json_data()
+                                        for rp in data['ramification_points']]
     json_data['s_walls'] = [s_wall.get_json_data()
                             for s_wall in data['s_walls']]
     json_data['joints'] = [joint.get_json_data()
                            for joint in data['joints']]
+    json_data['hit_table'] = data['hit_table'].get_json_data()
     json.dump(json_data, file_object, **kwargs)
     
 
 def generate_spectral_network(opts, config_data):
     sw_curve = SWCurve(config_data)
-    sw_curve.find_ramification_points()
     sw_diff = SWDiff(config_data)
+    ramification_points = sw_curve.get_ramification_points()
     spectral_network_data_list = []
     file_list = []
 
@@ -408,7 +311,7 @@ def generate_spectral_network(opts, config_data):
     logging.info('start cpu time: %s', start_time)
 
     logging.debug('\nList of ramification points')
-    for rp in sw_curve.ramification_points:
+    for rp in ramification_points:
         logging.debug('%s', rp)
     logging.debug('\n')
 
@@ -428,11 +331,17 @@ def generate_spectral_network(opts, config_data):
 
     if(opts['phase'] is not None):
         # Generate a single spectral network.
-        spectral_network = SpectralNetwork(sw_curve, sw_diff, opts['phase'], 
-                                           config_data) 
+        spectral_network = SpectralNetwork(
+            phase=opts['phase'], 
+            ramification_points=ramification_points,
+            config_data=config_data
+        ) 
 
-        spectral_network.seed()
-        spectral_network.grow()
+        spectral_network.seed(sw_curve, sw_diff, config_data)
+
+        spectral_network.set_ode(sw_curve, sw_diff, config_data)
+
+        spectral_network.grow(sw_curve, sw_diff, config_data)
 
         spectral_network_data = spectral_network.get_data()
 
@@ -466,7 +375,12 @@ def generate_spectral_network(opts, config_data):
                 pool.apply_async(
                     parallel_get_spectral_network, 
                     args=(
-                        sw_curve, sw_diff, phase, config_data,
+                        sw_curve,
+                        sw_diff,
+                        phase,
+                        ramification_points,
+                        config_data,
+                        data_save_dir,
                         shared_n_started_spectral_networks,
                         shared_n_finished_spectral_networks,
                     )
@@ -480,6 +394,8 @@ def generate_spectral_network(opts, config_data):
                     shared_n_finished_spectral_networks.value,
                     theta_n
                 ))
+
+            file_list += glob.glob(os.path.join(data_save_dir, 'data_*.json'))
 
         except KeyboardInterrupt:
             logging.warning('Caught ^C; terminates processes...')
@@ -506,8 +422,8 @@ def generate_spectral_network(opts, config_data):
     if(opts['show-plot'] is True):
         spectral_network_plot = SpectralNetworkPlot(
             config_data,
-            sw_curve,
-            sw_diff,
+            #sw_curve,
+            #sw_diff,
             #plot_data_points=True,
             #plot_joints=True,
             #plot_bins=True,
@@ -526,9 +442,16 @@ def generate_spectral_network(opts, config_data):
 def load_spectral_network_data(file_object, sw_curve, sw_diff, config_data,
                                **kwargs):
     json_data = json.load(file_object, **kwargs)
-    spectral_network = SpectralNetwork(sw_curve, sw_diff, json_data['phase'],
-                                       config_data,)
-    spectral_network.hit_table.load_json_data(json_data['hit_table'])
+    spectral_network = SpectralNetwork(
+        phase=json_data['phase'],
+        config_data=config_data,
+    )
+
+    for rp_data in json_data['ramification_points']:
+        rp = RamificationPoint()
+        rp.set_json_data(rp_data)
+        spectral_network.ramification_points.append(rp)
+
     for joint_data in json_data['joints']:
         a_joint = Joint()
         a_joint.set_json_data(joint_data)
@@ -539,6 +462,8 @@ def load_spectral_network_data(file_object, sw_curve, sw_diff, config_data,
         an_s_wall.set_json_data(s_wall_data)
         spectral_network.s_walls.append(an_s_wall)
 
+    spectral_network.hit_table.load_json_data(json_data['hit_table'])
+
     # NOTE: Loaded data indicates parents as labels,
     # but they should be changed to the corresponding instances.
 
@@ -546,7 +471,7 @@ def load_spectral_network_data(file_object, sw_curve, sw_diff, config_data,
 
 def load_spectral_network(data_dir, config_data):
     sw_curve = SWCurve(config_data)
-    sw_curve.find_ramification_points()
+    #sw_curve.find_ramification_points()
     sw_diff = SWDiff(config_data)
     spectral_network_data_list = []
 
@@ -561,8 +486,8 @@ def load_spectral_network(data_dir, config_data):
     # Make plots from the loaded data
     spectral_network_plot = SpectralNetworkPlot(
         config_data,
-        sw_curve,
-        sw_diff,
+        #sw_curve,
+        #sw_diff,
     )
     for data in spectral_network_data_list:
         spectral_network_plot.set_data(data)

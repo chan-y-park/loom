@@ -6,8 +6,8 @@ from matplotlib.widgets import Slider
 class SpectralNetworkPlot:
     def __init__(self, 
         config_data,
-        sw_curve,
-        sw_diff,
+        #sw_curve,
+        #sw_diff,
         plot_bins=False, 
         plot_joints=False,
         plot_data_points=False,
@@ -15,7 +15,7 @@ class SpectralNetworkPlot:
     ):
         # Give an identifier to the figure we are goint to produce
         self.config_data = config_data
-        self.sw_curve = sw_curve
+        #self.sw_curve = sw_curve
         self.plot_bins = plot_bins
         self.plot_joints = plot_joints
         self.plot_data_points = plot_data_points
@@ -30,8 +30,9 @@ class SpectralNetworkPlot:
         self,
         spectral_network_data,
     ):
-        s_walls = spectral_network_data['s_walls']
         theta = spectral_network_data['phase']
+        ramification_points = spectral_network_data['ramification_points']
+        s_walls = spectral_network_data['s_walls']
 
         x_min, x_max, y_min, y_max = self.config_data.z_range_limits
         rect = [0.125, 0.15, .8, 0.75]
@@ -57,7 +58,7 @@ class SpectralNetworkPlot:
         # End of drawing the bin lattice.
 
         # Plot branch points
-        for rp in self.sw_curve.ramification_points:
+        for rp in ramification_points:
             bpx = rp.z.real 
             bpy = rp.z.imag 
             axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
