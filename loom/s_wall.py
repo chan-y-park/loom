@@ -4,7 +4,7 @@ import pdb
 from misc import ctor2, r2toc
 
 class Joint:
-    def __init__(self, z, x1, x2, parents=None, label=None,):
+    def __init__(self, z=None, x1=None, x2=None, parents=None, label=None,):
         self.z = z
         self.x1 = x1
         self.x2 = x2
@@ -15,13 +15,21 @@ class Joint:
         return self.label == other.label
 
     def get_json_data(self):
-        data = {
+        json_data = {
             'z': ctor2(self.z),
             'x1': ctor2(self.x1),
             'x2': ctor2(self.x2),
             'parents': [parent.label for parent in self.parents],
             'label': self.label,
         }
+        return json_data
+
+    def set_json_data(self, json_data):
+        self.z = r2toc(json_data['z'])
+        self.x1 = r2toc(json_data['x1'])
+        self.x2 = r2toc(json_data['x2'])
+        self.parents = [parent_label for parent_label in json_data['parents']]
+        self.label = json_data['label']
 
     def is_equal_to(self, other, accuracy):
         if(abs(self.z - other.z) < accuracy and
@@ -40,13 +48,19 @@ class SWall(object):
         self.label = label
 
     def get_json_data(self):
-        data = {
+        json_data = {
             'data': [[ctor2(z), ctor2(x1), ctor2(x2)] 
                      for z, x1, x2 in self.data],
             'parents': [parent.label for parent in self.parents],
             'label': self.label,
         }
-        return data
+        return json_data
+
+    def set_json_data(self, json_data):
+        self.data = [[r2toc(z), r2toc(x1), r2toc(x2)] 
+                      for z, x1, x2 in json_data['data']]
+        self.parents = [parent_label for parent_label in json_data['parents']]
+        self.label = json_data['label']
 
     def get_zs(self, ti=0, tf=None):
         """

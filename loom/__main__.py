@@ -15,7 +15,7 @@ import time
 
 from config import ConfigData 
 from gui import open_gui
-from spectral_network import generate_spectral_network
+from spectral_network import load_spectral_network, generate_spectral_network
 
 shortopts = 'c:gl:p:'
 longopts = [
@@ -23,8 +23,12 @@ longopts = [
     'logging-level',
     'phase',
     'show-plot',
-    'load-data',
+    'load-data=',
 ]
+
+CONFIG_FILE_DIR = 'config_file'
+DATA_FILE_DIR = 'data_file'
+
 
 def run_with_optlist(optlist):
 
@@ -92,13 +96,24 @@ def run_with_optlist(optlist):
         logging.basicConfig(level=logging_level, format=logging_format, 
                             stream=sys.stdout)
 
+        config_data = ConfigData(opts)
         # Entry point branching
         if opts['gui-mode'] is True:
             open_gui(opts, config_data)
         elif (len(opts['load-data']) > 0):
-            load_spectral_network(opts, config_data)
+            data_dir = opts['load-data']
+            config_data.read_config_from_file(
+                os.path.join(data_dir, 'config.ini')
+            )
+            load_spectral_network(data_dir, config_data)
         else:
-            config_data = ConfigData(opts)
+            if opts['config-file'] is None:
+                config_file = 'default.ini'
+            else:
+                config_file = opts['config-file']
+            config_data.read_config_from_file(
+                os.path.join(CONFIG_FILE_DIR, config_file)
+            )
             generate_spectral_network(opts, config_data)
 
 # Set options from sys.argv when running on the command line,

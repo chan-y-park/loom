@@ -116,6 +116,10 @@ class HitTable:
             data[str_key] = value
         return data
 
+    def load_json_data(self, data):
+        for str_key, value in data.iteritems():
+            self._hit_table[eval(str_key)] = value
+
     def get_bin_size(self):
         return self._bin_size
 

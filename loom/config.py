@@ -6,9 +6,6 @@ import pdb
 
 from math import pi
 
-CONFIG_FILE_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                               'config_file')
-
 
 class ConfigData:
     def __init__(self, opts):
@@ -16,12 +13,14 @@ class ConfigData:
             self.phase_range = None
 
         #self.set_logger(opts['logging-level'])
-        if (opts['gui-mode'] is True):
-            pass
-        else:
-            self.config_parser = self.read_config_from_file(
-                opts['config-file']
-            )
+        #if (opts['gui-mode'] is True):
+        #    pass
+        #elif (len(opts['load-data']) > 0): 
+        #    pass
+        #else:
+        #    self.config_parser = self.read_config_from_file(
+        #        opts['config-file']
+        #    )
         
 #    def set_logger(self, level):
 #        if len(level) == 0:
@@ -41,12 +40,13 @@ class ConfigData:
 #                            stream=sys.stdout)
 
     def read_config_from_file(self, config_file):
-        if config_file is None:
-            config_file = 'default.ini'
-        config_file_full_path = os.path.join(CONFIG_FILE_DIR, config_file)
-        logging.debug('config file full path: %s', config_file_full_path)
+        #if config_file is None:
+        #    config_file = 'default.ini'
+        #config_file_full_path = os.path.join(CONFIG_FILE_DIR, config_file)
+        #logging.debug('config file full path: %s', config_file_full_path)
+        logging.info('config file: %s', config_file)
         config_parser = ConfigParser.SafeConfigParser()
-        config_parser.read(config_file_full_path)
+        config_parser.read(config_file)
 
         # directories
         self.root_dir = config_parser.get('directory', 'root_dir')
@@ -107,4 +107,4 @@ class ConfigData:
             'n_processes'
         )
 
-        return config_parser
+        self.config_parser = config_parser

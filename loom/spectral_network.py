@@ -7,6 +7,8 @@ import time
 import os
 import time
 import zipfile, zlib
+import glob
+import json
 import pdb
 
 from cmath import exp, pi, phase
@@ -21,7 +23,7 @@ from misc import (cpow, gather, remove_duplicate, n_nearest, n_nearest_indices,
 from intersection import (HitTable, NoIntersection,
                           find_intersection_of_segments)
 from plotting import SpectralNetworkPlot, plot_segments
-from data_io import save_spectral_network_data, load_spectral_network_data
+#from data_io import save_spectral_network_data, load_spectral_network_data
 
 x, z = sympy.symbols('x z')
 
@@ -37,8 +39,9 @@ class SpectralNetwork:
         self.s_walls = []
         self.joints = []
 
-        #self.ode = set_ode(self)
         self.set_ode()
+
+    def seed(self):
         # Initialize S-walls at ramification points
         for rp in self.sw_curve.ramification_points:
             s_wall_seeds = get_s_wall_seeds(self.sw_curve, self.sw_diff,
@@ -371,6 +374,7 @@ def parallel_get_spectral_network(sw_curve, sw_diff, phase, config_data,
     ))
 
     spectral_network = SpectralNetwork(sw_curve, sw_diff, phase, config_data) 
+    spectral_network.seed()
     spectral_network.grow()
 
     shared_n_finished_spectral_networks.value += 1
@@ -380,6 +384,18 @@ def parallel_get_spectral_network(sw_curve, sw_diff, phase, config_data,
 
     #return spectral_network
     return spectral_network.get_data()
+
+
+def save_spectral_network_data(data, file_object, **kwargs):
+    json_data = {}
+    json_data['phase'] = data['phase']
+    json_data['hit_table'] = data['hit_table'].get_json_data()
+    json_data['s_walls'] = [s_wall.get_json_data()
+                            for s_wall in data['s_walls']]
+    json_data['joints'] = [joint.get_json_data()
+                           for joint in data['joints']]
+    json.dump(json_data, file_object, **kwargs)
+    
 
 def generate_spectral_network(opts, config_data):
     sw_curve = SWCurve(config_data)
@@ -415,6 +431,7 @@ def generate_spectral_network(opts, config_data):
         spectral_network = SpectralNetwork(sw_curve, sw_diff, opts['phase'], 
                                            config_data) 
 
+        spectral_network.seed()
         spectral_network.grow()
 
         spectral_network_data = spectral_network.get_data()
@@ -505,4 +522,49 @@ def generate_spectral_network(opts, config_data):
 
         spectral_network_plot.show()
 
+
+def load_spectral_network_data(file_object, sw_curve, sw_diff, config_data,
+                               **kwargs):
+    json_data = json.load(file_object, **kwargs)
+    spectral_network = SpectralNetwork(sw_curve, sw_diff, json_data['phase'],
+                                       config_data,)
+    spectral_network.hit_table.load_json_data(json_data['hit_table'])
+    for joint_data in json_data['joints']:
+        a_joint = Joint()
+        a_joint.set_json_data(joint_data)
+        spectral_network.joints.append(a_joint)
+
+    for s_wall_data in json_data['s_walls']:
+        an_s_wall = SWall()
+        an_s_wall.set_json_data(s_wall_data)
+        spectral_network.s_walls.append(an_s_wall)
+
+    # NOTE: Loaded data indicates parents as labels,
+    # but they should be changed to the corresponding instances.
+
+    return spectral_network
+
+def load_spectral_network(data_dir, config_data):
+    sw_curve = SWCurve(config_data)
+    sw_curve.find_ramification_points()
+    sw_diff = SWDiff(config_data)
+    spectral_network_data_list = []
+
+    data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
+    for data_file in data_file_list:
+        with open(data_file, 'r') as fp:
+            spectral_network = load_spectral_network_data(
+                fp, sw_curve, sw_diff, config_data
+            )
+            spectral_network_data_list.append(spectral_network.get_data())
+
+    # Make plots from the loaded data
+    spectral_network_plot = SpectralNetworkPlot(
+        config_data,
+        sw_curve,
+        sw_diff,
+    )
+    for data in spectral_network_data_list:
+        spectral_network_plot.set_data(data)
+    spectral_network_plot.show()
 
