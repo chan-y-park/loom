@@ -54,6 +54,7 @@ class SWall(object):
         self.parents = parents
         self.label = label
 
+
     def get_json_data(self):
         json_data = {
             'data': [[ctor2(z), ctor2(x1), ctor2(x2)] 
@@ -63,11 +64,13 @@ class SWall(object):
         }
         return json_data
 
+
     def set_json_data(self, json_data):
         self.data = [[r2toc(z), r2toc(x1), r2toc(x2)] 
                       for z, x1, x2 in json_data['data']]
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
+
 
     def get_zs(self, ti=0, tf=None):
         """
@@ -81,6 +84,7 @@ class SWall(object):
             zs.append(z)
         return zs
 
+
     def get_zxzys(self, ti=0, tf=None):
         """
         return a list of (z.real, z.imag)
@@ -93,16 +97,6 @@ class SWall(object):
             zxzys.append((z.real, z.imag))
         return zxzys
 
-#    def out_of_range(self, z_range_limits):
-#        z_f = self.data[-1][0]
-#        z_real_min, z_real_max, z_imag_min, z_imag_max = z_range_limits
-#        if (z_f.real < z_real_min or
-#            z_f.real > z_real_max or
-#            z_f.imag < z_imag_min or
-#            z_f.imag > z_imag_max):
-#            return True
-#        else:
-#            return False
 
     def grow(
         self,
@@ -234,17 +228,21 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point, config,):
 
 
 def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy, 
-              spectral_network_type='A', label=None):
+              root_system=None, label=None):
     """
     return a joint if formed, otherwise return None.
     """
-    # TODO: implementation of joint rule changes according to the spectral
-    # network type.
-    if(abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
+    if (abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
         return None
-    elif(abs(x2_i - x1_j) < accuracy):
-        return Joint(z, x1_i, x2_j, [parent_i.label, parent_j.label], label)
-    elif(abs(x2_j - x1_i) < accuracy):
-        return Joint(z, x1_j, x2_i, [parent_j.label, parent_i.label], label)
+    elif (abs(x2_i - x1_j) < accuracy):
+        if (root_system[0] == 'D' and abs(x1_i-(-x2_j)) < accuracy):
+            return None
+        else:
+            return Joint(z, x1_i, x2_j, [parent_i, parent_j], label)
+    elif (abs(x2_j - x1_i) < accuracy):
+        if (root_system[0] == 'D' and abs(x1_j-(-x2_i)) < accuracy):
+            return None
+        else:
+            return Joint(z, x1_j, x2_i, [parent_j, parent_i], label)
 
 

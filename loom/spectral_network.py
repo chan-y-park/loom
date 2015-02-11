@@ -34,7 +34,7 @@ class SpectralNetwork:
         #sw_diff,
         phase=None,
         ramification_points=[],
-        config=None
+        config=None,
     ):
         self.phase = phase
         self.ramification_points = ramification_points
@@ -99,8 +99,12 @@ class SpectralNetwork:
         S-walls, which in principle can happen but is unlikely in a numerical
         setup.
         """
-        i_c = new_s_wall_index
         new_joints = []
+        if (config['root_system'] in ['A2',]):
+            # There is no joint for the given root system.
+            return new_joints
+
+        i_c = new_s_wall_index
         new_curve = self.s_walls[i_c].get_zxzys()
         new_bin_keys = self.hit_table.fill(i_c, new_curve)
 
@@ -161,13 +165,14 @@ class SpectralNetwork:
                             
                             a_joint_label = ('joint ' +
                                              '#{}'.format(len(self.joints)))
-                            a_joint = get_joint(ip_z,
-                                                ip_x1_c, ip_x2_c,
-                                                ip_x1_d, ip_x2_d,
-                                                self.s_walls[i_c],
-                                                self.s_walls[i_d],
-                                                config['accuracy'],
-                                                label=a_joint_label)
+                            a_joint = get_joint(
+                                ip_z, ip_x1_c, ip_x2_c, ip_x1_d, ip_x2_d,
+                                self.s_walls[i_c].label, 
+                                self.s_walls[i_d].label,
+                                config['accuracy'],
+                                root_system=config['root_system'],
+                                label=a_joint_label,
+                            )
 
                             if(a_joint is None):
                                 continue
@@ -192,6 +197,10 @@ class SpectralNetwork:
         n_finished_s_walls = 0 
         iteration = 0
         while(iteration < config['num_of_iterations']):
+            """
+            Iterate until there is no new joint.
+            Each S-wall is grown only once.
+            """
             new_joints = []     # number of new joints found in each iteration
             # first grow seeded S-walls.
             for i in range(n_finished_s_walls, len(self.s_walls)):
@@ -297,10 +306,9 @@ def save_spectral_network_data(data, file_object, **kwargs):
 def generate_spectral_network(opts, config):
     sw_curve = SWCurve(config)
     sw_diff = SWDiff(config)
-    ramification_points = sw_curve.get_ramification_points()
     spectral_network_data_list = []
     file_list = []
-
+    ramification_points = sw_curve.get_ramification_points()
     start_time = time.time()
     logging.info('start cpu time: %s', start_time)
 
