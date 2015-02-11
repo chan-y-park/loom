@@ -34,7 +34,11 @@ class SpectralNetworkPlot:
         ramification_points = spectral_network_data['ramification_points']
         s_walls = spectral_network_data['s_walls']
 
-        x_min, x_max, y_min, y_max = self.config_data.z_range_limits
+        if self.config_data.z_range_limits is not None:
+            z_range_limits = self.config_data.z_range_limits
+        else:
+            z_range_limits = [-5, 5, -5, 5] 
+        x_min, x_max, y_min, y_max = z_range_limits
         rect = [0.125, 0.15, .8, 0.75]
 
         axes = self.figure.add_axes(rect,

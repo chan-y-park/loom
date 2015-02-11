@@ -133,11 +133,12 @@ class SWall(object):
             z_i, x1_i, x2_i = ode.integrate(ode.t + dt)
             self.data.append([z_i, x1_i, x2_i])
 
-            if (z_i.real < z_real_min or 
-                z_i.real > z_real_max or
-                z_i.imag < z_imag_min or
-                z_i.imag > z_imag_max):
-                break
+            if z_range_limits is not None:
+                if (z_i.real < z_real_min or 
+                    z_i.real > z_real_max or
+                    z_i.imag < z_imag_min or
+                    z_i.imag > z_imag_max):
+                    break
 
             steps += 1
 

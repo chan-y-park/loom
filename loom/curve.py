@@ -1,7 +1,9 @@
-import pdb
 import sympy
 import numpy
 import logging
+import pdb
+
+from math import log10
 
 from misc import ctor2, r2toc, get_root_multiplicity
 
@@ -94,7 +96,6 @@ class SWCurve:
         logging.info('\nSeiberg-Witten curve: %s = 0\n',
                      sympy.latex(self.num_eq))
         self.accuracy = config_data.accuracy
-        pdb.set_trace()
         #self.ramification_points = []
         #self.puncture_points = []
 
@@ -124,18 +125,18 @@ class SWCurve:
 
 def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
     rp = ramification_point
-    local_curve = sw_curve.num_eq.series(x, rp.x, rp.i+1)
+    local_curve = sw_curve.num_eq.series(x, rp.x, rp.i+1).removeO()
     local_curve = local_curve.series(z, rp.z, 2).removeO()
     # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
     # translate z such that rp.z = 0
-    a = local_curve.subs(z, z+rp.z).coeff(z).coeff(x, 0)
+    a = local_curve.subs(z, z+rp.z).n().coeff(z).coeff(x, 0)
     # translate x such that rp.x = 0
-    b = local_curve.subs(x, x+rp.x).coeff(x**rp.i).coeff(z, 0)
+    b = local_curve.subs(x, x+rp.x).n().coeff(x**rp.i).coeff(z, 0)
     local_x = rp.x + (-(a/b)*(z - rp.z))**sympy.Rational(1, rp.i)
     # substitute x with x(z)
     local_diff = sw_diff.num_v.subs(x, local_x)
     # series expansion in z at rp.z
-    local_diff = local_diff.series(z, rp.z, 1).subs(z, z+rp.z)
+    local_diff = local_diff.series(z, rp.z, 2).removeO().subs(z, z+rp.z)
     # get the coefficient and the exponent of the leading term
     (diff_c, diff_e) = local_diff.leadterm(z)
     if diff_e == 0:
@@ -143,7 +144,7 @@ def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
         local_diff -= local_diff.subs(z, 0)
         (diff_c, diff_e) = local_diff.leadterm(z)
 
-    return (complex(diff_c), diff_e)
+    return (complex(diff_c.n()), diff_e)
 
 
 
