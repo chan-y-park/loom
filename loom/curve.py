@@ -54,7 +54,15 @@ class SWDiff:
             \lambda = v(x, z) dz
     """
     def __init__(self, config_data):
-        self.sym_v = sympy.sympify(config_data.sw_diff_v_string)
+        SL2C = config_data.SL2C_params
+        if SL2C is None:
+            SL2C = [[1, 0], [0, 1]]
+        [[C11, C12], [C21, C22]] = SL2C
+        Cz = (C11*z+C12)/(C21*z+C22)
+        dCz = Cz.diff(z)
+        v = sympy.sympify(config_data.sw_diff_v_string)
+        Cv = v.subs(z, Cz) * dCz
+        self.sym_v = sympy.simplify(Cv)
         self.parameters = config_data.sw_parameters 
         self.num_v = self.sym_v.subs(self.parameters)
         logging.info('\nSeiberg-Witten differential: %s dz\n',
@@ -74,12 +82,19 @@ class SWCurve:
         find_ramification_points
     """
     def __init__(self, config_data):
-        self.sym_eq = sympy.sympify(config_data.sw_curve_eq_string)
+        SL2C = config_data.SL2C_params
+        if SL2C is None:
+            SL2C = [[1, 0], [0, 1]]
+        [[C11, C12], [C21, C22]] = SL2C
+        Cz = (C11*z+C12)/(C21*z+C22)
+        curve = sympy.sympify(config_data.sw_curve_eq_string)
+        self.sym_eq = sympy.simplify(curve.subs(z, Cz))
         self.parameters = config_data.sw_parameters 
         self.num_eq = self.sym_eq.subs(self.parameters)
         logging.info('\nSeiberg-Witten curve: %s = 0\n',
                      sympy.latex(self.num_eq))
         self.accuracy = config_data.accuracy
+        pdb.set_trace()
         #self.ramification_points = []
         #self.puncture_points = []
 

@@ -24,6 +24,7 @@ longopts = [
     'phase',
     'show-plot',
     'load-data=',
+    'save-data=',
 ]
 
 CONFIG_FILE_DIR = 'config_file'
@@ -99,36 +100,37 @@ def run_with_optlist(optlist):
         config_data = ConfigData(opts)
         # Entry point branching
         if opts['gui-mode'] is True:
-            open_gui(opts, config_data)
+            return open_gui(opts, config_data)
         elif (len(opts['load-data']) > 0):
             data_dir = opts['load-data']
             config_data.read_config_from_file(
                 os.path.join(data_dir, 'config.ini')
             )
-            load_spectral_network(data_dir, config_data)
+            return load_spectral_network(data_dir, config_data)
         else:
             if opts['config-file'] is None:
                 config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
             else:
                 config_file = opts['config-file']
             config_data.read_config_from_file(config_file)
-            generate_spectral_network(opts, config_data)
+            return generate_spectral_network(opts, config_data)
 
 # Set options from sys.argv when running on the command line,
 # then start running the main code.
 def run_with_sys_argv(argv):    
     try:
         optlist, args = getopt.getopt(argv, shortopts, longopts,)
-        run_with_optlist(optlist)
+        return run_with_optlist(optlist)
 
     except getopt.GetoptError:
         print 'Unknown options.'
 
 # Set options from string 'optstr' when running on the interpreter, 
 # then start running the main code.
-def run_with_optstr(optstr):
-    run_with_sys_argv(optstr.split())
+def run(optstr=''):
+    return run_with_sys_argv(optstr.split())
 
 # End of definitions
 
-run_with_sys_argv(sys.argv[1:])
+if __name__ == '__main__':
+    run_with_sys_argv(sys.argv[1:])

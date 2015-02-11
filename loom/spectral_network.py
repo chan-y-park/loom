@@ -343,14 +343,14 @@ def generate_spectral_network(opts, config_data):
 
         spectral_network.grow(sw_curve, sw_diff, config_data)
 
-        spectral_network_data = spectral_network.get_data()
+        spectral_network_data_list.append(spectral_network.get_data())
 
         # Save spectral network data to a file
         data_file_name = os.path.join(data_save_dir, 'data_0.json')
         logging.info('Saving data to {}.'.format(data_file_name))
         with open(data_file_name, 'wb') as fp:
             save_spectral_network_data(
-                spectral_network_data, 
+                spectral_network_data_list[0], 
                 fp, 
             )
             file_list.append(data_file_name)
@@ -366,9 +366,18 @@ def generate_spectral_network(opts, config_data):
         shared_n_finished_spectral_networks = manager.Value('i', 0)
         if(config_data.n_processes == 0):
             n_processes = multiprocessing.cpu_count()
+        elif(config_data.n_processes < 0):
+            n_processes = multiprocessing.cpu_count()
+            if(n_processes > config_data.n_processes):
+                n_processes -= config_data.n_processes
+            else:
+                logging.warning('The number of CPUs is smaller than '
+                                '{}.'.format(-config_data.n_processes))
+                logging.warning('Set n_processes to 1.')
+                n_processes = 1
         else:
             n_processes = config_data.n_processes
-        logging.info('Number of processes: {}'.format(n_processes))
+        logging.info('Number of processes in the pool: {}'.format(n_processes))
         pool =  multiprocessing.Pool(n_processes, init_process)
         try:
             results = [
@@ -433,10 +442,10 @@ def generate_spectral_network(opts, config_data):
         if (len(spectral_network_data_list) > 0):
             for data in spectral_network_data_list:
                 spectral_network_plot.set_data(data)
-        else:
-            spectral_network_plot.set_data(spectral_network_data)
 
         spectral_network_plot.show()
+
+    return spectral_network_data_list
 
 
 def load_spectral_network_data(file_object, sw_curve, sw_diff, config_data,
@@ -492,4 +501,6 @@ def load_spectral_network(data_dir, config_data):
     for data in spectral_network_data_list:
         spectral_network_plot.set_data(data)
     spectral_network_plot.show()
+
+    return spectral_network_data_list
 
