@@ -13,7 +13,7 @@ import os
 import getopt
 import time
 
-from config import ConfigData 
+from config import LoomConfig
 from gui import open_gui
 from spectral_network import load_spectral_network, generate_spectral_network
 
@@ -47,16 +47,17 @@ def run_with_optlist(optlist):
         print("""usage: python -m loom [OPTION]
 
     -c CFG_FILE_NAME:
-        read CFG_FILE_NAME to set up the configuration.
+        Read CFG_FILE_NAME to set up the configuration.
 
     -g, --gui-mode:
-        run the graphical user interface.
+        Run the graphical user interface.
 
     -l LEVEL, --logging-level=LEVEL:
-        set logging level to LEVEL. 'warning' is default.
+        Set logging level to LEVEL. 'warning' is default.
 
     -p, --phase THETA:
-        generate a spectral network at the phase of THETA.
+        Generate a spectral network at the phase of THETA.
+        Overrides 'phase_range' of the configuration file. 
 
     --load-data DATA_FILE:
         load data from a file.
@@ -97,23 +98,21 @@ def run_with_optlist(optlist):
         logging.basicConfig(level=logging_level, format=logging_format, 
                             stream=sys.stdout)
 
-        config_data = ConfigData(opts)
+        config = LoomConfig()
         # Entry point branching
         if opts['gui-mode'] is True:
-            return open_gui(opts, config_data)
+            return open_gui(opts, config)
         elif (len(opts['load-data']) > 0):
             data_dir = opts['load-data']
-            config_data.read_config_from_file(
-                os.path.join(data_dir, 'config.ini')
-            )
-            return load_spectral_network(data_dir, config_data)
+            config.read(os.path.join(data_dir, 'config.ini'))
+            return load_spectral_network(data_dir, config)
         else:
             if opts['config-file'] is None:
                 config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
             else:
                 config_file = opts['config-file']
-            config_data.read_config_from_file(config_file)
-            return generate_spectral_network(opts, config_data)
+            config.read(config_file)
+            return generate_spectral_network(opts, config)
 
 # Set options from sys.argv when running on the command line,
 # then start running the main code.

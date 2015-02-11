@@ -143,11 +143,10 @@ class SWall(object):
             steps += 1
 
 
-def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point,
-                     config_data,):
+def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point, config,):
     rp = ramification_point
-    delta = config_data.accuracy
-    dt = config_data.size_of_small_step
+    delta = config['accuracy']
+    dt = config['size_of_small_step']
 
     ###
     # 1. Find the first-order approximations of the starting points 

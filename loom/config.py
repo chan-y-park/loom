@@ -6,79 +6,68 @@ import pdb
 
 from math import pi
 
+class LoomConfigParser(ConfigParser.SafeConfigParser):
+    """
+    A wrapper of SafeConfigParser.
+    """
 
-class ConfigData:
-    def __init__(self, opts):
-        if (opts['phase'] is not None):
-            self.phase_range = None
-        self.SL2C_params = None
+    def get(self, section, option):
+        """
+        Returns a value of an option as a Python expression,
+        whereas ConfigParser.get() returns a value as a string.
+        """
+        value = ConfigParser.SafeConfigParser.get(self, section, option)
+        return eval(value)
 
-    def read_config_from_file(self, config_file):
+    def getstr(self, section, option):
+        """
+        Returns a value as a string.
+        """
+        return ConfigParser.SafeConfigParser.get(self, section, option)
+
+
+class LoomConfig:
+    """
+    A container class of the configuration data.
+    Saves the configuration data as a Python dictionary.
+    """
+    def __init__(self):
+        self.data = {}
+        self.data['sw_parameters'] = {}
+        self.parser = None 
+
+
+    def __setitem__(self, option, value):
+        self.data[option] = value
+
+
+    def __getitem__(self, option):
+        try:
+            value = self.data[option]
+        except KeyError as e:
+            logging.warning('Option {} not specified; use None.'.format(e))
+            value = None
+        return value
+
+
+    def read(self, config_file):
+        """
+        Read an .ini file and load the configuration data.
+        """
         logging.info('config file: %s', config_file)
-        config_parser = ConfigParser.SafeConfigParser()
+        config_parser = LoomConfigParser()
         config_parser.read(config_file)
 
-        # directories
-        self.root_dir = config_parser.get('directory', 'root_dir')
-        self.config_dir = config_parser.get('directory', 'config_dir')
-        self.data_dir = config_parser.get('directory', 'data_dir')
+        for section in config_parser.sections():
+            for option in config_parser.options(section):
+                if (section == 'directories'
+                    or section == 'analytic expressions'):
+                    self[option] = config_parser.getstr(section, option)
+                elif section == 'Seiberg-Witten parameters':
+                    self['sw_parameters'][option] = config_parser.get(
+                        section, option
+                    )
+                else:
+                    self[option] = config_parser.get(section, option)
 
-        # analytic expressions
-        self.sw_curve_eq_string = config_parser.get('analytic expressions',
-                                                    'sw_curve')
-        self.sw_diff_v_string = config_parser.get('analytic expressions',
-                                                  'sw_diff_v')
-        # construct a dict of curve parameters
-        self.sw_parameters = {}
-        for param in config_parser.options('Seiberg-Witten parameters'):
-            self.sw_parameters[param] = eval(config_parser.get(
-                'Seiberg-Witten parameters', param
-            ))
-        
-        # numerical parameters
-        self.SL2C_params = eval(config_parser.get(
-            'numerical parameters',
-            'SL2C_params'
-        ))
-        self.phase_range = eval(config_parser.get(
-            'numerical parameters',
-            'phase_range'
-        ))
-        self.z_range_limits = eval(config_parser.get(
-            'numerical parameters',
-            'z_range_limits'
-        ))
-        self.num_of_steps = config_parser.getint(
-            'numerical parameters',
-            'num_of_steps'
-        )
-        self.num_of_iterations = config_parser.getint(
-            'numerical parameters',
-            'num_of_iterations'
-        )
-        self.size_of_small_step = eval(config_parser.get(
-            'numerical parameters',
-            'size_of_small_step'
-        ))
-        self.size_of_large_step = eval(config_parser.get(
-            'numerical parameters',
-            'size_of_large_step'
-        ))
-        self.size_of_neighborhood = eval(config_parser.get(
-            'numerical parameters',
-            'size_of_neighborhood'
-        ))
-        self.size_of_bin = eval(config_parser.get(
-            'numerical parameters',
-            'size_of_bin'
-        ))
-        self.accuracy = eval(config_parser.get(
-            'numerical parameters',
-            'accuracy'
-        ))
-        self.n_processes = config_parser.getint(
-            'numerical parameters',
-            'n_processes'
-        )
-
-        self.config_parser = config_parser
+        self.parser = config_parser

@@ -5,17 +5,14 @@ from matplotlib.widgets import Slider
 
 class SpectralNetworkPlot:
     def __init__(self, 
-        config_data,
-        #sw_curve,
-        #sw_diff,
+        config,
         plot_bins=False, 
         plot_joints=False,
         plot_data_points=False,
         plot_segments=False
     ):
         # Give an identifier to the figure we are goint to produce
-        self.config_data = config_data
-        #self.sw_curve = sw_curve
+        self.config = config
         self.plot_bins = plot_bins
         self.plot_joints = plot_joints
         self.plot_data_points = plot_data_points
@@ -34,9 +31,8 @@ class SpectralNetworkPlot:
         ramification_points = spectral_network_data['ramification_points']
         s_walls = spectral_network_data['s_walls']
 
-        if self.config_data.z_range_limits is not None:
-            z_range_limits = self.config_data.z_range_limits
-        else:
+        z_range_limits = self.config['z_range_limits']
+        if z_range_limits is None:
             z_range_limits = [-5, 5, -5, 5] 
         x_min, x_max, y_min, y_max = z_range_limits
         rect = [0.125, 0.15, .8, 0.75]
@@ -49,7 +45,7 @@ class SpectralNetworkPlot:
                                    )
         # Draw a lattice of bins for visualization.
         if(self.plot_bins is True):
-            bin_size = config_data.size_of_bin 
+            bin_size = config['size_of_bin']
             xv = x_min
             while xv < x_max:
                 xv += bin_size
