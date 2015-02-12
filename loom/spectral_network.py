@@ -308,7 +308,7 @@ def generate_spectral_network(opts, config):
     sw_diff = SWDiff(config)
     spectral_network_data_list = []
     file_list = []
-    ramification_points = sw_curve.get_ramification_points()
+    ramification_points = sw_curve.get_ramification_points(config)
     start_time = time.time()
     logging.info('start cpu time: %s', start_time)
 

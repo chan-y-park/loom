@@ -5,6 +5,7 @@ import logging
 import pdb
 
 from math import pi
+from sympy import oo
 
 class LoomConfigParser(ConfigParser.SafeConfigParser):
     """

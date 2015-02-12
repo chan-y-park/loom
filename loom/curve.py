@@ -5,7 +5,7 @@ import pdb
 
 from math import log10
 
-from misc import ctor2, r2toc, get_root_multiplicity
+from misc import ctor2, r2toc, get_root_multiplicity, PSL2C
 
 x, z = sympy.symbols('x z')
 
@@ -56,13 +56,8 @@ class SWDiff:
             \lambda = v(x, z) dz
     """
     def __init__(self, config):
-        SL2C = config['sl2c_params']
-        if SL2C is None:
-            SL2C = [[1, 0], [0, 1]]
-        [[C11, C12], [C21, C22]] = SL2C
-
-        # SL2C-transformed z & dz
-        Cz = (C11*z+C12)/(C21*z+C22)
+        # PSL2C-transformed z & dz
+        Cz = PSL2C(config['mt_params'], z) 
         dCz = Cz.diff(z)
 
         sw_diff_v = sympy.sympify(config['sw_diff_v'])
@@ -87,13 +82,8 @@ class SWCurve:
         find_ramification_points
     """
     def __init__(self, config):
-        SL2C = config['sl2c_params']
-        if SL2C is None:
-            SL2C = [[1, 0], [0, 1]]
-        [[C11, C12], [C21, C22]] = SL2C
-        
-        #SL2C transformed z
-        Cz = (C11*z+C12)/(C21*z+C22)
+        #PSL2C transformed z
+        Cz = PSL2C(config['mt_params'], z) 
 
         sw_curve = sympy.sympify(config['sw_curve'])
         self.sym_eq = sympy.simplify(sw_curve.subs(z, Cz))
@@ -103,14 +93,17 @@ class SWCurve:
                      sympy.latex(self.num_eq))
         self.accuracy = config['accuracy']
 
-    def get_ramification_points(self):
+    def get_ramification_points(self, config):
         ramification_points = []
+        punctures = [PSL2C(config['mt_params'], p, inverse=True)
+                     for p in config['punctures']] 
         f = self.num_eq
         # NOTE: solve_poly_system vs. solve
         #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
         sols = sympy.solve([f, f.diff(x)], z, x)
-        pdb.set_trace()
         for z_0, x_0 in sols:
+            if z_0 in punctures:
+                continue
             fx_at_z_0 = f.subs(z, z_0)
             fx_at_z_0_coeffs = map(complex, 
                                   sympy.Poly(fx_at_z_0, x).all_coeffs())

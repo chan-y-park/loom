@@ -4,6 +4,7 @@ import logging
 import pdb
 
 from fractions import Fraction
+from sympy import limit, oo
 
 
 class LocalDiffError(Exception):
@@ -145,6 +146,30 @@ def find_xs_at_z_0(f_z_x, z_0, x_0=None, num_x=1):
     else:
         return sorted(xs_at_z_0,
                       lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
+
+def PSL2C(C, z, inverse=False):
+    if C is None:
+        C = [[1, 0], [0, 1]]
+    if inverse is True:
+        a = C[1][1]
+        b = -C[0][1]
+        c = -C[1][0]
+        d = C[0][0]
+    else:
+        a = C[0][0]
+        b = C[0][1]
+        c = C[1][0]
+        d = C[1][1]
+
+    
+    u = sympy.symbols('u')
+    Cu = (a*u+b)/(c*u+d)
+
+    if z == oo:
+        Cz = limit(Cu, u, z) 
+    else:
+        Cz = Cu.subs(u, z)
+    return Cz 
 
 #def n_nearest(a_list, value, n):
 #    """
