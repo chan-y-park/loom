@@ -6,6 +6,7 @@ import pdb
 
 from fractions import Fraction
 from sympy import limit, oo
+from cmath import exp
 
 
 class LocalDiffError(Exception):
@@ -177,6 +178,7 @@ def PSL2C(C, z, inverse=False):
 
 
 def get_ode(sw, phase, accuracy):
+    x, z = sympy.symbols('x z')
     ode_absolute_tolerance = accuracy
 
     f = sw.curve.num_eq

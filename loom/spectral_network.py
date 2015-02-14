@@ -1,5 +1,5 @@
 import numpy
-import sympy
+#import sympy
 import logging
 import signal
 import multiprocessing
@@ -14,9 +14,8 @@ from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
 from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode)
 from intersection import (HitTable, NoIntersection,
                           find_intersection_of_segments)
-from plotting import SpectralNetworkPlot, plot_segments
 
-x, z = sympy.symbols('x z')
+#x, z = sympy.symbols('x z')
 
 
 class SpectralNetwork:

@@ -7,6 +7,8 @@ import pdb
 
 from geometry import SWData, get_ramification_points
 from spectral_network import SpectralNetwork
+from parallel import parallel_get_spectral_network
+from plotting import SpectralNetworkPlot
 
 
 def generate_spectral_network(opts, config):
@@ -38,7 +40,7 @@ def generate_spectral_network(opts, config):
 
     # Save configuration to a file.
     config_file_name = os.path.join(data_save_dir, 'config.ini')
-    logging.info('Save configuration to {}.'.config_file)
+    logging.info('Save configuration to {}.'.format(config_file_name))
     with open(config_file_name, 'wb') as fp:
         config.parser.write(fp)
         file_list.append(config_file_name)

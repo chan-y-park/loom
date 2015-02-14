@@ -50,6 +50,20 @@ class PuncturePoint:
     def __eq__(self, other):
         return self.label == other.label
 
+class SWCurve:
+    def __init__(self, eq_str):
+        self.eq_str = eq_str
+        self.sym_eq = None
+        self.num_eq = None
+
+
+class SWDiff:
+    def __init__(self, v_str):
+        self.v_str = v_str
+        self.sym_v = None
+        self.num_v = None
+
+
 class SWData:
     """
     A class containing a Seiberg-Witten curve 
@@ -59,21 +73,23 @@ class SWData:
     """
     def __init__(self, config):
         self.parameters = config['sw_parameters']
+        self.curve = SWCurve(config['sw_curve'])
+        self.diff = SWDiff(config['sw_diff'])
+        self.punctures = None
 
         # PSL2C-transformed z & dz
         Cz = PSL2C(config['mt_params'], z) 
         dCz = Cz.diff(z)
 
         # Seiberg-Witten curve
-        # sym_eq is a SymPy expression. 
         self.curve.sym_eq = sympy.simplify(
             sympy.sympify(config['sw_curve']).subs(z, Cz)
         )
-        # num_eq is from sym_v with its parameters 
+        # num_eq is from sym_eq with its parameters 
         # substituted with numerical values.
-        self.num_eq = self.curve.sym_eq.subs(self.parameters)
+        self.curve.num_eq = self.curve.sym_eq.subs(self.parameters)
         logging.info('\nSeiberg-Witten curve: %s = 0\n',
-                     sympy.latex(self.num_eq))
+                     sympy.latex(self.curve.num_eq))
 
         # Seiberg-Witten differential
         # sym_v is a SymPy expression. 
@@ -82,13 +98,17 @@ class SWData:
         )
         # num_v is from sym_v with its parameters 
         # substituted with numerical values.
-        self.diff.num_v = self.sym_v.subs(self.parameters)
+        self.diff.num_v = self.diff.sym_v.subs(self.parameters)
         logging.info('\nSeiberg-Witten differential: %s dz\n',
-                     sympy.latex(self.num_v))
+                     sympy.latex(self.diff.num_v))
 
-        #self.accuracy = config['accuracy']
-        self.punctures = [float(PSL2C(config['mt_params'], p, inverse=True))
-                          for p in config['punctures']]
+        if config['punctures'] is None:
+            self.punctures = []
+        else:
+            self.punctures = [
+                float(PSL2C(config['mt_params'], p, inverse=True))
+                for p in config['punctures']
+            ]
 
 
 def get_ramification_points(sw, accuracy):
@@ -100,7 +120,9 @@ def get_ramification_points(sw, accuracy):
     #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
     sols = sympy.solve([f, f.diff(x)], z, x)
     for z_0, x_0 in sols:
-        if min([abs(z_0 - p) for p in sw.punctures]) < accuracy:
+        if (len(sw.punctures) > 0 and
+            (min([abs(z_0 - p) for p in sw.punctures]) < accuracy)
+        ):
             continue
         fx_at_z_0 = f.subs(z, z_0)
         fx_at_z_0_coeffs = map(complex, sympy.Poly(fx_at_z_0, x).all_coeffs())

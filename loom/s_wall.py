@@ -11,6 +11,9 @@ from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
 
 x, z = sympy.symbols('x z')
 
+# Number of x's at a fixed z
+num_x_over_z = 2
+
 class Joint:
     def __init__(self, z=None, x1=None, x2=None, parents=None, label=None,):
         self.z = z
@@ -58,7 +61,7 @@ class SWall(object):
             SWall.data[i] = [z_i, [x_i[0], ...]].
         """
         self.z = numpy.empty(n_steps+1, complex)
-        self.x = numpy.empty(n_steps+1, (complex, 2))
+        self.x = numpy.empty(n_steps+1, (complex, num_x_over_z))
         self.z[0] = z_0
         self.x[0] = x_0
         self.parents = parents
@@ -77,7 +80,15 @@ class SWall(object):
         """
         Get the data of the S-wall at t, where data = [z, x[0], ...]
         """
-        return ([self.z[t]] + self.x[t])
+        return numpy.concatenate([[self.z[t]], self.x[t]])
+
+
+    def resize(self, size):
+        """
+        Resize z & x arrays to discard garbage data.
+        """
+        self.z.resize((size))
+        self.x.resize((size, num_x_over_z))
 
 
     def get_json_data(self):
@@ -95,40 +106,7 @@ class SWall(object):
         self.x = [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
-
     
-#    def get_zs(self, t_i=0, t_f=None):
-#        """
-#        return a NumPy array of z
-#        """
-#        if t_f is None:
-#            t_f = self.data.size
-#        zs = numpy.array(self.data[t_i:t_f]['z'], complex) 
-#        return zs
-#
-#
-#    def get_coordinates(self, var, t_i=0, t_f=None):
-#        """
-#        return a NumPy array of (v.real, v.imag),
-#        where v is to be either 'z' or 'x_i' according to var.
-#        """
-#        if t_f is None:
-#            t_f = self.data.size
-#        v = var[0]
-#        coords = numpy.empty(t_f - t_i, (float, 2))
-#        for t in range(t_i, t_f):
-#            if  v == 'z': 
-#                c = self.data[t]['z']
-#            elif v == 'x':
-#                i = int(var[2:])
-#                c = self.data[t][v][i]
-#            else:
-#                logging.error('{}: unknown field name '
-#                              'for SWall.data.'.format(v))
-#                raise KeyError(v)
-#            coords[t - t_i] = (c.real, c.imag))
-#        return coords
-
 
     def grow(
         self,
@@ -147,33 +125,42 @@ class SWall(object):
         size_of_puncture_cutoff = config['size_of_puncture_cutoff'] 
 
         step = 0
-        ode.set_initial_value(self[-1])
+        z_i = self.z[0]
+        # Prepare a 1-dim array for ode
+        y_i = self[0]
+        ode.set_initial_value(y_i)
 
         if z_range_limits is not None:
             z_real_min, z_real_max, z_imag_min, z_imag_max = z_range_limits
 
         while ode.successful() and step < num_of_steps:
+            step += 1
+            # Stop if z is inside a cutoff of a puncture.
+            if len(ppzs) > 0:
+                min_d = min([abs(z_i - ppz) for ppz in ppzs])
+                if min_d < size_of_puncture_cutoff:
+                    self.resize(step)
+                    break
+
+            # Stop if z is ouside the range limit.
+            if z_range_limits is not None:
+                if (z_i.real < z_real_min or 
+                    z_i.real > z_real_max or
+                    z_i.imag < z_imag_min or
+                    z_i.imag > z_imag_max):
+                    self.resize(step)
+                    break
+
+            # Adjust the step size if z is near a branch point.
             if (len(rpzs) > 0 and 
                 min([abs(z_i - rpz) for rpz in rpzs]) < size_of_neighborhood):
                 dt = size_of_small_step
             else:
                 dt = size_of_large_step
 
-            self[step] = ode.integrate(ode.t + dt)
-            step += 1
-
-            if len(ppzs) > 0:
-                min_d = min([abs(z_i - ppz) for ppz in ppzs])
-                if min_d < size_of_puncture_cutoff:
-                    break
-
-            if z_range_limits is not None:
-                if (z_i.real < z_real_min or 
-                    z_i.real > z_real_max or
-                    z_i.imag < z_imag_min or
-                    z_i.imag > z_imag_max):
-                    break
-
+            y_i = ode.integrate(ode.t + dt)
+            z_i = y_i[0]
+            self[step] = y_i 
 
 
 def get_s_wall_seeds(sw, theta, ramification_point, config,):
@@ -261,7 +248,9 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
         min_dev_indices = n_nearest_indices(dev_phases, 0.0, cm)
         for k in min_dev_indices:
             i, j = unravel(k, len(xs_at_z_0))
-            seeds.append((z_0, xs_at_z_0[i], xs_at_z_0[j]))
+            seeds.append(
+                [z_0, [xs_at_z_0[i], xs_at_z_0[j]]]
+            )
         
     return seeds
 
@@ -269,7 +258,7 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
 def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy, 
               root_system=None, label=None):
     """
-    return a joint if formed, otherwise return None.
+    Return a joint if formed, otherwise return None.
     """
     if (abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
         return None

@@ -3,6 +3,8 @@ import signal
 import multiprocessing
 import logging
 
+from spectral_network import SpectralNetwork
+
 def init_process():
     """
     Initializer of each child process that generates a spectral network.
@@ -41,13 +43,8 @@ def a_child_process(
     data_file_name = os.path.join(data_save_dir, 'data_{}.json'.format(job_id))
     logging.info('Saving data to {}.'.format(data_file_name))
     with open(data_file_name, 'wb') as fp:
-        save_spectral_network_data(
-            spectral_network_data, 
-            fp, 
-        )
+        spectral_network.save_json_data(fp,)
 
-    logging.info('job progress: {}/{} finished.'
-                 .format(shared_n_finished_spectral_networks.value, theta_n))
 
     return spectral_network_data
 
@@ -102,6 +99,10 @@ def parallel_get_spectral_network(
         pool.close()
 
         for result in results:
+            logging.info(
+                'job progress: {}/{} finished.'
+                .format(shared_n_finished_spectral_networks.value, theta_n)
+            )
             spectral_network_data_list.append(result.get())
 
     except KeyboardInterrupt:
