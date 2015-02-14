@@ -11,6 +11,7 @@ SymPy 0.7.6
 """
 import logging
 import warnings
+import numpy
 import pdb
 
 from numpy import __version__ as numpy_version

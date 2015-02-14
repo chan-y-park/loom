@@ -13,7 +13,8 @@ from geometry import RamificationPoint, SWData
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
 from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode)
 from intersection import (HitTable, NoIntersection,
-                          find_intersection_of_segments)
+                          find_intersection_of_segments, 
+                          find_curve_range_intersection)
 
 #x, z = sympy.symbols('x z')
 
@@ -207,22 +208,48 @@ class SpectralNetwork:
                 # only one S-wall in the bin, skip the rest.
                 continue
             for i_a, i_b in combinations(self.hit_table[bin_key], 2):
-                # don't check self-intersections.
+                # Don't check self-intersections.
                 if i_a == i_c:
                     i_d = i_b   # i_b != i_c
                 elif i_b == i_c:
                     i_d = i_a   # i_a != i_c
                 else:
-                    # both segments are not in the newly added curve.
-                    # don't check the intersection.
+                    # Both segments are not in the newly added curve.
+                    # Don't check the intersection.
                     continue
 
                 for t_c_i, t_c_f in self.hit_table[bin_key][i_c]:
                     for t_d_i, t_d_f in self.hit_table[bin_key][i_d]:
+                        # Check if the two segments have a common x-range.  
+                        xs = []
+                        xs += [x_i for x_i 
+                               in self.s_walls[i_c].x[t_c_i:t_c_f+1].T]
+                        xs += [x_i for x_i
+                               in self.s_walls[i_d].x[t_d_i:t_d_f+1].T]
+                        have_common_x_range = False
+                        for x_a, x_b in combinations(xs, 2):
+                            x_r_range, x_i_range = (
+                                find_curve_range_intersection(
+                                    (x_a.real, x_a.imag),
+                                    (x_b.real, x_b.imag),
+                                )
+                            )
+                            if (x_r_range.is_EmptySet and 
+                                x_r_range.is_EmptySet and 
+                                x_i_range.is_FiniteSet and
+                                x_i_range.is_FiniteSet):
+                                continue
+                            else:
+                                have_common_x_range = True
+                                break
+                        if have_common_x_range is False:
+                            # No common x range, therefore no joint.
+                            continue
+
+                        # Find an intersection on the z-plane.
                         seg_c_z = self.s_walls[i_c].z[t_c_i:t_c_f+1]
                         seg_d_z = self.s_walls[i_d].z[t_d_i:t_d_f+1]
                         try:
-                            # find an intersection on the z-plane.
                             ip_x, ip_y = find_intersection_of_segments(
                                 (seg_c_z.real, seg_c_z.imag),
                                 (seg_d_z.real, seg_d_z.imag),
