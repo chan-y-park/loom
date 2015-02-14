@@ -74,7 +74,7 @@ class SWData:
     def __init__(self, config):
         self.parameters = config['sw_parameters']
         self.curve = SWCurve(config['sw_curve'])
-        self.diff = SWDiff(config['sw_diff'])
+        self.diff = SWDiff(config['sw_diff_v'])
         self.punctures = None
 
         # PSL2C-transformed z & dz
@@ -83,7 +83,7 @@ class SWData:
 
         # Seiberg-Witten curve
         self.curve.sym_eq = sympy.simplify(
-            sympy.sympify(config['sw_curve']).subs(z, Cz)
+            sympy.sympify(self.curve.eq_str).subs(z, Cz)
         )
         # num_eq is from sym_eq with its parameters 
         # substituted with numerical values.
@@ -94,7 +94,7 @@ class SWData:
         # Seiberg-Witten differential
         # sym_v is a SymPy expression. 
         self.diff.sym_v = sympy.simplify(
-            sympy.sympify(config['sw_diff_v']).subs(z, Cz) * dCz
+            sympy.sympify(self.diff.v_str).subs(z, Cz) * dCz
         )
         # num_v is from sym_v with its parameters 
         # substituted with numerical values.

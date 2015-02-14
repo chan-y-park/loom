@@ -286,6 +286,8 @@ def find_curve_range_intersection(curve_1, curve_2, cut_at_inflection=False):
     x_range = x1_interval.intersect(x2_interval)
     y_range = y1_interval.intersect(y2_interval)
 
+    return (x_range, y_range)
+
 def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
                                   accuracy, newton_maxiter=5):
     """

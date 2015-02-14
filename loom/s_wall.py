@@ -60,10 +60,14 @@ class SWall(object):
         the fiber coordinates at t = t_i, i.e. 
             SWall.data[i] = [z_i, [x_i[0], ...]].
         """
-        self.z = numpy.empty(n_steps+1, complex)
-        self.x = numpy.empty(n_steps+1, (complex, num_x_over_z))
-        self.z[0] = z_0
-        self.x[0] = x_0
+        if n_steps is None:
+            self.z = []
+            self.x = []
+        else:
+            self.z = numpy.empty(n_steps+1, complex)
+            self.x = numpy.empty(n_steps+1, (complex, num_x_over_z))
+            self.z[0] = z_0
+            self.x[0] = x_0
         self.parents = parents
         self.label = label
 
@@ -102,8 +106,10 @@ class SWall(object):
 
 
     def set_json_data(self, json_data):
-        self.z = [r2toc(z_t) for z_t in json_data['z']] 
-        self.x = [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
+        self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']]) 
+        self.x = numpy.array(
+            [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
+        )
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
     

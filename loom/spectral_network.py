@@ -44,6 +44,7 @@ class SpectralNetwork:
         if the depth of the joint is too deep.
         """
         accuracy = config['accuracy']
+        n_steps=config['num_of_steps']
         logging.info('Start growing a new spectral network...')
 
         logging.info('Seed S-walls at ramification points...')
@@ -57,7 +58,7 @@ class SpectralNetwork:
                         x_0=x_0,
                         parents=[rp.label],
                         label=label,
-                        n_steps=config['num_of_steps']
+                        n_steps=n_steps,
                     )
                 )
 
@@ -80,8 +81,9 @@ class SpectralNetwork:
             """
             new_joints = []     # number of new joints found in each iteration
             for i in range(n_finished_s_walls, len(self.s_walls)):
+                logging.info('Growing S-wall #{}...'.format(i))
                 self.s_walls[i].grow(ode, rpzs, ppzs, config,)
-                new_joints += get_new_joints(self, i, sw, config)
+                new_joints += self.get_new_joints(i, sw, config)
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
@@ -107,7 +109,13 @@ class SpectralNetwork:
                 self.joints.append(joint)
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
-                    SWall(joint.z, joint.x1, joint.x2, joint.parents, label)
+                    SWall(
+                        z_0=joint.z,
+                        x_0=[joint.x1, joint.x2], 
+                        parents=joint.parents,
+                        label=label,
+                        n_steps=n_steps,
+                    )
                 )
             iteration += 1
 
@@ -164,113 +172,113 @@ class SpectralNetwork:
         for s_wall_data in json_data['s_walls']:
             an_s_wall = SWall()
             an_s_wall.set_json_data(s_wall_data)
-            spectral_network.s_walls.append(an_s_wall)
+            self.s_walls.append(an_s_wall)
 
         for joint_data in json_data['joints']:
             a_joint = Joint()
             a_joint.set_json_data(joint_data)
-            self.append(a_joint)
+            self.joints.append(a_joint)
 
-        spectral_network.hit_table.load_json_data(json_data['hit_table'])
+        self.hit_table.load_json_data(json_data['hit_table'])
 
 
-def get_new_joints(spectral_network, new_s_wall_index, sw, config):
-    """
-    Find joints between the newly grown segment of the given S-wall
-    and the other S-walls. This checks joints that are formed by two
-    S-walls only, not considering the possibility of a joint of three
-    S-walls, which in principle can happen but is unlikely in a numerical
-    setup.
-    """
-    s_walls = spectral_network.s_walls
+    def get_new_joints(self, new_s_wall_index, sw, config):
+        """
+        Find joints between the newly grown segment of the given S-wall
+        and the other S-walls. This checks joints that are formed by two
+        S-walls only, not considering the possibility of a joint of three
+        S-walls, which in principle can happen but is unlikely in a numerical
+        setup.
+        """
+        new_joints = []
+        if (config['root_system'] in ['A1',]):
+            logging.info('There is no joint for the given root system {}.'
+                         .format(config['root_system']))
+            return new_joints
 
-    new_joints = []
-    if (config['root_system'] in ['A2',]):
-        # There is no joint for the given root system.
-        return new_joints
+        i_c = new_s_wall_index
+        new_s_wall = self.s_walls[i_c]
+        new_curve = numpy.array([new_s_wall.z.real, new_s_wall.z.imag]).T
+        new_bin_keys = self.hit_table.fill(i_c, new_curve)
 
-    i_c = new_s_wall_index
-    new_s_wall = s_walls[i_c]
-    new_curve = numpy.array([new_s_wall.z.real, new_s_wall.z.imag]).T
-    new_bin_keys = self.hit_table.fill(i_c, new_curve)
-
-    # first get the intersections on the z-plane
-    for bin_key in new_bin_keys:
-        if len(self.hit_table[bin_key]) == 1:
-            # only one S-wall in the bin, skip the rest.
-            continue
-        for i_a, i_b in combinations(self.hit_table[bin_key], 2):
-            # don't check self-intersections.
-            if i_a == i_c:
-                i_d = i_b   # i_b != i_c
-            elif i_b == i_c:
-                i_d = i_a   # i_a != i_c
-            else:
-                # both segments are not in the newly added curve.
-                # don't check the intersection.
+        # first get the intersections on the z-plane
+        for bin_key in new_bin_keys:
+            if len(self.hit_table[bin_key]) == 1:
+                # only one S-wall in the bin, skip the rest.
                 continue
+            for i_a, i_b in combinations(self.hit_table[bin_key], 2):
+                # don't check self-intersections.
+                if i_a == i_c:
+                    i_d = i_b   # i_b != i_c
+                elif i_b == i_c:
+                    i_d = i_a   # i_a != i_c
+                else:
+                    # both segments are not in the newly added curve.
+                    # don't check the intersection.
+                    continue
 
-            s_wall_c = s_walls[i_c]
-            s_wall_d = s_walls[i_d]
+                for t_c_i, t_c_f in self.hit_table[bin_key][i_c]:
+                    for t_d_i, t_d_f in self.hit_table[bin_key][i_d]:
+                        seg_c_z = self.s_walls[i_c].z[t_c_i:t_c_f+1]
+                        seg_d_z = self.s_walls[i_d].z[t_d_i:t_d_f+1]
+                        try:
+                            # find an intersection on the z-plane.
+                            ip_x, ip_y = find_intersection_of_segments(
+                                (seg_c_z.real, seg_c_z.imag),
+                                (seg_d_z.real, seg_d_z.imag),
+                                self.hit_table.get_bin_location(bin_key),
+                                self.hit_table.get_bin_size(),
+                                config['accuracy']
+                            )
+                            ip_z = ip_x + 1j*ip_y
 
-            for t_c_i, t_c_f in self.hit_table[bin_key][i_c]:
-                for t_d_i, t_d_f in self.hit_table[bin_key][i_d]:
-                    segment_c = s_wall_c.z[t_c_i:t_c_f+1]
-                    segment_d = s_wall_c.z[t_d_i:t_d_f+1]
-                    try:
-                        # find an intersection on the z-plane.
-                        ip_x, ip_y = find_intersection_of_segments(
-                            (segment_c.real, segment_c.imag),
-                            (segment_d.real, segment_d.imag),
-                            self.hit_table.get_bin_location(bin_key),
-                            self.hit_table.get_bin_size(),
-                            config['accuracy']
-                        )
-                        ip_z = ip_x + 1j*ip_y
+                            # segment_c
+                            #seg_c_z = self.s_walls[i_c].z[t_c_i:t_c_f+1]
+                            # index of z of segment_c nearest to ip_z
+                            ip_t_c = (
+                                n_nearest_indices(seg_c_z, ip_z, 1)[0] +
+                                t_c_i
+                            )
+                            #z_c = s_wall_c.z[ip_t_c]
+                            c_x = self.s_walls[i_c].x[ip_t_c]
 
-                        # segment_c
-                        seg_c_z = s_wall_c.z[t_c_i:t_c_f+1]
-                        # index of z of segment_c nearest to ip_z
-                        ip_t_c = (n_nearest_indices(seg_c_z, ip_z, 1)[0] +
-                                  t_c_i)
-                        #z_c = s_wall_c.z[ip_t_c]
-                        c_x = s_wall_c.x[ip_t_c]
+                            # segment_d
+                            #seg_d_z = s_wall_d.z[t_d_i:t_d_f+1]
+                            # index of z of segment_d nearest to ip_z
+                            ip_t_d = (
+                                n_nearest_indices(seg_d_z, ip_z, 1)[0] +
+                                t_d_i
+                            )
+                            #z_d = s_wall_d.z[ip_t_d]
+                            d_x = self.s_walls[i_d].x[ip_t_d]
 
-                        # segment_d
-                        seg_d_z = s_wall_d.z[t_d_i:t_d_f+1]
-                        # index of z of segment_d nearest to ip_z
-                        ip_t_d = (n_nearest_indices(seg_d_z, ip_z, 1)[0] +
-                                  t_d_i)
-                        #z_d = s_wall_d.z[ip_t_d]
-                        d_x = s_wall_d.x[ip_t_d]
+                            # TODO: need to put the joint into the parent
+                            # S-walls?
 
-                        # TODO: need to put the joint into the parent
-                        # S-walls?
+                            # find the values of x at z = ip_z.
+                            ip_xs = find_xs_at_z_0(sw.curve.num_eq, ip_z)
+                            c_ip_x0 = n_nearest(ip_xs, c_x[0], 1)[0]
+                            c_ip_x1 = n_nearest(ip_xs, c_x[1], 1)[0]
+                            d_ip_x0 = n_nearest(ip_xs, d_x[0], 1)[0]
+                            d_ip_x1 = n_nearest(ip_xs, d_x[1], 1)[0]
+                            
+                            a_joint_label = ('joint ' +
+                                             '#{}'.format(len(self.joints)))
+                            a_joint = get_joint(
+                                ip_z, c_ip_x0, c_ip_x1, d_ip_x0, d_ip_x1,
+                                self.s_walls[i_c].label, 
+                                self.s_walls[i_d].label,
+                                config['accuracy'],
+                                root_system=config['root_system'],
+                                label=a_joint_label,
+                            )
 
-                        # find the values of x at z = ip_z.
-                        ip_xs = find_xs_at_z_0(sw.curve.num_eq, ip_z)
-                        c_ip_x0 = n_nearest(ip_xs, c_x[0], 1)[0]
-                        c_ip_x1 = n_nearest(ip_xs, c_x[1], 1)[0]
-                        d_ip_x0 = n_nearest(ip_xs, d_x[0], 1)[0]
-                        d_ip_x1 = n_nearest(ip_xs, d_x[1], 1)[0]
-                        
-                        a_joint_label = ('joint ' +
-                                         '#{}'.format(len(self.joints)))
-                        a_joint = get_joint(
-                            ip_z, c_ip_x0, c_ip_x1, d_ip_x0, d_ip_x1,
-                            s_wall_c.label, 
-                            s_wall_d.label,
-                            config['accuracy'],
-                            root_system=config['root_system'],
-                            label=a_joint_label,
-                        )
+                            if(a_joint is None):
+                                continue
+                            else:
+                                new_joints.append(a_joint)
+                            
+                        except NoIntersection:
+                            pass
 
-                        if(a_joint is None):
-                            continue
-                        else:
-                            new_joints.append(a_joint)
-                        
-                    except NoIntersection:
-                        pass
-
-    return new_joints
+        return new_joints
