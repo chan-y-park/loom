@@ -15,7 +15,7 @@ import time
 
 from config import LoomConfig
 from gui import open_gui
-from spectral_network import load_spectral_network, generate_spectral_network
+from api import load_spectral_network, generate_spectral_network
 
 shortopts = 'c:gl:p:'
 longopts = [

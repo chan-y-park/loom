@@ -90,7 +90,7 @@ class SpectralNetwork:
                              'Stop growing this spectral network '
                              'at iteration #{}.'.format(iteration))
                 break
-            else
+            else:
                 logging.info('Growing S-walls in iteration #{} finished; '
                              'start finding joints of S-walls.'
                              .format(iteration))
@@ -142,7 +142,7 @@ class SpectralNetwork:
             rp.get_json_data() for rp in self.ramification_points
         ]
         json_data['s_walls'] = [s_wall.get_json_data()
-                                for s_wall self.s_walls]
+                                for s_wall in self.s_walls]
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
         json_data['hit_table'] = self.hit_table.get_json_data()

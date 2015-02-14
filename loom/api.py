@@ -5,7 +5,7 @@ import zipfile, zlib
 import logging
 import pdb
 
-from geometry import SWData, get_ramification_points,
+from geometry import SWData, get_ramification_points
 from spectral_network import SpectralNetwork
 
 

@@ -5,7 +5,7 @@ import pdb
 
 from cmath import exp, pi, phase
 
-from curve import get_local_sw_diff
+from geometry import get_local_sw_diff
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
                   GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0,)
 
@@ -176,7 +176,7 @@ class SWall(object):
 
 
 
-def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point, config,):
+def get_s_wall_seeds(sw, theta, ramification_point, config,):
     rp = ramification_point
     delta = config['accuracy']
     dt = config['size_of_small_step']
@@ -192,7 +192,7 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point, config,):
 
     # 1.1 find the coefficient and the exponent of the leading term
     # of the SW differential at the ramification point.
-    lambda_0, diff_e = get_local_sw_diff(sw_curve, sw_diff, rp)
+    lambda_0, diff_e = get_local_sw_diff(sw, rp)
 
     # 1.2 find c_i, a phase factor for each S-wall.
     omega_1 = exp(2*pi*1j/rp.i)
@@ -228,7 +228,7 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point, config,):
                       cpow(((omega[0]-omega[i])*lambda_0), rp.i))
 
     else:
-        logging.error('unknown form of sw_diff at rp ({}, {}): '
+        logging.error('unknown form of sw.diff at rp ({}, {}): '
                       'diff_e  = {}'.format(rp.z, rp.x, diff_e))
         raise GetSWallSeedsError(diff_e)
         
@@ -244,10 +244,10 @@ def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point, config,):
         # resize to the size of the small step 
         Delta_z = cv/abs(cv)*delta
         z_0 = rp.z + Delta_z
-        xs_at_z_0 = find_xs_at_z_0(sw_curve.num_eq, z_0, rp.x, rp.i)
+        xs_at_z_0 = find_xs_at_z_0(sw.curve.num_eq, z_0, rp.x, rp.i)
         dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
         for i in range(len(xs_at_z_0)):
-            diffx = sw_diff.num_v.subs(z, z_0) 
+            diffx = sw.diff.num_v.subs(z, z_0) 
             v_i = complex(diffx.subs(x, xs_at_z_0[i]))
             for j in range(len(xs_at_z_0)):
                 if i == j:

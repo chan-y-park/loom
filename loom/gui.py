@@ -1,7 +1,7 @@
 import Tkinter as tk
 #from Tkinter import Tk, Entry, Frame, Button
 
-from spectral_network import generate_spectral_network
+from api import generate_spectral_network
 
 class Application(tk.Frame):
     def __init__(self, config, master=None):
