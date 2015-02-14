@@ -47,6 +47,7 @@ class LoomConfig:
             value = self.data[option]
         except KeyError as e:
             logging.warning('Option {} not specified; use None.'.format(e))
+            self.data[option] = None
             value = None
         return value
 
@@ -57,7 +58,8 @@ class LoomConfig:
         """
         logging.info('config file: %s', config_file)
         config_parser = LoomConfigParser()
-        config_parser.read(config_file)
+        with open(config_file, 'r') as fp:
+            config_parser.readfp(fp)
 
         for section in config_parser.sections():
             for option in config_parser.options(section):

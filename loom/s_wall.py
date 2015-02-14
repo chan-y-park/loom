@@ -269,12 +269,16 @@ def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy,
     if (abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
         return None
     elif (abs(x2_i - x1_j) < accuracy):
-        if (root_system[0] == 'D' and abs(x1_i-(-x2_j)) < accuracy):
+        if (root_system is not None and
+            root_system[0] == 'D' and 
+            abs(x1_i-(-x2_j)) < accuracy):
             return None
         else:
             return Joint(z, x1_i, x2_j, [parent_i, parent_j], label)
     elif (abs(x2_j - x1_i) < accuracy):
-        if (root_system[0] == 'D' and abs(x1_j-(-x2_i)) < accuracy):
+        if (root_system is not None and
+            root_system[0] == 'D' and 
+            abs(x1_j-(-x2_i)) < accuracy):
             return None
         else:
             return Joint(z, x1_j, x2_i, [parent_j, parent_i], label)
