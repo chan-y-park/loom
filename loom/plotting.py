@@ -81,21 +81,24 @@ class SpectralNetworkPlot:
             for bin_key in hit_table:
                 for curve_index in hit_table[bin_key]:
                     for t_i, t_f in hit_table[bin_key][curve_index]:
-                        seg_xcoords = [z.real for z in 
-                                       s_walls[curve_index].get_zs(t_i, t_f)] 
-                        seg_ycoords = [z.imag for z in 
-                                       s_walls[curve_index].get_zs(t_i, t_f)] 
-                        axes.plot(seg_xcoords, seg_ycoords, '-')
+                        #seg_xcoords = [z.real for z in 
+                        #               s_walls[curve_index].get_zs(t_i, t_f)] 
+                        #seg_ycoords = [z.imag for z in 
+                        #               s_walls[curve_index].get_zs(t_i, t_f)] 
+                        #axes.plot(seg_xcoords, seg_ycoords, '-')
+                        z_seg = s_walls[curve_index].z[t_i:t_f]
+                        axes.plot(z_seg.real, z_seg.imag, '-')
                         if(plot_data_points == True):
-                            axes.plot(seg_xcoords, seg_ycoords,
+                            axes.plot(z_seg.real, z_seg.imag,
                                         'o', color='b')
         else:
             for s_wall in s_walls:
-                xcoords = [z.real for z in s_wall.get_zs()] 
-                ycoords = [z.imag for z in s_wall.get_zs()] 
-                axes.plot(xcoords, ycoords, '-', color='b')
+                #xcoords = [z.real for z in s_wall.get_zs()] 
+                #ycoords = [z.imag for z in s_wall.get_zs()] 
+                #axes.plot(xcoords, ycoords, '-', color='b')
+                axes.plot(s_wall.z.real, s_wall.z.imag, '-')
                 if(self.plot_data_points is True):
-                    axes.plot(xcoords, ycoords, 'o', color='b')
+                    axes.plot(s_wall.z.real, s_wall.z.imag, 'o', color='b')
        
         axes.set_visible(False)
         self.plots.append(axes)

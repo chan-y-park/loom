@@ -1,4 +1,5 @@
 import logging
+import numpy
 import sympy
 import pdb
 
@@ -48,17 +49,41 @@ class Joint:
 
 
 class SWall(object):
-    def __init__(self, z_0=None, x1_0=None, x2_0=None, parents=None,
-                 label=None,):
-        self.data = [[z_0, x1_0, x2_0]]
+    def __init__(self, z_0=None, x_0=None, parents=None,
+                 label=None, n_steps=None,):
+        """
+        SWall.data is a NumPy array of [z_i, x_i] with length n_steps+1,
+        where z_i is the base coordinate and x_i is a Numpy array of 
+        the fiber coordinates at t = t_i, i.e. 
+            SWall.data[i] = [z_i, [x_i[0], ...]].
+        """
+        self.z = numpy.empty(n_steps+1, complex)
+        self.x = numpy.empty(n_steps+1, (complex, 2))
+        self.z[0] = z_0
+        self.x[0] = x_0
         self.parents = parents
         self.label = label
 
 
+    def __setitem__(self, t, data):
+        """
+        Set the data of the S-wall at t, where data = [z, x[0], ...]
+        """
+        self.z[t] = data[0]
+        self.x[t] = data[1:]
+
+
+    def __getitem__(self, t):
+        """
+        Get the data of the S-wall at t, where data = [z, x[0], ...]
+        """
+        return ([self.z[t]] + self.x[t])
+
+
     def get_json_data(self):
         json_data = {
-            'data': [[ctor2(z), ctor2(x1), ctor2(x2)] 
-                     for z, x1, x2 in self.data],
+            'z': [ctor2(z_t) for z_t in self.z],
+            'x': [[ctor2(x_i) for x_i in x_t] for x_t in self.x],
             'parents': [parent for parent in self.parents],
             'label': self.label,
         }
@@ -66,36 +91,43 @@ class SWall(object):
 
 
     def set_json_data(self, json_data):
-        self.data = [[r2toc(z), r2toc(x1), r2toc(x2)] 
-                      for z, x1, x2 in json_data['data']]
+        self.z = [r2toc(z_t) for z_t in json_data['z']] 
+        self.x = [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
 
-
-    def get_zs(self, ti=0, tf=None):
-        """
-        return a list of (z.real, z.imag)
-        """
-        if tf is None:
-            tf = len(self.data)
-        zs = []
-        for t in range(ti, tf):
-            z = self.data[t][0]
-            zs.append(z)
-        return zs
-
-
-    def get_zxzys(self, ti=0, tf=None):
-        """
-        return a list of (z.real, z.imag)
-        """
-        if tf is None:
-            tf = len(self.data)
-        zxzys = []
-        for t in range(ti, tf):
-            z = self.data[t][0]
-            zxzys.append((z.real, z.imag))
-        return zxzys
+    
+#    def get_zs(self, t_i=0, t_f=None):
+#        """
+#        return a NumPy array of z
+#        """
+#        if t_f is None:
+#            t_f = self.data.size
+#        zs = numpy.array(self.data[t_i:t_f]['z'], complex) 
+#        return zs
+#
+#
+#    def get_coordinates(self, var, t_i=0, t_f=None):
+#        """
+#        return a NumPy array of (v.real, v.imag),
+#        where v is to be either 'z' or 'x_i' according to var.
+#        """
+#        if t_f is None:
+#            t_f = self.data.size
+#        v = var[0]
+#        coords = numpy.empty(t_f - t_i, (float, 2))
+#        for t in range(t_i, t_f):
+#            if  v == 'z': 
+#                c = self.data[t]['z']
+#            elif v == 'x':
+#                i = int(var[2:])
+#                c = self.data[t][v][i]
+#            else:
+#                logging.error('{}: unknown field name '
+#                              'for SWall.data.'.format(v))
+#                raise KeyError(v)
+#            coords[t - t_i] = (c.real, c.imag))
+#        return coords
 
 
     def grow(
@@ -103,29 +135,37 @@ class SWall(object):
         ode,
         ramification_point_zs,
         puncture_point_zs,
-        z_range_limits=None,
-        num_of_steps=None,
-        size_of_small_step=None,
-        size_of_large_step=None,
-        size_of_neighborhood=None,
+        config,
     ):
-        steps = 0
         rpzs = ramification_point_zs
         ppzs = puncture_point_zs
-        z_i, x1_i, x2_i = self.data[-1]
-        ode.set_initial_value([z_i, x1_i, x2_i])
+        z_range_limits = config['z_range_limits']
+        num_of_steps = config['num_of_steps']
+        size_of_small_step = config['size_of_small_step']
+        size_of_large_step = config['size_of_large_step']
+        size_of_neighborhood = config['size_of_neighborhood']
+        size_of_puncture_cutoff = config['size_of_puncture_cutoff'] 
+
+        step = 0
+        ode.set_initial_value(self[-1])
 
         if z_range_limits is not None:
             z_real_min, z_real_max, z_imag_min, z_imag_max = z_range_limits
 
-        while ode.successful() and steps < num_of_steps:
+        while ode.successful() and step < num_of_steps:
             if (len(rpzs) > 0 and 
                 min([abs(z_i - rpz) for rpz in rpzs]) < size_of_neighborhood):
                 dt = size_of_small_step
             else:
                 dt = size_of_large_step
-            z_i, x1_i, x2_i = ode.integrate(ode.t + dt)
-            self.data.append([z_i, x1_i, x2_i])
+
+            self[step] = ode.integrate(ode.t + dt)
+            step += 1
+
+            if len(ppzs) > 0:
+                min_d = min([abs(z_i - ppz) for ppz in ppzs])
+                if min_d < size_of_puncture_cutoff:
+                    break
 
             if z_range_limits is not None:
                 if (z_i.real < z_real_min or 
@@ -134,7 +174,6 @@ class SWall(object):
                     z_i.imag > z_imag_max):
                     break
 
-            steps += 1
 
 
 def get_s_wall_seeds(sw_curve, sw_diff, theta, ramification_point, config,):

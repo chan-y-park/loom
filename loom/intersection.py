@@ -132,14 +132,10 @@ class HitTable:
         )
 
         if not isinstance(bin_key_x, int):
-            logging.debug('x_coord = %.8f, bin_size = %s',
-                          x_coord, self._bin_size)
             raise TypeError('bin_key_x = {} is not an integer'
                             '.'.format(bin_key_x))
 
         if not isinstance(bin_key_y, int):
-            logging.debug('y_coord = %.8f, bin_size = %s',
-                          y_coord, self._bin_size)
             raise TypeError('bin_key_y = {} is not an integer'
                             '.'.format(bin_key_y))
 
@@ -187,8 +183,6 @@ class HitTable:
             try:
                 bin_key = self.get_bin_key([x_n, y_n])
             except TypeError:
-                logging.debug('t_n, x_n, y_n = %d, %.8f, %.8f',
-                              t_n, x_n, y_n)
                 raise
             # Cut the curve into segments where it goes over the current
             # bin or where it has a turning point.
@@ -208,8 +202,6 @@ class HitTable:
                         self.put(prev_bin_key, curve_index, [t_i, t_f])
                         new_bin_keys.append(prev_bin_key)
                 except KeyError as e:
-                    logging.debug('prev_bin_key, bin_key = %s, %s',
-                                  prev_bin_key, bin_key)
                     print str(e)
                     pass
                 t_i = t_n
@@ -224,8 +216,6 @@ class HitTable:
                     self.put(prev_bin_key, curve_index, [t_i, t_n])
                     new_bin_keys.append(prev_bin_key)
                 except KeyError as e:
-                    logging.debug('prev_bin_key, bin_key = %s, %s',
-                                  prev_bin_key, bin_key)
                     print str(e)
                     pass
                 t_i = t_n
@@ -263,7 +253,38 @@ def is_turning_point(curve, t):
         return True
     else:
         return False
+        
 
+def find_curve_range_intersection(curve_1, curve_2, cut_at_inflection=False):
+    """
+    Return intersections of x- and y-ranges of two real curves,
+    which are parametric curves on the xy-plane given as 
+    (x_array, y_array), a tuple of NumPy arrays.
+    """
+    x1, y1 = curve_1
+    x2, y2 = curve_2
+
+    if cut_at_inflection is True:
+        x1_min, x1_max = sorted([x1[0], x1[-1]])
+        x2_min, x2_max = sorted([x2[0], x2[-1]])
+
+        y1_min, y1_may = sorted([y1[0], y1[-1]])
+        y2_min, y2_may = sorted([y2[0], y2[-1]])
+    else:
+        x1_min, x1_max = numpy.argsort(x1)[[0, -1]]
+        x2_min, x2_max = numpy.argsort(x2)[[0, -1]]
+
+        y1_min, y1_may = numpy.argsort(y1)[[0, -1]]
+        y2_min, y2_may = numpy.argsort(y2)[[0, -1]]
+
+    x1_interval = Interval(x1_min, x1_max)
+    x2_interval = Interval(x2_min, x2_max)
+
+    y1_interval = Interval(y1_min, y1_may)
+    y2_interval = Interval(y2_min, y2_may)
+
+    x_range = x1_interval.intersect(x2_interval)
+    y_range = y1_interval.intersect(y2_interval)
 
 def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
                                   accuracy, newton_maxiter=5):
@@ -278,7 +299,7 @@ def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
     Parameters
     ----------
     segment_1, segment_2: Segments to find their intersection. Each
-        segment is a list of [x, y].
+        segment is (x_array, y_array), a tuple of NumPy arrays.
     bin_center, bin_size: center location and the size of the bin
         that contains the segments.
     newton_maxiter: Maximum number of iterations for secant method.
@@ -288,43 +309,26 @@ def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
         the module keeps trying to find one.
     """
     # First check if the two segments share any x- and y-range.
-    x1_i, y1_i = segment_1[0]
-    x1_f, y1_f = segment_1[-1]
+    x_range, y_range = find_curve_range_intersection(
+        segment_1, segment_2, cut_at_inflection=True
+    )
 
-    x2_i, y2_i = segment_2[0]
-    x2_f, y2_f = segment_2[-1]
-
-    logging.debug('x1_i, x1_f = %.8f, %.8f', x1_i, x1_f)
-    logging.debug('y1_i, y1_f = %.8f, %.8f', y1_i, y1_f)
-    logging.debug('x2_i, x2_f = %.8f, %.8f', x2_i, x2_f)
-    logging.debug('y2_i, y2_f = %.8f, %.8f', y2_i, y2_f)
     bin_center_x, bin_center_y = bin_center
-
-    x1_interval = Interval(*sorted([x1_i, x1_f]))
-    x2_interval = Interval(*sorted([x2_i, x2_f]))
     bin_x_interval = Interval(bin_center_x - 0.5*bin_size,
                               bin_center_x + 0.5*bin_size)
-
-    y1_interval = Interval(*sorted([y1_i, y1_f]))
-    y2_interval = Interval(*sorted([y2_i, y2_f]))
     bin_y_interval = Interval(bin_center_y - 0.5*bin_size,
                               bin_center_y + 0.5*bin_size)
-
-    x_range = x1_interval.intersect(x2_interval).intersect(bin_x_interval)
-    y_range = y1_interval.intersect(y2_interval).intersect(bin_y_interval)
+    x_range = x_range.intersect(bin_x_interval)
+    y_range = y_range.intersect(bin_y_interval)
 
     if (x_range.is_EmptySet or y_range.is_EmptySet or x_range.is_FiniteSet or
             y_range.is_FiniteSet):
         # The segments and the bin do not share a domain and therefore
         # there is no intersection.
-        logging.debug('x_range = %s, y_range = %s', x_range, y_range)
         raise NoIntersection()
 
-    logging.debug('x_range = [%.8f, %.8f]', x_range.start, x_range.end)
-    logging.debug('y_range = [%.8f, %.8f]', y_range.start, y_range.end)
-
-    f1 = interp1d(*zip(*segment_1))
-    f2 = interp1d(*zip(*segment_2))
+    f1 = interp1d(*segment_1)
+    f2 = interp1d(*segment_2)
     delta_f12 = lambda x: f1(x) - f2(x)
 
     try:
@@ -332,13 +336,6 @@ def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
         intersection_x = brentq(delta_f12, x_range.start, x_range.end)
         intersection_y = f1(intersection_x)
     except ValueError:
-        logging.debug('f1(x_range.start), f1(x_range.end) = %.8f, %.8f',
-                      f1(x_range.start), f1(x_range.end))
-        logging.debug('f2(x_range.start), f2(x_range.end) = %.8f, %.8f',
-                      f2(x_range.start), f2(x_range.end))
-        logging.debug('delta_f12(x_range.start), delta_f12(x_range.end) '
-                      '= %.8f, %.8f', delta_f12(x_range.start),
-                      delta_f12(x_range.end))
         """
         (f1 - f2) has the same sign at x_range.start & x_range.end
         use Newton's method instead, and for that purpose interpolate
@@ -367,8 +364,8 @@ def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
         intersection_x = newton(delta_f12, x0, delta_f12_prime(x0))
         """
         logging.debug('try BarycentricInterpolator.')
-        f1 = BarycentricInterpolator(*zip(*segment_1))
-        f2 = BarycentricInterpolator(*zip(*segment_2))
+        f1 = BarycentricInterpolator(*segment_1)
+        f2 = BarycentricInterpolator(*segment_2)
         delta_f12 = lambda x: f1(x) - f2(x)
 
         x0 = 0.5*(x_range.start + x_range.end)

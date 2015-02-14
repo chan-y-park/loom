@@ -50,83 +50,75 @@ class PuncturePoint:
     def __eq__(self, other):
         return self.label == other.label
 
-class SWDiff:
+class SWData:
     """
-    Define a Seiberg-Witten differential of the form 
+    A class containing a Seiberg-Witten curve 
+        f(z, x) = 0
+    and a Seiberg-Witten differential of the form 
         \lambda = v(x, z) dz
     """
     def __init__(self, config):
+        self.parameters = config['sw_parameters']
+
         # PSL2C-transformed z & dz
         Cz = PSL2C(config['mt_params'], z) 
         dCz = Cz.diff(z)
 
-        sw_diff_v = sympy.sympify(config['sw_diff_v'])
-        v = sw_diff_v.subs(z, Cz) * dCz
-        self.sym_v = sympy.simplify(v)
-        self.parameters = config['sw_parameters']
-        self.num_v = self.sym_v.subs(self.parameters)
+        # Seiberg-Witten curve
+        # sym_eq is a SymPy expression. 
+        self.curve.sym_eq = sympy.simplify(
+            sympy.sympify(config['sw_curve']).subs(z, Cz)
+        )
+        # num_eq is from sym_v with its parameters 
+        # substituted with numerical values.
+        self.num_eq = self.curve.sym_eq.subs(self.parameters)
+        logging.info('\nSeiberg-Witten curve: %s = 0\n',
+                     sympy.latex(self.num_eq))
+
+        # Seiberg-Witten differential
+        # sym_v is a SymPy expression. 
+        self.diff.sym_v = sympy.simplify(
+            sympy.sympify(config['sw_diff_v']).subs(z, Cz) * dCz
+        )
+        # num_v is from sym_v with its parameters 
+        # substituted with numerical values.
+        self.diff.num_v = self.sym_v.subs(self.parameters)
         logging.info('\nSeiberg-Witten differential: %s dz\n',
                      sympy.latex(self.num_v))
 
-class SWCurve:
-    """
-    a class containing a Seiberg-Witten curve and relevant information.
-
-    Attributes:
-        eq_string: equation for the SW curve in string
-        equation: equation as a SymPy function
-        ramification_points: list of RamificationPoint instances
-        puncture_points: list of PuncturePoint instances
-    Methods:
-        set_curve_parameters
-        find_ramification_points
-    """
-    def __init__(self, config):
-        #PSL2C transformed z
-        Cz = PSL2C(config['mt_params'], z) 
-
-        sw_curve = sympy.sympify(config['sw_curve'])
-        self.sym_eq = sympy.simplify(sw_curve.subs(z, Cz))
-        self.parameters = config['sw_parameters']
-        self.num_eq = self.sym_eq.subs(self.parameters)
-        logging.info('\nSeiberg-Witten curve: %s = 0\n',
-                     sympy.latex(self.num_eq))
-        self.accuracy = config['accuracy']
+        #self.accuracy = config['accuracy']
         self.punctures = [float(PSL2C(config['mt_params'], p, inverse=True))
                           for p in config['punctures']]
 
-    def get_ramification_points(self, config):
-        ramification_points = []
-        #punctures = [PSL2C(config['mt_params'], p, inverse=True)
-        #             for p in config['punctures']] 
-        f = self.num_eq
-        # NOTE: solve_poly_system vs. solve
-        #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
-        sols = sympy.solve([f, f.diff(x)], z, x)
-        for z_0, x_0 in sols:
-            if min([abs(z_0 - p) for p in self.punctures]) < self.accuracy:
-                continue
-            fx_at_z_0 = f.subs(z, z_0)
-            fx_at_z_0_coeffs = map(complex, 
-                                  sympy.Poly(fx_at_z_0, x).all_coeffs())
-            m = get_root_multiplicity(fx_at_z_0_coeffs, complex(x_0), 
-                                      self.accuracy) 
-            if m > 1:
-                label = 'ramification point #{}'.format(
-                    len(ramification_points)
-                )
-                rp = RamificationPoint(complex(z_0), complex(x_0), m, label)
-                ramification_points.append(rp)
 
-        return ramification_points
+def get_ramification_points(sw, accuracy):
+    f = sw.curve.num_eq
+
+    ramification_points = []
+
+    # NOTE: solve_poly_system vs. solve
+    #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
+    sols = sympy.solve([f, f.diff(x)], z, x)
+    for z_0, x_0 in sols:
+        if min([abs(z_0 - p) for p in sw.punctures]) < accuracy:
+            continue
+        fx_at_z_0 = f.subs(z, z_0)
+        fx_at_z_0_coeffs = map(complex, sympy.Poly(fx_at_z_0, x).all_coeffs())
+        m = get_root_multiplicity(fx_at_z_0_coeffs, complex(x_0), accuracy) 
+        if m > 1:
+            label = 'ramification point #{}'.format(len(ramification_points))
+            rp = RamificationPoint(complex(z_0), complex(x_0), m, label)
+            ramification_points.append(rp)
+
+    return ramification_points
 
 
-def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
+def get_local_sw_diff(sw, ramification_point):
     rp = ramification_point
     # use Dz = z - rp.z & Dx = x - rp.x
     Dz, Dx = sympy.symbols('Dz, Dx')
     local_curve = (
-        sw_curve.num_eq
+        sw.curve.num_eq
         .subs(x, rp.x+Dx)
         .subs(z, rp.z+Dz)
         .series(Dx, 0, rp.i+1).removeO()
@@ -138,7 +130,7 @@ def get_local_sw_diff(sw_curve, sw_diff, ramification_point):
     # Dx = Dx(Dz)
     Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
     local_diff = (
-        sw_diff.num_v
+        sw.diff.num_v
         .subs(x, rp.x+Dx_Dz)
         .subs(z, rp.z+Dz)
         .series(Dz, 0, 1).removeO()

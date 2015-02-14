@@ -1,4 +1,5 @@
 import numpy
+import scipy
 import sympy
 import logging
 import pdb
@@ -56,18 +57,11 @@ def get_root_multiplicity(coefficients, root_0, accuracy):
 
     return multiplicity
 
+
 def cpow(base, exponent_numerator, exponent_denominator=1):
     return complex(base)**complex(Fraction(exponent_numerator,
                                            exponent_denominator))
 
-#def remove_duplicate(a_list, compare, i0=0):
-#    for i in range(i0, len(a_list)):
-#        for j in range(i+1, len(a_list)):
-#            if compare(a_list[i], a_list[j]) is True:
-#                a_list.pop(j)
-#                return remove_duplicate(a_list, compare, i)
-#
-#    return a_list
 
 def gather(a_list, compare, result=None):
     if result is None:
@@ -89,8 +83,10 @@ def gather(a_list, compare, result=None):
     else:
         return gather(next_list, compare, result)
     
+
 def remove_duplicate(a_list, compare):
     return [e[0] for e in gather(a_list, compare)]
+
 
 def n_nearest(a_list, value, n):
     """
@@ -99,6 +95,7 @@ def n_nearest(a_list, value, n):
     """
     compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
     return sorted(a_list, compare)[:n]
+
 
 def n_nearest_indices(a_list, value, n):
     """
@@ -110,6 +107,7 @@ def n_nearest_indices(a_list, value, n):
     sorted_indices = sorted(range(len(a_list)), compare, key)
 
     return sorted_indices[:n]
+
 
 def unravel(k, row_size, column_size=None):
     """
@@ -132,6 +130,7 @@ def unravel(k, row_size, column_size=None):
 
     return (i, j) 
 
+
 def find_xs_at_z_0(f_z_x, z_0, x_0=None, num_x=1):
     """
     solve f(x, z_0) = 0 and return num_x x's nearest to x_0.
@@ -147,9 +146,14 @@ def find_xs_at_z_0(f_z_x, z_0, x_0=None, num_x=1):
         return sorted(xs_at_z_0,
                       lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
 
+
 def PSL2C(C, z, inverse=False):
+    """
+    Apply linear fractional transformation defined by C onto z.
+    """
     if C is None:
         C = [[1, 0], [0, 1]]
+
     if inverse is True:
         a = C[1][1]
         b = -C[0][1]
@@ -171,36 +175,31 @@ def PSL2C(C, z, inverse=False):
         Cz = Cu.subs(u, z)
     return Cz 
 
-#def n_nearest(a_list, value, n):
-#    """
-#    Find n elements of a_list nearest to value and return their indices.
-#    """
-#    
-#    compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
-#    key = lambda k: a_list[k]
-#    sorted_indices = sorted(range(len(a_list)), compare, key)
-#
-#    min_indices = sorted_indices[:n]
-#
-#    size = sympy.sqrt(len(a_list))
-#    if not size.is_Integer:
-#        logging.error('a_list is not a square matrix.')
-#        raise NNearestError(size)
-#    else:
-#        size = int(size)
-#    result = []
-#    for k in min_indices:
-#        i = k / size
-#        j = k % size
-#        result.append((i, j))
-#
-#    return result
 
-#from random import randint
+def get_ode(sw, phase, accuracy):
+    ode_absolute_tolerance = accuracy
 
-#l = [randint(1, 9) for i in range(9)]
-#print l
-#print n_nearest(l, 2, 3)
-#print gather(l, lambda x, y: x == y)
-#print remove_duplicate(l, lambda x, y: x == y)
+    f = sw.curve.num_eq
+    df_dz = f.diff(z)
+    df_dx = f.diff(x)
+    # F = -(\partial f/\partial z)/(\partial f/\partial x)
+    F = sympy.lambdify((z, x), -df_dz/df_dx)
+    v = sympy.lambdify((z, x), sw.diff.num_v)
 
+    def ode_f(t, zx1x2):
+        z_i = zx1x2[0]
+        x1_i = zx1x2[1]
+        x2_i = zx1x2[2]
+        dz_i_dt = exp(phase*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
+        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+        return [dz_i_dt, dx1_i_dt, dx2_i_dt]
+
+    ode = scipy.integrate.ode(ode_f)
+    ode.set_integrator(
+        'zvode',
+        #method='adams',
+        atol=ode_absolute_tolerance,
+    )
+
+    return ode
