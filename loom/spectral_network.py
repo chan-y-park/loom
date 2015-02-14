@@ -221,13 +221,14 @@ class SpectralNetwork:
                 for t_c_i, t_c_f in self.hit_table[bin_key][i_c]:
                     for t_d_i, t_d_f in self.hit_table[bin_key][i_d]:
                         # Check if the two segments have a common x-range.  
-                        xs = []
-                        xs += [x_i for x_i 
+                        x_c = [x_i for x_i 
                                in self.s_walls[i_c].x[t_c_i:t_c_f+1].T]
-                        xs += [x_i for x_i
+                        x_d = [x_i for x_i
                                in self.s_walls[i_d].x[t_d_i:t_d_f+1].T]
                         have_common_x_range = False
-                        for x_a, x_b in combinations(xs, 2):
+                        for x_a, x_b in (
+                            (x_c_i, x_d_i) for x_c_i in x_c for x_d_i in x_d
+                        ):
                             x_r_range, x_i_range = (
                                 find_curve_range_intersection(
                                     (x_a.real, x_a.imag),
