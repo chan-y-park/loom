@@ -110,7 +110,6 @@ class SpectralNetworkPlot:
                             axes.plot(z_seg.real, z_seg.imag,
                                         'o', color='b')
         else:
-            logging.info('Plotting S-walls...')
             for s_wall in s_walls:
                 if(self.plot_data_points is True):
                     axes.plot(s_wall.z.real, s_wall.z.imag, 'o', color='k')

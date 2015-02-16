@@ -11,6 +11,7 @@ from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import SpectralNetworkPlot
 
+CONFIG_FILE_DIR = 'config_file'
 
 def generate_spectral_network(opts):
     """

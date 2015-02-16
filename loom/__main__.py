@@ -27,8 +27,7 @@ longopts = [
     #'save-data=',
 ]
 
-CONFIG_FILE_DIR = 'config_file'
-DATA_FILE_DIR = 'data_file'
+#DATA_FILE_DIR = 'data_file'
 
 
 def run_with_optlist(optlist):
@@ -109,8 +108,6 @@ def run_with_optlist(optlist):
         # Entry point branching
         if opts['gui-mode'] is True:
             return open_gui(opts)
-        elif (len(opts['load-data']) == 0):
-            logging.warning('option "load-data" requires an argument.')
         elif (len(opts['load-data']) > 0):
             return load_spectral_network(opts)
         else:
