@@ -13,7 +13,6 @@ import os
 import getopt
 import time
 
-from config import LoomConfig
 from gui import open_gui
 from api import load_spectral_network, generate_spectral_network
 
@@ -23,8 +22,9 @@ longopts = [
     'logging-level',
     'phase',
     'show-plot',
+    'show-plot-on-cylinder',
     'load-data=',
-    'save-data=',
+    #'save-data=',
 ]
 
 CONFIG_FILE_DIR = 'config_file'
@@ -38,9 +38,9 @@ def run_with_optlist(optlist):
         'gui-mode': False,
         'logging-level': 'warning',
         'phase': None,
-        #'single-network': False,
         'load-data': '',
         'show-plot': False,
+        'show-plot-on-cylinder': False,
     }
         
     if len(optlist) == 0:
@@ -48,6 +48,8 @@ def run_with_optlist(optlist):
 
     -c CFG_FILE_NAME:
         Read CFG_FILE_NAME to set up the configuration.
+        When this option is not set, by default use 
+            loom/config_file/default.ini
 
     -g, --gui-mode:
         Run the graphical user interface.
@@ -60,10 +62,15 @@ def run_with_optlist(optlist):
         Overrides 'phase_range' of the configuration file. 
 
     --load-data DATA_FILE:
-        load data from a file.
+        Load data from a file.
         
     --show-plot:
-        diaplay the spectral network plot.
+        Diaplay the spectral network plot.
+
+    --show-plot-on-cylinder:
+        Diaplay the spectral network plot on a cylinder,
+        assuming that the given Seiberg-Witten differential
+        has two punctures at 0 and infinity.
         """)
 
     else:
@@ -77,11 +84,12 @@ def run_with_optlist(optlist):
                 opts['logging-level'] = arg
             elif (opt == '-p' or opt == '--phase'):
                 opts['phase'] = float(arg)
-                #opts['single-network'] = True
             elif opt == '--load-data':
                 opts['load-data'] = arg
             elif opt == '--show-plot':
                 opts['show-plot'] = True
+            elif opt == '--show-plot-on-cylinder':
+                opts['show-plot-on-cylinder'] = True
         # End of option setting.
 
         # Set logging.
@@ -98,21 +106,15 @@ def run_with_optlist(optlist):
         logging.basicConfig(level=logging_level, format=logging_format, 
                             stream=sys.stdout)
 
-        config = LoomConfig()
         # Entry point branching
         if opts['gui-mode'] is True:
-            return open_gui(opts, config)
+            return open_gui(opts)
+        elif (len(opts['load-data']) == 0):
+            logging.warning('option "load-data" requires an argument.')
         elif (len(opts['load-data']) > 0):
-            data_dir = opts['load-data']
-            config.read(os.path.join(data_dir, 'config.ini'))
-            return load_spectral_network(data_dir, config)
+            return load_spectral_network(opts)
         else:
-            if opts['config-file'] is None:
-                config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
-            else:
-                config_file = opts['config-file']
-            config.read(config_file)
-            return generate_spectral_network(opts, config)
+            return generate_spectral_network(opts)
 
 # Set options from sys.argv when running on the command line,
 # then start running the main code.

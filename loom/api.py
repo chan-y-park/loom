@@ -5,18 +5,26 @@ import zipfile, zlib
 import logging
 import pdb
 
+from config import LoomConfig
 from geometry import SWData, get_ramification_points
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import SpectralNetworkPlot
 
 
-def generate_spectral_network(opts, config):
+def generate_spectral_network(opts):
     """
     Generate one or more spectral networks according to
     the command-line options and the configuration file
     and return a list of data obtained from SpectralNetwork.get_data()
     """
+    config = LoomConfig()
+    if opts['config-file'] is None:
+        config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
+    else:
+        config_file = opts['config-file']
+    config.read(config_file)
+
     file_list = []
 
     phase = opts['phase']
@@ -85,9 +93,11 @@ def generate_spectral_network(opts, config):
             fp.write(a_file, os.path.relpath(a_file, data_save_dir))
 
     # Plot spectral networks.
-    if(opts['show-plot'] is True):
+    if(opts['show-plot'] is True or 
+       opts['show-plot-on-cylinder'] is True):
         spectral_network_plot = SpectralNetworkPlot(
             config,
+            plot_on_cylinder=opts['show-plot-on-cylinder'],
             #plot_data_points=True,
             #plot_joints=True,
             #plot_bins=True,
@@ -103,7 +113,11 @@ def generate_spectral_network(opts, config):
     return spectral_network_data_list
 
 
-def load_spectral_network(data_dir, config):
+def load_spectral_network(opts):
+    config = LoomConfig()
+    data_dir = opts['load-data']
+    config.read(os.path.join(data_dir, 'config.ini'))
+
     sw = SWData(config)
     spectral_network_data_list = []
 
@@ -119,6 +133,7 @@ def load_spectral_network(data_dir, config):
     # Make plots from the loaded data
     spectral_network_plot = SpectralNetworkPlot(
         config,
+        plot_on_cylinder=opts['show-plot-on-cylinder'],
     )
     for data in spectral_network_data_list:
         spectral_network_plot.set_data(data)

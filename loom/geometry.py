@@ -78,7 +78,7 @@ class SWData:
         self.punctures = None
 
         # PSL2C-transformed z & dz
-        Cz = PSL2C(config['mt_params'], z) 
+        Cz = PSL2C(config['mt_params'], z, inverse=True) 
         dCz = Cz.diff(z)
 
         # Seiberg-Witten curve
@@ -106,7 +106,7 @@ class SWData:
             self.punctures = []
         else:
             self.punctures = [
-                float(PSL2C(config['mt_params'], p, inverse=True))
+                PSL2C(config['mt_params'], p, numerical=True)
                 for p in config['punctures']
             ]
 

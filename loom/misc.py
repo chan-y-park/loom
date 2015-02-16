@@ -6,7 +6,7 @@ import pdb
 
 from fractions import Fraction
 from sympy import limit, oo
-from cmath import exp
+from cmath import exp, log
 
 
 class LocalDiffError(Exception):
@@ -148,7 +148,7 @@ def find_xs_at_z_0(f_z_x, z_0, x_0=None, num_x=1):
                       lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
 
 
-def PSL2C(C, z, inverse=False):
+def PSL2C(C, z, inverse=False, numerical=False):
     """
     Apply linear fractional transformation defined by C onto z.
     """
@@ -166,15 +166,26 @@ def PSL2C(C, z, inverse=False):
         c = C[1][0]
         d = C[1][1]
 
-    
-    u = sympy.symbols('u')
-    Cu = (a*u+b)/(c*u+d)
+    if numerical is True:
+        return (complex(a) * z + complex(b))/(complex(c) * z + complex(d))
+    else: 
+        u = sympy.symbols('u')
+        Cu = (a*u+b)/(c*u+d)
 
-    if z == oo:
-        Cz = limit(Cu, u, z) 
-    else:
-        Cz = Cu.subs(u, z)
-    return Cz 
+        if z == oo:
+            Cz = limit(Cu, u, z) 
+        else:
+            Cz = Cu.subs(u, z)
+
+        return Cz 
+
+
+def put_on_cylinder(z, mt_params=None):
+    """
+    Put PSL2C-transformed z-coords  
+    onto the original cylinder.
+    """
+    return log(PSL2C(mt_params, z, inverse=True, numerical=True))/1.0j
 
 
 def get_ode(sw, phase, accuracy):
