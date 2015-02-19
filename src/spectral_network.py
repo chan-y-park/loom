@@ -183,7 +183,9 @@ class SpectralNetwork:
             a_joint.set_json_data(joint_data)
             self.joints.append(a_joint)
 
-        self.hit_table.load_json_data(json_data['hit_table'])
+        if json_data['hit_table'] is not None:
+            self.hit_table = HitTable()
+            self.hit_table.load_json_data(json_data['hit_table'])
 
 
     def get_new_joints(self, new_s_wall_index, sw, config):

@@ -13,7 +13,7 @@ import os
 import getopt
 import time
 
-from gui import open_gui
+from gui import open_gui, gui_load_spectral_network
 from api import load_spectral_network, generate_spectral_network
 
 shortopts = 'c:gl:p:'
@@ -23,7 +23,7 @@ longopts = [
     'phase',
     'show-plot',
     'show-plot-on-cylinder',
-    'load-data=',
+    'load-data',
     #'save-data=',
 ]
 
@@ -37,7 +37,7 @@ def run_with_optlist(optlist):
         'gui-mode': False,
         'logging-level': 'info',
         'phase': None,
-        'load-data': '',
+        'load-data': None,
         'show-plot': False,
         'show-plot-on-cylinder': False,
     }
@@ -108,8 +108,11 @@ def run_with_optlist(optlist):
         # Entry point branching
         if opts['gui-mode'] is True:
             return open_gui(opts)
-        elif (len(opts['load-data']) > 0):
-            return load_spectral_network(opts)
+        elif opts['load-data'] is not None:
+            if opts['load-data'] == '':
+                return gui_load_spectral_network(opts)
+            else:
+                return load_spectral_network(opts)
         else:
             return generate_spectral_network(opts)
 

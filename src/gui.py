@@ -1,7 +1,11 @@
+import os
+import logging
 import Tkinter as tk
-#from Tkinter import Tk, Entry, Frame, Button
+import Tkconstants
+import tkFileDialog
+import pdb
 
-from api import generate_spectral_network
+from api import generate_spectral_network, load_spectral_network
 
 class Application(tk.Frame):
     def __init__(self, config, master=None):
@@ -28,3 +32,21 @@ def open_gui(opts, config):
     root = tk.Tk()
     app = Application(config, master=root)
     app.mainloop()
+
+def gui_load_spectral_network(opts):
+    root = tk.Tk()
+    dir_opts = {
+        'initialdir': os.curdir,
+        'mustexist': False,
+        'parent': root,
+        'title': 'Select a directory that contains data files.',
+    }
+    data_dir = tkFileDialog.askdirectory(**dir_opts)
+    root.destroy()
+    if data_dir == '':
+        return None
+    else:
+        logging.info('Opening data directory "{}"...'.format(data_dir))
+        opts['load-data'] = data_dir
+        return load_spectral_network(opts)
+    
