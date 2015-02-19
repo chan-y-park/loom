@@ -9,9 +9,10 @@ Python program to generate and analyze spectral networks
 * takes too long near critical phases
   * change of intersection routine solved this problem?
 * print time after each data saving
-* SciPy warning
-  ```/usr/local/lib/python2.7/dist-packages/scipy/optimize/zeros.py:150: RuntimeWarning: Tolerance of 0.000513046300877562 reached
+* SciPy warnings
+  * ```/usr/local/lib/python2.7/dist-packages/scipy/optimize/zeros.py:150: RuntimeWarning: Tolerance of 0.000513046300877562 reached
   warnings.warn(msg, RuntimeWarning)```
+  * divide by zero
 * api for getting D-type joints alternative to the Z_2 projection.
 * GUI
 
