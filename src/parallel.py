@@ -22,29 +22,33 @@ def a_child_process(
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks
 ):
+    theta_i, theta_f, theta_n = config['phase_range']
+
     shared_n_started_spectral_networks.value += 1
     job_id = shared_n_started_spectral_networks.value
-    logging.info('Start generating spectral network #{}: theta = {}.'.format(
-        job_id, phase
-    ))
+    logging.info('Start generating spectral network #{}/{}: theta = {}.'
+                 .format(job_id, theta_n, phase)
+    )
 
     spectral_network = SpectralNetwork(phase, ramification_points, config) 
 
     spectral_network.grow(sw, config)
 
     shared_n_finished_spectral_networks.value += 1
-    logging.info('Finished generating spectral network #{}.'.format(
-        shared_n_finished_spectral_networks.value
-    ))
+    logging.info('Finished generating spectral network #{}/{}.'
+                 .format(shared_n_finished_spectral_networks.value, theta_n)
+    )
 
     spectral_network_data = spectral_network.get_data()
 
     # Save spectral network data to a file
-    data_file_name = os.path.join(data_save_dir, 'data_{}.json'.format(job_id))
+    data_file_name = os.path.join(
+        data_save_dir,
+        'data_{}.json'.format(str(job_id).zfill(len(str(theta_n))))
+    )
     logging.info('Saving data to {}.'.format(data_file_name))
     with open(data_file_name, 'wb') as fp:
         spectral_network.save_json_data(fp,)
-
 
     return spectral_network_data
 
@@ -99,10 +103,6 @@ def parallel_get_spectral_network(
         pool.close()
 
         for result in results:
-            logging.info(
-                'job progress: {}/{} finished.'
-                .format(shared_n_finished_spectral_networks.value, theta_n)
-            )
             spectral_network_data_list.append(result.get())
 
     except KeyboardInterrupt:

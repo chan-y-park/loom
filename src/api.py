@@ -123,6 +123,7 @@ def load_spectral_network(opts):
     spectral_network_data_list = []
 
     data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
+    data_file_list.sort()
     for data_file in data_file_list:
         logging.info('Loading {}...'.format(data_file))
         spectral_network = SpectralNetwork(
