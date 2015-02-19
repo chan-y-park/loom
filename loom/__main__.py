@@ -35,7 +35,7 @@ def run_with_optlist(optlist):
     opts = {
         'config-file': None,
         'gui-mode': False,
-        'logging-level': 'warning',
+        'logging-level': 'info',
         'phase': None,
         'load-data': '',
         'show-plot': False,

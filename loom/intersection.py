@@ -14,42 +14,18 @@ import warnings
 import numpy
 import pdb
 
-from numpy import __version__ as numpy_version
-from scipy import __version__ as scipy_version
-from sympy import __version__ as sympy_version
+#from numpy import __version__ as numpy_version
+#from scipy import __version__ as scipy_version
+#from sympy import __version__ as sympy_version
 from scipy.interpolate import interp1d
 from scipy.interpolate import BarycentricInterpolator
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq, newton
-# NOTE:this module requires SymPy 0.7.5.
 from sympy import Interval, Intersection
 
 from math import floor
 from itertools import combinations
 from warnings import warn
-
-# turn this on to capture warnings as exceptions.
-#warnings.filterwarnings('error')
-
-# Library version checks.
-if numpy_version < '1.8.2':
-    message = ('Current NumPy version ' + str(numpy_version) +
-               ' is lower than 1.8.2; '
-               'this module may not work properly.')
-    warn(message, Warning)
-
-if scipy_version < '0.14.0':
-    message = ('Current SciPy version ' + str(scipy_version) +
-               ' is lower than 0.14.0; '
-               'this module may not work properly.')
-    warn(message, Warning)
-
-if sympy_version < '0.7.6':
-    message = ('Current SymPy version ' + str(sympy_version) +
-               ' is lower than 0.7.6; '
-               'this module may not work properly.')
-    warn(message, Warning)
-
 
 class NoIntersection(Exception):
     """
@@ -62,7 +38,10 @@ class NoIntersection(Exception):
     def __str__(self):
         return repr(self.value)
 
-
+# NOTE: It seems that using HitTable takes too much RAM resource.
+# We will not use it when finding joints of S-walls, instead we will
+# find joints by first cutting S-walls into segments of monotonic
+# curves and then find intersections between the segments.
 class HitTable:
     """
     Construct a hash table of a coarse-grained plane.
@@ -234,6 +213,8 @@ class HitTable:
 
         return new_bin_keys
 
+
+# Only used by HitTable
 def is_turning_point(curve, t):
     """Check whether curve[t] is the turning point or not."""
     t_max = len(curve) - 1
@@ -254,6 +235,33 @@ def is_turning_point(curve, t):
         return True
     else:
         return False
+ 
+
+#def get_turning_points(curve):
+#    """
+#    Return a list of indices of turning points,
+#    i.e. dx/dy = 0 or dy/dx = 0.
+#
+#    curve is (x_array, y_array), a tuple of NumPy arrays.
+#    """
+#    tps = []
+#
+#    if len(curve) < 3:
+#        return tps
+#
+#    x, y = curve
+#
+#    if len(x) != len(y):
+#        logging.error('Incorrect form of curve: len(x) = {}, len(y) = {}'
+#                      .format(len(x), len(y)))
+#        return tps
+#
+#    for t in range(1, len(x)-1):
+#        if ((x[t] - x[t-1]) * (x[t+1] - x[t]) < 0 or
+#            (y[t] - y[t-1]) * (y[t+1] - y[t]) < 0):
+#            tps.append(t)
+#
+#    return tps
         
 
 def find_curve_range_intersection(curve_1, curve_2, cut_at_inflection=False):
@@ -289,10 +297,12 @@ def find_curve_range_intersection(curve_1, curve_2, cut_at_inflection=False):
 
     return (x_range, y_range)
 
-def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
-                                  accuracy, newton_maxiter=5):
+
+def find_intersection_of_segments(segment_1, segment_2, accuracy,
+                                  bin_center=None, bin_size=None,
+                                  newton_maxiter=5):
     """
-    Find an intersection of two segments of curves in the same bin.
+    Find an intersection of two segments of curves.
 
     First find interpolations of segments using scipy.interp1d and
     use SciPy's Brent method to find an intersection. When this
@@ -303,8 +313,6 @@ def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
     ----------
     segment_1, segment_2: Segments to find their intersection. Each
         segment is (x_array, y_array), a tuple of NumPy arrays.
-    bin_center, bin_size: center location and the size of the bin
-        that contains the segments.
     newton_maxiter: Maximum number of iterations for secant method.
         When increased, this gives a better accuracy of the
         intersection but it also greatly reduces the performance
@@ -316,13 +324,14 @@ def find_intersection_of_segments(segment_1, segment_2, bin_center, bin_size,
         segment_1, segment_2, cut_at_inflection=True
     )
 
-    bin_center_x, bin_center_y = bin_center
-    bin_x_interval = Interval(bin_center_x - 0.5*bin_size,
-                              bin_center_x + 0.5*bin_size)
-    bin_y_interval = Interval(bin_center_y - 0.5*bin_size,
-                              bin_center_y + 0.5*bin_size)
-    x_range = x_range.intersect(bin_x_interval)
-    y_range = y_range.intersect(bin_y_interval)
+    if bin_center is not None and bin_size is not None:
+        bin_center_x, bin_center_y = bin_center
+        bin_x_interval = Interval(bin_center_x - 0.5*bin_size,
+                                  bin_center_x + 0.5*bin_size)
+        bin_y_interval = Interval(bin_center_y - 0.5*bin_size,
+                                  bin_center_y + 0.5*bin_size)
+        x_range = x_range.intersect(bin_x_interval)
+        y_range = y_range.intersect(bin_y_interval)
 
     if (x_range.is_EmptySet or y_range.is_EmptySet or x_range.is_FiniteSet or
             y_range.is_FiniteSet):

@@ -124,6 +124,7 @@ def load_spectral_network(opts):
 
     data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
     for data_file in data_file_list:
+        logging.info('Loading {}...'.format(data_file))
         spectral_network = SpectralNetwork(
             config=config,
         )
@@ -137,6 +138,8 @@ def load_spectral_network(opts):
         plot_on_cylinder=opts['show-plot-on-cylinder'],
     )
     for data in spectral_network_data_list:
+        logging.info('Generating the plot of a spectral network '
+                     '@ theta = {}...'.format(data['phase']))
         spectral_network_plot.set_data(data)
     spectral_network_plot.show()
 

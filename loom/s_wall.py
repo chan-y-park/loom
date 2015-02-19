@@ -55,10 +55,11 @@ class SWall(object):
     def __init__(self, z_0=None, x_0=None, parents=None,
                  label=None, n_steps=None,):
         """
-        SWall.data is a NumPy array of [z_i, x_i] with length n_steps+1,
-        where z_i is the base coordinate and x_i is a Numpy array of 
-        the fiber coordinates at t = t_i, i.e. 
-            SWall.data[i] = [z_i, [x_i[0], ...]].
+        SWall.z is a NumPy array of length n_steps+1,
+        where z[t] is the base coordinate.
+        
+        SWall.x is a Numpy array of the fiber coordinates at t, i.e. 
+            SWall.x[t] = [x[t][0], x[t][1], ...].
         """
         if n_steps is None:
             self.z = []
@@ -74,7 +75,8 @@ class SWall(object):
 
     def __setitem__(self, t, data):
         """
-        Set the data of the S-wall at t, where data = [z, x[0], ...]
+        Set the data of the S-wall at t, where
+            data = [z[t], x[t][0], x[t][1], ...]
         """
         self.z[t] = data[0]
         self.x[t] = data[1:]
@@ -82,7 +84,8 @@ class SWall(object):
 
     def __getitem__(self, t):
         """
-        Get the data of the S-wall at t, where data = [z, x[0], ...]
+        Get the data of the S-wall at t, where 
+            data = [z[t], x[t][0], x[t][1], ...]
         """
         return numpy.concatenate([[self.z[t]], self.x[t]])
 
@@ -97,8 +100,10 @@ class SWall(object):
 
     def get_json_data(self):
         json_data = {
-            'z': [ctor2(z_t) for z_t in self.z],
-            'x': [[ctor2(x_i) for x_i in x_t] for x_t in self.x],
+            'z': numpy.array([self.z.real, self.z.imag]).T.tolist(),
+            'x': numpy.rollaxis(
+                numpy.array([self.x.real, self.x.imag]), 0, 3
+            ).tolist(),
             'parents': [parent for parent in self.parents],
             'label': self.label,
         }
@@ -113,6 +118,31 @@ class SWall(object):
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
     
+
+    def get_turning_points(self):
+        """
+        Return a list of indices of turning points of SWall.z,
+        i.e. dx/dy = 0 or dy/dx = 0, where x = z[t].real and y = z[t].imag.
+        """
+        tps = []
+
+        if len(self.z) < 3:
+            return tps
+
+        x_0 = self.z[0].real
+        y_0 = self.z[0].imag
+
+        for t in range(1, len(self.z)-1):
+            x_1 = self.z[t].real
+            y_1 = self.z[t].imag
+            x_2 = self.z[t+1].real
+            y_2 = self.z[t+1].imag
+            if ((x_1 - x_0) * (x_2 - x_1) < 0 or
+                (y_1 - y_0) * (y_2 - y_1) < 0):
+                tps.append(t)
+            x_0 = x_1
+            y_0 = y_1
+        return tps
 
     def grow(
         self,

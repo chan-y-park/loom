@@ -13,10 +13,9 @@ from geometry import RamificationPoint, SWData
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
 from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode)
 from intersection import (HitTable, NoIntersection,
+                          #get_turning_points,
                           find_intersection_of_segments, 
                           find_curve_range_intersection)
-
-#x, z = sympy.symbols('x z')
 
 
 class SpectralNetwork:
@@ -28,7 +27,8 @@ class SpectralNetwork:
     ):
         self.phase = phase
         self.ramification_points = ramification_points
-        self.hit_table = HitTable(config['size_of_bin'])
+        self.hit_table = None 
+        #self.hit_table = HitTable(config['size_of_bin'])
 
         self.s_walls = []
         self.joints = []
@@ -153,7 +153,10 @@ class SpectralNetwork:
                                 for s_wall in self.s_walls]
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
-        json_data['hit_table'] = self.hit_table.get_json_data()
+        if self.hit_table is None:
+            json_data['hit_table'] = None 
+        else:
+            json_data['hit_table'] = self.hit_table.get_json_data()
         json.dump(json_data, file_object, **kwargs)
     
 
@@ -191,6 +194,115 @@ class SpectralNetwork:
         S-walls, which in principle can happen but is unlikely in a numerical
         setup.
         """
+        new_joints = []
+        if (config['root_system'] in ['A1',]):
+            logging.info('There is no joint for the given root system {}.'
+                         .format(config['root_system']))
+            return new_joints
+
+        new_s_wall = self.s_walls[new_s_wall_index]
+        new_tps = new_s_wall.get_turning_points()
+        new_z_segs = numpy.split(new_s_wall.z, new_tps, axis=0,)
+        new_x_segs = numpy.split(new_s_wall.x, new_tps, axis=1,)
+        #new_curve = numpy.array([new_s_wall.z.real, new_s_wall.z.imag])
+        #new_curve_tps = get_turning_points(new_curve)
+        #new_curve_segs = numpy.split(new_curve, new_curve_tps, axis=1,)
+
+        # NOTE: Here we find only a single joint between two S-walls.
+        # If needed, change the part of getting the z-intersection
+        # such that it finds multiple z-intersections, or use HitTable.
+        for prev_s_wall in self.s_walls[:new_s_wall_index]:
+            prev_tps = prev_s_wall.get_turning_points()
+            prev_z_segs = numpy.split(prev_s_wall.z, prev_tps, axis=0,)
+            prev_x_segs = numpy.split(prev_s_wall.x, prev_tps, axis=1,)
+            #prev_curve = numpy.array([prev_s_wallw.z.real, prev_s_wall.z.imag])
+            #prev_curve_tps = get_turning_points(prev_curve)
+            #prev_curve_segs = numpy.split(prev_curve, prev_curve_tps, axis=1,)
+
+            for i_n in range(len(new_tps)+1):
+                z_seg_n = new_z_segs[i_n]
+                for i_p in range(len(prev_tps)+1):
+                    z_seg_p = prev_z_segs[i_p]
+                    # Check if the two segments have a common x-range.  
+                    have_common_x_range = False
+                    for x_a, x_b in (
+                        (x_a, x_b) for x_a in new_x_segs[i_n].T 
+                        for x_b in prev_x_segs[i_p].T
+                    ):
+                        x_r_range, x_i_range = (
+                            find_curve_range_intersection(
+                                (x_a.real, x_a.imag),
+                                (x_b.real, x_b.imag),
+                            )
+                        )
+                        if (x_r_range.is_EmptySet and 
+                            x_r_range.is_EmptySet and 
+                            x_i_range.is_FiniteSet and
+                            x_i_range.is_FiniteSet):
+                            continue
+                        else:
+                            have_common_x_range = True
+                            break
+                    if have_common_x_range is False:
+                        # No common x range, therefore no joint.
+                        continue
+
+                    # Find an intersection on the z-plane.
+                    try:
+                        ip_x, ip_y = find_intersection_of_segments(
+                            (z_seg_n.real, z_seg_n.imag), 
+                            (z_seg_p.real, z_seg_p.imag), 
+                            config['accuracy'],
+                        )
+                        ip_z = ip_x + 1j*ip_y
+
+                        # t_n: index of z_seg_n nearest to ip_z
+                        t_n = n_nearest_indices(z_seg_n, ip_z, 1)[0]
+                        x_n = new_x_segs[i_n][t_n]
+
+                        # t_p: index of z_seg_p nearest to ip_z
+                        t_p = n_nearest_indices(z_seg_p, ip_z, 1)[0]
+                        x_p = prev_x_segs[i_p][t_p]
+
+                        # TODO: need to put the joint into the parent
+                        # S-walls?
+
+                        # find the values of x at z = ip_z.
+                        ip_xs = find_xs_at_z_0(sw.curve.num_eq, ip_z)
+                        ip_x_n_0 = n_nearest(ip_xs, x_n[0], 1)[0]
+                        ip_x_n_1 = n_nearest(ip_xs, x_n[1], 1)[0]
+                        ip_x_p_0 = n_nearest(ip_xs, x_p[0], 1)[0]
+                        ip_x_p_1 = n_nearest(ip_xs, x_p[1], 1)[0]
+
+                        a_joint = get_joint(
+                            ip_z, ip_x_n_0, ip_x_n_1, ip_x_p_0, ip_x_p_1,
+                            new_s_wall.label, 
+                            prev_s_wall.label,
+                            config['accuracy'],
+                            root_system=config['root_system'],
+                            label='joint #{}'.format(len(self.joints)),
+                        )
+
+                        if(a_joint is None):
+                            continue
+                        else:
+                            new_joints.append(a_joint)
+
+                    except NoIntersection:
+                        pass
+        return new_joints
+
+
+    def get_new_joints_with_hit_table(self, new_s_wall_index, sw, config):
+        """
+        Find joints between the newly grown segment of the given S-wall
+        and the other S-walls. This checks joints that are formed by two
+        S-walls only, not considering the possibility of a joint of three
+        S-walls, which in principle can happen but is unlikely in a numerical
+        setup.
+        """
+        if self.hit_table is None:
+            self.hit_table = HitTable(config['size_of_bin'])
         new_joints = []
         if (config['root_system'] in ['A1',]):
             logging.info('There is no joint for the given root system {}.'
