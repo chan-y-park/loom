@@ -3,6 +3,7 @@ Python program to generate and analyze spectral networks
 
 ## To Do List
 * logging to file
+* GUI
 * egg?
 * joint.x1, x2 -> x0, x1
 * check num_x_over_z
@@ -13,8 +14,7 @@ Python program to generate and analyze spectral networks
   * ```/usr/local/lib/python2.7/dist-packages/scipy/optimize/zeros.py:150: RuntimeWarning: Tolerance of 0.000513046300877562 reached
   warnings.warn(msg, RuntimeWarning)```
   * divide by zero
-* API for getting D-type joints alternative to the Z_2 projection.
-* GUI
+* API for getting D-type joints using other method than the Z_2 projection.
 
 ## How to run 
 * Python > 2.7.6
