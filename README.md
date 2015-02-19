@@ -13,14 +13,14 @@ Python program to generate and analyze spectral networks
 
 #### Ubuntu 14.04
 
-* from Ubuntu package
-  * ```sudo apt-get install python python-dev libatlas-base-dev gcc gfortran g++ python-numpy python-matplotlib ipython ipython-notebook python-pandas python-nose```
-* install SciPy 0.15.1
-  * http://www.scipy.org/install.html
-  * Unpack ```scipy-<version>.tar.gz```, change to the ```scipy-<version>/``` directory
-  * ```python setup.py install```
+1. from Ubuntu package
+  1. ```sudo apt-get install python python-dev libatlas-base-dev gcc gfortran g++ python-numpy python-matplotlib ipython ipython-notebook python-pandas python-nose```
+1. install SciPy 0.15.1
+  1. Unpack ```scipy-<version>.tar.gz```, change to the ```scipy-<version>/``` directory.
+  1. ```python setup.py install```
+  1. see http://www.scipy.org/install.html for additional help.
 
-* install SymPy 0.7.6
-  * Unpack ```sympy-<version>.tar.gz```, change to the ```sympy-<version>/``` directory
-  * ```sudo python setup.py install``` 
+1. install SymPy 0.7.6
+  1. Unpack ```sympy-<version>.tar.gz```, change to the ```sympy-<version>/``` directory.
+  1. ```sudo python setup.py install``` 
 
