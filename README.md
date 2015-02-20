@@ -2,10 +2,10 @@
 Python program to generate and analyze spectral networks
 
 ## To Do List
+* don't use ```spectral_network.get_data()```: now a child process can pickle ``SpectralNetwork```.
 * logging to file
 * GUI
 * egg?
-* joint.x1, x2 -> x0, x1
 * check num_x_over_z
 * takes too long near critical phases
   * change of intersection routine solved this problem?
