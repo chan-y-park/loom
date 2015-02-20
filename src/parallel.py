@@ -18,7 +18,6 @@ def a_child_process(
     phase,
     ramification_points,
     config,
-    data_save_dir,
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks
 ):
@@ -41,39 +40,31 @@ def a_child_process(
 
     spectral_network_data = spectral_network.get_data()
 
-    # Save spectral network data to a file
-    data_file_name = os.path.join(
-        data_save_dir,
-        'data_{}.json'.format(str(job_id).zfill(len(str(theta_n))))
-    )
-    logging.info('Saving data to {}.'.format(data_file_name))
-    with open(data_file_name, 'wb') as fp:
-        spectral_network.save_json_data(fp,)
-
-    return spectral_network_data
+    return spectral_network
 
 
 def parallel_get_spectral_network(
     sw, 
     ramification_points, 
     config,
-    data_save_dir,
 ):
-    spectral_network_data_list = []
+    spectral_network_list = []
     n_processes = config['n_processes']
 
     theta_i, theta_f, theta_n = config['phase_range']
-    phases = [(theta_i + i * (theta_f - theta_i) / theta_n)
-              for  i in range(theta_n)]
+    phases = [(float(theta_i) + i * float(theta_f - theta_i) / (theta_n-1))
+              for i in range(theta_n)]
 
     manager = multiprocessing.Manager()
     shared_n_started_spectral_networks = manager.Value('i', 0)
     shared_n_finished_spectral_networks = manager.Value('i', 0)
 
-    if(n_processes == 0):
-        n_processes = multiprocessing.cpu_count()
-    elif(n_processes < 0):
-        n_cpu = multiprocessing.cpu_count()
+    n_cpu = multiprocessing.cpu_count()
+    if (n_processes == 0):
+        # Use all the CPUs.
+        n_processes = n_cpu
+    elif (n_processes < 0):
+        # Leave |n_processes| CPUs.
         if(n_cpu > -n_processes):
             n_processes = n_cpu - (-n_processes)
         else:
@@ -81,7 +72,13 @@ def parallel_get_spectral_network(
                             .format(-config['n_processes']))
             logging.warning('Set n_processes to 1.')
             n_processes = 1
+    elif (n_cpu < n_processes):
+            logging.warning('The number of CPUs is smaller than {}.'
+                            .format(config['n_processes']))
+            logging.warning('Set n_processes to {}.'.format(n_cpu))
+            n_processes = n_cpu
 
+    # Use n_processes CPUs.
     pool =  multiprocessing.Pool(n_processes, init_process)
     logging.info('Number of processes in the pool: {}'.format(n_processes))
 
@@ -94,7 +91,6 @@ def parallel_get_spectral_network(
                     phase,
                     ramification_points,
                     config,
-                    data_save_dir,
                     shared_n_started_spectral_networks,
                     shared_n_finished_spectral_networks,
                 )
@@ -103,11 +99,11 @@ def parallel_get_spectral_network(
         pool.close()
 
         for result in results:
-            spectral_network_data_list.append(result.get())
+            spectral_network_list.append(result.get())
 
     except KeyboardInterrupt:
         logging.warning('Caught ^C; terminates processes...')
         pool.terminate()
         pool.join()
 
-    return spectral_network_data_list
+    return spectral_network_list

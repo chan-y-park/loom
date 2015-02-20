@@ -33,13 +33,13 @@ class SpectralNetworkPlot:
         self.plots = []
         self.current_plot = 0
 
-    def set_data(
+    def draw(
         self,
-        spectral_network_data,
+        spectral_network,
     ):
-        theta = spectral_network_data['phase']
-        ramification_points = spectral_network_data['ramification_points']
-        s_walls = spectral_network_data['s_walls']
+        theta = spectral_network.phase
+        ramification_points = spectral_network.ramification_points
+        s_walls = spectral_network.s_walls
 
         C = self.config['mt_params']
 
@@ -87,7 +87,7 @@ class SpectralNetworkPlot:
    
         # Plot joints
         if(self.plot_joints is True):
-            for jp in spectral_network_data['joints']:
+            for jp in spectral_network.joints:
                 if (self.plot_on_cylinder is True):
                     jp_z = put_on_cylinder(rp.z, C)
                 else:
@@ -100,7 +100,7 @@ class SpectralNetworkPlot:
 
         # If we have segments of curves, draw them in different colors.
         if(self.plot_segments is True):
-            hit_table = spectral_network_data['hit_table']
+            hit_table = spectral_network.hit_table
             for bin_key in hit_table:
                 for curve_index in hit_table[bin_key]:
                     for t_i, t_f in hit_table[bin_key][curve_index]:

@@ -13,7 +13,6 @@ from geometry import RamificationPoint, SWData
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
 from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode)
 from intersection import (HitTable, NoIntersection,
-                          #get_turning_points,
                           find_intersection_of_segments, 
                           find_curve_range_intersection)
 
@@ -85,6 +84,7 @@ class SpectralNetwork:
                 logging.info('Growing S-wall #{}...'.format(i))
                 self.s_walls[i].grow(ode, rpzs, ppzs, config,)
                 new_joints += self.get_new_joints(i, sw, config)
+                #new_joints += self.get_new_joints_with_hit_table(i, sw, config)
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
@@ -112,7 +112,7 @@ class SpectralNetwork:
                 self.s_walls.append(
                     SWall(
                         z_0=joint.z,
-                        x_0=[joint.x1, joint.x2], 
+                        x_0=joint.x, 
                         parents=joint.parents,
                         label=label,
                         n_steps=n_steps,
@@ -235,11 +235,12 @@ class SpectralNetwork:
                             find_curve_range_intersection(
                                 (x_a.real, x_a.imag),
                                 (x_b.real, x_b.imag),
+                                cut_at_inflection=True,
                             )
                         )
-                        if (x_r_range.is_EmptySet and 
-                            x_r_range.is_EmptySet and 
-                            x_i_range.is_FiniteSet and
+                        if (x_r_range.is_EmptySet or 
+                            x_r_range.is_EmptySet or 
+                            x_i_range.is_FiniteSet or
                             x_i_range.is_FiniteSet):
                             continue
                         else:
@@ -368,9 +369,9 @@ class SpectralNetwork:
                             ip_x, ip_y = find_intersection_of_segments(
                                 (seg_c_z.real, seg_c_z.imag),
                                 (seg_d_z.real, seg_d_z.imag),
+                                config['accuracy'],
                                 self.hit_table.get_bin_location(bin_key),
                                 self.hit_table.get_bin_size(),
-                                config['accuracy']
                             )
                             ip_z = ip_x + 1j*ip_y
 

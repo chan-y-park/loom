@@ -280,11 +280,11 @@ def find_curve_range_intersection(curve_1, curve_2, cut_at_inflection=False):
         y1_min, y1_may = sorted([y1[0], y1[-1]])
         y2_min, y2_may = sorted([y2[0], y2[-1]])
     else:
-        x1_min, x1_max = numpy.argsort(x1)[[0, -1]]
-        x2_min, x2_max = numpy.argsort(x2)[[0, -1]]
+        x1_min, x1_max = numpy.sort(x1)[[0, -1]]
+        x2_min, x2_max = numpy.sort(x2)[[0, -1]]
 
-        y1_min, y1_may = numpy.argsort(y1)[[0, -1]]
-        y2_min, y2_may = numpy.argsort(y2)[[0, -1]]
+        y1_min, y1_may = numpy.sort(y1)[[0, -1]]
+        y2_min, y2_may = numpy.sort(y2)[[0, -1]]
 
     x1_interval = Interval(x1_min, x1_max)
     x2_interval = Interval(x2_min, x2_max)

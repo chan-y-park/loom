@@ -15,10 +15,9 @@ x, z = sympy.symbols('x z')
 num_x_over_z = 2
 
 class Joint:
-    def __init__(self, z=None, x1=None, x2=None, parents=None, label=None,):
+    def __init__(self, z=None, x=None, parents=None, label=None,):
         self.z = z
-        self.x1 = x1
-        self.x2 = x2
+        self.x = x
         self.parents = parents 
         self.label = label
 
@@ -28,8 +27,7 @@ class Joint:
     def get_json_data(self):
         json_data = {
             'z': ctor2(self.z),
-            'x1': ctor2(self.x1),
-            'x2': ctor2(self.x2),
+            'x': [ctor2(x_i) for x_i in self.x],
             'parents': [parent for parent in self.parents],
             'label': self.label,
         }
@@ -37,18 +35,19 @@ class Joint:
 
     def set_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
-        self.x1 = r2toc(json_data['x1'])
-        self.x2 = r2toc(json_data['x2'])
+        self.x = [r2toc(x_i) for x_i in json_data['x']]
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
 
     def is_equal_to(self, other, accuracy):
-        if(abs(self.z - other.z) < accuracy and
-           abs(self.x1 - other.x1) < accuracy and
-           abs(self.x2 - other.x2) < accuracy):
-            return True
-        else:
+        if(abs(self.z - other.z) > accuracy):
             return False
+        if(len(self.x) != len(other.x)):
+            return False
+        for i in range(len(self.x)):
+            if (abs(self.x[i] - other.x[i]) > accuracy):
+                return False
+        return True 
 
 
 class SWall(object):
@@ -304,13 +303,13 @@ def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy,
             abs(x1_i-(-x2_j)) < accuracy):
             return None
         else:
-            return Joint(z, x1_i, x2_j, [parent_i, parent_j], label)
+            return Joint(z, [x1_i, x2_j], [parent_i, parent_j], label)
     elif (abs(x2_j - x1_i) < accuracy):
         if (root_system is not None and
             root_system[0] == 'D' and 
             abs(x1_j-(-x2_i)) < accuracy):
             return None
         else:
-            return Joint(z, x1_j, x2_i, [parent_j, parent_i], label)
+            return Joint(z, [x1_j, x2_i], [parent_j, parent_i], label)
 
 
