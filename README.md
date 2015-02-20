@@ -2,6 +2,7 @@
 Python program to generate and analyze spectral networks
 
 ## To Do List
+* implement an option to change between the intersection finding routines. 
 * don't use ```spectral_network.get_data()```: now a child process can pickle ``SpectralNetwork```.
 * logging to file
 * GUI
