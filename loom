@@ -1,2 +1,2 @@
 #!/bin/sh 
-python -m src "$@"
+python -m src --gui-mode "$@"

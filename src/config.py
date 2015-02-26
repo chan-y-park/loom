@@ -52,6 +52,10 @@ class LoomConfig:
         return value
 
 
+    def iteritems(self):
+        return self.data.iteritems()
+
+
     def read(self, config_file):
         """
         Read an .ini file and load the configuration data.

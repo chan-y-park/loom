@@ -159,11 +159,7 @@ def plot_segments(segments,
     pyplot.axes().set_aspect('equal')
 
     for segment in segments:
-        xs = []
-        ys = []
-        for p in segment:
-            xs.append(p[0])
-            ys.append(p[1])
+        xs, ys = segment
         pyplot.plot(xs, ys, '-')
         if(plot_data_points == True):
             pyplot.plot(xs, ys, 'o', color='b')

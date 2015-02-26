@@ -12,8 +12,10 @@ import logging
 import os
 import getopt
 import time
+import pdb
 
-from gui import open_gui, gui_load_spectral_network
+from config import LoomConfig
+from gui import open_gui
 from api import load_spectral_network, generate_spectral_network
 
 shortopts = 'c:gl:p:'
@@ -23,10 +25,11 @@ longopts = [
     'phase',
     'show-plot',
     'show-plot-on-cylinder',
-    'load-data',
+    'load-data=',
     #'save-data=',
 ]
 
+CONFIG_FILE_DIR = 'config_file'
 #DATA_FILE_DIR = 'data_file'
 
 
@@ -61,7 +64,9 @@ def run_with_optlist(optlist):
         Overrides 'phase_range' of the configuration file. 
 
     --load-data DATA_FILE:
-        Load data from a file.
+        Load data from a file. If DATA_FILE is not specified,
+        shows a file dialog window to open a directory
+        containing data files.
         
     --show-plot:
         Diaplay the spectral network plot.
@@ -106,15 +111,28 @@ def run_with_optlist(optlist):
                             stream=sys.stdout)
 
         # Entry point branching
+        if opts['load-data'] is not None:
+            data_dir = opts['load-data']
+            return load_spectral_network(data_dir,
+                                         opts['show-plot-on-cylinder'])
+
+        # Read the default config file.
+        config = LoomConfig()
+        config_file = opts['config-file']
+        if config_file is None:
+            config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
+        config.read(config_file)
+
+        # Entry point branching continued.
         if opts['gui-mode'] is True:
-            return open_gui(opts)
-        elif opts['load-data'] is not None:
-            if opts['load-data'] == '':
-                return gui_load_spectral_network(opts)
-            else:
-                return load_spectral_network(opts)
+            return open_gui(config)
         else:
-            return generate_spectral_network(opts)
+            return generate_spectral_network(
+                config,
+                phase=opts['phase'],
+                show_plot=(opts['show-plot'] or opts['show-plot-on-cylinder']),
+                plot_on_cylinder=opts['show-plot-on-cylinder']
+            )
 
 # Set options from sys.argv when running on the command line,
 # then start running the main code.

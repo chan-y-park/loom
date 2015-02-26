@@ -1,5 +1,4 @@
 import numpy
-#import sympy
 import logging
 import signal
 import multiprocessing
@@ -15,6 +14,9 @@ from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode)
 from intersection import (HitTable, NoIntersection,
                           find_intersection_of_segments, 
                           find_curve_range_intersection)
+#
+from plotting import plot_segments
+#
 
 
 class SpectralNetwork:
@@ -206,9 +208,6 @@ class SpectralNetwork:
         new_tps = new_s_wall.get_turning_points()
         new_z_segs = numpy.split(new_s_wall.z, new_tps, axis=0,)
         new_x_segs = numpy.split(new_s_wall.x, new_tps, axis=1,)
-        #new_curve = numpy.array([new_s_wall.z.real, new_s_wall.z.imag])
-        #new_curve_tps = get_turning_points(new_curve)
-        #new_curve_segs = numpy.split(new_curve, new_curve_tps, axis=1,)
 
         # NOTE: Here we find only a single joint between two S-walls.
         # If needed, change the part of getting the z-intersection
@@ -217,14 +216,17 @@ class SpectralNetwork:
             prev_tps = prev_s_wall.get_turning_points()
             prev_z_segs = numpy.split(prev_s_wall.z, prev_tps, axis=0,)
             prev_x_segs = numpy.split(prev_s_wall.x, prev_tps, axis=1,)
-            #prev_curve = numpy.array([prev_s_wallw.z.real, prev_s_wall.z.imag])
-            #prev_curve_tps = get_turning_points(prev_curve)
-            #prev_curve_segs = numpy.split(prev_curve, prev_curve_tps, axis=1,)
 
             for i_n in range(len(new_tps)+1):
                 z_seg_n = new_z_segs[i_n]
                 for i_p in range(len(prev_tps)+1):
                     z_seg_p = prev_z_segs[i_p]
+                    #plot_segments(
+                    #    [(z_seg_n.real, z_seg_n.imag), 
+                    #     (z_seg_p.real, z_seg_p.imag)], 
+                    #    [(rp.z.real, rp.z.imag) 
+                    #     for rp in self.ramification_points], 
+                    #)
                     # Check if the two segments have a common x-range.  
                     have_common_x_range = False
                     for x_a, x_b in (
@@ -235,7 +237,7 @@ class SpectralNetwork:
                             find_curve_range_intersection(
                                 (x_a.real, x_a.imag),
                                 (x_b.real, x_b.imag),
-                                cut_at_inflection=True,
+                                cut_at_inflection=False,
                             )
                         )
                         if (x_r_range.is_EmptySet or 

@@ -11,24 +11,17 @@ from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import SpectralNetworkPlot
 
-CONFIG_FILE_DIR = 'config_file'
 
-def generate_spectral_network(opts):
+def generate_spectral_network(config, phase=None, show_plot=False,
+                              plot_on_cylinder=False):
     """
     Generate one or more spectral networks according to
     the command-line options and the configuration file
     and return a list of data obtained from SpectralNetwork.get_data()
     """
-    config = LoomConfig()
-    if opts['config-file'] is None:
-        config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
-    else:
-        config_file = opts['config-file']
-    config.read(config_file)
-
     file_list = []
 
-    phase = opts['phase']
+    #phase = opts['phase']
     phase_range = config['phase_range']
     sw = SWData(config)
     ramification_points = get_ramification_points(sw, config['accuracy'])
@@ -61,11 +54,10 @@ def generate_spectral_network(opts):
     logging.info('elapsed cpu time: %.8f', end_time - start_time)
 
     # Plot spectral networks.
-    if(opts['show-plot'] is True or 
-       opts['show-plot-on-cylinder'] is True):
+    if show_plot is True:
         spectral_network_plot = SpectralNetworkPlot(
             config,
-            plot_on_cylinder=opts['show-plot-on-cylinder'],
+            plot_on_cylinder,
             #plot_data_points=True,
             #plot_joints=True,
             #plot_bins=True,
@@ -101,7 +93,7 @@ def generate_spectral_network(opts):
         data_file_name = os.path.join(
             data_save_dir,
             'data_{}.json'.format(
-                str(i).zfill(len(spectral_network_list)-1)
+                str(i).zfill(len(str(len(spectral_network_list)-1)))
             )
         )
         logging.info('Saving data to {}.'.format(data_file_name))
@@ -119,9 +111,8 @@ def generate_spectral_network(opts):
     return spectral_network_list
 
 
-def load_spectral_network(opts):
+def load_spectral_network(data_dir, plot_on_cylinder=False):
     config = LoomConfig()
-    data_dir = opts['load-data']
     config.read(os.path.join(data_dir, 'config.ini'))
 
     sw = SWData(config)
@@ -141,7 +132,7 @@ def load_spectral_network(opts):
     # Make plots from the loaded data
     spectral_network_plot = SpectralNetworkPlot(
         config,
-        plot_on_cylinder=opts['show-plot-on-cylinder'],
+        plot_on_cylinder=plot_on_cylinder,
     )
     for spectral_network in spectral_network_list:
         logging.info('Generating the plot of a spectral network '
