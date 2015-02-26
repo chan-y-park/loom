@@ -53,6 +53,7 @@ class Application(tk.Frame):
                 textvariable=self.entry_var[option]
             )
         self.entry_phase = tk.StringVar()
+        self.entry_phase.set('None')
         self.entry['phase'] = tk.Entry(self, textvariable=self.entry_phase)
             
         # Entry & Label layout
@@ -60,9 +61,11 @@ class Application(tk.Frame):
         grid_col = 0
         tk.Label(self, text='sw_curve').grid(row=grid_row, column=grid_col)
         grid_col += 1
-        self.entry['sw_curve'].grid(row=grid_row, column=grid_col)
+        self.entry['sw_curve'].grid(row=grid_row, column=grid_col,
+                                    columnspan=3, sticky=tk.EW)
 
-        grid_col += 1
+        grid_row += 1
+        grid_col = 0
         tk.Label(self, text='sw_diff_v').grid(row=grid_row, column=grid_col)
         grid_col += 1
         self.entry['sw_diff_v'].grid(row=grid_row, column=grid_col)
@@ -76,11 +79,20 @@ class Application(tk.Frame):
         grid_col = 0
         tk.Label(self, text='sw_parameters').grid(row=grid_row, column=grid_col)
         grid_col += 1
-        self.entry['sw_parameters'].grid(
-            row=grid_row, column=grid_col,
-            columnspan=3,
-            sticky=tk.EW,
-        )
+        self.entry['sw_parameters'].grid(row=grid_row, column=grid_col,
+                                         columnspan=3, sticky=tk.EW,)
+
+        for option in ['mt_params', 'punctures', 'z_range_limits',
+                       'num_of_steps', 'num_of_iterations', 
+                       'size_of_small_step', 'size_of_large_step',
+                       'size_of_neighborhood', 'size_of_puncture_cutoff',
+                       'size_of_ramification_pt_cutoff',
+                       'size_of_bin', 'accuracy', 'n_processes']:
+            grid_row += 1
+            grid_col = 0
+            tk.Label(self, text=option).grid(row=grid_row, column=grid_col)
+            grid_col += 1
+            self.entry[option].grid(row=grid_row, column=grid_col)
 
         grid_row += 1
         grid_col = 0
@@ -239,7 +251,7 @@ class Application(tk.Frame):
                              '@ theta = {}...'.format(spectral_network.phase))
                 spectral_network_plot.draw(spectral_network)
 
-        spectral_network_plot.show()
+        return spectral_network_plot.show()
 
 
 def open_gui(config):

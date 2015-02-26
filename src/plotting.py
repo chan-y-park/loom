@@ -145,7 +145,7 @@ class SpectralNetworkPlot:
                                   valinit=self.current_plot, valfmt='%d',
                                   closedmax=False)
             theta_slider.on_changed(self.update)
-        pyplot.show()
+        return pyplot.show()
 
 def plot_segments(segments, 
                   marked_points=[],

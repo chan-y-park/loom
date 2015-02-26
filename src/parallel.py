@@ -38,7 +38,7 @@ def a_child_process(
                  .format(shared_n_finished_spectral_networks.value, theta_n)
     )
 
-    spectral_network_data = spectral_network.get_data()
+    #spectral_network_data = spectral_network.get_data()
 
     return spectral_network
 

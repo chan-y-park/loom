@@ -125,20 +125,20 @@ class SpectralNetwork:
             logging.info('Iteration #{} finished.'.format(iteration))
 
 
-    def get_data(self):
-        """
-        Returns a dictionary of spectral network data that is used 
-        when comminicating with parallel children processes
-        that generates spectral networks.
-        """
-        data = {
-            'phase': self.phase,
-            'ramification_points' : self.ramification_points,
-            's_walls': self.s_walls,
-            'joints': self.joints,
-            'hit_table': self.hit_table,
-        }
-        return data
+#    def get_data(self):
+#        """
+#        Returns a dictionary of spectral network data that is used 
+#        when comminicating with parallel children processes
+#        that generates spectral networks.
+#        """
+#        data = {
+#            'phase': self.phase,
+#            'ramification_points' : self.ramification_points,
+#            's_walls': self.s_walls,
+#            'joints': self.joints,
+#            'hit_table': self.hit_table,
+#        }
+#        return data
 
 
     def save_json_data(self, file_object, **kwargs):
