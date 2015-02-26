@@ -207,7 +207,7 @@ class SpectralNetwork:
         new_s_wall = self.s_walls[new_s_wall_index]
         new_tps = new_s_wall.get_turning_points()
         new_z_segs = numpy.split(new_s_wall.z, new_tps, axis=0,)
-        new_x_segs = numpy.split(new_s_wall.x, new_tps, axis=1,)
+        new_x_segs = numpy.split(new_s_wall.x, new_tps, axis=0,)
 
         # NOTE: Here we find only a single joint between two S-walls.
         # If needed, change the part of getting the z-intersection
@@ -215,18 +215,20 @@ class SpectralNetwork:
         for prev_s_wall in self.s_walls[:new_s_wall_index]:
             prev_tps = prev_s_wall.get_turning_points()
             prev_z_segs = numpy.split(prev_s_wall.z, prev_tps, axis=0,)
-            prev_x_segs = numpy.split(prev_s_wall.x, prev_tps, axis=1,)
+            prev_x_segs = numpy.split(prev_s_wall.x, prev_tps, axis=0,)
 
             for i_n in range(len(new_tps)+1):
                 z_seg_n = new_z_segs[i_n]
                 for i_p in range(len(prev_tps)+1):
                     z_seg_p = prev_z_segs[i_p]
+
                     #plot_segments(
                     #    [(z_seg_n.real, z_seg_n.imag), 
                     #     (z_seg_p.real, z_seg_p.imag)], 
                     #    [(rp.z.real, rp.z.imag) 
                     #     for rp in self.ramification_points], 
                     #)
+
                     # Check if the two segments have a common x-range.  
                     have_common_x_range = False
                     for x_a, x_b in (
@@ -240,8 +242,8 @@ class SpectralNetwork:
                                 cut_at_inflection=False,
                             )
                         )
-                        if (x_r_range.is_EmptySet or 
-                            x_r_range.is_EmptySet or 
+                        if ((x_r_range.is_EmptySet is True) or 
+                            (x_r_range.is_EmptySet is True) or 
                             x_i_range.is_FiniteSet or
                             x_i_range.is_FiniteSet):
                             continue
