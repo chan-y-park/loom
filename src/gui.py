@@ -13,7 +13,7 @@ from api import (generate_spectral_network, load_spectral_network,)
 from plotting import SpectralNetworkPlot
 
 class Application(tk.Frame):
-    def __init__(self, config, master=None):
+    def __init__(self, config, spectral_networks=[], master=None):
         tk.Frame.__init__(self, master)
         
         self.config = config
@@ -21,7 +21,7 @@ class Application(tk.Frame):
         self.entry_var = {} 
         self.mb = None
         self.check = {}
-        self.spectral_networks = []
+        self.spectral_networks = spectral_networks
         self.pack()
         self.create_widgets()
 
@@ -254,30 +254,15 @@ class Application(tk.Frame):
         return spectral_network_plot.show()
 
 
-def open_gui(config):
+def open_gui(config, spectral_networks,):
     root = tk.Tk()
+    root.wm_title('loom')
     # Put the window at the center
     ws = root.winfo_screenwidth()
     hs = root.winfo_screenheight()
     root.geometry('+{}+{}'.format(ws/2, hs/2))
 
-    app = Application(config, master=root)
+    app = Application(config, spectral_networks=spectral_networks, master=root)
     app.mainloop()
 
-
-#def gui_load_spectral_network(plot_on_cylinder=False):
-#    root = tk.Tk()
-#    dir_opts = {
-#        'initialdir': os.curdir,
-#        'mustexist': False,
-#        'parent': root,
-#        'title': 'Select a directory that contains data files.',
-#    }
-#    data_dir = tkFileDialog.askdirectory(**dir_opts)
-#    root.destroy()
-#    if data_dir == '':
-#        return None
-#    else:
-#        logging.info('Opening data directory "{}"...'.format(data_dir))
-#        return load_spectral_network(data_dir, plot_on_cylinder)
-    
+    return None

@@ -1,11 +1,19 @@
 import numpy
 import pdb
 import logging
-#
-import time
-#
+import Tkinter as tk
+
+import matplotlib
+# use() directive must be called before importing matplotlib.pyplot
+matplotlib.use('TkAgg')     
+
+import mpldatacursor
 
 from matplotlib import pyplot
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg as FigureCanvas,
+    NavigationToolbar2TkAgg as NavigationToolbar,
+)
 from matplotlib.widgets import Slider
 from math import pi
 
@@ -27,11 +35,23 @@ class SpectralNetworkPlot:
         self.plot_joints = plot_joints
         self.plot_data_points = plot_data_points
         self.plot_segments = plot_segments
+        self.scroll_bar = None
+        self.slider_width = None
 
-        label = 'spectral_network'
-        self.figure = pyplot.figure(label)
+        self.root = tk.Tk()
+        self.root.wm_title('Spectral Network Plot')
+
+        self.figure = matplotlib.figure.Figure()
         self.plots = []
         self.current_plot = 0
+
+        self.canvas = FigureCanvas(self.figure, master=self.root)
+        #self.canvas.show()
+        self.canvas.get_tk_widget().pack()
+
+        toolbar = NavigationToolbar(self.canvas, self.root)
+        toolbar.update()
+        self.canvas._tkcanvas.pack()
 
     def draw(
         self,
@@ -82,7 +102,7 @@ class SpectralNetworkPlot:
             bpx = rp_z.real 
             bpy = rp_z.imag 
             axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
-                      color='k')
+                      color='k', label=rp.label,)
         # End of plotting branch points
    
         # Plot joints
@@ -95,7 +115,7 @@ class SpectralNetworkPlot:
                 jpx = jp_z.real 
                 jpy = jp_z.imag 
                 axes.plot(jpx, jpy, '+', markeredgewidth=2, markersize=8, 
-                          color='k')
+                          color='k', label=jp.label,)
         # End of plotting joints
 
         # If we have segments of curves, draw them in different colors.
@@ -123,29 +143,64 @@ class SpectralNetworkPlot:
                             split_at.append(i)
                     z_segs = numpy.split(result, split_at)
                     for z_seg in z_segs:
-                        axes.plot(z_seg.real, z_seg.imag, '-', color='b')
+                        axes.plot(z_seg.real, z_seg.imag, '-', color='b',
+                                  label=s_wall.label,)
                 else:
-                    axes.plot(s_wall.z.real, s_wall.z.imag, '-', color='b')
+                    axes.plot(s_wall.z.real, s_wall.z.imag, '-', color='b',
+                              label=s_wall.label,)
         axes.set_visible(False)
         self.plots.append(axes)
 
-    def update(self, slider_val):
-        new_plot = int(slider_val)
+        return None
+
+    def scroll(self, *args):
+        num_plots = len(self.plots)
+        if args[0] == tk.MOVETO:
+            f = args[1]
+            new_plot = int(f * len(self.plots))
+            self.scroll_bar.set(f, f + self.slider_width)
+        elif args[0] == tk.SCROLL:
+            step = eval(args[1])
+            new_plot = self.current_plot + step
+            slider_left, slider_right = self.scroll_bar.get()
+            self.scroll_bar.set(
+                slider_left + step*(self.slider_width),
+                slider_right + step*(self.slider_width),
+            )
         if(self.current_plot != new_plot):
             self.plots[self.current_plot].set_visible(False)
             self.plots[new_plot].set_visible(True)
             self.current_plot = new_plot
-            self.figure.canvas.draw_idle()
+
+            current_axes = self.plots[self.current_plot]
+            # Use a DataCursor to interactively display the label
+            # for artists of the current axes.
+            mpldatacursor.datacursor(axes=current_axes,
+                                     formatter='{label}'.format)
+            #self.figure.canvas.draw_idle()
+            self.canvas.draw_idle()
+
+        return None
 
     def show(self):
-        self.plots[self.current_plot].set_visible(True)
+        current_axes = self.plots[self.current_plot]
+        current_axes.set_visible(True)
+
+        # Use a DataCursor to interactively display the label 
+        # for artists of the current axes.
+        mpldatacursor.datacursor(axes=current_axes, formatter='{label}'.format)
+
         if(len(self.plots) > 1):
-            theta_axes = self.figure.add_axes([.125, .05, .8, .05])
-            theta_slider = Slider(theta_axes, 'theta', 0, len(self.plots),
-                                  valinit=self.current_plot, valfmt='%d',
-                                  closedmax=False)
-            theta_slider.on_changed(self.update)
-        return pyplot.show()
+            self.slider_width = 1.0/len(self.plots)
+            self.scroll_bar = tk.Scrollbar(
+                self.root, 
+                command=self.scroll,
+                orient=tk.HORIZONTAL,
+            )
+            self.scroll_bar.pack(fill=tk.X)
+            self.scroll_bar.set(0.0, self.slider_width)
+        self.canvas.show()
+        return None
 
 def plot_segments(segments, 
                   marked_points=[],
@@ -154,19 +209,19 @@ def plot_segments(segments,
     x_min, x_max, y_min, y_max = plot_range
 
     # Plot setting.
-    pyplot.xlim(x_min, x_max)
-    pyplot.ylim(y_min, y_max)
-    pyplot.axes().set_aspect('equal')
+    self.figure.plot.xlim(x_min, x_max)
+    self.figure.plot.ylim(y_min, y_max)
+    self.figure.plot.axes().set_aspect('equal')
 
     for segment in segments:
         xs, ys = segment
-        pyplot.plot(xs, ys, '-')
+        self.figure.plot.plot(xs, ys, '-')
         if(plot_data_points == True):
-            pyplot.plot(xs, ys, 'o', color='b')
+            self.figure.plot.plot(xs, ys, 'o', color='b')
 
     for p in marked_points:
-        pyplot.plot(p[0], p[1], 'x', markeredgewidth=2, markersize=8,
+        self.figure.plot.plot(p[0], p[1], 'x', markeredgewidth=2, markersize=8,
                     color='k')
 
-    pyplot.show()
+    self.figure.plot.show()
     

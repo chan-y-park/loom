@@ -113,20 +113,20 @@ def run_with_optlist(optlist):
         # Entry point branching
         if opts['load-data'] is not None:
             data_dir = opts['load-data']
-            return load_spectral_network(data_dir,
-                                         opts['show-plot-on-cylinder'])
-
-        # Read the default config file.
-        config = LoomConfig()
-        config_file = opts['config-file']
-        if config_file is None:
-            config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
-        config.read(config_file)
+            config, spectral_networks = load_spectral_network(data_dir)
+        else:
+            # Read the default config file.
+            config = LoomConfig()
+            config_file = opts['config-file']
+            if config_file is None:
+                config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
+            config.read(config_file)
+            spectral_networks = []
 
         # Entry point branching continued.
         if opts['gui-mode'] is True:
-            return open_gui(config)
-        else:
+            return open_gui(config, spectral_networks)
+        elif len(spectral_networks) ==0:
             return generate_spectral_network(
                 config,
                 phase=opts['phase'],

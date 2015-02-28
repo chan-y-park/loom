@@ -2,6 +2,12 @@
 Python program to generate and analyze spectral networks
 
 ## To Do List
+* show the label when placing a mouse cursor on an object of a plot.
+  * https://github.com/joferkington/mpldatacursor
+* embedding matplotlib into tkinter
+  * see matplotlib user_interfaces examples.
+  * put Tkinter.Scrollbar & Tkinter.Entry
+* open a file dialog when saving data
 * implement an option to change between the intersection finding routines. 
 * logging to file
 * GUI

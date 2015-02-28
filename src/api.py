@@ -69,4 +69,4 @@ def load_spectral_network(data_dir):
             spectral_network.set_from_json_data(fp)
             spectral_network_list.append(spectral_network)
 
-    return spectral_network_list
+    return (config, spectral_network_list)
