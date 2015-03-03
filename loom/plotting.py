@@ -2,61 +2,69 @@ import numpy
 import pdb
 import logging
 import Tkinter as tk
+import mpldatacursor
 
 import matplotlib
 # use() directive must be called before importing matplotlib.pyplot
 matplotlib.use('TkAgg')     
 
-import mpldatacursor
-
-from matplotlib import pyplot
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg as FigureCanvas,
     NavigationToolbar2TkAgg as NavigationToolbar,
 )
-from matplotlib.widgets import Slider
+from matplotlib import pyplot
 from math import pi
-
 from misc import PSL2C, put_on_cylinder
 
 class SpectralNetworkPlot:
     def __init__(self, 
-        config,
+        master=None,
+        config=None,
         plot_on_cylinder=False,
         plot_bins=False, 
         plot_joints=False,
         plot_data_points=False,
         plot_segments=False,
     ):
-        # Give an identifier to the figure we are goint to produce
         self.config = config
         self.plot_on_cylinder = plot_on_cylinder
         self.plot_bins = plot_bins
         self.plot_joints = plot_joints
         self.plot_data_points = plot_data_points
         self.plot_segments = plot_segments
-        self.scroll_bar = None
-        self.slider_width = None
 
-        self.root = tk.Tk()
-        self.root.wm_title('Spectral Network Plot')
+        # Create a Toplevel widget, which is a child of GUILoom 
+        # and contains plots,
+        self.toplevel = tk.Toplevel(master)
+        self.toplevel.wm_title('Spectral Network Plot')
+
+        self.plots = []
+        self.data_cursor = None
+        self.current_plot_idx = None 
+
+        self.plot_idx_scale = None
+
+        self.plot_idx_entry = None
+        self.plot_idx_entry_var = tk.StringVar() 
+        self.plot_idx_entry_var.trace('w', self.plot_idx_entry_change)
 
         self.figure = matplotlib.figure.Figure()
-        self.plots = []
-        self.current_plot = 0
-
-        self.canvas = FigureCanvas(self.figure, master=self.root)
-        #self.canvas.show()
+        self.canvas = FigureCanvas(
+            self.figure,
+            master=self.toplevel,
+            resize_callback=(
+                lambda event: self.set_data_cursor()
+            )
+        )
+        self.canvas.show()
         self.canvas.get_tk_widget().pack()
 
-        toolbar = NavigationToolbar(self.canvas, self.root)
+        toolbar = NavigationToolbar(self.canvas, self.toplevel)
         toolbar.update()
-        self.canvas._tkcanvas.pack()
+        self.canvas.get_tk_widget().pack()
 
-    def draw(
-        self,
-        spectral_network,
-    ):
+    
+    def draw(self, spectral_network,):
         theta = spectral_network.phase
         ramification_points = spectral_network.ramification_points
         s_walls = spectral_network.s_walls
@@ -72,12 +80,13 @@ class SpectralNetworkPlot:
         x_min, x_max, y_min, y_max = z_range_limits
         rect = [0.125, 0.15, .8, 0.75]
 
-        axes = self.figure.add_axes(rect,
-                                    label=theta,
-                                    xlim=(x_min, x_max),
-                                    ylim=(y_min, y_max),
-                                    aspect='equal',
-                                   )
+        axes = self.figure.add_axes(
+            rect,
+            label=theta,
+            xlim=(x_min, x_max),
+            ylim=(y_min, y_max),
+            aspect='equal',
+        )
 
         # Draw a lattice of bins for visualization.
         if(self.plot_bins is True):
@@ -153,75 +162,113 @@ class SpectralNetworkPlot:
 
         return None
 
-    def scroll(self, *args):
-        num_plots = len(self.plots)
-        if args[0] == tk.MOVETO:
-            f = args[1]
-            new_plot = int(f * len(self.plots))
-            self.scroll_bar.set(f, f + self.slider_width)
-        elif args[0] == tk.SCROLL:
-            step = eval(args[1])
-            new_plot = self.current_plot + step
-            slider_left, slider_right = self.scroll_bar.get()
-            self.scroll_bar.set(
-                slider_left + step*(self.slider_width),
-                slider_right + step*(self.slider_width),
-            )
-        if(self.current_plot != new_plot):
-            self.plots[self.current_plot].set_visible(False)
-            self.plots[new_plot].set_visible(True)
-            self.current_plot = new_plot
 
-            current_axes = self.plots[self.current_plot]
-            # Use a DataCursor to interactively display the label
-            # for artists of the current axes.
-            mpldatacursor.datacursor(axes=current_axes,
-                                     formatter='{label}'.format)
-            #self.figure.canvas.draw_idle()
-            self.canvas.draw_idle()
+    def set_data_cursor(self):
+        if self.current_plot_idx is None:
+            return None
+
+        # Use a DataCursor to interactively display the label
+        # for artists of the current axes.
+        self.data_cursor = mpldatacursor.datacursor(
+            axes=self.plots[self.current_plot_idx],
+            formatter='{label}'.format,
+            tolerance=2,
+            #hover=True,
+            display='single',
+        )
+    
+        return None 
+
+
+    def scale_action(self, scale_value):
+        new_plot_idx = int(scale_value)
+        self.update_current_plot(new_plot_idx)
+        self.plot_idx_entry_var.set(new_plot_idx)
+
+
+    def plot_idx_entry_change(self, *args):
+        try:
+            new_plot_idx = int(self.plot_idx_entry_var.get())
+
+            if new_plot_idx == self.current_plot_idx:
+                return None
+            elif new_plot_idx < 0:
+                new_plot_idx = 0
+            elif new_plot_idx > len(self.plots) - 1:
+                new_plot_idx = len(self.plots) - 1
+
+            self.plot_idx_scale.set(new_plot_idx)
+            self.update_current_plot(new_plot_idx)
+
+        except ValueError:
+            pass
 
         return None
+
+    def update_current_plot(self, new_plot_idx):
+        if self.data_cursor is not None:
+            self.data_cursor.hide()
+
+        self.plots[self.current_plot_idx].set_visible(False)
+        self.plots[new_plot_idx].set_visible(True)
+        # Update the index variable for the currently displayed plot.
+        self.current_plot_idx = new_plot_idx
+        self.set_data_cursor()
+        self.canvas.draw_idle()
+
+        return None
+
 
     def show(self):
-        current_axes = self.plots[self.current_plot]
-        current_axes.set_visible(True)
-
-        # Use a DataCursor to interactively display the label 
-        # for artists of the current axes.
-        mpldatacursor.datacursor(axes=current_axes, formatter='{label}'.format)
+        plot_idx = 0
+        self.current_plot_idx = plot_idx
+        self.plots[plot_idx].set_visible(True)
+        self.set_data_cursor()
 
         if(len(self.plots) > 1):
-            self.slider_width = 1.0/len(self.plots)
-            self.scroll_bar = tk.Scrollbar(
-                self.root, 
-                command=self.scroll,
+            self.plot_idx_scale = tk.Scale(
+                self.toplevel,
                 orient=tk.HORIZONTAL,
-            )
-            self.scroll_bar.pack(fill=tk.X)
-            self.scroll_bar.set(0.0, self.slider_width)
-        self.canvas.show()
-        return None
+                to=len(self.plots)-1,
+                label='Plot #',
+                variable=self.current_plot_idx,
+                command=self.scale_action,
+            ) 
+            self.plot_idx_scale.pack(fill=tk.X)
 
-def plot_segments(segments, 
-                  marked_points=[],
-                  plot_range=[-5, 5, -5, 5],
-                  plot_data_points=False):
+            self.plot_idx_entry_var.set(plot_idx)
+            self.plot_idx_entry = tk.Entry(
+                master=self.toplevel,
+                textvariable=self.plot_idx_entry_var,
+            )
+            self.plot_idx_entry.pack()
+
+
+def plot_segments(
+    segments, 
+    marked_points=[],
+    plot_range=[-5, 5, -5, 5],
+    plot_data_points=False
+):
+    """
+    Plot the given segments for debugging.
+    """
     x_min, x_max, y_min, y_max = plot_range
 
     # Plot setting.
-    self.figure.plot.xlim(x_min, x_max)
-    self.figure.plot.ylim(y_min, y_max)
-    self.figure.plot.axes().set_aspect('equal')
+    pyplot.xlim(x_min, x_max)
+    pyplot.ylim(y_min, y_max)
+    pyplot.axes().set_aspect('equal')
 
     for segment in segments:
         xs, ys = segment
-        self.figure.plot.plot(xs, ys, '-')
+        pyplot.plot(xs, ys, '-')
         if(plot_data_points == True):
-            self.figure.plot.plot(xs, ys, 'o', color='b')
+            pyplot.plot(xs, ys, 'o', color='b')
 
     for p in marked_points:
-        self.figure.plot.plot(p[0], p[1], 'x', markeredgewidth=2, markersize=8,
+        pyplot.plot(p[0], p[1], 'x', markeredgewidth=2, markersize=8,
                     color='k')
 
-    self.figure.plot.show()
+    pyplot.show()
     

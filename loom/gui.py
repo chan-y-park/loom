@@ -12,18 +12,23 @@ from config import LoomConfig
 from api import (generate_spectral_network, load_spectral_network,)
 from plotting import SpectralNetworkPlot
 
-class Application(tk.Frame):
-    def __init__(self, config, spectral_networks=[], master=None):
-        tk.Frame.__init__(self, master)
+class GUILoom:
+    def __init__(self, config=None, spectral_networks=[],):
+        root = tk.Tk()
+        root.wm_title('loom')
         
+        # Put the window at the center
+        ws = root.winfo_screenwidth()
+        hs = root.winfo_screenheight()
+        root.geometry('+{}+{}'.format(ws/2, hs/2))
+        
+        self.root = root
         self.config = config
         self.entry = {}
         self.entry_var = {} 
         self.mb = None
         self.check = {}
         self.spectral_networks = spectral_networks
-        self.pack()
-        self.create_widgets()
 
     def create_widgets(self):
         # Layout variables
@@ -31,7 +36,7 @@ class Application(tk.Frame):
         grid_col = 0
 
         # Menu
-        self.mb = tk.Menubutton(self, text='File', relief=tk.RAISED)
+        self.mb = tk.Menubutton(self.root, text='File', relief=tk.RAISED)
         self.mb.grid(row=grid_row, column=grid_col)
         self.mb.menu = tk.Menu(self.mb, tearoff=0,)
         self.mb['menu'] = self.mb.menu
@@ -49,38 +54,47 @@ class Application(tk.Frame):
             self.entry_var[option] = tk.StringVar()
             self.entry_var[option].set(value)
             self.entry[option] = tk.Entry(
-                self,
+                self.root,
                 textvariable=self.entry_var[option]
             )
         self.entry_phase = tk.StringVar()
         self.entry_phase.set('None')
-        self.entry['phase'] = tk.Entry(self, textvariable=self.entry_phase)
+        self.entry['phase'] = tk.Entry(
+            self.root,
+            textvariable=self.entry_phase
+        )
             
         # Entry & Label layout
         grid_row += 1
         grid_col = 0
-        tk.Label(self, text='sw_curve').grid(row=grid_row, column=grid_col)
+        tk.Label(self.root,
+                 text='sw_curve').grid(row=grid_row, column=grid_col)
         grid_col += 1
-        self.entry['sw_curve'].grid(row=grid_row, column=grid_col,
-                                    columnspan=3, sticky=tk.EW)
+        self.entry['sw_curve'].grid(
+            row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW
+        )
 
         grid_row += 1
         grid_col = 0
-        tk.Label(self, text='sw_diff_v').grid(row=grid_row, column=grid_col)
+        tk.Label(self.root,
+                 text='sw_diff_v').grid(row=grid_row, column=grid_col)
         grid_col += 1
         self.entry['sw_diff_v'].grid(row=grid_row, column=grid_col)
 
         grid_col += 1
-        tk.Label(self, text='root_system').grid(row=grid_row, column=grid_col)
+        tk.Label(self.root,
+                 text='root_system').grid(row=grid_row, column=grid_col)
         grid_col += 1
         self.entry['root_system'].grid(row=grid_row, column=grid_col)
 
         grid_row += 1
         grid_col = 0
-        tk.Label(self, text='sw_parameters').grid(row=grid_row, column=grid_col)
+        tk.Label(self.root,
+                 text='sw_parameters').grid(row=grid_row, column=grid_col)
         grid_col += 1
-        self.entry['sw_parameters'].grid(row=grid_row, column=grid_col,
-                                         columnspan=3, sticky=tk.EW,)
+        self.entry['sw_parameters'].grid(
+            row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW,
+        )
 
         for option in ['mt_params', 'punctures', 'z_range_limits',
                        'num_of_steps', 'num_of_iterations', 
@@ -90,18 +104,21 @@ class Application(tk.Frame):
                        'size_of_bin', 'accuracy', 'n_processes']:
             grid_row += 1
             grid_col = 0
-            tk.Label(self, text=option).grid(row=grid_row, column=grid_col)
+            tk.Label(self.root, 
+                     text=option).grid(row=grid_row, column=grid_col)
             grid_col += 1
             self.entry[option].grid(row=grid_row, column=grid_col)
 
         grid_row += 1
         grid_col = 0
-        tk.Label(self, text='phase_range').grid(row=grid_row, column=grid_col)
+        tk.Label(self.root,
+                 text='phase_range').grid(row=grid_row, column=grid_col)
         grid_col += 1
         self.entry['phase_range'].grid(row=grid_row, column=grid_col)
 
         grid_col += 1
-        tk.Label(self, text='phase').grid(row=grid_row, column=grid_col)
+        tk.Label(self.root,
+                 text='phase').grid(row=grid_row, column=grid_col)
         grid_col += 1
         self.entry['phase'].grid(row=grid_row, column=grid_col)
 
@@ -110,7 +127,7 @@ class Application(tk.Frame):
         grid_col = 0
         self.check['plot_on_cylinder'] = tk.IntVar()
         tk.Checkbutton(
-            self,
+            self.root,
             text='Plot on cyliner',
             variable=self.check['plot_on_cylinder']
         ).grid(row=grid_row, column=grid_col)
@@ -123,7 +140,8 @@ class Application(tk.Frame):
         grid_row += 1
         grid_col = 0
         self.button_generate = tk.Button(
-            self, text='Generate',
+            self.root, 
+            text='Generate',
             command=self.button_generate_action,
         )
         grid_col += 1
@@ -132,7 +150,8 @@ class Application(tk.Frame):
         # 'Plot' button
         grid_col += 1
         self.button_plot = tk.Button(
-            self, text='Plot',
+            self.root,
+            text='Plot',
             command=self.button_plot_action,
         )
         grid_col += 1
@@ -146,20 +165,20 @@ class Application(tk.Frame):
             return False
 
     def menu_load_action(self):
-        root = tk.Tk()
+        #t = tk.Toplevel(self.root)
         dir_opts = {
             'initialdir': os.curdir,
             'mustexist': False,
-            'parent': root,
+            'parent': self.root,
             'title': 'Select a directory that contains data files.',
         }
         data_dir = tkFileDialog.askdirectory(**dir_opts)
-        root.destroy()
+        #t.destroy()
         if data_dir == '':
             return None
         else:
             logging.info('Opening data directory "{}"...'.format(data_dir))
-            self.spectral_networks = load_spectral_network(
+            self.config, self.spectral_networks = load_spectral_network(
                 data_dir,
             )
             return None
@@ -236,33 +255,32 @@ class Application(tk.Frame):
 
     def button_plot_action(self):
         # Plot spectral networks.
-        spectral_network_plot = SpectralNetworkPlot(
-            self.config,
-            plot_on_cylinder=self.check_plot_on_cylinder(),
-            #plot_data_points=True,
-            #plot_joints=True,
-            #plot_bins=True,
-            #plot_segments=True,
-        )
-
         if (len(self.spectral_networks) > 0):
+            spectral_network_plot = SpectralNetworkPlot(
+                master=self.root,
+                config=self.config,
+                plot_on_cylinder=self.check_plot_on_cylinder(),
+                #plot_data_points=True,
+                #plot_joints=True,
+                #plot_bins=True,
+                #plot_segments=True,
+            )
+
             for spectral_network in self.spectral_networks:
                 logging.info('Generating the plot of a spectral network '
                              '@ theta = {}...'.format(spectral_network.phase))
                 spectral_network_plot.draw(spectral_network)
 
-        return spectral_network_plot.show()
+            return spectral_network_plot.show()
+        else:
+            logging.warning('No spectral network to plot.')
+            return None
 
 
 def open_gui(config, spectral_networks,):
-    root = tk.Tk()
-    root.wm_title('loom')
-    # Put the window at the center
-    ws = root.winfo_screenwidth()
-    hs = root.winfo_screenheight()
-    root.geometry('+{}+{}'.format(ws/2, hs/2))
 
-    app = Application(config, spectral_networks=spectral_networks, master=root)
-    app.mainloop()
+    gui_loom = GUILoom(config, spectral_networks=spectral_networks)
+    gui_loom.create_widgets()
+    gui_loom.root.mainloop()
 
-    return None
+    return None 
