@@ -106,6 +106,9 @@ def run_with_optlist(optlist):
             show_plot=(opts['show-plot'] or opts['show-plot-on-cylinder']),
             plot_on_cylinder=opts['show-plot-on-cylinder']
         )
+        if opts['gui-mode'] is False:
+            save_spectral_network(config, spectral_networks,
+                                  data_dir=None, make_zipped_file=True,)
 
     return (config, spectral_networks)
 

@@ -9,7 +9,8 @@ import pdb
 
 from math import pi
 from config import LoomConfig
-from api import (generate_spectral_network, load_spectral_network,)
+from api import (generate_spectral_network, load_spectral_network,
+                 save_spectral_network,)
 from plotting import SpectralNetworkPlot
 
 class GUILoom:
@@ -165,7 +166,6 @@ class GUILoom:
             return False
 
     def menu_load_action(self):
-        #t = tk.Toplevel(self.root)
         dir_opts = {
             'initialdir': os.curdir,
             'mustexist': False,
@@ -173,7 +173,6 @@ class GUILoom:
             'title': 'Select a directory that contains data files.',
         }
         data_dir = tkFileDialog.askdirectory(**dir_opts)
-        #t.destroy()
         if data_dir == '':
             return None
         else:
@@ -184,47 +183,20 @@ class GUILoom:
             return None
 
     def menu_save_action(self):
-        file_list = []
-
-        # Prepare to save spectral network data to files.
-        timestamp = str(int(time.time()))
-        data_save_dir = os.path.join(
-            self.config['root_dir'], 
-            self.config['data_dir'], 
-            timestamp
-        )
-
-        logging.info('Make a directory {} to save data.'.format(data_save_dir))
-        os.makedirs(data_save_dir)
-
-        # Save configuration to a file.
-        config_file_name = os.path.join(data_save_dir, 'config.ini')
-        logging.info('Save configuration to {}.'.format(config_file_name))
-        with open(config_file_name, 'wb') as fp:
-            self.config.parser.write(fp)
-            file_list.append(config_file_name)
-
-        # Save spectral network data.
-        for i, spectral_network in enumerate(self.spectral_networks):
-            data_file_name = os.path.join(
-                data_save_dir,
-                'data_{}.json'.format(
-                    str(i).zfill(len(str(len(self.spectral_networks)-1)))
-                )
+        dir_opts = {
+            'initialdir': os.curdir,
+            'mustexist': False,
+            'parent': self.root,
+            'title': 'Select a directory to save data files.',
+        }
+        data_dir = tkFileDialog.askdirectory(**dir_opts)
+        if data_dir == '':
+            return None
+        else:
+            save_spectral_network(
+                self.config, self.spectral_networks, data_dir,
+                make_zipped_file=False,
             )
-            logging.info('Saving data to {}.'.format(data_file_name))
-            with open(data_file_name, 'wb') as fp:
-                spectral_network.save_json_data(fp,)
-
-        # Make a compressed data file.
-        file_list += glob.glob(os.path.join(data_save_dir, 'data_*.json'))
-        zipped_file_name = data_save_dir + '.zip'
-        logging.info('Save compressed data to {}.'.format(zipped_file_name))
-        with zipfile.ZipFile(zipped_file_name, 'w',
-                             zipfile.ZIP_DEFLATED) as fp:
-            for a_file in file_list:
-                fp.write(a_file, os.path.relpath(a_file, data_save_dir))
-
         return None
 
     def button_generate_action(self):

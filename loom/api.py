@@ -70,3 +70,51 @@ def load_spectral_network(data_dir):
             spectral_network_list.append(spectral_network)
 
     return (config, spectral_network_list)
+
+
+def save_spectral_network(config, spectral_networks, data_dir=None,
+                          make_zipped_file=True):
+    if data_dir is None:
+        # Prepare to save spectral network data to files.
+        timestamp = str(int(time.time()))
+        data_dir = os.path.join(
+            config['root_dir'], 
+            config['data_dir'], 
+            timestamp
+        )
+
+    logging.info('Make a directory {} to save data.'.format(data_dir))
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+    # Save configuration to a file.
+    config_file_name = os.path.join(data_dir, 'config.ini')
+    logging.info('Save configuration to {}.'.format(config_file_name))
+    with open(config_file_name, 'wb') as fp:
+        config.parser.write(fp)
+
+    # Save spectral network data.
+    for i, spectral_network in enumerate(spectral_networks):
+        data_file_name = os.path.join(
+            data_dir,
+            'data_{}.json'.format(
+                str(i).zfill(len(str(len(spectral_networks)-1)))
+            )
+        )
+        logging.info('Saving data to {}.'.format(data_file_name))
+        with open(data_file_name, 'wb') as fp:
+            spectral_network.save_json_data(fp,)
+
+    if make_zipped_file is True:
+        file_list = [config_file_name]
+        # Make a compressed data file.
+        file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
+        zipped_file_name = data_dir + '.zip'
+        logging.info('Save compressed data to {}.'.format(zipped_file_name))
+        with zipfile.ZipFile(zipped_file_name, 'w',
+                             zipfile.ZIP_DEFLATED) as fp:
+            for a_file in file_list:
+                fp.write(a_file, os.path.relpath(a_file, data_dir))
+
+
+    
