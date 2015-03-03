@@ -88,6 +88,8 @@ class SpectralNetworkPlot:
             aspect='equal',
         )
 
+        axes.set_title('phase = ({:.4f})pi'.format(theta/pi))
+
         # Draw a lattice of bins for visualization.
         if(self.plot_bins is True):
             bin_size = config['size_of_bin']
@@ -215,6 +217,7 @@ class SpectralNetworkPlot:
         self.current_plot_idx = new_plot_idx
         self.set_data_cursor()
         self.canvas.draw_idle()
+        self.canvas.get_tk_widget().focus_set()
 
         return None
 
@@ -226,22 +229,39 @@ class SpectralNetworkPlot:
         self.set_data_cursor()
 
         if(len(self.plots) > 1):
-            self.plot_idx_scale = tk.Scale(
+            tk.Label(
                 self.toplevel,
-                orient=tk.HORIZONTAL,
-                to=len(self.plots)-1,
-                label='Plot #',
-                variable=self.current_plot_idx,
-                command=self.scale_action,
-            ) 
-            self.plot_idx_scale.pack(fill=tk.X)
+                text='Plot #',
+            ).pack(side=tk.LEFT)
 
             self.plot_idx_entry_var.set(plot_idx)
             self.plot_idx_entry = tk.Entry(
-                master=self.toplevel,
+                self.toplevel,
                 textvariable=self.plot_idx_entry_var,
+                width=len(str(len(self.plots)-1)),
             )
-            self.plot_idx_entry.pack()
+            self.plot_idx_entry.pack(side=tk.LEFT)
+
+            tk.Label(
+                self.toplevel,
+                text='/{}'.format(len(self.plots)-1),
+            ).pack(side=tk.LEFT)
+
+            self.plot_idx_scale = tk.Scale(
+                self.toplevel,
+                command=self.scale_action,
+                #length=100*len(self.plots),
+                orient=tk.HORIZONTAL,
+                showvalue=0,
+                to=len(self.plots)-1,
+                variable=self.current_plot_idx,
+            ) 
+            self.plot_idx_scale.pack(
+                expand=True,
+                fill=tk.X,
+                side=tk.LEFT,
+            )
+
 
 
 def plot_segments(
