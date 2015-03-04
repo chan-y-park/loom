@@ -21,13 +21,9 @@ loom has the following functionality.
   * right-click doesn't remove the label when plotting multiple networks
   * make label appear when hovering the mouse cursor over an artist.
     * hard to point a branch point and show the label in this case.
-* during the first running make ```config_file``` and ```data_file``` dirs
-* load a config file 
 * implement an option to change between the intersection finding routines. 
 * logging to file
-* GUI
 * egg?
-* print time after each child process finishes its job
 * SciPy warnings
   * ```/usr/local/lib/python2.7/dist-packages/scipy/optimize/zeros.py:150: RuntimeWarning: Tolerance of 0.000513046300877562 reached
   warnings.warn(msg, RuntimeWarning)```
