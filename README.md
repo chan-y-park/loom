@@ -58,7 +58,7 @@ An easy way to run ```loom``` is downloading a standalone binary and executing i
 * Python >= 2.7.6
 * Not tested on Python 3.
 
-### Library requirements
+##### Library requirements
 * NumPy >= 1.8.2
 * SciPy >= 0.15.1
 * SymPy >= 0.7.6
