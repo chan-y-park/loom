@@ -60,6 +60,7 @@ An easy way to run ```loom``` is downloading a standalone binary and executing i
 #### Requirements
 * Python >= 2.7.6
 * Not tested on Python 3.
+
 ### Library requirements
 * NumPy >= 1.8.2
 * SciPy >= 0.15.1
@@ -96,6 +97,7 @@ An easy way to run ```loom``` is downloading a standalone binary and executing i
 
 #### Windows
 * Generating multiple spectral networks doesn't work on Windows.
+
 ##### Use Enthought Canopy
 * As of now, incompatible with the current usage of matplotlib Tk backend
 
