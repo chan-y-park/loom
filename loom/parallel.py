@@ -79,6 +79,7 @@ def parallel_get_spectral_network(
             n_processes = n_cpu
 
     # Use n_processes CPUs.
+    multiprocessing.freeze_support()
     pool =  multiprocessing.Pool(n_processes, init_process)
     logging.info('Number of processes in the pool: {}'.format(n_processes))
 
