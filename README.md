@@ -40,6 +40,9 @@ An easy way to run ```loom``` is downloading a standalone binary and executing i
 #### Windows
 * Generating multiple spectral networks doesn't work on Windows.
 #### Linux
+* Download ```gui_loom``` from:
+  * http://chan.physics.rutgers.edu/files/gui_loom.tar
+
 #### Max OS X
 
 
