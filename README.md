@@ -6,6 +6,7 @@ loom has the following functionality.
 * Generate a single spectral network for a given Seiberg-Witten data at a phase.
 * Generate multiple spectral networks at various phases by utilizing parallel computation.
   * To generate multiple spectral networks, need to specifiy ```phase``` to ```None```.
+  * Generating multiple spectral networks doesn't work on Windows.
 * Save and load analytical and numerical configurations.
 * Save and load generated data in JSON.
 * Plot spectral networks with interactive labeling.
@@ -37,6 +38,7 @@ loom has the following functionality.
 An easy way to run ```loom``` is downloading a standalone binary and executing it.
 ### Standalone
 #### Windows
+* Generating multiple spectral networks doesn't work on Windows.
 #### Linux
 #### Max OS X
 
@@ -86,7 +88,7 @@ An easy way to run ```loom``` is downloading a standalone binary and executing i
   1. ```sudo python setup.py install``` 
 
 #### Windows
-
+* Generating multiple spectral networks doesn't work on Windows.
 ##### Use Enthought Canopy
 * As of now, incompatible with the current usage of matplotlib Tk backend
 
