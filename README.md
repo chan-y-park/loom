@@ -10,9 +10,9 @@ loom has the following functionality.
 * Plot spectral networks with interactive labeling.
 
 ## Screenshots
-![loom screenshot](/screenshots/loom_desktop.jpg?raw=true "loom desktop")
-![loom menu screenshot](/screenshots/loom_menu.jpg?raw=true "loom menu")
-![loom plot screenshot](/screenshots/loom_plot.jpg?raw=true "loom plot")
+![loom screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_desktop.png "loom desktop")
+![loom menu screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_menu.png "loom menu")
+![loom plot screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_plot.png "loom plot")
 
 ## To Do List
 * mplcursor not working properly.
