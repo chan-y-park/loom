@@ -36,15 +36,19 @@ loom has the following functionality.
 
 ## How to run this program
 An easy way to run ```loom``` is downloading a standalone binary and executing it.
+
 ### Standalone
+
 #### Windows
 * Generating multiple spectral networks doesn't work on Windows.
+* Was not able to make it work yet.
+
 #### Linux
 * Download ```gui_loom``` from:
   * http://chan.physics.rutgers.edu/files/gui_loom.tar
 
 #### Max OS X
-
+* not built yet.
 
 ### Using Python
 1. First install the required version of Python & its libraries, as described below.
