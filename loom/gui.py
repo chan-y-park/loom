@@ -10,7 +10,7 @@ import pdb
 from math import pi
 from config import LoomConfig
 from api import (generate_spectral_network, load_spectral_network,
-                 save_spectral_network,)
+                 save_config_file, save_spectral_network,)
 from plotting import SpectralNetworkPlot
 
 class GUILoom:
@@ -38,16 +38,24 @@ class GUILoom:
 
         # Menu
         self.mb = tk.Menubutton(self.root, text='File', relief=tk.RAISED)
-        self.mb.grid(row=grid_row, column=grid_col)
+        self.mb.grid(row=grid_row, column=grid_col, sticky=tk.W)
         self.mb.menu = tk.Menu(self.mb, tearoff=0,)
         self.mb['menu'] = self.mb.menu
         self.mb.menu.add_command(
-            label='Load',
-            command=self.menu_load_action,
+            label='Load configuration',
+            command=self.menu_load_config_action,
         )
         self.mb.menu.add_command(
-            label='Save',
-            command=self.menu_save_action,
+            label='Save configuration',
+            command=self.menu_save_config_action,
+        )
+        self.mb.menu.add_command(
+            label='Load data',
+            command=self.menu_load_data_action,
+        )
+        self.mb.menu.add_command(
+            label='Save data',
+            command=self.menu_save_data_action,
         )
 
         # Associate each config option to an Entry
@@ -59,7 +67,7 @@ class GUILoom:
                 textvariable=self.entry_var[option]
             )
         self.entry_phase = tk.StringVar()
-        self.entry_phase.set('None')
+        self.entry_phase.set('1.0')
         self.entry['phase'] = tk.Entry(
             self.root,
             textvariable=self.entry_phase
@@ -164,8 +172,38 @@ class GUILoom:
             return True
         else: 
             return False
+            
 
-    def menu_load_action(self):
+    def menu_load_config_action(self):
+        file_opts = {
+            'defaultextension': '.ini',
+            'initialdir': os.curdir,
+            'initialfile': 'config.ini',
+            'parent': self.root,
+            'title': 'Select a configuration file to load.',
+        }
+        config_file_name = tkFileDialog.askopenfilename(**file_opts)
+        if config_file_name != '':
+            self.config.read(config_file_name)
+        
+        for option, value in self.config.iteritems():
+            self.entry_var[option].set(value)
+
+    def menu_save_config_action(self):
+        file_opts = {
+            'defaultextension': '.ini',
+            'initialdir': os.curdir,
+            'initialfile': 'config.ini',
+            'parent': self.root,
+            'title': 'Save the current configuration to a file.',
+        }
+        config_file_name = tkFileDialog.asksaveasfilename(**file_opts)
+        if config_file_name != '':
+            self.update_config_from_entries()
+            save_config_file(self.config, config_file_name)
+
+
+    def menu_load_data_action(self):
         dir_opts = {
             'initialdir': os.curdir,
             'mustexist': False,
@@ -182,7 +220,7 @@ class GUILoom:
             )
             return None
 
-    def menu_save_action(self):
+    def menu_save_data_action(self):
         dir_opts = {
             'initialdir': os.curdir,
             'mustexist': False,
@@ -193,13 +231,15 @@ class GUILoom:
         if data_dir == '':
             return None
         else:
+            self.update_config_from_entries()
             save_spectral_network(
                 self.config, self.spectral_networks, data_dir,
                 make_zipped_file=False,
             )
         return None
 
-    def button_generate_action(self):
+
+    def update_config_from_entries(self):
         # Read config options from Entries.
         for section in self.config.parser.sections():
             if (section == 'directories'):
@@ -217,6 +257,10 @@ class GUILoom:
                 elif (section == 'numerical parameters'):
                     self.config[option] = eval(value)
                 self.config.parser.set(section, option, value)
+
+
+    def button_generate_action(self):
+        self.update_config_from_entries()
 
         self.spectral_networks = generate_spectral_network(
             self.config,

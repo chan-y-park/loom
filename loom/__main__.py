@@ -28,9 +28,6 @@ longopts = [
     'load-data=',
 ]
 
-CONFIG_FILE_DIR = 'config_file'
-#DATA_FILE_DIR = 'data_file'
-
 
 def run_with_optlist(optlist):
     if len(optlist) == 0:
@@ -89,7 +86,7 @@ def run_with_optlist(optlist):
         config_file = opts['config-file']
         # No config file chosen; read the default config file.
         if config_file is None:
-            config_file = os.path.join(CONFIG_FILE_DIR, 'default.ini')
+            config_file = os.path.join(os.curdir, 'default.ini')
         config.read(config_file)
         spectral_networks = []
 

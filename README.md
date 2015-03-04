@@ -1,12 +1,26 @@
 # loom
 Python program to generate and analyze spectral networks
 
+## Overview
+loom has the following functionality.
+* Generate a single spectral network for a given Seiberg-Witten data at a phase.
+* Generate multiple spectral networks at various phases by utilizing parallel computation.
+* Save and load analytical and numerical configurations.
+* Save and load generated data in JSON.
+* Plot spectral networks with interactive labeling.
+
+## Screenshots
+![loom screenshot](/screenshots/loom_desktop.jpg?raw=true "loom desktop")
+![loom menu screenshot](/screenshots/loom_menu.jpg?raw=true "loom menu")
+![loom plot screenshot](/screenshots/loom_plot.jpg?raw=true "loom plot")
+
 ## To Do List
 * mplcursor not working properly.
   * right-click doesn't remove the label when plotting multiple networks
   * make label appear when hovering the mouse cursor over an artist.
     * hard to point a branch point and show the label in this case.
-* open a file dialog when saving data
+* during the first running make ```config_file``` and ```data_file``` dirs
+* load a config file 
 * implement an option to change between the intersection finding routines. 
 * logging to file
 * GUI
@@ -19,13 +33,13 @@ Python program to generate and analyze spectral networks
 * API for getting D-type joints using other method than the Z_2 projection.
 
 ## How to run 
-* Python > 2.7.6
+* Python >= 2.7.6
 * Not tested on Python 3.
 
 ### Python library requirement
-* NumPy > 1.8.2
-* SciPy > 0.15.1
-* SymPy > 0.7.6
+* NumPy >= 1.8.2
+* SciPy >= 0.15.1
+* SymPy >= 0.7.6
 * Matplotlib > 1.4.1
 
 ### Linux
@@ -56,3 +70,22 @@ Python program to generate and analyze spectral networks
   1. Unpack ```sympy-<version>.tar.gz```, change to the ```sympy-<version>/``` directory.
   1. ```sudo python setup.py install``` 
 
+### Windows
+
+#### Use Enthought Canopy
+
+#### Installing Python and required libraries
+1. Install Python 2.7.9
+  1. https://www.python.org/downloads/
+1. Install NumPy 1.9.2
+  1. http://sourceforge.net/projects/numpy/files/NumPy/
+  1. Choose a Windows installer, not .zip file.
+1. Install SciPy 0.15.1
+  1. http://sourceforge.net/projects/scipy/files/scipy/
+  1. Choose a Windows installer, not .zip file.
+1. Install matplotlib 1.4.3
+  1. http://matplotlib.org/downloads.html
+  1. requires ```dateutil, pytz, pyparsing, six```
+    1. ```pip install python-dateutil````, ...
+1. Install SymPy
+  1. https://github.com/sympy/sympy/releases

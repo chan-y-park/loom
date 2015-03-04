@@ -62,8 +62,12 @@ class LoomConfig:
         """
         logging.info('config file: %s', config_file)
         config_parser = LoomConfigParser()
+
         with open(config_file, 'r') as fp:
             config_parser.readfp(fp)
+
+        # Initialize sw_parameters
+        self['sw_parameters'] = {}
 
         for section in config_parser.sections():
             for option in config_parser.options(section):

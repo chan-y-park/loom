@@ -72,14 +72,22 @@ def load_spectral_network(data_dir):
     return (config, spectral_network_list)
 
 
+def save_config_file(config, file_name='config.ini', file_dir='',):
+    # Save configuration to a file.
+    config_file_name = os.path.join(file_dir, file_name)
+    logging.info('Save configuration to {}.'.format(config_file_name))
+    with open(config_file_name, 'wb') as fp:
+        config.parser.write(fp)
+
+
 def save_spectral_network(config, spectral_networks, data_dir=None,
                           make_zipped_file=True):
     if data_dir is None:
         # Prepare to save spectral network data to files.
         timestamp = str(int(time.time()))
         data_dir = os.path.join(
-            config['root_dir'], 
-            config['data_dir'], 
+            os.curdir,
+            'data', 
             timestamp
         )
 
@@ -88,10 +96,7 @@ def save_spectral_network(config, spectral_networks, data_dir=None,
         os.makedirs(data_dir)
 
     # Save configuration to a file.
-    config_file_name = os.path.join(data_dir, 'config.ini')
-    logging.info('Save configuration to {}.'.format(config_file_name))
-    with open(config_file_name, 'wb') as fp:
-        config.parser.write(fp)
+    save_config_file(config, file_dir=data_dir)
 
     # Save spectral network data.
     for i, spectral_network in enumerate(spectral_networks):
@@ -115,6 +120,3 @@ def save_spectral_network(config, spectral_networks, data_dir=None,
                              zipfile.ZIP_DEFLATED) as fp:
             for a_file in file_list:
                 fp.write(a_file, os.path.relpath(a_file, data_dir))
-
-
-    
