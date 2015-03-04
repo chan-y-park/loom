@@ -12,6 +12,7 @@ loom has the following functionality.
 * Plot spectral networks with interactive labeling.
 
 ## Screenshots
+
 ![loom screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_desktop.png "loom desktop")
 ![loom menu screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_menu.png "loom menu")
 ![loom plot screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_plot.png "loom plot")
