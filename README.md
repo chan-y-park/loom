@@ -12,6 +12,7 @@ loom has the following functionality.
 * Plot spectral networks with interactive labeling.
 
 ## Screenshots
+
 ![loom screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_desktop.png "loom desktop")
 ![loom menu screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_menu.png "loom menu")
 ![loom plot screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_plot.png "loom plot")
@@ -22,13 +23,9 @@ loom has the following functionality.
   * right-click doesn't remove the label when plotting multiple networks
   * make label appear when hovering the mouse cursor over an artist.
     * hard to point a branch point and show the label in this case.
-* during the first running make ```config_file``` and ```data_file``` dirs
-* load a config file 
 * implement an option to change between the intersection finding routines. 
 * logging to file
-* GUI
 * egg?
-* print time after each child process finishes its job
 * SciPy warnings
   * ```/usr/local/lib/python2.7/dist-packages/scipy/optimize/zeros.py:150: RuntimeWarning: Tolerance of 0.000513046300877562 reached
   warnings.warn(msg, RuntimeWarning)```
@@ -38,15 +35,19 @@ loom has the following functionality.
 
 ## How to run this program
 An easy way to run ```loom``` is downloading a standalone binary and executing it.
+
 ### Standalone
+
 #### Windows
 * Generating multiple spectral networks doesn't work on Windows.
+* Was not able to make it work yet.
+
 #### Linux
 * Download ```gui_loom``` from:
   * http://chan.physics.rutgers.edu/files/gui_loom.tar
 
 #### Max OS X
-
+* not built yet.
 
 ### Using Python
 1. First install the required version of Python & its libraries, as described below.
@@ -58,7 +59,8 @@ An easy way to run ```loom``` is downloading a standalone binary and executing i
 #### Requirements
 * Python >= 2.7.6
 * Not tested on Python 3.
-### Library requirements
+
+##### Library requirements
 * NumPy >= 1.8.2
 * SciPy >= 0.15.1
 * SymPy >= 0.7.6
@@ -94,6 +96,7 @@ An easy way to run ```loom``` is downloading a standalone binary and executing i
 
 #### Windows
 * Generating multiple spectral networks doesn't work on Windows.
+
 ##### Use Enthought Canopy
 * As of now, incompatible with the current usage of matplotlib Tk backend
 
