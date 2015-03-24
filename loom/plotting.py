@@ -26,6 +26,7 @@ class SpectralNetworkPlot:
         plot_data_points=False,
         plot_segments=False,
     ):
+        self.master = master
         self.config = config
         self.plot_on_cylinder = plot_on_cylinder
         self.plot_bins = plot_bins

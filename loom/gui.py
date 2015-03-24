@@ -1,7 +1,6 @@
 import os
 import time
 import glob
-import zipfile, zlib
 import logging
 import Tkinter as tk
 import tkFileDialog
@@ -9,8 +8,9 @@ import pdb
 
 from math import pi
 from config import LoomConfig
-from api import (generate_spectral_network, load_spectral_network,
-                 save_config_file, save_spectral_network,)
+from api import (generate_spectral_network, load_config, load_spectral_network,
+                 save_config, save_spectral_network, 
+                 make_spectral_network_plot,)
 from plotting import SpectralNetworkPlot
 
 class GUILoom:
@@ -30,6 +30,7 @@ class GUILoom:
         self.mb = None
         self.check = {}
         self.spectral_networks = spectral_networks
+
 
     def create_widgets(self):
         # Layout variables
@@ -86,15 +87,23 @@ class GUILoom:
         grid_row += 1
         grid_col = 0
         tk.Label(self.root,
-                 text='sw_diff_v').grid(row=grid_row, column=grid_col)
+                 text='sw_diff').grid(row=grid_row, column=grid_col)
         grid_col += 1
+        self.entry['sw_diff_v'].config(justify=tk.RIGHT)
         self.entry['sw_diff_v'].grid(row=grid_row, column=grid_col)
-
         grid_col += 1
+        tk.Label(self.root,
+                 text='dz').grid(row=grid_row, column=grid_col, sticky=tk.W)
+
+        grid_row += 1
+        grid_col = 0
         tk.Label(self.root,
                  text='root_system').grid(row=grid_row, column=grid_col)
         grid_col += 1
         self.entry['root_system'].grid(row=grid_row, column=grid_col)
+        grid_col += 1
+        tk.Label(self.root,
+                 text='representation').grid(row=grid_row, column=grid_col)
 
         grid_row += 1
         grid_col = 0
@@ -166,6 +175,7 @@ class GUILoom:
         grid_col += 1
         self.button_plot.grid(row=grid_row, column=grid_col, sticky=tk.E)
 
+
     def check_plot_on_cylinder(self):
         check = self.check['plot_on_cylinder'].get()
         if check == 1:
@@ -175,50 +185,24 @@ class GUILoom:
             
 
     def menu_load_config_action(self):
-        file_opts = {
-            'defaultextension': '.ini',
-            'initialdir': os.curdir,
-            'initialfile': 'config.ini',
-            'parent': self.root,
-            'title': 'Select a configuration file to load.',
-        }
-        config_file_name = tkFileDialog.askopenfilename(**file_opts)
-        if config_file_name != '':
-            self.config.read(config_file_name)
+        self.config = load_config()
         
         for option, value in self.config.iteritems():
-            self.entry_var[option].set(value)
+            try:
+                self.entry_var[option].set(value)
+            except KeyError:
+                logging.warning('No entry for "{}".'.format(option))
+                pass
+
 
     def menu_save_config_action(self):
-        file_opts = {
-            'defaultextension': '.ini',
-            'initialdir': os.curdir,
-            'initialfile': 'config.ini',
-            'parent': self.root,
-            'title': 'Save the current configuration to a file.',
-        }
-        config_file_name = tkFileDialog.asksaveasfilename(**file_opts)
-        if config_file_name != '':
-            self.update_config_from_entries()
-            save_config_file(self.config, config_file_name)
+        self.update_config_from_entries()
+        save_config(self.config)
 
 
     def menu_load_data_action(self):
-        dir_opts = {
-            'initialdir': os.curdir,
-            'mustexist': False,
-            'parent': self.root,
-            'title': 'Select a directory that contains data files.',
-        }
-        data_dir = tkFileDialog.askdirectory(**dir_opts)
-        if data_dir == '':
-            return None
-        else:
-            logging.info('Opening data directory "{}"...'.format(data_dir))
-            self.config, self.spectral_networks = load_spectral_network(
-                data_dir,
-            )
-            return None
+        self.config, self.spectral_networks = load_spectral_network()
+        return None
 
     def menu_save_data_action(self):
         dir_opts = {
@@ -242,9 +226,14 @@ class GUILoom:
     def update_config_from_entries(self):
         # Read config options from Entries.
         for section in self.config.parser.sections():
+            # Reset the given section of config.parser
             if (section == 'directories'):
                 continue
             elif (section == 'Seiberg-Witten parameters'):
+                # Reset the given section of config.parser
+                for option in self.config.parser.options(section):
+                    self.config.parser.remove_option(section, option)
+
                 params_input = eval(self.entry_var['sw_parameters'].get())
                 self.config['sw_parameters'] = params_input
                 for var, val in params_input.iteritems():
@@ -272,22 +261,13 @@ class GUILoom:
     def button_plot_action(self):
         # Plot spectral networks.
         if (len(self.spectral_networks) > 0):
-            spectral_network_plot = SpectralNetworkPlot(
+            spectral_network_plot = make_spectral_network_plot(
+                self.config, 
+                self.spectral_networks,
                 master=self.root,
-                config=self.config,
-                plot_on_cylinder=self.check_plot_on_cylinder(),
-                #plot_data_points=True,
-                #plot_joints=True,
-                #plot_bins=True,
-                #plot_segments=True,
+                plot_on_cylinder=self.check_plot_on_cylinder,
             )
-
-            for spectral_network in self.spectral_networks:
-                logging.info('Generating the plot of a spectral network '
-                             '@ theta = {}...'.format(spectral_network.phase))
-                spectral_network_plot.draw(spectral_network)
-
-            return spectral_network_plot.show()
+            return None
         else:
             logging.warning('No spectral network to plot.')
             return None

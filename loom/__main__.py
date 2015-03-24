@@ -15,14 +15,17 @@ import pdb
 
 from config import LoomConfig
 from gui import open_gui
-from api import load_spectral_network, generate_spectral_network
+from api import (
+    set_logging, load_config, load_spectral_network, generate_spectral_network, 
+    save_spectral_network,
+)
 
 shortopts = 'c:g:hl:p:'
 longopts = [
     'gui-mode=',
     'help',
     'logging-level',
-    'phase',
+    'phase=',
     'show-plot',
     'show-plot-on-cylinder',
     'load-data=',
@@ -62,19 +65,7 @@ def run_with_optlist(optlist):
             opts['show-plot-on-cylinder'] = True
     # End of option setting.
 
-    # Set logging.
-    if opts['logging-level'] == 'debug':
-        logging_level = logging.DEBUG
-        logging_format = '%(module)s@%(lineno)d: %(funcName)s: %(message)s'
-    elif opts['logging-level'] == 'info':
-        logging_level = logging.INFO
-        logging_format = '%(process)d: %(message)s'
-    else:
-        logging_level = logging.WARNING
-        logging_format = '%(message)s'
-
-    logging.basicConfig(level=logging_level, format=logging_format, 
-                        stream=sys.stdout)
+    set_logging(opts['logging-level'])
 
     # Load config & data according to the command line args. 
     if opts['load-data'] is not None:
@@ -82,12 +73,11 @@ def run_with_optlist(optlist):
         config, spectral_networks = load_spectral_network(data_dir)
     else:
         # Read in the specified config file.
-        config = LoomConfig()
         config_file = opts['config-file']
         # No config file chosen; read the default config file.
         if config_file is None:
             config_file = os.path.join(os.curdir, 'default.ini')
-        config.read(config_file)
+        config = load_config(config_file)
         spectral_networks = []
 
     # Open GUI.
@@ -100,9 +90,14 @@ def run_with_optlist(optlist):
         spectral_networks = generate_spectral_network(
             config,
             phase=opts['phase'],
-            show_plot=(opts['show-plot'] or opts['show-plot-on-cylinder']),
             plot_on_cylinder=opts['show-plot-on-cylinder']
         )
+        if (opts['show-plot'] or opts['show-plot-on-cylinder']) is True:
+            make_spectral_network_plot(
+                config, 
+                spectral_network_list,
+                plot_on_cylinder=opts['show-plot-on-cylinder'],
+            )
         if opts['gui-mode'] is False:
             save_spectral_network(config, spectral_networks,
                                   data_dir=None, make_zipped_file=True,)

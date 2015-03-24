@@ -1,13 +1,33 @@
 import time
+import sys
 import os
 import glob
+import zipfile, zlib
 import logging
+import Tkinter as tk
+import tkFileDialog
 import pdb
 
 from config import LoomConfig
 from geometry import SWData, get_ramification_points
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
+from plotting import SpectralNetworkPlot
+
+
+def set_logging(level):
+    if level == 'debug':
+        logging_level = logging.DEBUG
+        logging_format = '%(module)s@%(lineno)d: %(funcName)s: %(message)s'
+    elif level == 'info':
+        logging_level = logging.INFO
+        logging_format = '%(process)d: %(message)s'
+    else:
+        logging_level = logging.WARNING
+        logging_format = '%(message)s'
+
+    logging.basicConfig(level=logging_level, format=logging_format, 
+                        stream=sys.stdout)
 
 
 def generate_spectral_network(config, phase=None):
@@ -51,7 +71,43 @@ def generate_spectral_network(config, phase=None):
     return spectral_network_list
 
 
-def load_spectral_network(data_dir):
+def load_config(path=None):
+    if path is None:
+        root = tk.Tk()
+        file_opts = {
+            'defaultextension': '.ini',
+            'initialdir': os.curdir,
+            'initialfile': 'config.ini',
+            'parent': root,
+            'title': 'Select a configuration file to load.',
+        }
+        path = tkFileDialog.askopenfilename(**file_opts)
+        root.destroy()
+        if path == '':
+            return None
+
+    config = LoomConfig()
+    config.read(path)
+
+    return config
+    
+
+def load_spectral_network(data_dir=None):
+    if data_dir is None:
+        root = tk.Tk()
+        dir_opts = {
+            'initialdir': os.curdir,
+            'mustexist': False,
+            'parent': root,
+            'title': 'Select a directory that contains data files.',
+        }
+        data_dir = tkFileDialog.askdirectory(**dir_opts)
+        root.destroy()
+        if data_dir == '':
+            return (None, None)
+ 
+    logging.info('Opening data directory "{}"...'.format(data_dir))
+
     config = LoomConfig()
     config.read(os.path.join(data_dir, 'config.ini'))
 
@@ -72,12 +128,26 @@ def load_spectral_network(data_dir):
     return (config, spectral_network_list)
 
 
-def save_config_file(config, file_name='config.ini', file_dir='',):
-    # Save configuration to a file.
-    config_file_name = os.path.join(file_dir, file_name)
-    logging.info('Save configuration to {}.'.format(config_file_name))
-    with open(config_file_name, 'wb') as fp:
+def save_config(config, path=None):
+    if path is None:
+        root = tk.Tk()
+        file_opts = {
+            'defaultextension': '.ini',
+            'initialdir': os.curdir,
+            'initialfile': 'config.ini',
+            'parent': root,
+            'title': 'Save the current configuration to a file.',
+        }
+        path = tkFileDialog.asksaveasfilename(**file_opts)
+        root.destroy()
+        if path == '':
+            return None
+
+    logging.info('Save configuration to {}.'.format(path))
+    with open(path, 'wb') as fp:
         config.parser.write(fp)
+
+    return None
 
 
 def save_spectral_network(config, spectral_networks, data_dir=None,
@@ -96,27 +166,51 @@ def save_spectral_network(config, spectral_networks, data_dir=None,
         os.makedirs(data_dir)
 
     # Save configuration to a file.
-    save_config_file(config, file_dir=data_dir)
+    config_file_path = os.path.join(data_dir, 'config.ini')
+    save_config(config, path=config_file_path)
 
     # Save spectral network data.
     for i, spectral_network in enumerate(spectral_networks):
-        data_file_name = os.path.join(
+        data_file_path = os.path.join(
             data_dir,
             'data_{}.json'.format(
                 str(i).zfill(len(str(len(spectral_networks)-1)))
             )
         )
-        logging.info('Saving data to {}.'.format(data_file_name))
-        with open(data_file_name, 'wb') as fp:
+        logging.info('Saving data to {}.'.format(data_file_path))
+        with open(data_file_path, 'wb') as fp:
             spectral_network.save_json_data(fp,)
 
     if make_zipped_file is True:
-        file_list = [config_file_name]
+        file_list = [config_file_path]
         # Make a compressed data file.
         file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
-        zipped_file_name = data_dir + '.zip'
-        logging.info('Save compressed data to {}.'.format(zipped_file_name))
-        with zipfile.ZipFile(zipped_file_name, 'w',
+        zipped_file_path = data_dir + '.zip'
+        logging.info('Save compressed data to {}.'.format(zipped_file_path))
+        with zipfile.ZipFile(zipped_file_path, 'w',
                              zipfile.ZIP_DEFLATED) as fp:
             for a_file in file_list:
                 fp.write(a_file, os.path.relpath(a_file, data_dir))
+
+
+def make_spectral_network_plot(config, spectral_networks, master=None,
+                               **kwargs):
+    if master is None:
+        master=tk.Tk()
+        master.withdraw()
+
+    spectral_network_plot = SpectralNetworkPlot(
+        master=master,
+        config=config,
+        **kwargs
+    )
+
+    for spectral_network in spectral_networks:
+        logging.info('Generating the plot of a spectral network '
+                     '@ theta = {}...'.format(spectral_network.phase))
+        spectral_network_plot.draw(spectral_network)
+
+    spectral_network_plot.show()
+
+    return master 
+

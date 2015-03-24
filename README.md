@@ -17,6 +17,7 @@ loom has the following functionality.
 ![loom plot screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_plot.png "loom plot")
 
 ## To Do List
+### Core
 * mplcursor not working properly.
   * right-click doesn't remove the label when plotting multiple networks
   * make label appear when hovering the mouse cursor over an artist.
@@ -33,6 +34,7 @@ loom has the following functionality.
   warnings.warn(msg, RuntimeWarning)```
   * divide by zero
 * API for getting D-type joints using other method than the Z_2 projection.
+### GUI
 
 ## How to run this program
 An easy way to run ```loom``` is downloading a standalone binary and executing it.
