@@ -185,7 +185,11 @@ class GUILoom:
             
 
     def menu_load_config_action(self):
-        self.config = load_config()
+        config = load_config()
+        if config is None:
+            return None
+        else:
+            self.config = config
         
         for option, value in self.config.iteritems():
             try:
