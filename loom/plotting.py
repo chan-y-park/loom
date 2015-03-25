@@ -155,10 +155,12 @@ class SpectralNetworkPlot:
                             split_at.append(i)
                     z_segs = numpy.split(result, split_at)
                     for z_seg in z_segs:
-                        axes.plot(z_seg.real, z_seg.imag, '-', color='b',
+                        axes.plot(z_seg.real, z_seg.imag, '-', 
+                                  #color='b',
                                   label=s_wall.label,)
                 else:
-                    axes.plot(s_wall.z.real, s_wall.z.imag, '-', color='b',
+                    axes.plot(s_wall.z.real, s_wall.z.imag, '-',
+                              #color='b',
                               label=s_wall.label,)
         axes.set_visible(False)
         self.plots.append(axes)
@@ -264,6 +266,84 @@ class SpectralNetworkPlot:
             )
 
 
+def plot_s_walls(
+    s_walls,
+    ramification_points=[],
+    plot_range=[-5, 5, -5, 5],
+    plot_data_points=False,
+    marked_points=[],
+    colors=['b', 'g', 'r', 'c', 'm', 'y'], 
+):
+    x_min, x_max, y_min, y_max = plot_range
+
+    pyplot.figure(1)
+    pyplot.title('S-walls')
+
+    # z-plane
+    zax = pyplot.subplot(
+        121,
+        label='z-plane',
+        xlim=(x_min, x_max),
+        ylim=(y_min, y_max),
+        aspect='equal',
+    )
+    # Plot branch points
+    for rp in ramification_points:
+        zax.plot(rp.z.real, rp.z.imag, 'x', markeredgewidth=2, markersize=8, 
+                 color='k', label=rp.label,)
+    for p in marked_points:
+        zax.plot(p[0].real, p[0].imag, 'o', markeredgewidth=2,
+                 markersize=8, color='k')
+
+    # x-plane
+    xax = pyplot.subplot(
+        122,
+        label='x-plane',
+        xlim=(x_min, x_max),
+        ylim=(y_min, y_max),
+        aspect='equal',
+    )
+    for rp in ramification_points:
+        xax.plot(rp.x.real, rp.x.imag, 'x', markeredgewidth=2, markersize=8, 
+                 color='k', label=rp.label,)
+    for p in marked_points:
+        xax.plot(p[1].real, p[1].imag, 'o', markeredgewidth=2,
+                 markersize=8, color='k')
+
+    num_s_walls = len(s_walls)
+
+    for i, s_wall in enumerate(s_walls):
+        # z-plane
+        zrs = s_wall.z.real
+        zis = s_wall.z.imag
+        zax.plot(zrs, zis, '-', color=colors[i % num_s_walls], 
+                 label=s_wall.label)
+        if(plot_data_points == True):
+            zax.plot(zrs, zis, 'o', color='b', label=s_wall.label)
+
+        # x-plane
+        xs = s_wall.x.T
+        for j, x_j in enumerate(xs):
+            xrs = x_j.real
+            xis = x_j.imag
+            xax.plot(
+                xrs, xis, '-', color=colors[i % num_s_walls], 
+                label=(s_wall.label + ',{}'.format(j))
+            )
+            if(plot_data_points == True):
+                xax.plot(
+                    xrs, xis, 'o', color='b', 
+                    label=(s_wall.label + ',{}'.format(j))
+                )
+            
+    mpldatacursor.datacursor(
+        formatter='{label}'.format,
+        tolerance=2,
+        #hover=True,
+        #display='single',
+    )
+
+    pyplot.show()
 
 def plot_segments(
     segments, 

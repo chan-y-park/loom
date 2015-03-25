@@ -23,11 +23,15 @@ class SpectralNetwork:
     def __init__(
         self,
         phase=None,
-        ramification_points=[],
+        #ramification_points=[],
+        ramification_points=None,
         config=None,
     ):
         self.phase = phase
-        self.ramification_points = ramification_points
+        if ramification_points is None:
+            self.ramification_points = []
+        else:
+            self.ramification_points = ramification_points
         self.hit_table = None 
         #self.hit_table = HitTable(config['size_of_bin'])
 
@@ -123,22 +127,6 @@ class SpectralNetwork:
             iteration += 1
 
             logging.info('Iteration #{} finished.'.format(iteration))
-
-
-#    def get_data(self):
-#        """
-#        Returns a dictionary of spectral network data that is used 
-#        when comminicating with parallel children processes
-#        that generates spectral networks.
-#        """
-#        data = {
-#            'phase': self.phase,
-#            'ramification_points' : self.ramification_points,
-#            's_walls': self.s_walls,
-#            'joints': self.joints,
-#            'hit_table': self.hit_table,
-#        }
-#        return data
 
 
     def save_json_data(self, file_object, **kwargs):
