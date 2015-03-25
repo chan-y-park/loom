@@ -6,6 +6,7 @@ from api import save_spectral_network as save
 from api import make_spectral_network_plot as plot
 from api import load_config, save_config
 from plotting import plot_s_walls
+from geometry import get_fibers
 
 set_logging('info')
 

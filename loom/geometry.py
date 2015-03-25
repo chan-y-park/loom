@@ -168,4 +168,12 @@ def get_local_sw_diff(sw, ramification_point):
     return (complex(diff_c.n()), diff_e)
 
 
+def get_fibers(config, z_0):
+    """
+    Return a list of x-coordinates of the fibers over z.
+    """
+    sw = SWData(config)
+    fx = sw.curve.num_eq.subs(z, z_0)
+    xs = sympy.solve(fx, x)
+    return map(complex, xs) 
 

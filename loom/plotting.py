@@ -269,6 +269,7 @@ class SpectralNetworkPlot:
 def plot_s_walls(
     s_walls,
     ramification_points=[],
+    joints=[],
     plot_range=[-5, 5, -5, 5],
     plot_data_points=False,
     marked_points=[],
@@ -291,9 +292,12 @@ def plot_s_walls(
     for rp in ramification_points:
         zax.plot(rp.z.real, rp.z.imag, 'x', markeredgewidth=2, markersize=8, 
                  color='k', label=rp.label,)
+    for jp in joints:
+        zax.plot(jp.z.real, jp.z.imag, '+', markeredgewidth=2, markersize=8, 
+                 color='k', label=jp.label,)
     for p in marked_points:
         zax.plot(p[0].real, p[0].imag, 'o', markeredgewidth=2,
-                 markersize=8, color='k')
+                 markersize=4, color='k')
 
     # x-plane
     xax = pyplot.subplot(
@@ -306,20 +310,26 @@ def plot_s_walls(
     for rp in ramification_points:
         xax.plot(rp.x.real, rp.x.imag, 'x', markeredgewidth=2, markersize=8, 
                  color='k', label=rp.label,)
+    for jp in joints:
+        for j, x_j in enumerate(jp.x):
+            xax.plot(
+                x_j.real, x_j.imag,
+                '+', markeredgewidth=2, markersize=8, color='k', 
+                label=(jp.label + ', {}'.format(j)),
+            )
     for p in marked_points:
         xax.plot(p[1].real, p[1].imag, 'o', markeredgewidth=2,
-                 markersize=8, color='k')
-
-    num_s_walls = len(s_walls)
+                 markersize=4, color='k')
 
     for i, s_wall in enumerate(s_walls):
+        s_wall_color = colors[i % len(colors)]
         # z-plane
         zrs = s_wall.z.real
         zis = s_wall.z.imag
-        zax.plot(zrs, zis, '-', color=colors[i % num_s_walls], 
+        zax.plot(zrs, zis, '-', color=s_wall_color, 
                  label=s_wall.label)
         if(plot_data_points == True):
-            zax.plot(zrs, zis, 'o', color='b', label=s_wall.label)
+            zax.plot(zrs, zis, 'o', color=s_wall_color, label=s_wall.label)
 
         # x-plane
         xs = s_wall.x.T
@@ -327,20 +337,20 @@ def plot_s_walls(
             xrs = x_j.real
             xis = x_j.imag
             xax.plot(
-                xrs, xis, '-', color=colors[i % num_s_walls], 
+                xrs, xis, '-', color=s_wall_color, 
                 label=(s_wall.label + ',{}'.format(j))
             )
             if(plot_data_points == True):
                 xax.plot(
-                    xrs, xis, 'o', color='b', 
+                    xrs, xis, 'o', color=s_wall_color, 
                     label=(s_wall.label + ',{}'.format(j))
                 )
             
     mpldatacursor.datacursor(
         formatter='{label}'.format,
-        tolerance=2,
+        #tolerance=2,
         #hover=True,
-        #display='single',
+        display='multiple',
     )
 
     pyplot.show()

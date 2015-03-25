@@ -113,6 +113,7 @@ class SpectralNetwork:
                         break
                 if not joint_is_new:
                     continue
+                joint.label = 'joint #{}'.format(len(self.joints))
                 self.joints.append(joint)
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
@@ -275,7 +276,6 @@ class SpectralNetwork:
                             prev_s_wall.label,
                             config['accuracy'],
                             root_system=config['root_system'],
-                            label='joint #{}'.format(len(self.joints)),
                         )
 
                         if(a_joint is None):
