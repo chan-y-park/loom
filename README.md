@@ -19,6 +19,7 @@ loom has the following functionality.
 
 ## To Do List
 ### Core
+* sometimes loom does not exit after making a plot and closing it.
 * mplcursor not working properly.
   * right-click doesn't remove the label when plotting multiple networks
   * make label appear when hovering the mouse cursor over an artist.
