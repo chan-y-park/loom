@@ -291,22 +291,27 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
 
 
 def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy, 
-              root_system=None, label=None):
+              root_system=None, representation=None, label=None):
     """
     Return a joint if formed, otherwise return None.
     """
+    # TODO: change the following part so that Z_2 projection is
+    # determined by the given root system & the representation.
+    if representation == 'Z_2_projection':
+        Z_2_projection = True
+    else:
+        Z_2_projection = False
+
     if (abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
         return None
     elif (abs(x2_i - x1_j) < accuracy):
-        if (root_system is not None and
-            root_system[0] == 'D' and 
+        if (Z_2_projection is True and 
             abs(x1_i-(-x2_j)) < accuracy):
             return None
         else:
             return Joint(z, [x1_i, x2_j], [parent_i, parent_j], label)
     elif (abs(x2_j - x1_i) < accuracy):
-        if (root_system is not None and
-            root_system[0] == 'D' and 
+        if (Z_2_projection is True and 
             abs(x1_j-(-x2_i)) < accuracy):
             return None
         else:

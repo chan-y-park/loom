@@ -2,6 +2,7 @@ import sympy
 import numpy
 import logging
 import pdb
+import subprocess
 
 from math import log10
 
@@ -117,9 +118,12 @@ def get_ramification_points(sw, accuracy):
     ramification_points = []
 
     # NOTE: solve_poly_system vs. solve
-    sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
-    #pdb.set_trace()
+    #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
     #sols = sympy.solve([f, f.diff(x)], z, x)
+    #if sols is None:
+    #    # Use Sage instead
+    #    sols = sage_solve_poly_system([f, f.diff(x)])
+    sols = sage_solve_poly_system([f, f.diff(x)])
     for z_0, x_0 in sols:
         if (len(sw.punctures) > 0 and
             (min([abs(z_0 - p) for p in sw.punctures]) < accuracy)
@@ -127,12 +131,21 @@ def get_ramification_points(sw, accuracy):
             continue
         fx_at_z_0 = f.subs(z, z_0)
         fx_at_z_0_coeffs = map(complex, sympy.Poly(fx_at_z_0, x).all_coeffs())
-        m = get_root_multiplicity(fx_at_z_0_coeffs, complex(x_0), accuracy) 
-        if m > 1:
+        mx = get_root_multiplicity(fx_at_z_0_coeffs, complex(x_0), accuracy)
+        if mx > 1:
+            fz_at_x_0 = f.subs(x, x_0)
+            fz_at_x_0_coeffs = map(complex, 
+                                   sympy.Poly(fz_at_x_0, z).all_coeffs())
+            
+            mz = get_root_multiplicity(fz_at_x_0_coeffs, complex(z_0),
+                                       accuracy)
+            if mz > 1:
+                continue
             label = 'ramification point #{}'.format(len(ramification_points))
-            rp = RamificationPoint(complex(z_0), complex(x_0), m, label)
+            rp = RamificationPoint(complex(z_0), complex(x_0), mx, label)
+            logging.info("{}: z = {}, x = {}, i = {}."
+                         .format(label, rp.z, rp.x, rp.i))
             ramification_points.append(rp)
-
     return ramification_points
 
 
@@ -177,3 +190,14 @@ def get_fibers(config, z_0):
     xs = sympy.solve(fx, x)
     return map(complex, xs) 
 
+
+def sage_solve_poly_system(poly_system):
+    """
+    Use sage to solve the given system of polynomial equations of x and z.
+    """
+    sols_str = subprocess.check_output(
+        ["sage", "./loom/sage_scripts/solve_poly_system.sage"] +
+        [str(poly) for poly in poly_system]
+    )
+    sols = eval(sols_str)
+    return sols

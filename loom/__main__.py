@@ -90,7 +90,6 @@ def run_with_optlist(optlist):
         spectral_networks = generate_spectral_network(
             config,
             phase=opts['phase'],
-            plot_on_cylinder=opts['show-plot-on-cylinder']
         )
         if (opts['show-plot'] or opts['show-plot-on-cylinder']) is True:
             make_spectral_network_plot(

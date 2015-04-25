@@ -104,6 +104,8 @@ class GUILoom:
         grid_col += 1
         tk.Label(self.root,
                  text='representation').grid(row=grid_row, column=grid_col)
+        grid_col += 1
+        self.entry['representation'].grid(row=grid_row, column=grid_col)
 
         grid_row += 1
         grid_col = 0

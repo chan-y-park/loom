@@ -53,18 +53,16 @@ class SpectralNetworkPlot:
         self.canvas = FigureCanvas(
             self.figure,
             master=self.toplevel,
-            resize_callback=(
-                lambda event: self.set_data_cursor()
-            )
+            resize_callback=self.canvas_resize_callback
         )
         self.canvas.show()
-        self.canvas.get_tk_widget().pack()
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         toolbar = NavigationToolbar(self.canvas, self.toplevel)
         toolbar.update()
-        self.canvas.get_tk_widget().pack()
-
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
     
+
     def draw(self, spectral_network,):
         theta = spectral_network.phase
         ramification_points = spectral_network.ramification_points
@@ -223,6 +221,10 @@ class SpectralNetworkPlot:
         self.canvas.get_tk_widget().focus_set()
 
         return None
+
+
+    def canvas_resize_callback(self, event):
+        self.set_data_cursor()
 
 
     def show(self):

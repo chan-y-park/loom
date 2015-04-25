@@ -276,6 +276,7 @@ class SpectralNetwork:
                             prev_s_wall.label,
                             config['accuracy'],
                             root_system=config['root_system'],
+                            representation=config['representation'],
                         )
 
                         if(a_joint is None):
