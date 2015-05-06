@@ -290,31 +290,55 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
     return seeds
 
 
-def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy, 
-              root_system=None, representation=None, label=None):
+def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy=None, 
+              xs_at_z=None, g_data=None, label=None):
     """
     Return a joint if formed, otherwise return None.
     """
-    # TODO: change the following part so that Z_2 projection is
-    # determined by the given root system & the representation.
-    if representation == 'Z_2_projection':
-        Z_2_projection = True
-    else:
-        Z_2_projection = False
 
     if (abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
         return None
     elif (abs(x2_i - x1_j) < accuracy):
-        if (Z_2_projection is True and 
-            abs(x1_i-(-x2_j)) < accuracy):
-            return None
-        else:
+        if differ_by_root(
+            x1_i, x2_j, accuracy=accuracy, xs=xs_at_z, g_data=g_data,
+        ):
             return Joint(z, [x1_i, x2_j], [parent_i, parent_j], label)
-    elif (abs(x2_j - x1_i) < accuracy):
-        if (Z_2_projection is True and 
-            abs(x1_j-(-x2_i)) < accuracy):
-            return None
         else:
+            return None
+    elif (abs(x2_j - x1_i) < accuracy):
+        if differ_by_root(
+            x1_j, x2_i, accuracy=accuracy, xs=xs_at_z, g_data=g_data,
+        ):
             return Joint(z, [x1_j, x2_i], [parent_j, parent_i], label)
+        else:
+            return None
 
 
+def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):
+    root_system = g_data["root_system"]
+    k = g_data["representation"]
+    # NOTE: A shortcut. Use this after checking this function
+    # works correctly.
+    if root_system[0] == 'A':
+        if k == 1:
+            return True
+        else:
+            weights = numpy.array(g_data["weights"])
+            roots = numpy.array(g_data["roots"])
+            xs = numpy.array(xs)
+
+            vs = numpy.linalg.pinv(weights).dot(xs)
+            root_diffs = roots.dot(vs)
+            delta_x = x1 - x2
+            pdb.set_trace()
+            for root_diff in root_diffs:
+                if abs(delta_x - root_diff) < accuracy:
+                    return True
+            return False
+    elif root_system[0] == 'D' and k == 1:
+        if abs(x1-(-x2)) < accuracy:
+            return False
+        else:
+            return True
+        
+    

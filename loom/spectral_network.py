@@ -2,6 +2,7 @@ import numpy
 import logging
 import signal
 import multiprocessing
+import subprocess
 import json
 import pdb
 
@@ -37,6 +38,7 @@ class SpectralNetwork:
 
         self.s_walls = []
         self.joints = []
+        self.g_data = None 
 
 
     def grow(self, sw, config):
@@ -49,6 +51,7 @@ class SpectralNetwork:
         that there is a joint from which an S-wall is not grown
         if the depth of the joint is too deep.
         """
+        self.g_data = sage_get_g_data(config)
         accuracy = config['accuracy']
         n_steps=config['num_of_steps']
         logging.info('Start growing a new spectral network...')
@@ -274,9 +277,9 @@ class SpectralNetwork:
                             ip_z, ip_x_n_0, ip_x_n_1, ip_x_p_0, ip_x_p_1,
                             new_s_wall.label, 
                             prev_s_wall.label,
-                            config['accuracy'],
-                            root_system=config['root_system'],
-                            representation=config['representation'],
+                            accuracy=config['accuracy'],
+                            xs_at_z=ip_xs,
+                            g_data=self.g_data,
                         )
 
                         if(a_joint is None):
@@ -418,3 +421,12 @@ class SpectralNetwork:
                             pass
 
         return new_joints
+
+
+def sage_get_g_data(config):
+    g_data_str = subprocess.check_output(
+        ["sage", "./loom/sage_scripts/get_g_data.sage", 
+         config["root_system"], config["representation"]]
+    )
+    g_data = eval(g_data_str)
+    return g_data
