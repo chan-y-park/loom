@@ -15,9 +15,6 @@ from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode)
 from intersection import (HitTable, NoIntersection,
                           find_intersection_of_segments, 
                           find_curve_range_intersection)
-#
-from plotting import plot_segments
-#
 
 
 class SpectralNetwork:
@@ -185,7 +182,10 @@ class SpectralNetwork:
     def get_new_joints(self, new_s_wall_index, sw, config):
         """
         Find joints between the newly grown segment of the given S-wall
-        and the other S-walls. This checks joints that are formed by two
+        and the other S-walls by interpolating S-walls with functions and
+        finding roots of the pairwise differences of the functions.
+        
+        This checks joints that are formed by two
         S-walls only, not considering the possibility of a joint of three
         S-walls, which in principle can happen but is unlikely in a numerical
         setup.
@@ -213,13 +213,6 @@ class SpectralNetwork:
                 z_seg_n = new_z_segs[i_n]
                 for i_p in range(len(prev_tps)+1):
                     z_seg_p = prev_z_segs[i_p]
-
-                    #plot_segments(
-                    #    [(z_seg_n.real, z_seg_n.imag), 
-                    #     (z_seg_p.real, z_seg_p.imag)], 
-                    #    [(rp.z.real, rp.z.imag) 
-                    #     for rp in self.ramification_points], 
-                    #)
 
                     # Check if the two segments have a common x-range.  
                     have_common_x_range = False

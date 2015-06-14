@@ -209,7 +209,6 @@ def make_spectral_network_plot(config, spectral_networks, master=None,
         logging.info('Generating the plot of a spectral network '
                      '@ theta = {}...'.format(spectral_network.phase))
         spectral_network_plot.draw(spectral_network)
-
     spectral_network_plot.show()
 
     return master 
