@@ -12,7 +12,8 @@ from itertools import combinations
 from geometry import RamificationPoint, SWData
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
 from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode)
-from intersection import (HitTable, NoIntersection,
+from hit_table import HitTable
+from intersection import (NoIntersection,
                           find_intersection_of_segments, 
                           find_curve_range_intersection)
 
