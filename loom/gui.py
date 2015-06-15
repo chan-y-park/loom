@@ -11,7 +11,6 @@ from config import LoomConfig
 from api import (generate_spectral_network, load_config, load_spectral_network,
                  save_config, save_spectral_network, 
                  make_spectral_network_plot,)
-from plotting import SpectralNetworkPlot
 
 class GUILoom:
     def __init__(self, config=None, spectral_networks=[],):

@@ -70,6 +70,8 @@ class SWall(object):
             self.x[0] = x_0
         self.parents = parents
         self.label = label
+        # XXX: interface for marking branch-cut crossings.
+        self.splitting = []
 
 
     def __setitem__(self, t, data):
@@ -323,17 +325,7 @@ def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):
         if k == 1:
             return True
         else:
-            weights = numpy.array(g_data["weights"])
-            roots = numpy.array(g_data["roots"])
-            xs = numpy.array(xs)
-
-            vs = numpy.linalg.pinv(weights).dot(xs)
-            root_diffs = roots.dot(vs)
-            delta_x = x1 - x2
-            pdb.set_trace()
-            for root_diff in root_diffs:
-                if abs(delta_x - root_diff) < accuracy:
-                    return True
+            # XXX: This part is not implemented yet.
             return False
     elif root_system[0] == 'D' and k == 1:
         if abs(x1-(-x2)) < accuracy:

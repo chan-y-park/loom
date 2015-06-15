@@ -5,43 +5,202 @@ import Tkinter as tk
 import mpldatacursor
 
 import matplotlib
-# use() directive must be called before importing matplotlib.pyplot
-matplotlib.use('TkAgg')     
-
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg as FigureCanvas,
     NavigationToolbar2TkAgg as NavigationToolbar,
 )
+from matplotlib.widgets import Button
 from matplotlib import pyplot
 from math import pi
+from network_plot import NetworkPlotBase
 from misc import PSL2C, put_on_cylinder
 
-class SpectralNetworkPlot:
-    def __init__(self, 
-        master=None,
-        config=None,
-        plot_on_cylinder=False,
-        plot_bins=False, 
+
+class SpectralNetworkPlotBase(NetworkPlotBase):
+    def draw(
+        self, 
+        spectral_network,
+        z_range_limits=None, 
         plot_joints=False,
         plot_data_points=False,
-        plot_segments=False,
+        plot_on_cylinder=False,
+        C=[[1, 0], [0, 1]],
     ):
+        labels = {'branch_points': [], 'joints': [], 'walls': []}
+        if z_range_limits is None:
+            if plot_on_cylinder is True:
+                z_range_limits = [-pi, pi, -5, 5]
+            else:
+                z_range_limits = [-5, 5, -5, 5] 
+        x_min, x_max, y_min, y_max = z_range_limits
+
+        branch_points = []
+        for i, rp in enumerate(spectral_network.ramification_points):
+            if plot_on_cylinder is True:
+                rp_z = put_on_cylinder(rp.z, C)
+            else:
+                rp_z = rp.z
+            branch_points.append([rp_z.real, rp_z.imag])
+            labels['branch_points'].append(rp.label)
+   
+        joints = []
+        for i, jp in enumerate(spectral_network.joints):
+            if plot_on_cylinder is True:
+                jp_z = put_on_cylinder(jp.z, C)
+            else:
+                jp_z = jp.z
+            joints.append([jp_z.real, jp_z.imag])
+            labels['joints'].append(jp.label)
+
+        walls = []
+        for i, s_wall in enumerate(spectral_network.s_walls):
+            segments = []
+            seg_labels = []
+            split_at = []
+
+            if plot_on_cylinder is True:
+                zs_on_cylinder = numpy.fromfunction(
+                    lambda i: put_on_cylinder(s_wall.z[i], C),
+                    (len(s_wall.z)),
+                )
+                for j, delta_z in enumerate(numpy.diff(zs_on_cylinder)):
+                    if abs(delta_z) > pi:
+                        split_at.append(j)
+                z_segs = numpy.split(zs_on_cylinder, split_at)
+            else:
+                z_segs = [s_wall.z] 
+
+            for z_seg in z_segs:
+                segments.append([z_seg.real, z_seg.imag])
+                seg_labels.append(s_wall.label)
+
+            walls.append(segments)
+            labels['walls'].append(seg_labels)
+
+        super(SpectralNetworkPlotBase, self).draw(
+            phase=spectral_network.phase,
+            branch_points=branch_points,
+            joints=joints,
+            walls=walls,
+            labels=labels,
+            plot_range=[x_min, x_max, y_min, y_max],
+            plot_joints=plot_joints,
+            plot_data_points=plot_data_points,
+        )
+
+
+class NetworkPlot(SpectralNetworkPlotBase):
+    """
+    This class implements UIs using matplotlib widgets
+    so that it can be backend-independent. 
+    
+    The content of this class is independent of the parent class.
+    It only depends on the grandparent class, which should be
+    'NetworkPlotBase'. Therefore this class can inherit any class
+    whose parent is 'NetworkPlotBase'; just change the name of the
+    parent in the definition of this class.
+    """
+    def __init__(
+        self, 
+        title=None,
+    ):
+        super(NetworkPlot, self).__init__(
+            matplotlib_figure=pyplot.figure(title),
+        )
+
+        self.axes_button_prev = None
+        self.axes_button_next = None
+        self.index_text = None
+
+    def save(self, plot_dir, file_prefix=''):
+        # TODO: change the current figure to plot_id.
+        digits = len(str(len(self.plots)-1))
+        for i, axes in enumerate(self.plots):
+            self.change_current_plot(i)
+            plot_file_path = os.path.join(
+                plot_dir, file_prefix + str(i).zfill(digits) + '.png'
+            )
+            self.figure.savefig(plot_file_path)
+
+
+    def change_current_plot(self, new_plot_idx):
+        super(NetworkPlot, self).change_current_plot(new_plot_idx)
+        if self.index_text is not None:
+            self.index_text.set_text(
+                "{}/{}".format(self.current_plot_idx, len(self.plots)-1)
+            )
+
+
+
+    def show_prev_plot(self, event):
+        super(NetworkPlot, self).show_prev_plot(event)
+
+
+    def show_next_plot(self, event):
+        super(NetworkPlot, self).show_next_plot(event)
+
+
+    def show(self):
+        plot_idx = 0
+        self.current_plot_idx = plot_idx
+        self.plots[plot_idx].set_visible(True)
+        self.set_data_cursor()
+
+        if(len(self.plots) > 1):
+            button_width = .05
+            index_width = .03*len(str(len(self.plots)-1))
+            button_height = .05
+            button_bottom = .025
+            center = .5
+            margin = .005
+
+            axes_prev_rect = [center - index_width/2 - margin - button_width,
+                              button_bottom, button_width, button_height]
+            axes_prev = self.figure.add_axes(axes_prev_rect)
+            self.button_prev = Button(axes_prev, '<')
+            self.button_prev.on_clicked(self.show_prev_plot)
+
+            self.index_text = self.figure.text(
+                center - index_width/2, (button_bottom+button_height)/2, 
+                "{}/{}".format(self.current_plot_idx, len(self.plots)-1)
+            )
+
+            axes_next_rect = [center + index_width/2 + margin,
+                              button_bottom, button_width, button_height]
+            axes_next = self.figure.add_axes(axes_next_rect)
+            self.button_next = Button(axes_next, '>')
+            self.button_next.on_clicked(self.show_next_plot)
+
+        self.figure.show()
+
+
+class NetworkPlotTk(SpectralNetworkPlotBase):
+    """
+    This class implements UIs using Tkinter. 
+    
+    The content of this class is independent of the parent class.
+    It only depends on the grandparent class, which should be
+    'NetworkPlotBase'. Therefore this class can inherit any class
+    whose parent is 'NetworkPlotBase'; just change the name of the
+    parent in the definition of this class.
+    """
+    def __init__(self, 
+        master=None,
+        title=None,
+    ):
+        super(NetworkPlotTk, self).__init__(
+            matplotlib_figure=matplotlib.figure.Figure(),
+        )
+
+        if master is None:
+            master = tk.Tk()
+            master.withdraw()
         self.master = master
-        self.config = config
-        self.plot_on_cylinder = plot_on_cylinder
-        self.plot_bins = plot_bins
-        self.plot_joints = plot_joints
-        self.plot_data_points = plot_data_points
-        self.plot_segments = plot_segments
 
         # Create a Toplevel widget, which is a child of GUILoom 
         # and contains plots,
         self.toplevel = tk.Toplevel(master)
-        self.toplevel.wm_title('Spectral Network Plot')
-
-        self.plots = []
-        self.data_cursor = None
-        self.current_plot_idx = None 
+        self.toplevel.wm_title(title)
 
         self.plot_idx_scale = None
 
@@ -49,7 +208,6 @@ class SpectralNetworkPlot:
         self.plot_idx_entry_var = tk.StringVar() 
         self.plot_idx_entry_var.trace('w', self.plot_idx_entry_change)
 
-        self.figure = matplotlib.figure.Figure()
         self.canvas = FigureCanvas(
             self.figure,
             master=self.toplevel,
@@ -62,126 +220,6 @@ class SpectralNetworkPlot:
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
     
-
-    def draw(self, spectral_network,):
-        theta = spectral_network.phase
-        ramification_points = spectral_network.ramification_points
-        s_walls = spectral_network.s_walls
-
-        C = self.config['mt_params']
-
-        z_range_limits = self.config['z_range_limits']
-        if z_range_limits is None:
-            if self.plot_on_cylinder is True:
-                z_range_limits = [-pi, pi, -5, 5]
-            else:
-                z_range_limits = [-5, 5, -5, 5] 
-        x_min, x_max, y_min, y_max = z_range_limits
-        rect = [0.125, 0.15, .8, 0.75]
-
-        axes = self.figure.add_axes(
-            rect,
-            label=theta,
-            xlim=(x_min, x_max),
-            ylim=(y_min, y_max),
-            aspect='equal',
-        )
-
-        axes.set_title('phase = ({:.4f})pi'.format(theta/pi))
-
-        # Draw a lattice of bins for visualization.
-        if(self.plot_bins is True):
-            bin_size = config['size_of_bin']
-            xv = x_min
-            while xv < x_max:
-                xv += bin_size
-                axes.axvline(x = xv, linewidth=0.5, color='0.75')
-
-            yh = y_min  
-            while yh < y_max:
-                yh += bin_size
-                axes.axhline(y = yh, linewidth=0.5, color='0.75')
-        # End of drawing the bin lattice.
-
-        # Plot branch points
-        for rp in ramification_points:
-            if (self.plot_on_cylinder is True):
-                rp_z = put_on_cylinder(rp.z, C)
-            else:
-                rp_z = rp.z
-            bpx = rp_z.real 
-            bpy = rp_z.imag 
-            axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
-                      color='k', label=rp.label,)
-        # End of plotting branch points
-   
-        # Plot joints
-        if(self.plot_joints is True):
-            for jp in spectral_network.joints:
-                if (self.plot_on_cylinder is True):
-                    jp_z = put_on_cylinder(rp.z, C)
-                else:
-                    jp_z = jp.z
-                jpx = jp_z.real 
-                jpy = jp_z.imag 
-                axes.plot(jpx, jpy, '+', markeredgewidth=2, markersize=8, 
-                          color='k', label=jp.label,)
-        # End of plotting joints
-
-        # If we have segments of curves, draw them in different colors.
-        if(self.plot_segments is True):
-            hit_table = spectral_network.hit_table
-            for bin_key in hit_table:
-                for curve_index in hit_table[bin_key]:
-                    for t_i, t_f in hit_table[bin_key][curve_index]:
-                        z_seg = s_walls[curve_index].z[t_i:t_f]
-                        axes.plot(z_seg.real, z_seg.imag, '-')
-                        if(plot_data_points == True):
-                            axes.plot(z_seg.real, z_seg.imag,
-                                        'o', color='b')
-        else:
-            for s_wall in s_walls:
-                if(self.plot_data_points is True):
-                    axes.plot(s_wall.z.real, s_wall.z.imag, 'o', color='k')
-                if (self.plot_on_cylinder is True):
-                    result = numpy.empty(len(s_wall.z), complex)
-                    split_at = []
-                    result[0] = put_on_cylinder(s_wall.z[0], C)
-                    for i, z in enumerate(s_wall.z[1:], start=1):
-                        result[i] = put_on_cylinder(z, C)
-                        if abs(result[i-1] - result[i]) > pi:
-                            split_at.append(i)
-                    z_segs = numpy.split(result, split_at)
-                    for z_seg in z_segs:
-                        axes.plot(z_seg.real, z_seg.imag, '-', 
-                                  #color='b',
-                                  label=s_wall.label,)
-                else:
-                    axes.plot(s_wall.z.real, s_wall.z.imag, '-',
-                              #color='b',
-                              label=s_wall.label,)
-        axes.set_visible(False)
-        self.plots.append(axes)
-
-        return None
-
-
-    def set_data_cursor(self):
-        if self.current_plot_idx is None:
-            return None
-
-        # Use a DataCursor to interactively display the label
-        # for artists of the current axes.
-        self.data_cursor = mpldatacursor.datacursor(
-            axes=self.plots[self.current_plot_idx],
-            formatter='{label}'.format,
-            tolerance=2,
-            #hover=True,
-            display='single',
-        )
-    
-        return None 
-
 
     def scale_action(self, scale_value):
         new_plot_idx = int(scale_value)
@@ -210,7 +248,7 @@ class SpectralNetworkPlot:
 
     def update_current_plot(self, new_plot_idx):
         if self.data_cursor is not None:
-            self.data_cursor.hide()
+            self.data_cursor.hide().disable()
 
         self.plots[self.current_plot_idx].set_visible(False)
         self.plots[new_plot_idx].set_visible(True)
@@ -266,7 +304,6 @@ class SpectralNetworkPlot:
                 fill=tk.X,
                 side=tk.LEFT,
             )
-
 
 def plot_s_walls(
     s_walls,

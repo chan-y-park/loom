@@ -6,13 +6,14 @@ import zipfile, zlib
 import logging
 import Tkinter as tk
 import tkFileDialog
+import matplotlib
 import pdb
 
 from config import LoomConfig
 from geometry import SWData, get_ramification_points
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
-from plotting import SpectralNetworkPlot
+from plotting import NetworkPlot, NetworkPlotTk
 
 
 def set_logging(level):
@@ -194,22 +195,32 @@ def save_spectral_network(config, spectral_networks, data_dir=None,
 
 
 def make_spectral_network_plot(config, spectral_networks, master=None,
-                               **kwargs):
-    if master is None:
-        master=tk.Tk()
-        master.withdraw()
+                               show_plot=True, **kwargs):
+    spectral_network_plot_title = 'Spectral Network'
 
-    spectral_network_plot = SpectralNetworkPlot(
-        master=master,
-        config=config,
-        **kwargs
-    )
+    if matplotlib.rcParams['backend'] == 'TkAgg':
+        spectral_network_plot = NetworkPlotTk(
+            master=master,
+            title=spectral_network_plot_title
+        )
+    else:
+        spectral_network_plot = NetworkPlot(
+            title=spectral_network_plot_title
+        )
 
     for spectral_network in spectral_networks:
         logging.info('Generating the plot of a spectral network '
                      '@ theta = {}...'.format(spectral_network.phase))
         spectral_network_plot.draw(spectral_network)
-    spectral_network_plot.show()
 
-    return master 
+    if show_plot is True:
+        spectral_network_plot.show()
+
+    if master is None:
+        try:
+            raw_input('Press any key to continue...')
+        except NameError:
+            pass
+    return spectral_network_plot
+
 
