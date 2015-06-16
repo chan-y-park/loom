@@ -108,6 +108,7 @@ class Trivialization:
         sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
         enum_sh = [[i, s_i] for i, s_i in enumerate(sheets_at_bp)]
 
+        print "sheets of the cover at z = {}".format(z_bp)
         print enum_sh
         ### TO DO:
         ### Will sort sheets according to their real part in the fiber C-plane
@@ -123,18 +124,26 @@ class Trivialization:
         pairs = []
         singles = []
 
-        for i, s in real_sorted_enum_sh:
+        for j, sheet in enumerate(real_sorted_enum_sh):
+            ### here 'sheet' stands for the sheet identifier
+            ### and contains sheet = [i, x]
+            ### while 'j' is the index of the sheets sorted
+            ### according to the real parts of x
+            i = sheet[0]
+            x = sheet[1]
+                        
             if i in flatten(pairs):
-                    pass
-            elif i == len(real_sorted_enum_sh)-1:
+                pass
+            elif j == len(real_sorted_enum_sh)-1:
                 ### this is the last sheet of the list
                 ### if it's not already in a pair, then it's a single
                 singles.append(i)
             else:
-                s_1 = real_sorted_enum_sh[i][1]
-                s_2 = real_sorted_enum_sh[i+1][1]
-                if abs(s_1 - s_2) < PROXIMITY_THRESHOLD:
-                    pairs.append([i, i+1])
+                x_1 = real_sorted_enum_sh[j+1][1]
+                i_1 = real_sorted_enum_sh[j+1][0]
+                
+                if abs(x - x_1) < PROXIMITY_THRESHOLD:
+                    pairs.append([i, i_1])
                 else:
                     singles.append(i)
 
