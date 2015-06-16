@@ -58,17 +58,10 @@ class Trivialization:
 
 
     def sheets_at_z(self, z_0):
-        ### TO DO: SHOULD USE NUMPY INSTEAD OF SYMPY TO SOLVE HERE, MUCH FASTER!  
         from sympy.abc import x, z
         sw_curve_fiber = self.sw_data.curve.num_eq.subs(z, z_0)
-        # print "sym roots"
-        # print map(complex, sympy.solve(sw_curve_fiber))
-        # return map(complex, sympy.solve(sw_curve_fiber))
-        # print sw_curve_fiber
         sym_poly = Poly(sw_curve_fiber, x, domain='CC')
-        # print sym_poly
         coeff_list = map(complex, sym_poly.all_coeffs())
-        # print coeff_list
         return map(complex, np.roots(coeff_list))
 
 
@@ -116,6 +109,52 @@ class Trivialization:
         ### SHOULD INTRODUCE A CHECK THAT A NEW_SHEET CAN'T BE PICKED TWICE!
         return sorted_sheets
 
+    # def branch_point_structure(self, z_bp):
+    #     tracked_sheets = self.track_sheets_to_bp(z_bp)
+    #     sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
+    #     enum_sh = [[i, s_i] for i, s_i in enumerate(sheets_at_bp)]
+
+    #     print "sheets of the cover at z = {}".format(z_bp)
+    #     print enum_sh
+    #     ### TO DO:
+    #     ### Will sort sheets according to their real part in the fiber C-plane
+    #     ### then will only compare adjacent ones
+    #     ### But we should check that not more than two roots have the same 
+    #     ### real part. If that's the case, should tilt the x-plane
+    #     ### Alternative: don't use this sorting at all, and compare all posible 
+    #     ### pairs of sheets.
+    #     real_sorted_enum_sh = sorted(enum_sh, key=getkey_real)
+        
+    #     ### These 'pairs' and 'singles' should be probably
+    #     ### introduced as attributes of the branch-point class
+    #     pairs = []
+    #     singles = []
+
+    #     for j, sheet in enumerate(real_sorted_enum_sh):
+    #         ### here 'sheet' stands for the sheet identifier
+    #         ### and contains sheet = [i, x]
+    #         ### while 'j' is the index of the sheets sorted
+    #         ### according to the real parts of x
+    #         i = sheet[0]
+    #         x = sheet[1]
+                        
+    #         if i in flatten(pairs):
+    #             pass
+    #         elif j == len(real_sorted_enum_sh)-1:
+    #             ### this is the last sheet of the list
+    #             ### if it's not already in a pair, then it's a single
+    #             singles.append(i)
+    #         else:
+    #             x_1 = real_sorted_enum_sh[j+1][1]
+    #             i_1 = real_sorted_enum_sh[j+1][0]
+                
+    #             if abs(x - x_1) < PROXIMITY_THRESHOLD:
+    #                 pairs.append([i, i_1])
+    #             else:
+    #                 singles.append(i)
+
+    #     return pairs, singles
+
     def branch_point_structure(self, z_bp):
         tracked_sheets = self.track_sheets_to_bp(z_bp)
         sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
@@ -123,41 +162,33 @@ class Trivialization:
 
         print "sheets of the cover at z = {}".format(z_bp)
         print enum_sh
-        ### TO DO:
-        ### Will sort sheets according to their real part in the fiber C-plane
-        ### then will only compare adjacent ones
-        ### But we should check that not more than two roots have the same 
-        ### real part. If that's the case, should tilt the x-plane
-        ### Alternative: don't use this sorting at all, and compare all posible 
-        ### pairs of sheets.
-        real_sorted_enum_sh = sorted(enum_sh, key=getkey_real)
         
         ### These 'pairs' and 'singles' should be probably
         ### introduced as attributes of the branch-point class
         pairs = []
         singles = []
 
-        for j, sheet in enumerate(real_sorted_enum_sh):
-            ### here 'sheet' stands for the sheet identifier
-            ### and contains sheet = [i, x]
-            ### while 'j' is the index of the sheets sorted
-            ### according to the real parts of x
-            i = sheet[0]
-            x = sheet[1]
-                        
+        for i, x in enum_sh:
             if i in flatten(pairs):
                 pass
-            elif j == len(real_sorted_enum_sh)-1:
+            elif i == len(enum_sh)-1:
                 ### this is the last sheet of the list
                 ### if it's not already in a pair, then it's a single
                 singles.append(i)
             else:
-                x_1 = real_sorted_enum_sh[j+1][1]
-                i_1 = real_sorted_enum_sh[j+1][0]
-                
-                if abs(x - x_1) < PROXIMITY_THRESHOLD:
-                    pairs.append([i, i_1])
-                else:
+                paired = False
+                for j, y in enum_sh[i+1:]:                    
+                    if abs(x - y) < PROXIMITY_THRESHOLD:
+                        paired = True
+                        pairs.append([i, j])
+                ### NOTE: we can in principle have multiple pairings, meaning
+                ### that three or more sheets could collide together
+                ### these will show up as several pairs containing the 
+                ### same numbers e.g. [i, j], [j, k], [k, i] would mean
+                ### that sheets i, j, k collide all together
+                ### Should introduce a check that handles this situations!
+
+                if paired == False:
                     singles.append(i)
 
         return pairs, singles
