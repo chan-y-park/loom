@@ -3,6 +3,8 @@ from geometry import SWData, get_ramification_points
 import sympy
 import matplotlib.pyplot as plt
 import cmath
+import numpy as np
+from sympy import Poly
 
 ### number of steps used to track the sheets along a leg 
 ### of the lefshetz spider
@@ -34,8 +36,11 @@ class Trivialization:
         r_center = sum(r_points_z)
         self.basepoint = r_center - 1j * max_distance
 
+        self.reference_sheets = [[i, x] \
+                    for i, x in enumerate(self.sheets_at_z(self.basepoint))]
+
         print "\nSheets of the cover at z_0 = {}".format(self.basepoint)
-        print self.sheets_at_z(self.basepoint)
+        print self.reference_sheets
 
         print "\npath to first branch point"
         print self.path_to_bp(r_points_z[0])
@@ -54,9 +59,17 @@ class Trivialization:
 
     def sheets_at_z(self, z_0):
         ### TO DO: SHOULD USE NUMPY INSTEAD OF SYMPY TO SOLVE HERE, MUCH FASTER!  
-        from sympy.abc import z
+        from sympy.abc import x, z
         sw_curve_fiber = self.sw_data.curve.num_eq.subs(z, z_0)
-        return map(complex, sympy.solve(sw_curve_fiber))
+        # print "sym roots"
+        # print map(complex, sympy.solve(sw_curve_fiber))
+        # return map(complex, sympy.solve(sw_curve_fiber))
+        # print sw_curve_fiber
+        sym_poly = Poly(sw_curve_fiber, x, domain='CC')
+        # print sym_poly
+        coeff_list = map(complex, sym_poly.all_coeffs())
+        # print coeff_list
+        return map(complex, np.roots(coeff_list))
 
 
     def path_to_bp(self, z_bp):
