@@ -8,7 +8,7 @@ from sympy import Poly
 
 ### number of steps used to track the sheets along a leg 
 ### of the lefshetz spider
-N_PATH_TO_BP = 50
+N_PATH_TO_BP = 100
 
 ### Tolerance for recognizing colliding sheets at a branch-point
 PROXIMITY_THRESHOLD = 0.05
@@ -42,18 +42,18 @@ class Trivialization:
         print "\nSheets of the cover at z_0 = {}".format(self.basepoint)
         print self.reference_sheets
 
-        print "\npath to first branch point"
-        print self.path_to_bp(r_points_z[0])
-
-        for z_bp in r_points_z:
-            # sheets_path = self.track_sheets_to_bp(z_bp)
-            # for sheet_list in sheets_path:
-            #     data_plot(sheet_list, z_bp)
+        for i, z_bp in enumerate(r_points_z):
+            print "\nroot tracking along the path to branch point #{}".format(i)
+            sheets_path = self.track_sheets_to_bp(z_bp)
+            for sheet_list in sheets_path:
+                data_plot(sheet_list, z_bp)
+            pairs, singles  = self.branch_point_structure(z_bp)
+            print "this is the brach point structure for branch point #{}".format(i)
+            print "pairs = {}".format(pairs)
+            print "singles = {}".format(singles)
             pass
 
-        pairs, singles  = self.branch_point_structure(r_points_z[0])
-        print "\npairs = {}".format(pairs)
-        print "singles = {}".format(singles)
+        
 
 
 
@@ -109,51 +109,6 @@ class Trivialization:
         ### SHOULD INTRODUCE A CHECK THAT A NEW_SHEET CAN'T BE PICKED TWICE!
         return sorted_sheets
 
-    # def branch_point_structure(self, z_bp):
-    #     tracked_sheets = self.track_sheets_to_bp(z_bp)
-    #     sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
-    #     enum_sh = [[i, s_i] for i, s_i in enumerate(sheets_at_bp)]
-
-    #     print "sheets of the cover at z = {}".format(z_bp)
-    #     print enum_sh
-    #     ### TO DO:
-    #     ### Will sort sheets according to their real part in the fiber C-plane
-    #     ### then will only compare adjacent ones
-    #     ### But we should check that not more than two roots have the same 
-    #     ### real part. If that's the case, should tilt the x-plane
-    #     ### Alternative: don't use this sorting at all, and compare all posible 
-    #     ### pairs of sheets.
-    #     real_sorted_enum_sh = sorted(enum_sh, key=getkey_real)
-        
-    #     ### These 'pairs' and 'singles' should be probably
-    #     ### introduced as attributes of the branch-point class
-    #     pairs = []
-    #     singles = []
-
-    #     for j, sheet in enumerate(real_sorted_enum_sh):
-    #         ### here 'sheet' stands for the sheet identifier
-    #         ### and contains sheet = [i, x]
-    #         ### while 'j' is the index of the sheets sorted
-    #         ### according to the real parts of x
-    #         i = sheet[0]
-    #         x = sheet[1]
-                        
-    #         if i in flatten(pairs):
-    #             pass
-    #         elif j == len(real_sorted_enum_sh)-1:
-    #             ### this is the last sheet of the list
-    #             ### if it's not already in a pair, then it's a single
-    #             singles.append(i)
-    #         else:
-    #             x_1 = real_sorted_enum_sh[j+1][1]
-    #             i_1 = real_sorted_enum_sh[j+1][0]
-                
-    #             if abs(x - x_1) < PROXIMITY_THRESHOLD:
-    #                 pairs.append([i, i_1])
-    #             else:
-    #                 singles.append(i)
-
-    #     return pairs, singles
 
     def branch_point_structure(self, z_bp):
         tracked_sheets = self.track_sheets_to_bp(z_bp)
