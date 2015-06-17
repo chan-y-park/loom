@@ -67,6 +67,8 @@ class Trivialization:
     ### NOTE: I am only analyzing the ramification_points that are branch points 
     ### for now, not irregular singularities.
     ### NOTE: I am restricting to square-root type branch points.
+    ### Although I am not printing any explicit warning/error message 
+    ### and the computation will go through for higher-type, but give a wrong answer!
     def __init__(self, sw_data, ramification_points, lie_algebra):
         self.sw_data = sw_data
         self.algebra = lie_algebra
@@ -202,9 +204,9 @@ class Trivialization:
 
     def build_dictionary(self):
         algebra = self.algebra
+        r = algebra[1]
 
         if algebra[0] == 'A':
-            r = algebra[1]
             ### for example, fund_weights(2) will be [0, 1, 0, ...]
             def fund_weights(i):
                 return np.array([kr_delta(j, i - 1) for j in range(r+1)])
@@ -212,7 +214,29 @@ class Trivialization:
             return {i : fund_weights(i+1) for i, x in self.reference_sheets}
 
         elif algebra[0] == 'D':
-            raise ValueError('I am not ready for D-type algebras yet!')
+            def pos_fund_weights(i):
+                return np.array([kr_delta(j, i - 1) for j in range(r)])
+            
+            def neg_fund_weights(i):
+                return -1 * pos_fund_weights(i)
+
+            positive_sheets = [[i, x] for i, x in self.reference_sheets if d_positivity(x)]
+            negative_sheets = [[i, x] for i, x in self.reference_sheets if not d_positivity(x)]
+            sorted_negative_sheets = sort_negatives(positive_sheets, negative_sheets)
+            print "The positive sheets:"
+            print positive_sheets
+            print "The corresponding sorted negative sheets:"
+            print sorted_negative_sheets
+            pos_dict = {i : pos_fund_weights(j+1) for j, [i, x] in enumerate(positive_sheets)}
+            # print "\npositive dictionary"
+            # print pos_dict
+            neg_dict = {i : neg_fund_weights(j+1) for j, [i, x] in enumerate(sorted_negative_sheets)}
+            # print "\nnegative dictionary"
+            # print neg_dict
+            full_dict = pos_dict.copy()
+            full_dict.update(neg_dict)
+            return full_dict
+
 
         elif algebra[0] == 'E':
             raise ValueError('I am not ready for E-type algebras yet!')
@@ -239,7 +263,7 @@ class Trivialization:
                 return v_2 - v_1
 
         elif algebra[0] == 'D':
-            raise ValueError('I am not ready for D-type algebras yet!')
+            return d_positive_root(v_1 - v_2)
 
         elif algebra[0] == 'E':
             raise ValueError('I am not ready for E-type algebras yet!')
@@ -257,8 +281,50 @@ def getkey_real(item):
 def getkey_imag(item):
     return item[1].imag
 
+def getkey_last(item):
+    return item[-1]
+
 def flatten(l):
     return [item for sublist in l for item in sublist]
+
+def d_positivity(x):
+    """
+    Criterion for establishing whether a sheet of a D-type 
+    vector-representation cover is positive or not.
+    """
+    if x.imag > 0 or (x.imag == 0 and x.real > 0):
+        return True
+    elif x.imag < 0 or (x.imag == 0 and x.real < 0):
+        return False
+    else:
+        raise ValueError('There is a sheet located at x=0.0 for a D-type cover!'
+                        +'\nBy Z_2 symmetry there must be two sheets at x=0.'
+                        +'\nThis means that the basepoint is not good.')
+
+def d_positive_root(alpha):
+    """
+    Given a root 'alpha', it determines whether it's positive or negative.
+    If positive, it returns alpha. If negative it returns -alpha
+    """
+    non_zero_elements = [x for x in alpha if x!=0]
+    first_element = non_zero_elements[0]
+    if first_element > 0:
+        return alpha
+    else:
+        return -1 * alpha
+
+
+
+def sort_negatives(pos, neg):
+    sorted_neg = []
+    for i, x in pos:
+        distances = [[j, y, abs(x - (-y))] for j, y in neg]
+        ### sorting them by distance, the closest will be the first one
+        sorted_distances = sorted(distances, key=getkey_last)
+        closest_sheet = sorted_distances[0][:2]
+        sorted_neg.append(closest_sheet)
+
+    return sorted_neg
 
 
 def data_plot(cmplx_list, title):
@@ -294,7 +360,16 @@ def data_plot(cmplx_list, title):
 
 ### Some Testing
 
-config = load_config('../default.ini')
+# config = load_config('../default.ini')
+# algebra = ['A', 2]
+
+# config = load_config('../config/pure_SO_4.ini')
+# algebra = ['D', 2]
+
+config = load_config('../config/coset_D_3.ini')
+algebra = ['D', 3]
+
+
 sw = SWData(config)
 ramification_points = get_ramification_points(sw, config['accuracy'])
 
@@ -307,6 +382,6 @@ print "\nThe ramification points"
 for r in ramification_points:
     print r
 
-algebra = ['A', 2]
+
 
 t = Trivialization(sw, ramification_points, algebra)
