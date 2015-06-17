@@ -23,25 +23,101 @@ BP_PROXIMITY_THRESHOLD = 0.05
 class BranchPoint:
     """
     The BranchPoint class.
-    Just a container of information.
+
+    Attributes
+    ----------
+
+    z :
+        The position of the branch point on the z-plane
+
+    trivialization : 
+        The trivialization of the cover to which the 
+        branch point is associated.
+
+    groups :
+        ********************
+        A list of sheets which collide pairwise at the 
+        branch point.
+
+    singles :
+        The list of sheets which do not collide with any
+        other sheet.
+
+    enum_sh :
+        The enumerated sheets at the branch point. 
+        A list of pairs [i, x] where i is the sheet 
+        identifier referring to the reference sheets 
+        of the trivialization class; x is the corresponding
+        coordinate in the fiber above the branch point.
+
+    path_to_bp :
+        A path running from the basepoint of the trivialization
+        to the branch point without crossing any branch cut.
+    
+    sheet_tracks_to_bp :
+        A list of sheet tracks, i.e. the x-values of each
+        sheet as it is tracked along a path that runs to
+        the branch point, to determine collision structure 
+        of the various sheets.
+    
+    positive_root :
+        ********************
+    
+    path_around_bp :
+        A path encircling the branch point and no one else,
+        used to compute the monodromy.
+    
+    sheet_tracks_around_bp :
+        A list of sheet tracks, i.e. the x-values of each
+        sheet as it is tracked along a path that runs around 
+        the branch point, to determine the monodromy.
+    
+    monodromy : 
+        The monodromy matrix acting on the column vector
+        of sheets (hence, acting FROM the left).
+        Sheets are ordered according to the reference 
+        sheets of the trivialization.
+    
+    order : 
+        At a branch point, the dual of the higgs field 
+        lies on the boundary of a Weyl chamber.
+        In general, it will li at the intersection of
+        k of the walls delimiting the chamber.
+        The order of the branch point is then k + 1.
+
     """
     def __init__(self, z=None, trivialization=None):
         self.z = z
         self.trivialization = trivialization
         
         bp_data = self.trivialization.analyze_branch_point(self.z)
-        self.pairs = bp_data['pairs']
+        self.groups = bp_data['groups']
         self.singles = bp_data['singles']
         self.enum_sh = bp_data['enum_sh']
-        self.sheets_at_branch_point = bp_data['sheets_at_branch_point']
         self.sheet_tracks_to_bp = bp_data['tracked_sheets']
-        self.path_to_bp = bp_data['path_to_branch_point']
-                        
-        self.positive_root = trivialization.positive_root(self.pairs, self.singles, self.enum_sh)
-        
+        self.path_to_bp = bp_data['path_to_branch_point']                                
         self.path_around_bp = self.trivialization.path_around_pt(self.z)
         self.sheet_tracks_around_bp = self.trivialization.track_sheets_along_path(self.path_around_bp)
+        self.positive_root = trivialization.positive_root(self.groups, self.singles, self.enum_sh)
         self.monodromy = trivialization.sheet_monodromy(self.path_around_bp)
+
+    def print_info(self):
+        print "\n---------------------------------------------------------\
+               \nBranch Point at z = %s\
+               \n---------------------------------------------------------"\
+               % self.z
+        if SHOW_TRACKING_PLOTS == True:
+            print "\nroot tracking along the path to branch point {}".format(self.z)
+            for j, sheet_list in enumerate(self.sheet_tracks_to_bp):
+                data_plot(sheet_list, 'sheet {} tracked to branch point {}'.format(j, self.z))
+            for j, sheet_list in enumerate(self.sheet_tracks_around_bp):
+                data_plot(sheet_list, 'sheet {} tracked around branch point {}'.format(j, self.z))
+        print "this is the branch point structure for branch point #{}".format(i)
+        print "groups = {}".format(self.groups)
+        print "singles = {}".format(self.singles)
+        print "positive root = {}".format(self.positive_root)
+        print "sheets at the branch point = {}".format(self.enum_sh)
+        print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
 
 
 class IrregularSingularity:
@@ -57,7 +133,8 @@ class IrregularSingularity:
         self.sheet_tracks_around_irr_sing = self.trivialization.track_sheets_along_path(self.path_around_irr_sing)
         self.monodromy = trivialization.sheet_monodromy(self.path_around_irr_sing)
         
-    
+    def print_info(self):
+        print "FILL IN"
 
 
 class Trivialization:
@@ -71,75 +148,75 @@ class Trivialization:
     ---------
     
     sw_data : 
-    an object of the type SWData, whose attribute 'curve' 
-    should correspond to the curve in the FIRST fundamental
-    representation of the Lie algebra
+        an object of the type SWData, whose attribute 'curve' 
+        should correspond to the curve in the FIRST fundamental
+        representation of the Lie algebra
     
     ramification_points : 
-    a list of objects of the type RamificationPoint, corresponding
-    to the given sw_data.
+        a list of objects of the type RamificationPoint, corresponding
+        to the given sw_data.
 
     lie_algebra : 
-    the Lie algebra associated with the cover, expressed
-    as a list of a capital letter and the rank, e.g.
-    ['A', 3] for the A_3 algebra.
+        the Lie algebra associated with the cover, expressed
+        as a list of a capital letter and the rank, e.g.
+        ['A', 3] for the A_3 algebra.
 
 
     Attributes & Methods
     --------------------
 
     basepoint : 
-    the base point of the trivialization
+        the base point of the trivialization
 
     reference_sheets :
-    a list of pairs [i, x] where 'i' is an integer label
-    for the sheet, and 'x' is its position in the fiber of T^*C 
-    over the basepoint
+        a list of pairs [i, x] where 'i' is an integer label
+        for the sheet, and 'x' is its position in the fiber of T^*C 
+        over the basepoint
 
     sheet_weight_dictionary :
-    a dictionary between the sheet integer labels and the
-    weights of the FIRST fundamental representation
-    it is structured as follows
-    {i_0 : v_0, ... , i_k : v_k , ...}
-    where 'v_k' are numpy arrays corresponding to weights.
-    - For g=A_n Lie algebras, the weights are given in IR^{n+1}
-        v_0 = (1,0,...,0)
-        v_1 = (0,1,0,..) 
-        ...
-        v_n = (0,...,0,1) 
-      In this case, it does not matter how we identify weights
-      with sheets, since the Weyl group acts by permuting all of 
-      them freely.
-    - For g=D_n, the weights are given in IR^{n}
-        v_0 = (1,0,...,0)
-        v_1 = (0,1,...,0)
-        v_{n-1} = (0,...,0,1)
-        v_n = (-1,0,...,0)
-        v_{n+1} = (0,-1,...,0)
-        v_{2n-1} = (0,...,0,-1)
-      In this case, we diivde the sheets into positive and negative ones,
-      and assign the weights accordingly.
-      The assignment of positive sheets is almost arbitrary: from each pair
-      of positive/negative sheets one can pick either, as long as one makes
-      an even number of "sign mistakes". We don't keep track of this,
-      as a result there is an ambiguity in distinguishing one spinor 
-      representation from the other
+        a dictionary between the sheet integer labels and the
+        weights of the FIRST fundamental representation
+        it is structured as follows
+        {i_0 : v_0, ... , i_k : v_k , ...}
+        where 'v_k' are numpy arrays corresponding to weights.
+        - For g=A_n Lie algebras, the weights are given in IR^{n+1}
+            v_0 = (1,0,...,0)
+            v_1 = (0,1,0,..) 
+            ...
+            v_n = (0,...,0,1) 
+          In this case, it does not matter how we identify weights
+          with sheets, since the Weyl group acts by permuting all of 
+          them freely.
+        - For g=D_n, the weights are given in IR^{n}
+            v_0 = (1,0,...,0)
+            v_1 = (0,1,...,0)
+            v_{n-1} = (0,...,0,1)
+            v_n = (-1,0,...,0)
+            v_{n+1} = (0,-1,...,0)
+            v_{2n-1} = (0,...,0,-1)
+          In this case, we diivde the sheets into positive and negative ones,
+          and assign the weights accordingly.
+          The assignment of positive sheets is almost arbitrary: from each pair
+          of positive/negative sheets one can pick either, as long as one makes
+          an even number of "sign mistakes". We don't keep track of this,
+          as a result there is an ambiguity in distinguishing one spinor 
+          representation from the other
 
     sheets_at_arbitrary_z(z) :
-    this method returns the set of sheets and their integer label 
-    identifier at any point 'z' on the C-plane.
-    These are the sheets of the FIRST FUNDAMENTAL representation.
-    The labels are consistent with those at the basepoint.
-    To get the corresponding weights, of the firt fundamental 
-    representation, the dictionary should be invoked.
-    The output looks like this
-    [[0, x_0] ... [i, x_i] ...]
+        this method returns the set of sheets and their integer label 
+        identifier at any point 'z' on the C-plane.
+        These are the sheets of the FIRST FUNDAMENTAL representation.
+        The labels are consistent with those at the basepoint.
+        To get the corresponding weights, of the firt fundamental 
+        representation, the dictionary should be invoked.
+        The output looks like this
+        [[0, x_0] ... [i, x_i] ...]
 
     branch_points :
-    A list of all the branch points.
+        A list of all the branch points.
 
     irregular_singularities :
-    A list of all the irregular singularities.
+        A list of all the irregular singularities.
 
     """
     ### NOTE: I am assuming that branch points do not overlap vertically
@@ -203,27 +280,7 @@ class Trivialization:
                                                     trivialization=self
                                                 ))
 
-        ### PRESENT THE DATA FOR DEBUGGING PURPOSES
-        print "\nSheets of the cover at the baspoint z_0 = {}".format(self.basepoint)
-        print self.reference_sheets
-
-        print "\nThe dictionary between sheets and weights:"
-        print self.sheet_weight_dictionary
-
-        for i, bp in enumerate(self.branch_points):
-            if SHOW_TRACKING_PLOTS == True:
-                print "\nroot tracking along the path to branch point #{}".format(i)
-                for j, sheet_list in enumerate(bp.sheet_tracks_to_bp):
-                    data_plot(sheet_list, 'sheet {} tracked to branch point {}'.format(j, i))
-                for j, sheet_list in enumerate(bp.sheet_tracks_around_bp):
-                    data_plot(sheet_list, 'sheet {} tracked around branch point {}'.format(j, i))
-            print "this is the branch point structure for branch point #{}".format(i)
-            print "pairs = {}".format(bp.pairs)
-            print "singles = {}".format(bp.singles)
-            print "positive root = {}".format(bp.positive_root)
-            print "sheets at the branch point = {}".format(bp.sheets_at_branch_point)
-            print "sheet monodromy permutation matrix = \n{}".format(bp.monodromy)
-
+        
 
         
     def sheets_at_z(self, z_0):
@@ -370,11 +427,11 @@ class Trivialization:
         sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
         enum_sh = [[i, s_i] for i, s_i in enumerate(sheets_at_bp)]
         
-        pairs = []
+        groups = []
         singles = []
 
         for i, x in enum_sh:
-            if i in flatten(pairs):
+            if i in flatten(groups):
                 pass
             elif i == len(enum_sh)-1:
                 ### this is the last sheet of the list
@@ -385,7 +442,7 @@ class Trivialization:
                 for j, y in enum_sh[i+1:]:                    
                     if abs(x - y) < BP_PROXIMITY_THRESHOLD:
                         paired = True
-                        pairs.append([i, j])
+                        groups.append([i, j])
                 ### NOTE: we can in principle have multiple pairings, meaning
                 ### that three or more sheets could collide together
                 ### these will show up as several pairs containing the 
@@ -396,11 +453,10 @@ class Trivialization:
                 if paired == False:
                     singles.append(i)
 
-        return {'pairs' : pairs, \
+        return {'groups' : groups, \
                 'singles' : singles, \
                 'enum_sh' : enum_sh, \
                 'tracked_sheets' : tracked_sheets, \
-                'sheets_at_branch_point' : sheets_at_bp, \
                 'path_to_branch_point' : z_bp_path
                 }
 
@@ -435,8 +491,7 @@ class Trivialization:
                     closest_candidate = s_2
             sorted_sheets.append(closest_candidate)
         
-        ### Now we check that sheet tracking is not making 
-        ### a mistake.
+        ### Now we check that sheet tracking is not making a mistake.
         seen = set()
         uniq = []
         for s in sorted_sheets:
@@ -493,16 +548,8 @@ class Trivialization:
             positive_sheets = [[i, x] for i, x in self.reference_sheets if d_positivity(x)]
             negative_sheets = [[i, x] for i, x in self.reference_sheets if not d_positivity(x)]
             sorted_negative_sheets = sort_negatives(positive_sheets, negative_sheets)
-            print "\nThe positive sheets at z_0:"
-            print positive_sheets
-            print "The corresponding sorted negative sheets:"
-            print sorted_negative_sheets
             pos_dict = {i : pos_fund_weights(j+1) for j, [i, x] in enumerate(positive_sheets)}
-            # print "\npositive dictionary"
-            # print pos_dict
             neg_dict = {i : neg_fund_weights(j+1) for j, [i, x] in enumerate(sorted_negative_sheets)}
-            # print "\nnegative dictionary"
-            # print neg_dict
             full_dict = pos_dict.copy()
             full_dict.update(neg_dict)
             return full_dict
@@ -512,14 +559,14 @@ class Trivialization:
             raise ValueError('I am not ready for E-type algebras yet!')
 
 
-    def positive_root(self, pairs, singles, enum_sh):
+    def positive_root(self, groups, singles, enum_sh):
         """
         Determines the positive root associated with 
         a branch point's 'structure', i.e. how the sheets
         collide at the branch point
         """
         algebra = self.algebra
-        first_pair = pairs[0]
+        first_pair = groups[0]
         i_1 = first_pair[0]
         i_2 = first_pair[1]
         v_1 = self.sheet_weight_dictionary[i_1]
@@ -651,14 +698,14 @@ def data_plot(cmplx_list, title):
 
 ### Some Testing
 
-# config = load_config('../default.ini')
-# algebra = ['A', 2]
+config = load_config('../default.ini')
+algebra = ['A', 2]
 
 # config = load_config('../config/pure_SO_4.ini')
 # algebra = ['D', 2]
 
-config = load_config('../config/coset_D_3.ini')
-algebra = ['D', 3]
+# config = load_config('../config/coset_D_3.ini')
+# algebra = ['D', 3]
 
 # config = load_config('../config/coset_D_4.ini')
 # algebra = ['D', 4]
@@ -679,6 +726,18 @@ for r in ramification_points:
 SHOW_TRACKING_PLOTS = False
 t = Trivialization(sw, ramification_points, algebra)
 
+### PRESENT THE DATA FOR DEBUGGING PURPOSES
+print "\nSheets of the cover at the baspoint z_0 = {}".format(t.basepoint)
+print t.reference_sheets
+
+print "\nThe dictionary between sheets and weights:"
+print t.sheet_weight_dictionary
+
+for i, bp in enumerate(t.branch_points):
+    bp.print_info()
+    
+
+### EXAMPLE USE OF THE TRIVIALIZATION METHOD TO GET SHEETS ANYWHERE
 z_arb = 1.50 + 2.35j
 print "\nThe sheets trivializing the FUNDAMENTAL cover at z = %s" % z_arb
 print t.sheets_at_arbitrary_z(z_arb)
