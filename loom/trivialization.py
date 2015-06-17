@@ -35,11 +35,6 @@ class BranchPoint:
                         
         self.positive_root = trivialization.positive_root(self.pairs, self.singles, self.enum_sh)
         
-        # ### WARNING: IF YOU DETERMINED THE STRUCTURE, 
-        # ### THEN YOU ALREADY COMPUTED SOME OF THE FOLLOWING. DON'T REPEAT!
-        # self.path_to_bp = self.trivialization.path_to_bp(z)
-        # self.sheet_tracks_to_bp = self.trivialization.track_sheets_along_path(self.path_to_bp, is_path_to_bp=True)
-
         self.path_around_bp = self.trivialization.path_around_pt(self.z)
         self.sheet_tracks_around_bp = self.trivialization.track_sheets_along_path(self.path_around_bp)
         self.monodromy = trivialization.sheet_monodromy(self.path_around_bp)
@@ -68,8 +63,11 @@ class Trivialization:
     as a list of a capital letter and the rank, e.g.
     ['A', 3] for the A_3 algebra.
 
-    Attributes
-    ----------
+
+
+
+    Attributes & Methods
+    --------------------
 
     basepoint : 
     the base point of the trivialization
@@ -78,6 +76,45 @@ class Trivialization:
     a list of pairs [i, x] where 'i' is an integer label
     for the sheet, and 'x' is its position in the fiber of T^*C 
     over the basepoint
+
+    sheet_weight_dictionary:
+    a dictionary between the sheet integer labels and the
+    weights of the FIRST fundamental representation
+    it is structured as follows
+    {i_0 : v_0, ... , i_k : v_k , ...}
+    where 'v_k' are numpy arrays corresponding to weights.
+    - For g=A_n Lie algebras, the weights are given in IR^{n+1}
+        v_0 = (1,0,...,0)
+        v_1 = (0,1,0,..) 
+        ...
+        v_n = (0,...,0,1) 
+      In this case, it does not matter how we identify weights
+      with sheets, since the Weyl group acts by permuting all of 
+      them freely.
+    - For g=D_n, the weights are given in IR^{n}
+        v_0 = (1,0,...,0)
+        v_1 = (0,1,...,0)
+        v_{n-1} = (0,...,0,1)
+        v_n = (-1,0,...,0)
+        v_{n+1} = (0,-1,...,0)
+        v_{2n-1} = (0,...,0,-1)
+      In this case, we diivde the sheets into positive and negative ones,
+      and assign the weights accordingly.
+      The assignment of positive sheets is almost arbitrary: from each pair
+      of positive/negative sheets one can pick either, as long as one makes
+      an even number of "sign mistakes". We don't keep track of this,
+      as a result there is an ambiguity in distinguishing one spinor 
+      representation from the other
+
+    sheets_at_arbitrary_z(z) :
+    this method returns the set of sheets and their integer label 
+    identifier at any point 'z' on the C-plane.
+    These are the sheets of the FIRST FUNDAMENTAL representation.
+    The labels are consistent with those at the basepoint.
+    To get the corresponding weights, of the firt fundamental 
+    representation, the dictionary should be invoked.
+    The output looks like this
+    [[0, x_0] ... [i, x_i] ...]
 
     """
     ### NOTE: I am assuming that branch points do not overlap vertically
