@@ -21,11 +21,15 @@ BP_PROXIMITY_THRESHOLD = 0.05
 
 
 class BranchPoint:
+    """
+    The BranchPoint class.
+    Just a container of information.
+    """
     def __init__(self, z=None, trivialization=None):
         self.z = z
         self.trivialization = trivialization
         
-        bp_data = self.trivialization.branch_point_structure(self.z)
+        bp_data = self.trivialization.analyze_branch_point(self.z)
         self.pairs = bp_data['pairs']
         self.singles = bp_data['singles']
         self.enum_sh = bp_data['enum_sh']
@@ -38,13 +42,30 @@ class BranchPoint:
         self.path_around_bp = self.trivialization.path_around_pt(self.z)
         self.sheet_tracks_around_bp = self.trivialization.track_sheets_along_path(self.path_around_bp)
         self.monodromy = trivialization.sheet_monodromy(self.path_around_bp)
+
+
+class IrregularSingularity:
+    """
+    The IrregularSingularity class.
+    Just a container of information.
+    """
+    def __init__(self, z=None, trivialization=None):
+        self.z = z
+        self.trivialization = trivialization
+        
+        self.path_around_irr_sing = self.trivialization.path_around_pt(self.z)
+        self.sheet_tracks_around_irr_sing = self.trivialization.track_sheets_along_path(self.path_around_irr_sing)
+        self.monodromy = trivialization.sheet_monodromy(self.path_around_irr_sing)
         
     
 
 
 class Trivialization:
     """
-    The trivialization class.
+    The Trivialization class.
+
+    All branch cuts are assumed to run vertically, emanating
+    upwards from branch points and irregular singularities.
 
     Arguments
     ---------
@@ -64,8 +85,6 @@ class Trivialization:
     ['A', 3] for the A_3 algebra.
 
 
-
-
     Attributes & Methods
     --------------------
 
@@ -77,7 +96,7 @@ class Trivialization:
     for the sheet, and 'x' is its position in the fiber of T^*C 
     over the basepoint
 
-    sheet_weight_dictionary:
+    sheet_weight_dictionary :
     a dictionary between the sheet integer labels and the
     weights of the FIRST fundamental representation
     it is structured as follows
@@ -116,24 +135,34 @@ class Trivialization:
     The output looks like this
     [[0, x_0] ... [i, x_i] ...]
 
+    branch_points :
+    A list of all the branch points.
+
+    irregular_singularities :
+    A list of all the irregular singularities.
+
     """
     ### NOTE: I am assuming that branch points do not overlap vertically
     ### this should be guaranteed by introducing an automatic rotation of 
     ### the z-plane before calling this class.
-    ### NOTE: I am only analyzing the ramification_points that are branch points 
-    ### for now, not irregular singularities.
     ### NOTE: I am restricting to square-root type branch points.
     ### Although I am not printing any explicit warning/error message 
     ### and the computation will go through for higher-type, but give a wrong answer!
     def __init__(self, sw_data, ramification_points, lie_algebra):
         self.sw_data = sw_data
         self.algebra = lie_algebra
+        
         self.branch_points = []
+        self.irregular_singularities = []
+        self.reference_sheets = None
         self.sheet_weight_dictionary = None
+        self.basepoint = None
+        self.min_distance = None
+        self.max_distance = None
+        self.center = None
 
         b_points_z = bp_from_ramif(ramification_points)
         irr_sing_z = irr_sing_from_ramif(ramification_points)
-        
 
         print "\nbranch points"
         print b_points_z
@@ -142,15 +171,14 @@ class Trivialization:
         
         ### Automatically choose a basepoint, based on the positions of
         ### both branch points and irregular singularities
-        
-        all_distances = [abs(x.z - y.z) for x in ramification_points
-                                                for y in ramification_points]
+        all_points_z = b_points_z + irr_sing_z
+        all_distances = [abs(x - y) for x in all_points_z
+                                                        for y in all_points_z]
         self.max_distance = max(all_distances)
         non_zero_distances = [x for x in all_distances if x!=0.0]
         self.min_distance = min(non_zero_distances)
-        
-        self.r_center = sum([r.z for r in ramification_points])
-        self.basepoint = self.r_center - 1j * self.max_distance
+        self.center = sum([z_pt for z_pt in all_points_z]) / len(all_points_z)
+        self.basepoint = self.center - 1j * self.max_distance
 
         ### Fix reference sheets at the basepoints, i.e. assign an integer 
         ### label to each sheet
@@ -161,9 +189,17 @@ class Trivialization:
         ### we build a weight-sheet dictionary
         self.sheet_weight_dictionary = self.build_dictionary()
 
+        ### Construct the list of branch points
         for i, z_bp in enumerate(b_points_z):
             self.branch_points.append(BranchPoint(
                                                     z=z_bp, 
+                                                    trivialization=self
+                                                ))
+
+        ### Construct the list of irregular singularities
+        for z_irr_sing in irr_sing_z:
+            self.irregular_singularities.append(IrregularSingularity(
+                                                    z=z_irr_sing, 
                                                     trivialization=self
                                                 ))
 
@@ -328,7 +364,7 @@ class Trivialization:
             return sorted_sheets
 
 
-    def branch_point_structure(self, z_bp):
+    def analyze_branch_point(self, z_bp):
         z_bp_path = self.path_to_pt(z_bp)
         tracked_sheets = self.track_sheets_along_path(z_bp_path, is_path_to_bp=True)
         sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
