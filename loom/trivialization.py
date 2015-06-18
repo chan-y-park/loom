@@ -6,6 +6,7 @@ import cmath
 import numpy as np
 from sympy import Poly
 from cmath import exp, pi
+from numpy.linalg import matrix_rank
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
@@ -35,9 +36,8 @@ class BranchPoint:
         branch point is associated.
 
     groups :
-        ********************
-        A list of sheets which collide pairwise at the 
-        branch point.
+        A list of groups of sheets which collide together
+        at the branch point.
 
     singles :
         The list of sheets which do not collide with any
@@ -60,8 +60,9 @@ class BranchPoint:
         the branch point, to determine collision structure 
         of the various sheets.
     
-    positive_root :
-        ********************
+    positive_roots :
+        A minimal list of positive roots characterizing the 
+        groups of colliding sheets at the branch point.
     
     path_around_bp :
         A path encircling the branch point and no one else,
@@ -98,7 +99,8 @@ class BranchPoint:
         self.path_to_bp = bp_data['path_to_branch_point']                                
         self.path_around_bp = self.trivialization.path_around_pt(self.z)
         self.sheet_tracks_around_bp = self.trivialization.track_sheets_along_path(self.path_around_bp)
-        self.positive_root = trivialization.positive_root(self.groups, self.singles, self.enum_sh)
+        self.positive_roots = trivialization.positive_roots(self.groups, self.singles, self.enum_sh)
+        self.order = len(self.positive_roots) + 1
         self.monodromy = trivialization.sheet_monodromy(self.path_around_bp)
 
     def print_info(self):
@@ -115,7 +117,8 @@ class BranchPoint:
         print "this is the branch point structure for branch point #{}".format(i)
         print "groups = {}".format(self.groups)
         print "singles = {}".format(self.singles)
-        print "positive root = {}".format(self.positive_root)
+        print "positive roots = {}".format(self.positive_roots)
+        print "order = {}".format(self.order)
         print "sheets at the branch point = {}".format(self.enum_sh)
         print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
 
@@ -395,15 +398,9 @@ class Trivialization:
             sorted_sheets.append(closest_candidate)
         
         if check_tracking == True:
-            ### Now we check that sheet tracking is not making 
-            ### a mistake.
-            seen = set()
-            uniq = []
-            for x in sorted_sheets:
-                if x not in seen:
-                    uniq.append(x)
-                    seen.add(x)
-            if len(uniq) < len(sorted_sheets):
+            ### Now we check that sheet tracking is not making a mistake.
+            unique_sorted_sheets = delete_duplicates(sorted_sheets)
+            if len(unique_sorted_sheets) < len(sorted_sheets):
                 print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
                 print "old sheets" 
                 print ref_sheets
@@ -421,6 +418,45 @@ class Trivialization:
             return sorted_sheets
 
 
+    # def analyze_branch_point(self, z_bp):
+    #     z_bp_path = self.path_to_pt(z_bp)
+    #     tracked_sheets = self.track_sheets_along_path(z_bp_path, is_path_to_bp=True)
+    #     sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
+    #     enum_sh = [[i, s_i] for i, s_i in enumerate(sheets_at_bp)]
+        
+    #     groups = []
+    #     singles = []
+
+    #     for i, x in enum_sh:
+    #         if i in flatten(groups):
+    #             pass
+    #         elif i == len(enum_sh)-1:
+    #             ### this is the last sheet of the list
+    #             ### if it's not already in a pair, then it's a single
+    #             singles.append(i)
+    #         else:
+    #             paired = False
+    #             for j, y in enum_sh[i+1:]:                    
+    #                 if abs(x - y) < BP_PROXIMITY_THRESHOLD:
+    #                     paired = True
+    #                     groups.append([i, j])
+    #             ### NOTE: we can in principle have multiple pairings, meaning
+    #             ### that three or more sheets could collide together
+    #             ### these will show up as several pairs containing the 
+    #             ### same numbers e.g. [i, j], [j, k], [k, i] would mean
+    #             ### that sheets i, j, k collide all together
+    #             ### Should introduce a check that handles this situations!
+
+    #             if paired == False:
+    #                 singles.append(i)
+
+    #     return {'groups' : groups, \
+    #             'singles' : singles, \
+    #             'enum_sh' : enum_sh, \
+    #             'tracked_sheets' : tracked_sheets, \
+    #             'path_to_branch_point' : z_bp_path
+    #             }
+
     def analyze_branch_point(self, z_bp):
         z_bp_path = self.path_to_pt(z_bp)
         tracked_sheets = self.track_sheets_along_path(z_bp_path, is_path_to_bp=True)
@@ -430,28 +466,20 @@ class Trivialization:
         groups = []
         singles = []
 
+        clusters = []
         for i, x in enum_sh:
-            if i in flatten(groups):
-                pass
-            elif i == len(enum_sh)-1:
-                ### this is the last sheet of the list
-                ### if it's not already in a pair, then it's a single
-                singles.append(i)
-            else:
-                paired = False
-                for j, y in enum_sh[i+1:]:                    
-                    if abs(x - y) < BP_PROXIMITY_THRESHOLD:
-                        paired = True
-                        groups.append([i, j])
-                ### NOTE: we can in principle have multiple pairings, meaning
-                ### that three or more sheets could collide together
-                ### these will show up as several pairs containing the 
-                ### same numbers e.g. [i, j], [j, k], [k, i] would mean
-                ### that sheets i, j, k collide all together
-                ### Should introduce a check that handles this situations!
+            is_single = True
+            for c_index, c in enumerate(clusters):
+                x_belongs_to_c = belongs_to_cluster(x, c, enum_sh)
+                if x_belongs_to_c == True:
+                    clusters[c_index].append(i)
+                    is_single = False
+                    break
+            if is_single == True:
+                clusters.append([i])
 
-                if paired == False:
-                    singles.append(i)
+        groups = [c for c in clusters if len(c) > 1]
+        singles = [c[0] for c in clusters if len(c) == 1]
 
         return {'groups' : groups, \
                 'singles' : singles, \
@@ -492,6 +520,8 @@ class Trivialization:
             sorted_sheets.append(closest_candidate)
         
         ### Now we check that sheet tracking is not making a mistake.
+        ### NOTE: cannot use the function 'delete_duplicates' with this 
+        ### data structure.
         seen = set()
         uniq = []
         for s in sorted_sheets:
@@ -559,52 +589,77 @@ class Trivialization:
             raise ValueError('I am not ready for E-type algebras yet!')
 
 
-    def positive_root(self, groups, singles, enum_sh):
+    # def positive_root(self, groups, singles, enum_sh):
+    #     """
+    #     Determines the positive root associated with 
+    #     a branch point's 'structure', i.e. how the sheets
+    #     collide at the branch point
+    #     """
+    #     algebra = self.algebra
+    #     first_pair = groups[0]
+    #     i_1 = first_pair[0]
+    #     i_2 = first_pair[1]
+    #     v_1 = self.sheet_weight_dictionary[i_1]
+    #     v_2 = self.sheet_weight_dictionary[i_2]
+        
+    #     if algebra[0] == 'A':
+    #         if i_1 < i_2:
+    #             return v_1 - v_2
+    #         else:
+    #             return v_2 - v_1
+
+    #     elif algebra[0] == 'D':
+    #         return d_positive_root(v_1 - v_2)
+
+    #     elif algebra[0] == 'E':
+    #         raise ValueError('I am not ready for E-type algebras yet!')
+
+    def positive_roots(self, groups, singles, enum_sh):
         """
-        Determines the positive root associated with 
+        Determines the positive roots associated with 
         a branch point's 'structure', i.e. how the sheets
-        collide at the branch point
+        collide at the branch point.
+        It will return a minimal list, i.e. it will drop
+        any redundant roots that can be obtained as linear
+        combinations of others.
         """
         algebra = self.algebra
-        first_pair = groups[0]
-        i_1 = first_pair[0]
-        i_2 = first_pair[1]
-        v_1 = self.sheet_weight_dictionary[i_1]
-        v_2 = self.sheet_weight_dictionary[i_2]
+        vanishing_positive_roots = []
+
+        for g in groups:
+            ### Within each group of colliding sheets/weights,
+            ### consider all possible pairs, and compute 
+            ### the corresponding difference.
+            ### Then add it to the vanishing positive roots.
+            for i, s_1 in enumerate(g):
+                for j, s_2 in enumerate(g[i+1:]):
+                    v_1 = self.sheet_weight_dictionary[s_1]
+                    v_2 = self.sheet_weight_dictionary[s_2]
         
-        if algebra[0] == 'A':
-            if i_1 < i_2:
-                return v_1 - v_2
-            else:
-                return v_2 - v_1
+                if algebra[0] == 'A':
+                    if s_1 < s_2:
+                        vanishing_positive_roots.append(v_1 - v_2)
+                    else:
+                        vanishing_positive_roots.append(v_2 - v_1)
 
-        elif algebra[0] == 'D':
-            return d_positive_root(v_1 - v_2)
+                elif algebra[0] == 'D':
+                    vanishing_positive_roots.append(d_positive_root(v_1 - v_2))
 
-        elif algebra[0] == 'E':
-            raise ValueError('I am not ready for E-type algebras yet!')
+                elif algebra[0] == 'E':
+                    raise ValueError('I am not ready for E-type algebras yet!')
+
+        ### Finally, cleanup the duplicates, 
+        ### as well as the roots which are not 
+        ### linearly independent
+        independent_vanishing_positive_roots = keep_linearly_independent_vectors(vanishing_positive_roots)
+        return independent_vanishing_positive_roots
 
 
 def bp_from_ramif(ramification_points):
-    b_points = [r.z for r in ramification_points if not r.is_puncture]
-    seen = set()
-    uniq = []
-    for b in b_points:
-        if b not in seen:
-            uniq.append(b)
-            seen.add(b)
-    return uniq
+    return delete_duplicates([r.z for r in ramification_points if not r.is_puncture])
 
 def irr_sing_from_ramif(ramification_points):
-    irr_sing = [r.z for r in ramification_points if r.is_puncture]
-    seen = set()
-    uniq = []
-    for irr in irr_sing:
-        if irr not in seen:
-            uniq.append(irr)
-            seen.add(irr)
-    return uniq
-
+    return delete_duplicates([r.z for r in ramification_points if r.is_puncture])
 
 
 def kr_delta(i, j):
@@ -612,6 +667,15 @@ def kr_delta(i, j):
         return 1
     else:
         return 0
+
+def delete_duplicates(l):
+    seen = set()
+    uniq = []
+    for x in l:
+        if x not in seen:
+            uniq.append(x)
+            seen.add(x)
+    return uniq
 
 def getkey_real(item):
     return item[1].real
@@ -651,7 +715,28 @@ def d_positive_root(alpha):
     else:
         return -1 * alpha
 
+def belongs_to_cluster(x, c, enum_sh):
+    """
+    Given a cluster of sheets, c = [i_0, i_1, ...]
+    specified by means of their integer labels,
+    it determines whether a sheet with coordinate 'x'
+    is close enough to ANY of the sheets in 'c'
+    to be considered as part of it.
+    The positions of sheets in the cluster are extracted
+    from enum_sh = [...[i_k, x_k]...]
+    """
+    test = False
+    for i in c:
+        ### pick the coordinate of the sheet with label 'i'
+        y_i = [y for j, y in enum_sh if j==i][0]
+        if abs(y_i - x) < BP_PROXIMITY_THRESHOLD:
+            test = True
+            break
 
+    if test == False:
+        return False
+    if test == True:
+        return True
 
 def sort_negatives(pos, neg):
     sorted_neg = []
@@ -663,6 +748,30 @@ def sort_negatives(pos, neg):
         sorted_neg.append(closest_sheet)
 
     return sorted_neg
+
+
+def keep_linearly_independent_vectors(vector_list):
+    """
+    Takes a list of numpy arrays and returns a 
+    subset of linearly independent ones.
+    """
+    
+    first_vector = vector_list[0]
+    independent_list = [first_vector]
+
+    m_rank = 1
+    m = np.matrix([first_vector])
+    for v in vector_list:
+        ### add the vector as a row to the matrix, 
+        ### then compute the rank
+        new_m = np.vstack([m,v])
+        new_m_rank = matrix_rank(new_m)
+        if new_m_rank > m_rank:
+            m = new_m
+            m_rank = new_m_rank
+            independent_list.append(v)
+
+    return independent_list
 
 
 def data_plot(cmplx_list, title):
@@ -698,14 +807,14 @@ def data_plot(cmplx_list, title):
 
 ### Some Testing
 
-config = load_config('../default.ini')
-algebra = ['A', 2]
+# config = load_config('../default.ini')
+# algebra = ['A', 2]
 
 # config = load_config('../config/pure_SO_4.ini')
 # algebra = ['D', 2]
 
-# config = load_config('../config/coset_D_3.ini')
-# algebra = ['D', 3]
+config = load_config('../config/coset_D_3.ini')
+algebra = ['D', 3]
 
 # config = load_config('../config/coset_D_4.ini')
 # algebra = ['D', 4]
