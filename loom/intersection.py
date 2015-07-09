@@ -81,7 +81,7 @@ def find_curve_range_intersection(curve_1, curve_2, cut_at_inflection=False):
     return (x_range, y_range)
 
 
-def find_intersection_of_segments(segment_1, segment_2, accuracy,
+def find_intersection_of_segments(segment_1, segment_2, accuracy=None,
                                   bin_center=None, bin_size=None,
                                   newton_maxiter=5):
     """

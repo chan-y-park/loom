@@ -1,6 +1,8 @@
 import os, platform
 import matplotlib
-if platform.system() == 'Linux':
+if matplotlib.rcParams['backend'] == 'nbAgg':
+    print('Use IPython notebook backend for matplotlib.')
+elif platform.system() == 'Linux':
     try:
         os.environ['DISPLAY']
         matplotlib.use('TkAgg')
