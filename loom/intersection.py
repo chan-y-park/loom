@@ -13,6 +13,7 @@ from scipy.optimize import brentq, newton
 from sympy import Interval, Intersection
 from itertools import combinations
 
+import pdb
 
 class NoIntersection(Exception):
     """
@@ -81,7 +82,7 @@ def find_curve_range_intersection(curve_1, curve_2, cut_at_inflection=False):
     return (x_range, y_range)
 
 
-def find_intersection_of_segments(segment_1, segment_2, accuracy=None,
+def find_intersection_of_segments(segment_1, segment_2, accuracy=1e-1,
                                   bin_center=None, bin_size=None,
                                   newton_maxiter=5):
     """
@@ -158,10 +159,10 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=None,
 
         intersection_x = newton(delta_f12, x0, delta_f12_prime(x0))
         """
-        logging.debug('try BarycentricInterpolator.')
-        f1 = BarycentricInterpolator(*segment_1)
-        f2 = BarycentricInterpolator(*segment_2)
-        delta_f12 = lambda x: f1(x) - f2(x)
+        #logging.debug('try BarycentricInterpolator.')
+        #f1 = BarycentricInterpolator(*segment_1)
+        #f2 = BarycentricInterpolator(*segment_2)
+        #delta_f12 = lambda x: f1(x) - f2(x)
 
         x0 = 0.5*(x_range.start + x_range.end)
 
@@ -169,12 +170,17 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=None,
             logging.debug('try newton with x0 = %.8f.', x0)
             intersection_x = newton(delta_f12, x0, maxiter=newton_maxiter)
             logging.debug('intersection_x = %.8f.', intersection_x)
+        except ValueError:
+            # newton() searches for x outside the interpolation domain.
+            # Declar no intersection.
+            raise NoIntersection()
         except RuntimeError:
             # Newton's method fails to converge; declare no intersection
             raise NoIntersection()
-        #except RuntimeWarning:
-        #    pdb.set_trace()
-        #    pass
+
+        # Verify the solution returned by newton().
+        if abs(delta_f12(intersection_x)) > accuracy:
+            raise NoIntersection()
 
         # Check if the intersection is within the curve range.
         # If not, the intersecion is not valid.
