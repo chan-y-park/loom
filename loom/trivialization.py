@@ -7,6 +7,7 @@ import numpy as np
 from sympy import Poly
 from cmath import exp, pi
 from numpy.linalg import matrix_rank
+from weight_system import weight_system
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
@@ -346,7 +347,12 @@ class Trivialization:
         if is_path_to_bp == False:
             for i, z in enumerate(z_path):
                 sheets_1 = self.sheets_at_z(z)
-                sheets_0 = self.sort_sheets(sheets_0, sheets_1, check_tracking=True, index=1, z_0=z_path[i-1], z_1=z_path[i])
+                sheets_0 = self.sort_sheets(
+                                            sheets_0, sheets_1, 
+                                            check_tracking=True, 
+                                            index=1, z_0=z_path[i-1], 
+                                            z_1=z_path[i]
+                                            )
                 for i, s_list in enumerate(sheets_along_path):
                     s_list.append(sheets_0[i])
 
@@ -556,21 +562,67 @@ class Trivialization:
 
         return perm_matrix
 
+    ### REPLACED BY SAGE
+    ###
+    # def build_dictionary(self):
+    #     algebra = self.algebra
+    #     r = algebra[1]
+
+    #     if algebra[0] == 'A':
+    #         ### for example, fund_weights(2) will be [0, 1, 0, ...]
+    #         def fund_weights(i):
+    #             return np.array([kr_delta(j, i - 1) for j in range(r+1)])
+            
+    #         return {i : fund_weights(i+1) for i, x in self.reference_sheets}
+
+    #     elif algebra[0] == 'D':
+    #         def pos_fund_weights(i):
+    #             return np.array([kr_delta(j, i - 1) for j in range(r)])
+            
+    #         def neg_fund_weights(i):
+    #             return -1 * pos_fund_weights(i)
+
+    #         positive_sheets = [[i, x] for i, x in self.reference_sheets if d_positivity(x)]
+    #         negative_sheets = [[i, x] for i, x in self.reference_sheets if not d_positivity(x)]
+    #         sorted_negative_sheets = sort_negatives(positive_sheets, negative_sheets)
+    #         pos_dict = {i : pos_fund_weights(j+1) for j, [i, x] in enumerate(positive_sheets)}
+    #         neg_dict = {i : neg_fund_weights(j+1) for j, [i, x] in enumerate(sorted_negative_sheets)}
+    #         full_dict = pos_dict.copy()
+    #         full_dict.update(neg_dict)
+    #         return full_dict
+
+
+    #     elif algebra[0] == 'E':
+    #         raise ValueError('I am not ready for E-type algebras yet!')
+
 
     def build_dictionary(self):
         algebra = self.algebra
         r = algebra[1]
+        algebra_name = algebra[0] + str(r)
+
+        ### The 1st fundamental weight, in the base of coroots.
+        ### It's just [1,0,...,0]
+        first_fund_weight = [kr_delta(j, 0) for j in range(r)]
+
+        ### Here we stick to the 1st fundamental rep, which is minuscule
+        ### and multiplicities will all be 1.
+        weights, multiplicities = weight_system(algebra_name, first_fund_weight)
 
         if algebra[0] == 'A':
-            ### for example, fund_weights(2) will be [0, 1, 0, ...]
             def fund_weights(i):
-                return np.array([kr_delta(j, i - 1) for j in range(r+1)])
+                return np.array(weights[i - 1])
             
-            return {i : fund_weights(i+1) for i, x in self.reference_sheets}
+            return {i : fund_weights(i + 1) for i, x in self.reference_sheets}
 
         elif algebra[0] == 'D':
+            ### It's very important to sort the weights,
+            ### as this ensures that the first half of them 
+            ### will not contain both a positive and its negative
+            sorted_weights = sorted(weights)
+
             def pos_fund_weights(i):
-                return np.array([kr_delta(j, i - 1) for j in range(r)])
+                return np.array(sorted_weights[i - 1])
             
             def neg_fund_weights(i):
                 return -1 * pos_fund_weights(i)
@@ -631,6 +683,7 @@ class Trivialization:
             ### consider all possible pairs, and compute 
             ### the corresponding difference.
             ### Then add it to the vanishing positive roots.
+            ### NOTE: here we DEFINE our conventions on positivity!
             for i, s_1 in enumerate(g):
                 for j, s_2 in enumerate(g[i+1:]):
                     v_1 = self.sheet_weight_dictionary[s_1]
@@ -807,14 +860,14 @@ def data_plot(cmplx_list, title):
 
 ### Some Testing
 
-# config = load_config('../default.ini')
-# algebra = ['A', 2]
+config = load_config('../default.ini')
+algebra = ['A', 2]
 
 # config = load_config('../config/pure_SO_4.ini')
 # algebra = ['D', 2]
 
-config = load_config('../config/coset_D_3.ini')
-algebra = ['D', 3]
+# config = load_config('../config/coset_D_3.ini')
+# algebra = ['D', 3]
 
 # config = load_config('../config/coset_D_4.ini')
 # algebra = ['D', 4]
