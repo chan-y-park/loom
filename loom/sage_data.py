@@ -13,6 +13,19 @@ def weight_system(algebra, highest_weight):
          str(highest_weight)
         ]
     )
-    weights, multiplicities = eval(eval(out))
+    weights, multiplicities = eval(out)
     return weights, multiplicities
+
+
+def positive_roots(algebra):
+    """
+    Arguments must be formatted as follows:
+    algebra = 'D3'
+    """
+    out = subprocess.check_output(
+        ["sage", "./sage_scripts/positive_roots.sage", 
+         algebra]
+    )
+    positive_roots = map(list, eval(out))
+    return positive_roots
 

@@ -10,28 +10,26 @@ def translate_weight_data(data):
     does not.
     For example a weight [1/2, 1/2, -1/2] would be evaluated to
     [0,0,-1] wrongly.
-    To fix this, we picke the elements one by one and approximate 
+    To fix this, we pick the elements one by one and approximate 
     them with reals.
     """
 
-    keys = [w for w in data]
-    mults = str([int(data[k]) for k in keys])
-    weights = '['
+    ### Weight data is given as a dictionary with the following format
+    ### {... , weight : multiplicity , ...}
+    keys = data.keys()
+    mults = data.values()
+
+    weights = []
     for i in range(len(data) - 1):
-        weight = keys[i]
-        l = len(list(eval(str(weight))))
-        weight_as_list = [N(weight[i]) for i in range(l)]
+        weight = map(float, list(keys[i].to_vector()))
         ### Now add the new entry
-        weights += str(weight_as_list) + ', '
+        weights.append(weight)
 
-    last_weight = keys[-1]
-    l = len(list(eval(str(weight))))
-    last_weight_as_list = [N(last_weight[i]) for i in range(l)]
+    last_weight =  map(float, list(keys[-1].to_vector()))
     ### Now add the last entry
-    weights += str(last_weight_as_list) + ']'
+    weights.append(last_weight)
 
-    return '[' + weights + ', ' + mults + ']'
-    # return mults
+    return [weights, mults]
 
 algebra = sys.argv[1]
 highest_weight_str = sys.argv[2]

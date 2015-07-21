@@ -7,7 +7,7 @@ import numpy as np
 from sympy import Poly
 from cmath import exp, pi
 from numpy.linalg import matrix_rank
-from weight_system import weight_system
+from sage_data import weight_system, positive_roots
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
@@ -222,6 +222,9 @@ class Trivialization:
     irregular_singularities :
         A list of all the irregular singularities.
 
+    algebra_positive_roots :
+        A choice of positive roots, derived from sage's conventions
+
     """
     ### NOTE: I am assuming that branch points do not overlap vertically
     ### this should be guaranteed by introducing an automatic rotation of 
@@ -232,7 +235,10 @@ class Trivialization:
     def __init__(self, sw_data, ramification_points, lie_algebra):
         self.sw_data = sw_data
         self.algebra = lie_algebra
-        
+
+        algebra_name = algebra[0] + str(algebra[1])
+        self.algebra_positive_roots = [np.array(x) for x in positive_roots(algebra_name)]
+
         self.branch_points = []
         self.irregular_singularities = []
         self.reference_sheets = None
@@ -638,7 +644,16 @@ class Trivialization:
 
 
         elif algebra[0] == 'E':
-            raise ValueError('I am not ready for E-type algebras yet!')
+            ### !!!!!
+            ### Here I am pairing any sheet with any weight of E_6 and E_7 
+            ### However, the Weyl group does not contains permutations 
+            ### of 27 (resp 56) elements so it's probably NOT OK to 
+            ### pair sheets with weights as we like.
+            ### !!!!!
+            def fund_weights(i):
+                return np.array(weights[i - 1])
+            
+            return {i : fund_weights(i + 1) for i, x in self.reference_sheets}
 
 
     # def positive_root(self, groups, singles, enum_sh):
@@ -683,23 +698,19 @@ class Trivialization:
             ### consider all possible pairs, and compute 
             ### the corresponding difference.
             ### Then add it to the vanishing positive roots.
-            ### NOTE: here we DEFINE our conventions on positivity!
             for i, s_1 in enumerate(g):
                 for j, s_2 in enumerate(g[i+1:]):
                     v_1 = self.sheet_weight_dictionary[s_1]
                     v_2 = self.sheet_weight_dictionary[s_2]
-        
-                if algebra[0] == 'A':
-                    if s_1 < s_2:
+               
+                    if any((v_1 - v_2 == x).all() for x in self.algebra_positive_roots):
                         vanishing_positive_roots.append(v_1 - v_2)
-                    else:
+
+                    elif any((v_2 - v_1 == x).all() for x in self.algebra_positive_roots):
                         vanishing_positive_roots.append(v_2 - v_1)
 
-                elif algebra[0] == 'D':
-                    vanishing_positive_roots.append(d_positive_root(v_1 - v_2))
-
-                elif algebra[0] == 'E':
-                    raise ValueError('I am not ready for E-type algebras yet!')
+                    else:
+                        raise ValueError('Branch point doesnt correspond to positive root')
 
         ### Finally, cleanup the duplicates, 
         ### as well as the roots which are not 
@@ -860,14 +871,14 @@ def data_plot(cmplx_list, title):
 
 ### Some Testing
 
-config = load_config('../default.ini')
-algebra = ['A', 2]
+# config = load_config('../default.ini')
+# algebra = ['A', 2]
 
 # config = load_config('../config/pure_SO_4.ini')
 # algebra = ['D', 2]
 
-# config = load_config('../config/coset_D_3.ini')
-# algebra = ['D', 3]
+config = load_config('../config/coset_D_3.ini')
+algebra = ['D', 3]
 
 # config = load_config('../config/coset_D_4.ini')
 # algebra = ['D', 4]
@@ -894,6 +905,10 @@ print t.reference_sheets
 
 print "\nThe dictionary between sheets and weights:"
 print t.sheet_weight_dictionary
+
+print "\nThe positive roots of the algebra:"
+print t.algebra_positive_roots
+
 
 for i, bp in enumerate(t.branch_points):
     bp.print_info()
