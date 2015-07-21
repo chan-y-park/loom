@@ -7,8 +7,8 @@ import numpy as np
 from sympy import Poly
 from cmath import exp, pi
 from numpy.linalg import matrix_rank
-from sage_data import weight_system, positive_roots, pick_basis, 
-                    weight_coefficients
+from sage_data import weight_system, positive_roots, pick_basis, \
+                            weight_coefficients
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
@@ -720,6 +720,109 @@ class Trivialization:
         return independent_vanishing_positive_roots
 
 
+
+
+
+class RepTrivialization:
+    """
+    The RepTrivialization class.
+
+    This is a close cousin of the Trivialization class, 
+    generalizing it to other representations beyond the 1st
+    fundamental one.
+
+    Arguments
+    ---------
+
+    trivialization :
+        the trivialization of the 1st fundamental cover
+        that is used to build this more general one
+
+    representation :
+        the highest weight of the representation of the 
+        cover one wishes to study, expressed in terms of 
+        Dynkin labels (coroot basis).
+        E.g. for D3 we would use
+        [1, 0, 0] for the vector rep
+        [0, 1, 0] or [0, 0, 1] for the spinor reps
+    """
+
+    def __init__(self, trivialization, representation):
+        ### TO DO
+        # self.sw_data = ...
+        self.trivialization = trivialization
+        self.algebra = self.trivialization.algebra
+        self.highest_weight = representation
+        self.rep_dimension = None
+
+        ###TO DO
+        # self.branch_points = []
+        # self.irregular_singularities = []
+        self.weight_dictionary = None
+        self.multiplicities_dictionary = None
+
+        self.weight_space_basis = None
+        self.weight_coefficients_dictionary = None
+
+        ### we build a weight and multiplicities dictionary
+        self.build_weight_dictionary()
+
+        ### we build a weight_coefficients dictionary
+        self.build_coeff_dictionary()
+
+
+        # TO DO
+        # ### Construct the list of branch points
+        # for i, z_bp in enumerate(b_points_z):
+        #     self.branch_points.append(BranchPoint(
+        #                                             z=z_bp, 
+        #                                             trivialization=self
+        #                                         ))
+
+        # ### Construct the list of irregular singularities
+        # for z_irr_sing in irr_sing_z:
+        #     self.irregular_singularities.append(IrregularSingularity(
+        #                                             z=z_irr_sing, 
+        #                                             trivialization=self
+        #                                         ))
+    
+    def build_weight_dictionary(self):
+        algebra = self.algebra
+        r = algebra[1]
+        algebra_name = algebra[0] + str(r)
+
+        highest_weight = self.highest_weight
+
+        ### Here we stick to the 1st fundamental rep, which is minuscule
+        ### and multiplicities will all be 1.
+        weights, multiplicities = weight_system(algebra_name, highest_weight)
+
+        self.weight_dictionary = {i : np.array(weights[i]) for i, x in enumerate(weights)}
+        self.multiplicities_dictionary = {i : int(multiplicities[i]) for i, x in enumerate(multiplicities)}
+        self.rep_dimension = sum(map(int, multiplicities))
+
+               
+
+    def build_coeff_dictionary(self):
+        """
+        This is based on the weight dictionary: 
+        to the i-th weight we associate its coefficients 
+        in a certain choice of basis.
+        The basis consists of a selection of the weights 
+        of the first fundamental rep.
+        """
+        fundamental_weights = [list(v) for v in self.trivialization.sheet_weight_dictionary.values()]
+        self.weight_space_basis = pick_basis(fundamental_weights)
+        
+        self.weight_coefficients_dictionary = \
+                    {  \
+                        i : weight_coefficients(list(self.weight_dictionary[i]), self.weight_space_basis) \
+                        for i in range(len(self.weight_dictionary)) \
+                    }
+        
+               
+
+
 def bp_from_ramif(ramification_points):
     return delete_duplicates([r.z for r in ramification_points if not r.is_puncture])
 
@@ -880,6 +983,7 @@ def data_plot(cmplx_list, title):
 
 config = load_config('../config/coset_D_3.ini')
 algebra = ['D', 3]
+rep = [0, 1, 0]
 
 # config = load_config('../config/coset_D_4.ini')
 # algebra = ['D', 4]
@@ -899,17 +1003,18 @@ for r in ramification_points:
 
 SHOW_TRACKING_PLOTS = False
 t = Trivialization(sw, ramification_points, algebra)
+t_rep = RepTrivialization(t, rep)
+
 
 ### PRESENT THE DATA FOR DEBUGGING PURPOSES
-print "\nSheets of the cover at the baspoint z_0 = {}".format(t.basepoint)
+print "\nSheets of the 1st fundamental cover at the baspoint z_0 = {}".format(t.basepoint)
 print t.reference_sheets
 
-print "\nThe dictionary between sheets and weights:"
+print "\nThe dictionary between sheets and weights for the 1st fundamental cover:"
 print t.sheet_weight_dictionary
 
 print "\nThe positive roots of the algebra:"
 print t.algebra_positive_roots
-
 
 for i, bp in enumerate(t.branch_points):
     bp.print_info()
@@ -920,3 +1025,25 @@ z_arb = 1.50 + 2.35j
 print "\nThe sheets trivializing the FUNDAMENTAL cover at z = %s" % z_arb
 print t.sheets_at_arbitrary_z(z_arb)
 
+
+# print "\nSheets of the rep-cover at the baspoint z_0 = {}".format(t.basepoint)
+# print t_rep.reference_sheets
+
+# print "\nThe dictionary between sheets and weights for the rep-cover:"
+# print t_rep.sheet_weight_dictionary
+
+print '\n\n---------------------------------------------------------'
+print '\nThe cover for representation %s' % rep 
+print 'has dimension %s' % t_rep.rep_dimension
+
+print '\nThe weight dictionary'
+print t_rep.weight_dictionary
+
+print '\nThe multiplicities dictionary'
+print t_rep.multiplicities_dictionary
+
+print '\nThe weight space basis (a choice of weights of the fundamental cover)'
+print t_rep.weight_space_basis
+
+print '\nRelative to this basis, the coefficients of weights are'
+print t_rep.weight_coefficients_dictionary
