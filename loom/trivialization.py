@@ -215,7 +215,7 @@ class Trivialization:
         To get the corresponding weights, of the firt fundamental 
         representation, the dictionary should be invoked.
         The output looks like this
-        [[0, x_0] ... [i, x_i] ...]
+        {0 : x_0, ... , i : x_i, ...}
 
     branch_points :
         A list of all the branch points.
@@ -389,7 +389,7 @@ class Trivialization:
         z_path = self.path_to_pt(z_pt)
         sheet_tracks = self.track_sheets_along_path(z_path)
         final_x = [sheet_list[-1] for sheet_list in sheet_tracks]
-        final_sheets = [[i, x] for i, x in enumerate(final_x)]
+        final_sheets = {i : x for i, x in enumerate(final_x)}
         return final_sheets
 
 
@@ -762,6 +762,7 @@ class RepTrivialization:
         self.multiplicities_dictionary = None
 
         self.weight_space_basis = None
+        self.weight_space_basis_identifiers = None
         self.weight_coefficients_dictionary = None
 
         ### we build a weight and multiplicities dictionary
@@ -812,14 +813,50 @@ class RepTrivialization:
         of the first fundamental rep.
         """
         fundamental_weights = [list(v) for v in self.trivialization.sheet_weight_dictionary.values()]
-        self.weight_space_basis = pick_basis(fundamental_weights)
+        self.weight_space_basis = [np.array(x) for x in pick_basis(fundamental_weights)]
+        self.weight_space_basis_identifiers = []
+        for wt in self.weight_space_basis:
+            for key, value in self.trivialization.sheet_weight_dictionary.iteritems():
+                if (value == wt).all():
+                    self.weight_space_basis_identifiers.append(key)
+        # self.weight_space_basis_dictionary = {\
+        #                                     self.weight_space_basis_dictionary[i] : \
+        #                                     np.array(self.weight_space_basis[i]) \
+        #                                     for i in range(len(self.weight_space_basis))
+        #                                     }
         
         self.weight_coefficients_dictionary = \
                     {  \
-                        i : weight_coefficients(list(self.weight_dictionary[i]), self.weight_space_basis) \
+                        i : weight_coefficients(list(self.weight_dictionary[i]), map(list, self.weight_space_basis)) \
                         for i in range(len(self.weight_dictionary)) \
                     }
+    
+    def sheets_at_arbitrary_z(self, z_pt):
+        """
+        Returns a list of sheets of the rep-cover
+        with their identifiers at any point 'z'.
+        The choice of 'z' cannot be a branch point or a singularity.
+        The weights of the rep-cover, corresponding to the sheets,
+        can be obtained by invoking the dictionary of the rep-trivialization
+        """
+
+        ### This gives a dictionary of sheets for the fundamental cover
+        fundamental_sheet_at_z = self.trivialization.sheets_at_arbitrary_z(z_pt)
         
+        ### Now we extract only those sheets corresponding to the
+        ### choice of basis weights from the fundamental rep
+        sheet_basis = [fundamental_sheet_at_z[i] for i in self.weight_space_basis_identifiers]
+
+        ### Then, we get the new sheets from linear combinations
+        ### of these sheets, according to the corresponding linear
+        ### combinations for the weights.
+        rep_sheets_at_z = {\
+                            i : \
+                            combine_sheets(sheet_basis, self.weight_coefficients_dictionary[i]) \
+                            for i in self.weight_dictionary.keys() \
+                        }
+
+        return rep_sheets_at_z
                
 
 
@@ -973,6 +1010,10 @@ def data_plot(cmplx_list, title):
     plt.show()
 
 
+def combine_sheets(sheet_basis, weight_coefficients):
+    return sum([sheet_basis[i] * weight_coefficients[i] for i in range(len(sheet_basis))])
+
+
 ### Some Testing
 
 # config = load_config('../default.ini')
@@ -1026,12 +1067,6 @@ print "\nThe sheets trivializing the FUNDAMENTAL cover at z = %s" % z_arb
 print t.sheets_at_arbitrary_z(z_arb)
 
 
-# print "\nSheets of the rep-cover at the baspoint z_0 = {}".format(t.basepoint)
-# print t_rep.reference_sheets
-
-# print "\nThe dictionary between sheets and weights for the rep-cover:"
-# print t_rep.sheet_weight_dictionary
-
 print '\n\n---------------------------------------------------------'
 print '\nThe cover for representation %s' % rep 
 print 'has dimension %s' % t_rep.rep_dimension
@@ -1042,8 +1077,13 @@ print t_rep.weight_dictionary
 print '\nThe multiplicities dictionary'
 print t_rep.multiplicities_dictionary
 
-print '\nThe weight space basis (a choice of weights of the fundamental cover)'
+print '\nThe weight space basis (a choice of weights of the fundamental cover) and their identifiers'
 print t_rep.weight_space_basis
+print t_rep.weight_space_basis_identifiers
 
 print '\nRelative to this basis, the coefficients of weights are'
 print t_rep.weight_coefficients_dictionary
+
+### EXAMPLE USE OF THE TRIVIALIZATION METHOD TO GET SHEETS ANYWHERE
+print "\nThe sheets trivializing the rep-cover at z = %s" % z_arb
+print t_rep.sheets_at_arbitrary_z(z_arb)
