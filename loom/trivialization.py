@@ -7,7 +7,8 @@ import numpy as np
 from sympy import Poly
 from cmath import exp, pi
 from numpy.linalg import matrix_rank
-from sage_data import weight_system, positive_roots
+from sage_data import weight_system, positive_roots, pick_basis, 
+                    weight_coefficients
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
