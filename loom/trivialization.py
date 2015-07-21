@@ -27,6 +27,10 @@ class BranchPoint:
     """
     The BranchPoint class.
 
+    This class is strictly related to the 
+    cover corresponding to the first fundamental
+    representation.
+
     Attributes
     ----------
 
@@ -116,7 +120,7 @@ class BranchPoint:
                 data_plot(sheet_list, 'sheet {} tracked to branch point {}'.format(j, self.z))
             for j, sheet_list in enumerate(self.sheet_tracks_around_bp):
                 data_plot(sheet_list, 'sheet {} tracked around branch point {}'.format(j, self.z))
-        print "this is the branch point structure for branch point #{}".format(i)
+        print "this is the branch point structure"
         print "groups = {}".format(self.groups)
         print "singles = {}".format(self.singles)
         print "positive roots = {}".format(self.positive_roots)
@@ -129,6 +133,7 @@ class IrregularSingularity:
     """
     The IrregularSingularity class.
     Just a container of information.
+    Strictly related to the first fundamental representation cover.
     """
     def __init__(self, z=None, trivialization=None):
         self.z = z
@@ -755,8 +760,8 @@ class RepTrivialization:
         self.highest_weight = representation
         self.rep_dimension = None
 
+        self.branch_points = []
         ###TO DO
-        # self.branch_points = []
         # self.irregular_singularities = []
         self.weight_dictionary = None
         self.multiplicities_dictionary = None
@@ -770,15 +775,12 @@ class RepTrivialization:
 
         ### we build a weight_coefficients dictionary
         self.build_coeff_dictionary()
-
-
-        # TO DO
-        # ### Construct the list of branch points
-        # for i, z_bp in enumerate(b_points_z):
-        #     self.branch_points.append(BranchPoint(
-        #                                             z=z_bp, 
-        #                                             trivialization=self
-        #                                         ))
+        
+        for fund_bp in self.trivialization.branch_points:
+            self.branch_points.append(RepBranchPoint(
+                                                    fund_bp=fund_bp,
+                                                    rep_trivialization=self
+                                                    ))
 
         # ### Construct the list of irregular singularities
         # for z_irr_sing in irr_sing_z:
@@ -831,18 +833,14 @@ class RepTrivialization:
                         for i in range(len(self.weight_dictionary)) \
                     }
     
-    def sheets_at_arbitrary_z(self, z_pt):
+    
+    def rep_sheets_from_fundamental_sheets(self, fundamental_sheet_at_z):
         """
-        Returns a list of sheets of the rep-cover
-        with their identifiers at any point 'z'.
-        The choice of 'z' cannot be a branch point or a singularity.
-        The weights of the rep-cover, corresponding to the sheets,
-        can be obtained by invoking the dictionary of the rep-trivialization
+        For any z on C, this function turns the dictionary for
+        sheets of the fundamental cover into a dictionary for 
+        sheets of the rep-cover.
         """
 
-        ### This gives a dictionary of sheets for the fundamental cover
-        fundamental_sheet_at_z = self.trivialization.sheets_at_arbitrary_z(z_pt)
-        
         ### Now we extract only those sheets corresponding to the
         ### choice of basis weights from the fundamental rep
         sheet_basis = [fundamental_sheet_at_z[i] for i in self.weight_space_basis_identifiers]
@@ -857,7 +855,138 @@ class RepTrivialization:
                         }
 
         return rep_sheets_at_z
+
+
+    def sheets_at_arbitrary_z(self, z_pt):
+        """
+        Returns a list of sheets of the rep-cover
+        with their identifiers at any point 'z'.
+        The choice of 'z' cannot be a branch point or a singularity.
+        The weights of the rep-cover, corresponding to the sheets,
+        can be obtained by invoking the dictionary of the rep-trivialization
+        """
+
+        ### This gives a dictionary of sheets for the fundamental cover
+        fundamental_sheet_at_z = self.trivialization.sheets_at_arbitrary_z(z_pt)
+        
+        return self.rep_sheets_from_fundamental_sheets(fundamental_sheet_at_z)
+
+
+    def analyze_branch_point(self, fundamental_bp):
+        """
+        fundamental_bp is the corresponding branch point from the fundamental cover
+        """
+        z_bp = fundamental_bp.z
+        order = fundamental_bp.order
+        positive_roots = fundamental_bp.positive_roots
+        
+        ### This gives a dictionary of the sheets of the fundamental cover
+        fundamental_enum_sh_dict = {i : x for [i, x] in fundamental_bp.enum_sh}
+        
+        rep_enum_sh_dict = self.rep_sheets_from_fundamental_sheets(fundamental_enum_sh_dict)
+        rep_enum_sh = [[i, rep_enum_sh_dict[i]] for i in rep_enum_sh_dict.keys()]
+
+        groups = []
+        singles = []
+
+        clusters = []
+        for i, x in rep_enum_sh:
+            is_single = True
+            for c_index, c in enumerate(clusters):
+                x_belongs_to_c = belongs_to_cluster(x, c, rep_enum_sh)
+                if x_belongs_to_c == True:
+                    clusters[c_index].append(i)
+                    is_single = False
+                    break
+            if is_single == True:
+                clusters.append([i])
+
+        groups = [c for c in clusters if len(c) > 1]
+        singles = [c[0] for c in clusters if len(c) == 1]
+
+        return {
+                'groups' : groups, \
+                'singles' : singles, \
+                'enum_sh' : rep_enum_sh, \
+                }
+
+
+
                
+
+class RepBranchPoint:
+    """
+    The RepBranchPoint class.
+
+    
+    Attributes
+    ----------
+
+    z :
+        The position of the branch point on the z-plane
+
+    rep_trivialization : 
+        The rep-trivialization of the cover to which the 
+        branch point is associated.
+
+    groups :
+        A list of groups of sheets which collide together
+        at the branch point.
+
+    singles :
+        The list of sheets which do not collide with any
+        other sheet.
+
+    enum_sh :
+        The enumerated sheets at the branch point. 
+        A list of pairs [i, x] where i is the sheet 
+        identifier referring to the reference sheets 
+        of the trivialization class; x is the corresponding
+        coordinate in the fiber above the branch point.
+
+    positive_roots :
+        A minimal list of positive roots characterizing the 
+        groups of colliding sheets at the branch point.
+    
+    monodromy : 
+        The monodromy matrix acting on the column vector
+        of sheets (hence, acting FROM the left).
+        Sheets are ordered according to the reference 
+        sheets of the trivialization.
+    
+    order : 
+        At a branch point, the dual of the higgs field 
+        lies on the boundary of a Weyl chamber.
+        In general, it will li at the intersection of
+        k of the walls delimiting the chamber.
+        The order of the branch point is then k + 1.
+
+    """
+    def __init__(self, fund_bp=None, rep_trivialization=None):
+        self.z = fund_bp.z
+        self.rep_trivialization = rep_trivialization
+        
+        bp_data = self.rep_trivialization.analyze_branch_point(fund_bp)
+        self.groups = bp_data['groups']
+        self.singles = bp_data['singles']
+        self.enum_sh = bp_data['enum_sh']
+        self.positive_roots = fund_bp.positive_roots
+        self.order = fund_bp.order
+        self.monodromy = 'TO DO!'
+
+    def print_info(self):
+        print "\n---------------------------------------------------------\
+               \nBranch Point at z = %s\
+               \n---------------------------------------------------------"\
+               % self.z
+        print "this is the branch point structure"
+        print "groups = {}".format(self.groups)
+        print "singles = {}".format(self.singles)
+        print "positive roots = {}".format(self.positive_roots)
+        print "order = {}".format(self.order)
+        print "sheets at the branch point = {}".format(self.enum_sh)
+        print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
+
 
 
 def bp_from_ramif(ramification_points):
@@ -1087,3 +1216,6 @@ print t_rep.weight_coefficients_dictionary
 ### EXAMPLE USE OF THE TRIVIALIZATION METHOD TO GET SHEETS ANYWHERE
 print "\nThe sheets trivializing the rep-cover at z = %s" % z_arb
 print t_rep.sheets_at_arbitrary_z(z_arb)
+
+for i, bp in enumerate(t_rep.branch_points):
+    bp.print_info()
