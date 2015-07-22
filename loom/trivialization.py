@@ -929,7 +929,7 @@ class RepTrivialization:
         Turns a sheet track of the fundamental cover into 
         a sheet track for the rep-cover
         """
-        rep_track_n = self.rep_dimension
+        rep_track_n = len(self.weight_dictionary)
         fund_track_n = len(fund_sheet_tracks)
         rep_tracks = [[] for i in range(rep_track_n)]
         track_length = len(fund_sheet_tracks[0])
@@ -1303,7 +1303,7 @@ def combine_sheets(sheet_basis, weight_coefficients):
 
 config = load_config('../config/coset_D_3.ini')
 algebra = ['D', 3]
-rep = [0, 1, 0]
+rep = [0, 1, 1]
 
 # config = load_config('../config/coset_D_4.ini')
 # algebra = ['D', 4]
