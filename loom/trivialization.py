@@ -144,7 +144,15 @@ class IrregularSingularity:
         self.monodromy = trivialization.sheet_monodromy(self.path_around_irr_sing)
         
     def print_info(self):
-        print "FILL IN"
+        print "\n---------------------------------------------------------\
+               \nIrregular singularity at z = %s\
+               \n---------------------------------------------------------"\
+               % self.z
+        if SHOW_TRACKING_PLOTS == True:
+            print "\nroot tracking along the path around the singularity at {}".format(self.z)
+            for j, sheet_list in enumerate(self.sheet_tracks_around_irr_sing):
+                data_plot(sheet_list, 'sheet {} tracked around singularity at {}'.format(j, self.z))
+        print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
 
 
 class Trivialization:
@@ -349,7 +357,7 @@ class Trivialization:
         set the variable 'is_path_to_bp=True', and the check for 
         sheets becoming too similar will be ignored altogether.
         """
-        ### NOTE: instead of disabling the chack, we could 
+        ### NOTE: instead of disabling the check, we could 
         ### still perform it, and suppress the check only towards the 
         ### end of the tracking.
 
@@ -758,11 +766,10 @@ class RepTrivialization:
         self.trivialization = trivialization
         self.algebra = self.trivialization.algebra
         self.highest_weight = representation
-        self.rep_dimension = None
+        self.rep_dimension = None      
 
         self.branch_points = []
-        ###TO DO
-        # self.irregular_singularities = []
+        self.irregular_singularities = []
         self.weight_dictionary = None
         self.multiplicities_dictionary = None
 
@@ -775,19 +782,26 @@ class RepTrivialization:
 
         ### we build a weight_coefficients dictionary
         self.build_coeff_dictionary()
+
+        ### Using the above weight coefficients, we extract 
+        ### information from the corresponing fundamental cover
+        fund_reference_sheets_dict = {i : x for [i, x] in trivialization.reference_sheets}
+        self.reference_sheets_dict = self.rep_sheets_from_fundamental_sheets(fund_reference_sheets_dict)
+        self.reference_sheets = [[i, self.reference_sheets_dict[i]] for i in self.reference_sheets_dict.keys()]
         
+        ### Construct the list of branch points        
         for fund_bp in self.trivialization.branch_points:
             self.branch_points.append(RepBranchPoint(
                                                     fund_bp=fund_bp,
                                                     rep_trivialization=self
                                                     ))
 
-        # ### Construct the list of irregular singularities
-        # for z_irr_sing in irr_sing_z:
-        #     self.irregular_singularities.append(IrregularSingularity(
-        #                                             z=z_irr_sing, 
-        #                                             trivialization=self
-        #                                         ))
+        ### Construct the list of irregular singularities
+        for fund_irr_sing in self.trivialization.irregular_singularities:
+            self.irregular_singularities.append(RepIrregularSingularity(
+                                                    fund_irr_sing=fund_irr_sing, 
+                                                    rep_trivialization=self
+                                                ))
     
     def build_weight_dictionary(self):
         algebra = self.algebra
@@ -910,7 +924,96 @@ class RepTrivialization:
                 'enum_sh' : rep_enum_sh, \
                 }
 
+    def rep_sheet_tracks_from_fund_sheet_tracks(self, fund_sheet_tracks):
+        """
+        Turns a sheet track of the fundamental cover into 
+        a sheet track for the rep-cover
+        """
+        rep_track_n = self.rep_dimension
+        fund_track_n = len(fund_sheet_tracks)
+        rep_tracks = [[] for i in range(rep_track_n)]
+        track_length = len(fund_sheet_tracks[0])
 
+        for i in range(track_length):
+            fund_sheets_dict = {j : fund_sheet_tracks[j][i] for j in range(fund_track_n)}
+            # print '\nfundamental sheet dictionary'
+            # print fund_sheets_dict
+            rep_sheet_dict = self.rep_sheets_from_fundamental_sheets(fund_sheets_dict)
+            
+            for j, track in enumerate(rep_tracks):
+                track.append(rep_sheet_dict.values()[j])
+
+        return rep_tracks
+
+    def rep_sheet_monodromy(self, sheet_tracks):
+        """
+        Compares the x-coordinates of sheets at the 
+        beginning and at the end of a CLOSED path.
+        The sheet tracks must be provided (note difference
+        with the corresponding function from the 
+        Trivialization class for the 1st fundamental rep).
+        Returns a permutation matrix, expressed in 
+        the basis of reference sheets, such that
+        new_sheets = M . old_sheets
+        """
+
+        initial_sheets = self.reference_sheets
+        final_x = [sheet_list[-1] \
+                        for sheet_list in sheet_tracks]
+        final_sheets = [[i, x] for i, x in enumerate(final_x)]
+
+        ### Now we compare the initial and final sheets 
+        ### to extract the monodromy permutation
+        ### recall that each entry of initial_sheets and final_sheets
+        ### is of the form [i, x] with i the integer label
+        ### and x the actual position of the sheet in the fiber 
+        ### above the basepoint.
+        sorted_sheets = []
+        for s_1 in initial_sheets:
+            closest_candidate = final_sheets[0]
+            min_d = abs(s_1[1] - closest_candidate[1])
+            for s_2 in final_sheets:
+                if abs(s_2[1] - s_1[1]) < min_d:
+                    min_d = abs(s_2[1] - s_1[1])
+                    closest_candidate = s_2
+            sorted_sheets.append(closest_candidate)
+        
+        ### Now we check that sheet tracking is not making a mistake.
+        ### NOTE: cannot use the function 'delete_duplicates' with this 
+        ### data structure.
+        seen = set()
+        uniq = []
+        for s in sorted_sheets:
+            if s[1] not in seen:
+                uniq.append(s[1])
+                seen.add(s[1])
+        if len(uniq) < len(sorted_sheets):
+            raise ValueError('\nError in determination of monodromy!\n'+\
+                'Cannot match uniquely the initial sheets to the final ones.')
+        else:
+            pass
+
+        ### Now we have tree lists:
+        ### initial_sheets = [[0, x_0], [1, x_1], ...]
+        ### final_sheets = [[0, x'_0], [1, x'_1], ...]
+        ### sorted_sheets = [[i_0, x_0], [i_1, x_1], ...]
+        ### therefore the monodromy permutation corresponds
+        ### to 0 -> i_0, 1 -> i_1, etc.
+
+        n_sheets = len(initial_sheets)
+        
+        ### NOTE: in the following basis vectors, i = 0 , ... , n-1
+        def basis_e(i):
+            return np.array([kr_delta(j, i) for j in range(n_sheets)])
+
+        perm_list = []
+        for i in range(n_sheets):
+            new_sheet_index = sorted_sheets[i][0]
+            perm_list.append(basis_e(new_sheet_index))
+
+        perm_matrix = np.matrix(perm_list).transpose()
+
+        return perm_matrix
 
                
 
@@ -947,6 +1050,19 @@ class RepBranchPoint:
     positive_roots :
         A minimal list of positive roots characterizing the 
         groups of colliding sheets at the branch point.
+
+    path_to_bp :
+        A path running from the basepoint of the trivialization
+        to the branch point without crossing any branch cut.
+        
+    path_around_bp :
+        A path encircling the branch point and no one else,
+        used to compute the monodromy.
+
+    sheet_tracks_around_bp :
+        A list of sheet tracks, i.e. the x-values of each
+        sheet as it is tracked along a path that runs around 
+        the branch point, to determine the monodromy.
     
     monodromy : 
         The monodromy matrix acting on the column vector
@@ -961,6 +1077,11 @@ class RepBranchPoint:
         k of the walls delimiting the chamber.
         The order of the branch point is then k + 1.
 
+    fund_bp :
+        the corresponding branch point for the 1st
+        fundamental cover, from which much of the 
+        above data is obtained.
+
     """
     def __init__(self, fund_bp=None, rep_trivialization=None):
         self.z = fund_bp.z
@@ -972,8 +1093,13 @@ class RepBranchPoint:
         self.enum_sh = bp_data['enum_sh']
         self.positive_roots = fund_bp.positive_roots
         self.order = fund_bp.order
-        self.monodromy = 'TO DO!'
+        self.path_to_bp = fund_bp.path_to_bp
+        self.path_around_bp = fund_bp.path_around_bp
+        self.sheet_tracks_around_bp = self.rep_trivialization.rep_sheet_tracks_from_fund_sheet_tracks(fund_bp.sheet_tracks_around_bp)
+        self.monodromy = self.rep_trivialization.rep_sheet_monodromy(self.sheet_tracks_around_bp)
+        self.fund_bp = fund_bp
 
+    
     def print_info(self):
         print "\n---------------------------------------------------------\
                \nBranch Point at z = %s\
@@ -985,6 +1111,30 @@ class RepBranchPoint:
         print "positive roots = {}".format(self.positive_roots)
         print "order = {}".format(self.order)
         print "sheets at the branch point = {}".format(self.enum_sh)
+        print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
+
+
+class RepIrregularSingularity:
+    """
+    The RepIrregularSingularity class.
+    Just a container of information.
+    """
+    def __init__(self, fund_irr_sing=None, rep_trivialization=None):
+        self.z = fund_irr_sing.z
+        self.rep_trivialization = trivialization
+        
+        self.path_around_irr_sing = fund_irr_sing.path_around_irr_sing
+        self.monodromy = trivialization.sheet_monodromy(self.path_around_irr_sing)
+        self.sheet_tracks_around_irr_sing = self.rep_trivialization.rep_sheet_tracks_from_fund_sheet_tracks(fund_irr_sing.sheet_tracks_around_irr_sing)
+        self.monodromy = self.rep_trivialization.rep_sheet_monodromy(self.sheet_tracks_around_irr_sing)
+        self.fund_irr_sing = fund_irr_sing
+
+        
+    def print_info(self):
+        print "\n---------------------------------------------------------\
+               \nIrregular singularity at z = %s\
+               \n---------------------------------------------------------"\
+               % self.z
         print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
 
 
@@ -1212,6 +1362,9 @@ print t_rep.weight_space_basis_identifiers
 
 print '\nRelative to this basis, the coefficients of weights are'
 print t_rep.weight_coefficients_dictionary
+
+print "\nSheets of the rep-cover at the baspoint z_0 = {}".format(t.basepoint)
+print t_rep.reference_sheets
 
 ### EXAMPLE USE OF THE TRIVIALIZATION METHOD TO GET SHEETS ANYWHERE
 print "\nThe sheets trivializing the rep-cover at z = %s" % z_arb
