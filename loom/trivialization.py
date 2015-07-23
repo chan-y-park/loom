@@ -1295,22 +1295,24 @@ def combine_sheets(sheet_basis, weight_coefficients):
 
 ### Some Testing
 
-# config = load_config('../default.ini')
-# algebra = ['A', 2]
+# config_file_name = '../config/coset_D_3.ini'
+# algebra = ['D', 3]
+# rep = [0, 1, 0]
 
-# config = load_config('../config/pure_SO_4.ini')
-# algebra = ['D', 2]
+# config_file_name = '../config/A_3_coset.ini'
+# algebra = ['A', 3]
+# rep = [0, 1, 0]
 
-config = load_config('../config/coset_D_3.ini')
-algebra = ['D', 3]
-rep = [0, 1, 1]
+config_file_name = '../config/coset_D_4.ini'
+algebra = ['D', 4]
+rep = [0, 0, 0, 1]
 
-# config = load_config('../config/coset_D_4.ini')
-# algebra = ['D', 4]
+config = load_config(config_file_name)
 
 sw = SWData(config)
 ramification_points = get_ramification_points(sw, config['accuracy'])
 
+print "\nLoaded configuration file %s" % config_file_name
 
 print "\nThe SW curve in the FIRST fundamental representation"
 print sw.curve.sym_eq
