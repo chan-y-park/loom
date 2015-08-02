@@ -22,6 +22,7 @@ c = get_config()
 
 # The IP address the notebook server will listen on.
 # c.NotebookApp.ip = 'localhost'
+c.NotebookApp.ip = '*'
 
 # DEPRECATED use base_url
 # c.NotebookApp.base_project_url = '/'
