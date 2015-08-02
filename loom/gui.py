@@ -147,7 +147,7 @@ class GUILoom:
         self.check['plot_on_cylinder'] = tk.IntVar()
         tk.Checkbutton(
             self.root,
-            text='Plot on cyliner',
+            text='Plot on cylinder',
             variable=self.check['plot_on_cylinder']
         ).grid(row=grid_row, column=grid_col)
 
