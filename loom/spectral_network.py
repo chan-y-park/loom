@@ -7,6 +7,7 @@ import signal
 import multiprocessing
 import subprocess
 import json
+
 import pdb
 
 from cmath import exp
@@ -52,7 +53,7 @@ class SpectralNetwork:
         that there is a joint from which an S-wall is not grown
         if the depth of the joint is too deep.
         """
-        #self.g_data = sage_get_g_data(config)
+        self.g_data = sage_get_g_data(config)
         accuracy = config['accuracy']
         n_steps=config['num_of_steps']
         logging.info('Start growing a new spectral network...')

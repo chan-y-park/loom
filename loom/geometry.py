@@ -119,11 +119,11 @@ def get_ramification_points(sw, accuracy):
 
     # NOTE: solve_poly_system vs. solve
     #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
-    sols = sympy.solve([f, f.diff(x)], z, x)
+    #sols = sympy.solve([f, f.diff(x)], z, x)
     #if sols is None:
     #    # Use Sage instead
     #    sols = sage_solve_poly_system([f, f.diff(x)])
-    #sols = sage_solve_poly_system([f, f.diff(x)])
+    sols = sage_solve_poly_system([f, f.diff(x)])
     for z_0, x_0 in sols:
         if (len(sw.punctures) > 0 and
             (min([abs(z_0 - p) for p in sw.punctures]) < accuracy)

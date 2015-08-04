@@ -317,21 +317,21 @@ def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy=None,
 
 
 def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):
-    return False
-#    root_system = g_data["root_system"]
-#    k = g_data["representation"]
-#    # NOTE: A shortcut. Use this after checking this function
-#    # works correctly.
-#    if root_system[0] == 'A':
-#        if k == 1:
-#            return True
-#        else:
-#            # XXX: This part is not implemented yet.
-#            return False
-#    elif root_system[0] == 'D' and k == 1:
-#        if abs(x1-(-x2)) < accuracy:
-#            return False
-#        else:
-#            return True
-#        
+#    return False
+    root_system = g_data["root_system"]
+    k = g_data["representation"]
+    # NOTE: A shortcut. Use this after checking this function
+    # works correctly.
+    if root_system[0] == 'A':
+        if k == 1:
+            return True
+        else:
+            # XXX: This part is not implemented yet.
+            return False
+    elif root_system[0] == 'D' and k == 1:
+        if abs(x1-(-x2)) < accuracy:
+            return False
+        else:
+            return True
+        
     
