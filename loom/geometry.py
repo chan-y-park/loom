@@ -52,8 +52,13 @@ class PuncturePoint:
         return self.label == other.label
 
 class SWCurve:
-    def __init__(self, eq_str):
-        self.eq_str = eq_str
+    def __init__(self, differentials=None, g_data=None):
+        N = len(g_data['weights'])
+        self.eq_str = 'x^{} '.format(N)
+        for k, u_k in differentials.iteritems():
+            self.eq_str += '+ ({}) '.format(u_k)
+            if k != N:
+                self.eq_str += '* x^{}'.format(k)
         self.sym_eq = None
         self.num_eq = None
 
@@ -68,14 +73,22 @@ class SWDiff:
 class SWData:
     """
     A class containing a Seiberg-Witten curve 
-        f(z, x) = 0
-    and a Seiberg-Witten differential of the form 
-        \lambda = v(x, z) dz
+        \lambda^N + \sum_{k=2}^N \phi_k \lambda^{N-k}, 
+    where \lambda is the Seiberg-Witten differential of the form 
+        \lambda = x dz
+    and \phi_k = u_k(z) dz^k.
     """
     def __init__(self, config):
         self.parameters = config['sw_parameters']
-        self.curve = SWCurve(config['sw_curve'])
-        self.diff = SWDiff(config['sw_diff_v'])
+        self.differentials = eval(config['differentials'])
+
+        self.g_data = sage_get_g_data(config)
+
+        self.curve = SWCurve(
+            differentials=self.differentials, 
+            g_data=self.g_data,
+        )
+        self.diff = SWDiff('x')
         self.punctures = None
 
         # PSL2C-transformed z & dz
@@ -201,3 +214,18 @@ def sage_solve_poly_system(poly_system):
     )
     sols = eval(sols_str)
     return sols
+
+def sage_get_g_data(config):
+    root_system = config['root_system']
+    g_data_str = subprocess.check_output(
+        ["sage", "./loom/sage_scripts/get_g_data.sage", 
+         root_system, config["representation"]]
+    )
+    g_data = eval(g_data_str)
+
+    g_data['root_system'] = root_system
+    g_data['representation'] = eval(config['representation'])
+    g_data['type'] = root_system[0]
+    g_data['rank'] = eval(root_system[1:])
+
+    return g_data

@@ -77,22 +77,22 @@ class GUILoom:
         grid_row += 1
         grid_col = 0
         tk.Label(self.root,
-                 text='sw_curve').grid(row=grid_row, column=grid_col)
+                 text='diffenrentials').grid(row=grid_row, column=grid_col)
         grid_col += 1
-        self.entry['sw_curve'].grid(
+        self.entry['differentials'].grid(
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW
         )
 
-        grid_row += 1
-        grid_col = 0
-        tk.Label(self.root,
-                 text='sw_diff').grid(row=grid_row, column=grid_col)
-        grid_col += 1
-        self.entry['sw_diff_v'].config(justify=tk.RIGHT)
-        self.entry['sw_diff_v'].grid(row=grid_row, column=grid_col)
-        grid_col += 1
-        tk.Label(self.root,
-                 text='dz').grid(row=grid_row, column=grid_col, sticky=tk.W)
+#        grid_row += 1
+#        grid_col = 0
+#        tk.Label(self.root,
+#                 text='sw_diff').grid(row=grid_row, column=grid_col)
+#        grid_col += 1
+#        self.entry['sw_diff_v'].config(justify=tk.RIGHT)
+#        self.entry['sw_diff_v'].grid(row=grid_row, column=grid_col)
+#        grid_col += 1
+#        tk.Label(self.root,
+#                 text='dz').grid(row=grid_row, column=grid_col, sticky=tk.W)
 
         grid_row += 1
         grid_col = 0
@@ -282,6 +282,10 @@ def open_gui(config, spectral_networks,):
 
     gui_loom = GUILoom(config, spectral_networks=spectral_networks)
     gui_loom.create_widgets()
+    gui_loom.root.protocol("WM_DELETE_WINDOW", lambda: quit_gui(gui_loom),)
     gui_loom.root.mainloop()
 
     return None 
+
+def quit_gui(gui_loom):
+    gui_loom.root.destroy()

@@ -168,7 +168,7 @@ class SWall(object):
         ode.set_initial_value(y_i)
 
         if z_range_limits is not None:
-            z_real_min, z_real_max, z_imag_min, z_imag_max = z_range_limits
+            [z_real_min, z_real_max], [z_imag_min, z_imag_max] = z_range_limits
 
         while ode.successful() and step < num_of_steps:
             step += 1

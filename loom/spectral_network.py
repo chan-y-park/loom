@@ -40,7 +40,7 @@ class SpectralNetwork:
 
         self.s_walls = []
         self.joints = []
-        self.g_data = None 
+        #self.g_data = None 
 
 
     def grow(self, sw, config):
@@ -53,7 +53,7 @@ class SpectralNetwork:
         that there is a joint from which an S-wall is not grown
         if the depth of the joint is too deep.
         """
-        self.g_data = sage_get_g_data(config)
+        #self.g_data = sage_get_g_data(config)
         accuracy = config['accuracy']
         n_steps=config['num_of_steps']
         logging.info('Start growing a new spectral network...')
@@ -254,6 +254,10 @@ class SpectralNetwork:
         new_s_wall = self.s_walls[new_s_wall_index]
 
         for prev_s_wall in self.s_walls[:new_s_wall_index]:
+
+            if prev_s_wall.label in new_s_wall.parents:
+                continue
+                    
             # Check if the two S-walls have a common x-range.  
             have_common_x_range = False
             for x_a, x_b in (
@@ -285,7 +289,9 @@ class SpectralNetwork:
                 intersection_search_finished = False
                 while not intersection_search_finished:
                     intersections = numpy.empty((buffer_size, 2), 
-                                                dtype=numpy.float64) 
+                                                dtype=numpy.float64)
+                    #from plotting import plot_s_walls
+                    #plot_s_walls([new_s_wall, prev_s_wall])
                     num_of_intersections = cgal_find_intersections_of_curves(
                         #new_s_wall.z.view(numpy.dtype((numpy.float64,2))),
                         new_s_wall.z,
@@ -333,7 +339,7 @@ class SpectralNetwork:
                         prev_s_wall.label,
                         accuracy=config['accuracy'],
                         xs_at_z=ip_xs,
-                        g_data=self.g_data,
+                        g_data=sw.g_data,
                     )
 
                     if(a_joint is None):
@@ -440,7 +446,7 @@ class SpectralNetwork:
                             prev_s_wall.label,
                             accuracy=config['accuracy'],
                             xs_at_z=ip_xs,
-                            g_data=self.g_data,
+                            g_data=sw.g_data,
                         )
 
                         if(a_joint is None):
@@ -584,10 +590,4 @@ class SpectralNetwork:
         return new_joints
 
 
-def sage_get_g_data(config):
-    g_data_str = subprocess.check_output(
-        ["sage", "./loom/sage_scripts/get_g_data.sage", 
-         config["root_system"], config["representation"]]
-    )
-    g_data = eval(g_data_str)
-    return g_data
+

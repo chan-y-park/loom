@@ -7,8 +7,8 @@ import numpy as np
 from sympy import Poly
 from cmath import exp, pi
 from numpy.linalg import matrix_rank
-from sage_data import weight_system, positive_roots, pick_basis, \
-                            weight_coefficients
+from sage_data import (weight_system, positive_roots, pick_basis,
+                       weight_coefficients,)
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
@@ -443,49 +443,11 @@ class Trivialization:
             ### sheets will be indistinguishable at the very end.
             return sorted_sheets
 
-
-    # def analyze_branch_point(self, z_bp):
-    #     z_bp_path = self.path_to_pt(z_bp)
-    #     tracked_sheets = self.track_sheets_along_path(z_bp_path, is_path_to_bp=True)
-    #     sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
-    #     enum_sh = [[i, s_i] for i, s_i in enumerate(sheets_at_bp)]
-        
-    #     groups = []
-    #     singles = []
-
-    #     for i, x in enum_sh:
-    #         if i in flatten(groups):
-    #             pass
-    #         elif i == len(enum_sh)-1:
-    #             ### this is the last sheet of the list
-    #             ### if it's not already in a pair, then it's a single
-    #             singles.append(i)
-    #         else:
-    #             paired = False
-    #             for j, y in enum_sh[i+1:]:                    
-    #                 if abs(x - y) < BP_PROXIMITY_THRESHOLD:
-    #                     paired = True
-    #                     groups.append([i, j])
-    #             ### NOTE: we can in principle have multiple pairings, meaning
-    #             ### that three or more sheets could collide together
-    #             ### these will show up as several pairs containing the 
-    #             ### same numbers e.g. [i, j], [j, k], [k, i] would mean
-    #             ### that sheets i, j, k collide all together
-    #             ### Should introduce a check that handles this situations!
-
-    #             if paired == False:
-    #                 singles.append(i)
-
-    #     return {'groups' : groups, \
-    #             'singles' : singles, \
-    #             'enum_sh' : enum_sh, \
-    #             'tracked_sheets' : tracked_sheets, \
-    #             'path_to_branch_point' : z_bp_path
-    #             }
-
+    
     def analyze_branch_point(self, z_bp):
         z_bp_path = self.path_to_pt(z_bp)
-        tracked_sheets = self.track_sheets_along_path(z_bp_path, is_path_to_bp=True)
+        tracked_sheets = self.track_sheets_along_path(z_bp_path,
+                                                      is_path_to_bp=True)
         sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
         enum_sh = [[i, s_i] for i, s_i in enumerate(sheets_at_bp)]
         
@@ -581,40 +543,6 @@ class Trivialization:
         perm_matrix = np.matrix(perm_list).transpose()
 
         return perm_matrix
-
-    ### REPLACED BY SAGE
-    ###
-    # def build_dictionary(self):
-    #     algebra = self.algebra
-    #     r = algebra[1]
-
-    #     if algebra[0] == 'A':
-    #         ### for example, fund_weights(2) will be [0, 1, 0, ...]
-    #         def fund_weights(i):
-    #             return np.array([kr_delta(j, i - 1) for j in range(r+1)])
-            
-    #         return {i : fund_weights(i+1) for i, x in self.reference_sheets}
-
-    #     elif algebra[0] == 'D':
-    #         def pos_fund_weights(i):
-    #             return np.array([kr_delta(j, i - 1) for j in range(r)])
-            
-    #         def neg_fund_weights(i):
-    #             return -1 * pos_fund_weights(i)
-
-    #         positive_sheets = [[i, x] for i, x in self.reference_sheets if d_positivity(x)]
-    #         negative_sheets = [[i, x] for i, x in self.reference_sheets if not d_positivity(x)]
-    #         sorted_negative_sheets = sort_negatives(positive_sheets, negative_sheets)
-    #         pos_dict = {i : pos_fund_weights(j+1) for j, [i, x] in enumerate(positive_sheets)}
-    #         neg_dict = {i : neg_fund_weights(j+1) for j, [i, x] in enumerate(sorted_negative_sheets)}
-    #         full_dict = pos_dict.copy()
-    #         full_dict.update(neg_dict)
-    #         return full_dict
-
-
-    #     elif algebra[0] == 'E':
-    #         raise ValueError('I am not ready for E-type algebras yet!')
-
 
     def build_dictionary(self):
         algebra = self.algebra

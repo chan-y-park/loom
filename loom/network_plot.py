@@ -10,10 +10,11 @@ class NetworkPlotBase(object):
         self.current_plot_idx = None 
 
         self.figure = matplotlib_figure
+        if self.figure is not None:
+            self.figure.clf()
     
-
     def draw(self, phase=None, branch_points=None, joints=None, walls=None,
-             labels=None, plot_range=[-5, 5, -5, 5], plot_joints=False,
+             labels=None, plot_range=None, plot_joints=False,
              plot_data_points=False,):
         """
         branch_points = [[bpx, bpy], ...]
@@ -23,17 +24,20 @@ class NetworkPlotBase(object):
                   'joints': [jp1_label, ...],
                   'walls': [wall1_label, ...]}
         """
-        x_min, x_max, y_min, y_max = plot_range
         rect = [.1, 0.15, .8, .8]
-        #rect = [0.125, 0.125, .8, 0.8]
 
         axes = self.figure.add_axes(
             rect,
             label="Network #{}".format(len(self.plots)),
-            xlim=(x_min, x_max),
-            ylim=(y_min, y_max),
             aspect='equal',
         )
+
+        if plot_range is not None:
+            [[x_min, x_max], [y_min, y_max]] = plot_range
+            axes.set_xlim(x_min, x_max)
+            axes.set_ylim(y_min, y_max)
+        else:
+            axes.autoscale(enable=True, axis='both', tight=None)
 
         axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
 
@@ -66,6 +70,29 @@ class NetworkPlotBase(object):
         self.plots.append(axes)
 
 
+    def autoscale(self):
+        min_x_min = None
+        max_x_max = None
+        min_y_min = None
+        max_y_max = None
+
+        for axes in self.plots:
+            x_min, x_max = axes.get_xlim()
+            if min_x_min is None or min_x_min > x_min:
+                min_x_min = x_min
+            if max_x_max is None or max_x_max < x_max:
+                max_x_max = x_max
+
+            y_min, y_max = axes.get_ylim()
+            if min_y_min is None or min_y_min > y_min:
+                min_y_min = y_min
+            if max_y_max is None or max_y_max < y_max:
+                max_y_max = y_max
+
+        for axes in self.plots:
+            axes.set_xlim(min_x_min, max_x_max)
+            axes.set_ylim(min_y_min, max_y_max)
+
     def set_data_cursor(self):
         if self.current_plot_idx is None:
             return None
@@ -91,7 +118,8 @@ class NetworkPlotBase(object):
         elif new_plot_idx > len(self.plots) - 1:
             new_plot_idx = len(self.plots) - 1
 
-        self.plots[self.current_plot_idx].set_visible(False)
+        if self.current_plot_idx is not None:
+            self.plots[self.current_plot_idx].set_visible(False)
         self.plots[new_plot_idx].set_visible(True)
         # Update the index variable for the currently displayed plot.
         self.current_plot_idx = new_plot_idx

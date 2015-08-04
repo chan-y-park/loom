@@ -15,6 +15,7 @@ from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
 
+LOGGING_FILE_NAME = 'logs/log.mose.txt'
 
 def set_logging(level):
     if level == 'debug':
@@ -27,8 +28,24 @@ def set_logging(level):
         logging_level = logging.WARNING
         logging_format = '%(message)s'
 
-    logging.basicConfig(level=logging_level, format=logging_format, 
-                        stream=sys.stdout)
+    #logging.basicConfig(level=logging_level, format=logging_format, 
+    #                    stream=sys.stdout)
+    logger = logging.getLogger()
+    # Remove other handlers
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+    logger.setLevel(logging_level)
+    formatter = logging.Formatter(logging_format)
+    ### create console handler with a higher log level
+    ch = logging.StreamHandler()
+    ch.setLevel(logging_level)
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    # Log to a file 'log.mose.txt'
+    fh = logging.FileHandler(LOGGING_FILE_NAME, 'w')
+    fh.setLevel(logging_level)
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
 
 
 def generate_spectral_network(config, phase=None):
@@ -72,8 +89,8 @@ def generate_spectral_network(config, phase=None):
     return spectral_network_list
 
 
-def load_config(path=None):
-    if path is None:
+def load_config(config_file=None):
+    if config_file is None:
         root = tk.Tk()
         file_opts = {
             'defaultextension': '.ini',
@@ -82,13 +99,13 @@ def load_config(path=None):
             'parent': root,
             'title': 'Select a configuration file to load.',
         }
-        path = tkFileDialog.askopenfilename(**file_opts)
+        config_file = tkFileDialog.askopenfilename(**file_opts)
         root.destroy()
-        if path == '':
+        if config_file == '':
             return None
 
     config = LoomConfig()
-    config.read(path)
+    config.read(config_file)
 
     return config
     
@@ -216,11 +233,11 @@ def make_spectral_network_plot(config, spectral_networks, master=None,
     if show_plot is True:
         spectral_network_plot.show()
 
-    if master is None:
-        try:
-            raw_input('Press any key to continue...')
-        except NameError:
-            pass
+    #if master is None:
+    #    try:
+    #        raw_input('Press any key to continue...')
+    #    except NameError:
+    #        pass
     return spectral_network_plot
 
 

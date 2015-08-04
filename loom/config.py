@@ -71,8 +71,9 @@ class LoomConfig:
 
         for section in config_parser.sections():
             for option in config_parser.options(section):
-                if (section == 'directories'
-                    or section == 'symbolic expressions'):
+                if (#section == 'directories' or
+                    #section == 'symbolic expressions' or 
+                    section == 'Seiberg-Witten data'):
                     self[option] = config_parser.getstr(section, option)
                 elif section == 'Seiberg-Witten parameters':
                     self['sw_parameters'][option] = config_parser.get(

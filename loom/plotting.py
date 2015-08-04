@@ -20,19 +20,17 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
         self, 
         spectral_network,
-        z_range_limits=None, 
+        #z_range_limits=None, 
+        plot_range=None, 
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
         C=[[1, 0], [0, 1]],
     ):
         labels = {'branch_points': [], 'joints': [], 'walls': []}
-        if z_range_limits is None:
+        if plot_range is None:
             if plot_on_cylinder is True:
-                z_range_limits = [-pi, pi, -5, 5]
-            else:
-                z_range_limits = [-5, 5, -5, 5] 
-        x_min, x_max, y_min, y_max = z_range_limits
+                plot_range = [[-pi, pi], [-5, 5]]
 
         branch_points = []
         for i, rp in enumerate(spectral_network.ramification_points):
@@ -83,7 +81,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             joints=joints,
             walls=walls,
             labels=labels,
-            plot_range=[x_min, x_max, y_min, y_max],
+            plot_range=plot_range,
             plot_joints=plot_joints,
             plot_data_points=plot_data_points,
         )
@@ -189,18 +187,24 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         title=None,
     ):
         super(NetworkPlotTk, self).__init__(
+            #matplotlib_figure=pyplot.figure(title),
             matplotlib_figure=matplotlib.figure.Figure(),
         )
 
+        self.root = None
         if master is None:
-            master = tk.Tk()
-            master.withdraw()
+            root = tk.Tk()
+            root.withdraw()
+            self.root = root
+        else:
+            self.root = master
         self.master = master
 
         # Create a Toplevel widget, which is a child of GUILoom 
         # and contains plots,
-        self.toplevel = tk.Toplevel(master)
+        self.toplevel = tk.Toplevel(self.root)
         self.toplevel.wm_title(title)
+        self.toplevel.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.plot_idx_scale = None
 
@@ -219,7 +223,14 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         toolbar = NavigationToolbar(self.canvas, self.toplevel)
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-    
+   
+
+
+    def on_closing(self):
+        self.toplevel.destroy()
+        if self.master is None:
+            self.root.destroy()
+
 
     def scale_action(self, scale_value):
         new_plot_idx = int(scale_value)
@@ -309,12 +320,12 @@ def plot_s_walls(
     s_walls,
     ramification_points=[],
     joints=[],
-    plot_range=[-5, 5, -5, 5],
+    plot_range=[[-5, 5], [-5, 5]],
     plot_data_points=False,
     marked_points=[],
     colors=['b', 'g', 'r', 'c', 'm', 'y'], 
 ):
-    x_min, x_max, y_min, y_max = plot_range
+    [x_min, x_max], [y_min, y_max] = plot_range
 
     pyplot.figure(1)
     pyplot.title('S-walls')
@@ -403,7 +414,7 @@ def plot_segments(
     """
     Plot the given segments for debugging.
     """
-    x_min, x_max, y_min, y_max = plot_range
+    [x_min, x_max], [y_min, y_max] = plot_range
 
     # Plot setting.
     pyplot.xlim(x_min, x_max)
@@ -421,4 +432,36 @@ def plot_segments(
                     color='k')
 
     pyplot.show()
-    
+
+
+def plot_s_walls(s_walls, plot_range=None, plot_data_points=False,):
+    """
+    Plot K-walls for debugging purpose.
+    """
+    pyplot.figure()
+    pyplot.axes().set_aspect('equal')
+
+    for s_wall in s_walls:
+        xs = s_wall.z.real 
+        ys = s_wall.z.imag 
+        pyplot.plot(xs, ys, '-', label=s_wall.label)
+
+        if(plot_data_points == True):
+            pyplot.plot(xs, ys, 'o', color='k', markersize=4)
+
+    if plot_range is None:
+        pyplot.autoscale(enable=True, axis='both', tight=None)
+    else:
+        [[x_min, x_max], [y_min, y_max]] = plot_range
+        pyplot.xlim(x_min, x_max)
+        pyplot.ylim(y_min, y_max)
+
+    mpldatacursor.datacursor(
+        formatter='{label}'.format,
+        hover=True,
+    )
+
+    pyplot.show()
+
+
+
