@@ -58,7 +58,7 @@ class SWCurve:
         for k, u_k in differentials.iteritems():
             self.eq_str += '+ ({}) '.format(u_k)
             if k != N:
-                self.eq_str += '* x^{}'.format(k)
+                self.eq_str += '* x^{}'.format(N-k)
         self.sym_eq = None
         self.num_eq = None
 
