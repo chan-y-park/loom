@@ -2,13 +2,56 @@ import sympy
 import numpy
 import logging
 import pdb
-import subprocess
 
-from math import log10
-
+import sage_subprocess
 from misc import ctor2, r2toc, get_root_multiplicity, PSL2C
 
 x, z = sympy.symbols('x z')
+
+
+class GData:
+    def __init__(self, root_system=None, representation_str=None):
+        self.root_system = root_system
+        ### type is 'A', 'D', or 'E'.
+        self.type = root_system[0]
+        self.rank = eval(root_system[1:])
+
+        ### Index of the fundamental representation, i.e. n of \omega_n. 
+        representation = eval(representation_str)
+        if isinstance(representation, int):
+            ### Representation is specified as an index
+            ### of a fundamental representation, i.e. n of \omega_n.
+            self.representation_index = representation
+            self.higest_weight = numpy.array(
+                [1 if i == self.representation_index else 0
+                 for i in range(self.rank)]
+            )
+        elif isinstance(representation, list):
+            ### Representation is specified in the coroot(Dynkin) basis.
+            self.highest_weight = representation
+            height = 0
+            for i, n_i in enumerate(self.highest_weight):
+                height += n_i
+                if n_i == 1:
+                    self.representation_index = i
+            if height > 1:
+                raise NotImplementedError
+                
+        sage_data = sage_subprocess.get_g_data(
+            root_system, 
+            self.highest_weight,
+        )
+
+        #self.omega_1 = numpy.array(sage_data['omega_1'])
+        #self.omega_n = numpy.array(sage_data['omega_n'])
+        self.weyl_orbit_1 = numpy.array(sage_data['weyl_orbit_1'])
+        #self.weyl_orbit_n = numpy.array(sage_data['weyl_orbit_n'])
+        self.roots = numpy.array(sage_data['roots'])
+        self.positive_roots = numpy.array(sage_data['positive_roots'])
+        #self.weight_multiplicities = sage_data['weight_multiplicities']
+        self.weights = numpy.array(sage_data['weights'])
+        self.multiplicities = numpy.array(sage_data['multiplicities'])
+
 
 class RamificationPoint:
     def __init__(self, z=None, x=None, i=None, label=None, is_puncture=False):
@@ -53,7 +96,7 @@ class PuncturePoint:
 
 class SWCurve:
     def __init__(self, differentials=None, g_data=None):
-        N = len(g_data['weights'])
+        N = len(g_data.weights)
         self.eq_str = 'x^{} '.format(N)
         for k, u_k in differentials.iteritems():
             self.eq_str += '+ ({}) '.format(u_k)
@@ -61,6 +104,14 @@ class SWCurve:
                 self.eq_str += '* x^{}'.format(N-k)
         self.sym_eq = None
         self.num_eq = None
+
+    def get_fibers(z_0):
+        """
+        Return a list of x-coordinates of the fibers over z.
+        """
+        fx = self.curve.num_eq.subs(z, z_0)
+        xs = sympy.solve(fx, x)
+        return map(complex, xs) 
 
 
 class SWDiff:
@@ -82,7 +133,7 @@ class SWData:
         self.parameters = config['sw_parameters']
         self.differentials = eval(config['differentials'])
 
-        self.g_data = sage_get_g_data(config)
+        self.g_data = GData(config['root_system'], config['representation'])
 
         self.curve = SWCurve(
             differentials=self.differentials, 
@@ -135,8 +186,8 @@ def get_ramification_points(sw, accuracy):
     #sols = sympy.solve([f, f.diff(x)], z, x)
     #if sols is None:
     #    # Use Sage instead
-    #    sols = sage_solve_poly_system([f, f.diff(x)])
-    sols = sage_solve_poly_system([f, f.diff(x)])
+    #    sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
+    sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
     for z_0, x_0 in sols:
         if (len(sw.punctures) > 0 and
             (min([abs(z_0 - p) for p in sw.punctures]) < accuracy)
@@ -194,38 +245,14 @@ def get_local_sw_diff(sw, ramification_point):
     return (complex(diff_c.n()), diff_e)
 
 
-def get_fibers(config, z_0):
-    """
-    Return a list of x-coordinates of the fibers over z.
-    """
-    sw = SWData(config)
-    fx = sw.curve.num_eq.subs(z, z_0)
-    xs = sympy.solve(fx, x)
-    return map(complex, xs) 
+#def get_fibers(config, z_0):
+#    """
+#    Return a list of x-coordinates of the fibers over z.
+#    """
+#    sw = SWData(config)
+#    fx = sw.curve.num_eq.subs(z, z_0)
+#    xs = sympy.solve(fx, x)
+#    return map(complex, xs) 
 
 
-def sage_solve_poly_system(poly_system):
-    """
-    Use sage to solve the given system of polynomial equations of x and z.
-    """
-    sols_str = subprocess.check_output(
-        ["sage", "./loom/sage_scripts/solve_poly_system.sage"] +
-        [str(poly) for poly in poly_system]
-    )
-    sols = eval(sols_str)
-    return sols
 
-def sage_get_g_data(config):
-    root_system = config['root_system']
-    g_data_str = subprocess.check_output(
-        ["sage", "./loom/sage_scripts/get_g_data.sage", 
-         root_system, config["representation"]]
-    )
-    g_data = eval(g_data_str)
-
-    g_data['root_system'] = root_system
-    g_data['representation'] = eval(config['representation'])
-    g_data['type'] = root_system[0]
-    g_data['rank'] = eval(root_system[1:])
-
-    return g_data
