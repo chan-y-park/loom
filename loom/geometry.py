@@ -51,6 +51,10 @@ class GData:
         #self.weight_multiplicities = sage_data['weight_multiplicities']
         self.weights = numpy.array(sage_data['weights'])
         self.multiplicities = numpy.array(sage_data['multiplicities'])
+        self.basis = numpy.array(sage_data['basis']),
+        ### The i-th row of self.coefficients is the representation
+        ### of self.weights[i] in the self.basis.
+        self.coefficients = numpy.array(sage_data['coefficients'])
 
 
 class RamificationPoint:
