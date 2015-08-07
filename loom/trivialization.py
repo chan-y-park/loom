@@ -290,7 +290,7 @@ class Trivialization:
         self.reference_sheets = [
             [i, x] for i, x in enumerate(
                 #self.sheets_at_z(self.base_point)
-                sw.curve.get_fibers(self.base_point)
+                sw.curve.get_xs(self.base_point)
             )
         ]
         
@@ -331,7 +331,7 @@ class Trivialization:
         if is_path_to_bp == False:
             for i, z in enumerate(z_path):
                 #sheets_1 = self.sheets_at_z(z)
-                sheets_1 = self.sw.curve.get_fibers(z)
+                sheets_1 = self.sw.curve.get_xs(z)
                 sheets_0 = self.sort_sheets(sheets_0, sheets_1, 
                                             check_tracking=True, 
                                             index=1, z_0=z_path[i-1], 
@@ -345,7 +345,7 @@ class Trivialization:
             ### of the sheet along the path
         else:
             for i, z in enumerate(z_path):
-                sheets_1 = self.sw.curve.get_fibers(z)
+                sheets_1 = self.sw.curve.get_xs(z)
                 sheets_0 = self.sort_sheets(sheets_0, sheets_1,
                                             check_tracking=False)
                 for i, s_list in enumerate(sheets_along_path):
@@ -525,7 +525,7 @@ class Trivialization:
             sorted_weights = sorted(weights)
 
             def pos_fund_weights(i):
-                return np.array(sorted_weights)1[i - 1])
+                return np.array(sorted_weights[i - 1])
             
             def neg_fund_weights(i):
                 return -1 * pos_fund_weights(i)
@@ -693,19 +693,19 @@ def delete_duplicates(l):
     return uniq
 
 
-def d_positivity(x):
-    """
-    Criterion for establishing whether a sheet of a D-type 
-    vector-representation cover is positive or not.
-    """
-    if x.imag > 0 or (x.imag == 0 and x.real > 0):
-        return True
-    elif x.imag < 0 or (x.imag == 0 and x.real < 0):
-        return False
-    else:
-        raise ValueError('There is a sheet located at x=0.0 for a D-type cover!'
-                        +'\nBy Z_2 symmetry there must be two sheets at x=0.'
-                        +'\nThis means that the basepoint is not good.')
+#def d_positivity(x):
+#    """
+#    Criterion for establishing whether a sheet of a D-type 
+#    vector-representation cover is positive or not.
+#    """
+#    if x.imag > 0 or (x.imag == 0 and x.real > 0):
+#        return True
+#    elif x.imag < 0 or (x.imag == 0 and x.real < 0):
+#        return False
+#    else:
+#        raise ValueError('There is a sheet located at x=0.0 for a D-type cover!'
+#                        +'\nBy Z_2 symmetry there must be two sheets at x=0.'
+#                        +'\nThis means that the basepoint is not good.')
 
 
 def belongs_to_cluster(x, c, enum_sh):

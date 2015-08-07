@@ -2,6 +2,8 @@ import sympy
 import numpy
 import logging
 import pdb
+from warnings import warn
+from pprint import pformat
 
 import sage_subprocess
 from misc import ctor2, r2toc, get_root_multiplicity, PSL2C
@@ -21,11 +23,11 @@ class GData:
         if isinstance(representation, int):
             ### Representation is specified as an index
             ### of a fundamental representation, i.e. n of \omega_n.
-            self.representation_index = representation
-            self.higest_weight = numpy.array(
-                [1 if i == self.representation_index else 0
-                 for i in range(self.rank)]
-            )
+            self.fundamental_representation_index = representation
+            self.highest_weight = [
+                1 if i == (self.fundamental_representation_index - 1) else 0
+                for i in range(self.rank)
+            ]
         elif isinstance(representation, list):
             ### Representation is specified in the coroot(Dynkin) basis.
             self.highest_weight = representation
@@ -33,28 +35,34 @@ class GData:
             for i, n_i in enumerate(self.highest_weight):
                 height += n_i
                 if n_i == 1:
-                    self.representation_index = i
+                    self.fundamental_representation_index = i
             if height > 1:
-                raise NotImplementedError
+                self.fundamental_representation_index = None 
+                warn('{} is not a fundamental representation.'
+                     .format(representation_str))
                 
         sage_data = sage_subprocess.get_g_data(
             root_system, 
             self.highest_weight,
         )
+        logging.info("Representation data of ({}, {}) retrieved from SAGE:\n"
+                     "{}".format(root_system, representation_str,
+                                 pformat(sage_data)))
 
         #self.omega_1 = numpy.array(sage_data['omega_1'])
         #self.omega_n = numpy.array(sage_data['omega_n'])
-        self.weyl_orbit_1 = numpy.array(sage_data['weyl_orbit_1'])
+        #self.weyl_orbit_1 = numpy.array(sage_data['weyl_orbit_1'])
         #self.weyl_orbit_n = numpy.array(sage_data['weyl_orbit_n'])
+        self.ffr_weights = numpy.array(sage_data['ffr_weights'])
         self.roots = numpy.array(sage_data['roots'])
         self.positive_roots = numpy.array(sage_data['positive_roots'])
         #self.weight_multiplicities = sage_data['weight_multiplicities']
         self.weights = numpy.array(sage_data['weights'])
         self.multiplicities = numpy.array(sage_data['multiplicities'])
-        self.basis = numpy.array(sage_data['basis']),
+        self.weight_basis = numpy.array(sage_data['weight_basis']),
         ### The i-th row of self.coefficients is the representation
         ### of self.weights[i] in the self.basis.
-        self.coefficients = numpy.array(sage_data['coefficients'])
+        self.weight_coefficients = numpy.array(sage_data['weight_coefficients'])
 
 
 class RamificationPoint:
@@ -98,76 +106,176 @@ class PuncturePoint:
     def __eq__(self, other):
         return self.label == other.label
 
-class SWCurve:
-    def __init__(self, differentials=None, g_data=None):
-        N = len(g_data.weights)
-        self.eq_str = 'x^{} '.format(N)
-        for k, u_k in differentials.iteritems():
-            self.eq_str += '+ ({}) '.format(u_k)
-            if k != N:
-                self.eq_str += '* x^{}'.format(N-k)
-        self.sym_eq = None
-        self.num_eq = None
 
-    def get_fibers(z_0):
+class SWCurve:
+    def __init__(self, differentials=None, g_data=None, Cz=None, 
+                 parameters=None):
+        ### First, build a cover in the first fundamental representation.
+        N = len(g_data.ffr_weights)
+        ffr_eq_str = 'x^{} '.format(N)
+        for k, u_k in differentials.iteritems():
+            ffr_eq_str += '+ ({}) '.format(u_k)
+            if k != N:
+                ffr_eq_str += '* x^{}'.format(N-k)
+
+        self.ffr_sym_eq = sympy.simplify(
+            sympy.sympify(ffr_eq_str).subs(z, Cz)
+        )
+        self.ffr_num_eq = self.ffr_sym_eq.subs(parameters)
+
+        ### TODO: Need to build a cover in a general representation
+        ### from the differentials, using symmetric polynomials.
+        if g_data.fundamental_representation_index == 1:
+            self.sym_eq = self.ffr_sym_eq
+            self.num_eq = self.ffr_num_eq
+        else:
+            warn('class SWCurve with a general representation '
+                 'is not implemented yet.')
+            self.sym_eq = None 
+            self.num_eq = None
+
+
+    def get_xs(self, z_0, for_ffr=False):
         """
-        Return a list of x-coordinates of the fibers over z.
+        Return a numpy array of x-coordinates over z = z_0.
         """
-        fx = self.curve.num_eq.subs(z, z_0)
-        xs = sympy.solve(fx, x)
-        return map(complex, xs) 
+        if for_ffr is True:
+            eq = self.ffr_num_eq
+        else:
+            eq = self.num_eq
+        fx = eq.subs(z, z_0)
+        #xs = sympy.solve(fx, x)
+        ### The following may fail when the curve is not a polynomial.
+        sym_poly = sympy.Poly(fx, x, domain='CC')
+        coeff_list = map(complex, sym_poly.all_coeffs())
+        return numpy.roots(coeff_list)
+
+
+    def get_aligned_xs(self, z_0, g_data):
+        ### Return a numpy array of x-coordinates of the fibers over z.
+        ### The order of x's is the same as the order of the weights
+        ### in g_data.weights.
+        algebra_name = g_data.root_system
+        ffr_weights = g_data.ffr_weights
+        weights = g_data.weights
+        weight_basis = g_data.weight_basis
+        weight_coeffs = g_data.weight_coefficients
+
+        ### First order x's of the first fundamental cover
+        ### according to the order of ''g_data.weights'',
+        ### then construct the list of x's for the given representation
+        ### ordered according to weights.
+        ffr_xs = self.get_xs(z_0, for_ffr=True) 
+
+        if g_data.type == 'A':
+            """
+            Can consider ffr_xs to be aligned according to ffr_weights,
+            [(1, 0, 0, 0, 0, 0),
+             (0, 1, 0, 0, 0, 0),
+             ...,
+             (0, 0, 0, 0, 0, 1)].
+            """
+            if g_data.fundamental_representation_index == 1:
+                xs = ffr_xs
+            else:
+                xs = get_xs_of_weights(g_data, ffr_xs)
+
+        elif g_data.type == 'D':
+            """
+            Align ffr_xs according to ffr_weights,
+            [(1, 0, 0, 0, 0),
+             (0, 1, 0, 0, 0),
+             ...,
+             (0, 0, 0, 0, 1),
+             (-1, 0, 0, 0, 0),
+             ...
+             (0, 0, 0, 0, -1)]      
+            """
+            sorted_ffr_xs = sorted(
+                ffr_xs, key=lambda z: (z.real, z.imag), reverse=True,
+            )
+            positive_xs = []
+            negative_xs = []
+            for i in range(g_data.rank):
+                px_i = sorted_ffr_xs[i]
+                nx_i = sorted_ffr_xs[-(i+1)]
+                if numpy.isclose(px_i, -nx_i) is False:
+                    warn("get_ordered_xs(): No pairing of x's in the D-type, "
+                         "({}, {}) != (x, -x).".format(px_i, nx_i))
+                else:
+                    positive_xs.append(px_i)
+                    negative_xs.append(nx_i)
+            aligned_ffr_xs = positive_xs + negative_xs
+
+            if g_data.fundamental_representation_index == 1:
+                xs = aligned_ffr_xs
+            else:
+                xs = get_xs_of_weights(g_data, aligned_ffr_xs)
+
+        elif g_data.type == 'E':
+            ### !!!!!
+            ### Here I am pairing any sheet with any weight of E_6 and E_7 
+            ### However, the Weyl group does not contains permutations 
+            ### of 27 (resp 56) elements so it's probably NOT OK to 
+            ### pair sheets with weights as we like.
+            ### !!!!!
+            #xs = ffr_xs
+            raise NotImplementedError
+     
+        return xs
+
 
 
 class SWDiff:
-    def __init__(self, v_str):
-        self.v_str = v_str
-        self.sym_v = None
-        self.num_v = None
+    def __init__(self, v_str, g_data=None, Cz=None, dCz=None, parameters=None):
+        ### sym_v is a SymPy expression. 
+        self.sym_v = sympy.simplify(
+            sympy.sympify(v_str).subs(z, Cz) * dCz
+        )
+        ### num_v is from sym_v with its parameters 
+        ### substituted with numerical values.
+        self.num_v = self.sym_v.subs(parameters)
 
 
 class SWData:
     """
-    A class containing a Seiberg-Witten curve 
+    A class containing a Seiberg-Witten curve in the first
+    fundamental representation,
         \lambda^N + \sum_{k=2}^N \phi_k \lambda^{N-k}, 
     where \lambda is the Seiberg-Witten differential of the form 
         \lambda = x dz
-    and \phi_k = u_k(z) dz^k.
+    and \phi_k = u_k(z) dz^k, and another curve in the representation
+    given in the configuration.
     """
     def __init__(self, config):
+        self.punctures = None
         self.parameters = config['sw_parameters']
         self.differentials = eval(config['differentials'])
-
         self.g_data = GData(config['root_system'], config['representation'])
+
+        ### PSL2C-transformed z & dz
+        Cz = PSL2C(config['mt_params'], z, inverse=True) 
+        dCz = Cz.diff(z)
 
         self.curve = SWCurve(
             differentials=self.differentials, 
             g_data=self.g_data,
+            Cz=Cz,
+            parameters=self.parameters,
         )
-        self.diff = SWDiff('x')
-        self.punctures = None
 
-        # PSL2C-transformed z & dz
-        Cz = PSL2C(config['mt_params'], z, inverse=True) 
-        dCz = Cz.diff(z)
-
-        # Seiberg-Witten curve
-        self.curve.sym_eq = sympy.simplify(
-            sympy.sympify(self.curve.eq_str).subs(z, Cz)
-        )
-        # num_eq is from sym_eq with its parameters 
-        # substituted with numerical values.
-        self.curve.num_eq = self.curve.sym_eq.subs(self.parameters)
         logging.info('\nSeiberg-Witten curve: %s = 0\n',
                      sympy.latex(self.curve.num_eq))
 
         # Seiberg-Witten differential
-        # sym_v is a SymPy expression. 
-        self.diff.sym_v = sympy.simplify(
-            sympy.sympify(self.diff.v_str).subs(z, Cz) * dCz
+        self.diff = SWDiff(
+            'x',
+            g_data=self.g_data,
+            Cz=Cz,
+            dCz=dCz,
+            parameters=self.parameters,
         )
-        # num_v is from sym_v with its parameters 
-        # substituted with numerical values.
-        self.diff.num_v = self.diff.sym_v.subs(self.parameters)
+
         logging.info('\nSeiberg-Witten differential: %s dz\n',
                      sympy.latex(self.diff.num_v))
 
@@ -179,6 +287,19 @@ class SWData:
                 for p in config['punctures']
             ]
 
+
+def get_xs_of_weights(g_data, ffr_xs):
+    xs = numpy.zeros(len(g_data.weights), dtype=complex)
+
+    if g_data.type == 'A' or g_data.type == 'D':
+        for i, cs in enumerate(g_data.weight_coefficients):
+            for j, c_j in enumerate(cs):
+                xs[i] += c_j * ffr_xs[j]
+    else:
+        raise NotImplementedError
+
+    return xs
+    
 
 def get_ramification_points(sw, accuracy):
     f = sw.curve.num_eq
@@ -247,16 +368,3 @@ def get_local_sw_diff(sw, ramification_point):
         (diff_c, diff_e) = local_diff.leadterm(Dz)
 
     return (complex(diff_c.n()), diff_e)
-
-
-#def get_fibers(config, z_0):
-#    """
-#    Return a list of x-coordinates of the fibers over z.
-#    """
-#    sw = SWData(config)
-#    fx = sw.curve.num_eq.subs(z, z_0)
-#    xs = sympy.solve(fx, x)
-#    return map(complex, xs) 
-
-
-
