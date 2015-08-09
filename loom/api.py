@@ -10,7 +10,8 @@ import matplotlib
 import pdb
 
 from config import LoomConfig
-from geometry import SWData, get_ramification_points
+#from geometry import SWData, get_ramification_points
+from geometry import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
@@ -56,8 +57,9 @@ def generate_spectral_network(config, phase=None):
     """
 
     phase_range = config['phase_range']
-    sw = SWData(config)
-    ramification_points = get_ramification_points(sw, config['accuracy'])
+    #sw = SWData(config)
+    #ramification_points = get_ramification_points(sw, config['accuracy'])
+    sw = SWDataWithTrivialization(config)
 
     start_time = time.time()
     logging.info('start cpu time: %s', start_time)
@@ -129,7 +131,7 @@ def load_spectral_network(data_dir=None):
     config = LoomConfig()
     config.read(os.path.join(data_dir, 'config.ini'))
 
-    sw = SWData(config)
+    sw = SWDataWithTrivialization(config)
     spectral_network_list = []
 
     data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))

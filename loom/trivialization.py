@@ -5,8 +5,8 @@ import numpy as np
 from sympy import Poly
 from cmath import exp, pi
 from numpy.linalg import matrix_rank
-#from sage_data import (weight_system, positive_roots, pick_basis,
-#                       weight_coefficients,)
+from geometry import SWData
+from misc import delete_duplicates
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
@@ -153,7 +153,7 @@ class IrregularSingularity:
         print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
 
 
-class Trivialization:
+class SWDataWithTrivialization(SWData):
     """
     The Trivialization class.
 
@@ -172,12 +172,6 @@ class Trivialization:
         a list of objects of the type RamificationPoint, corresponding
         to the given sw_data.
 
-    lie_algebra : 
-        the Lie algebra associated with the cover, expressed
-        as a list of a capital letter and the rank, e.g.
-        ['A', 3] for the A_3 algebra.
-
-
     Attributes & Methods
     --------------------
 
@@ -185,58 +179,21 @@ class Trivialization:
         the base point of the trivialization
 
     reference_sheets :
-        a list of pairs [i, x] where 'i' is an integer label
-        for the sheet, and 'x' is its position in the fiber of T^*C 
-        over the basepoint
+        a list x's 
+            [x_0, x_1, ..., x_i, ...]
+        where 'i' is an integer label for the sheet,
+        and 'x' is its position in the fiber of T^*C 
+        over the basepoint. This is aligned with 
+        g_data.ffr_weights.
 
-    sheet_weight_dictionary :
-        a dictionary between the sheet integer labels and the
-        weights of the FIRST fundamental representation
-        it is structured as follows
-        {i_0 : v_0, ... , i_k : v_k , ...}
-        where 'v_k' are numpy arrays corresponding to weights.
-        - For g=A_n Lie algebras, the weights are given in IR^{n+1}
-            v_0 = (1,0,...,0)
-            v_1 = (0,1,0,..) 
-            ...
-            v_n = (0,...,0,1) 
-          In this case, it does not matter how we identify weights
-          with sheets, since the Weyl group acts by permuting all of 
-          them freely.
-        - For g=D_n, the weights are given in IR^{n}
-            v_0 = (1,0,...,0)
-            v_1 = (0,1,...,0)
-            v_{n-1} = (0,...,0,1)
-            v_n = (-1,0,...,0)
-            v_{n+1} = (0,-1,...,0)
-            v_{2n-1} = (0,...,0,-1)
-          In this case, we diivde the sheets into positive and negative ones,
-          and assign the weights accordingly.
-          The assignment of positive sheets is almost arbitrary: from each pair
-          of positive/negative sheets one can pick either, as long as one makes
-          an even number of "sign mistakes". We don't keep track of this,
-          as a result there is an ambiguity in distinguishing one spinor 
-          representation from the other
-
-    sheets_at_arbitrary_z(z) :
+    sheets_at_z(z) :
         this method returns the set of sheets and their integer label 
         identifier at any point 'z' on the C-plane.
-        These are the sheets of the FIRST FUNDAMENTAL representation.
         The labels are consistent with those at the basepoint.
         To get the corresponding weights, of the firt fundamental 
-        representation, the dictionary should be invoked.
+        representation, use g_data.weights[i].
         The output looks like this
         {0 : x_0, ... , i : x_i, ...}
-
-    branch_points :
-        A list of all the branch points.
-
-    irregular_singularities :
-        A list of all the irregular singularities.
-
-    algebra_positive_roots :
-        A choice of positive roots, derived from sage's conventions
-
     """
     ### NOTE: I am assuming that branch points do not overlap vertically
     ### this should be guaranteed by introducing an automatic rotation of 
@@ -245,12 +202,9 @@ class Trivialization:
     ### Although I am not printing any explicit warning/error message 
     ### and the computation will go through for higher-type, but give a 
     ### wrong answer!
-    def __init__(
-        self, sw, ramification_points,
-        #lie_algebra
-    ):
+    def __init__(self, sw, ramification_points,):
         # Seiberg-Witten data encapsulated in SWData.
-        self.sw = sw
+        #self.sw = sw
 
         self.branch_points = []
         self.irregular_singularities = []
@@ -262,7 +216,6 @@ class Trivialization:
         #self.center = None
 
         # z-coords of branch points.
-        #b_points_z
         bpzs = delete_duplicates(
             [r.z for r in ramification_points if not r.is_puncture]
         )
@@ -285,18 +238,17 @@ class Trivialization:
         non_zero_distances = [x for x in all_distances if x!=0.0]
         self.min_distance = min(non_zero_distances)
 
-        ### Fix reference sheets at the basepoints, i.e. assign an integer 
-        ### label to each sheet.
-        self.reference_sheets = [
-            [i, x] for i, x in enumerate(
-                #self.sheets_at_z(self.base_point)
-                sw.curve.get_xs(self.base_point)
-            )
-        ]
+        ### Fix reference x's at the basepoints.
+        ### These sheets are aligned in the order of
+        ### sw.g_data.weights, i.e. reference_sheets[i]
+        ### is the value of x corresponding to 
+        ### sw.g_data.weights[i].
+        self.reference_xs = sw.curve.get_aligned_xs(self.base_point,
+                                                    sw.g_data)
+        self.reference_sheets = {i: x for i, x in enumerate(self.reference_xs)}
         
-        ### Now that we have determined the reference sheets, 
-        ### we build a weight-sheet dictionary
-        self.sheet_weight_dictionary = self.build_dictionary()
+        ### XXX: sheet_weight_dictionary -> sw.g_data.weights
+        #self.sheet_weight_dictionary = self.build_dictionary()
 
         ### Construct the list of branch points
         for z_bp in bpzs:
@@ -311,7 +263,8 @@ class Trivialization:
             self.irregular_singularities.append(irr_sing)
 
         
-    def track_sheets_along_path(self, z_path, is_path_to_bp=False):
+    #def track_sheets_along_path(self, z_path, sw, is_path_to_bp=False):
+    def get_sheets_along_path(self, z_path, sw, is_path_to_bp=False):
         """
         Tracks the sheets along a path.
         It checks at each step that tracking is successful,
@@ -325,19 +278,24 @@ class Trivialization:
         ### still perform it, and suppress the check only towards the 
         ### end of the tracking.
 
-        sheets_0 = [x for i, x in self.reference_sheets]
-        sheets_along_path = [[s] for s in sheets_0]
+        g_data = sw.g_data
+        #sheets_0 = [x for i, x in self.reference_sheets]
+        xs_0 = self.reference_xs
+        ### Each element is a sheet, which is a list of x's along the path.
+        ### Initialized with reference_xs.
+        sheets_along_path = [[x] for x in xs_0]
         
         if is_path_to_bp == False:
             for i, z in enumerate(z_path):
                 #sheets_1 = self.sheets_at_z(z)
-                sheets_1 = self.sw.curve.get_xs(z)
-                sheets_0 = self.sort_sheets(sheets_0, sheets_1, 
-                                            check_tracking=True, 
-                                            index=1, z_0=z_path[i-1], 
-                                            z_1=z_path[i])
-                for i, s_list in enumerate(sheets_along_path):
-                    s_list.append(sheets_0[i])
+                xs_1 = sw.curve.get_xs(z, g_data=g_data)
+                sorted_xs = get_sorted_xs(
+                    xs_0, xs_1, check_tracking=True, 
+                    index=1, z_0=z_path[i-1], z_1=z_path[i]
+                )
+                for i, s_i in enumerate(sheets_along_path):
+                    s_i.append(xs_0[i])
+                xs_0 = sorted_xs
 
             return sheets_along_path
             ### the result is of the form [sheet_path_1, sheet_path_2, ...]
@@ -345,80 +303,29 @@ class Trivialization:
             ### of the sheet along the path
         else:
             for i, z in enumerate(z_path):
-                sheets_1 = self.sw.curve.get_xs(z)
-                sheets_0 = self.sort_sheets(sheets_0, sheets_1,
-                                            check_tracking=False)
-                for i, s_list in enumerate(sheets_along_path):
-                    s_list.append(sheets_0[i])
+                xs_1 = sw.curve.get_xs(z, g_data=g_data)
+                sorted_xs = get_sorted_sheets(xs_0, xs_1, check_tracking=False)
+                for i, s_i in enumerate(sheets_along_path):
+                    s_i.append(xs_0[i])
+                xs_0 = sorted_xs
 
             return sheets_along_path
 
 
-    def sheets_at_arbitrary_z(self, z_pt):
+    def get_sheets_at_z(self, z_pt, g_data=None):
         """
-        Returns a list of sheets of the fuandamental cover
-        with their identifiers at any point 'z'.
-        The choice of 'z' cannot be a branch point or a singularity.
-        The weights of the fundamental cover, corresponding to the sheets,
-        can be obtained by invoking the dictionary of the trivialization
+        Returns a dict of (sheet_index, x) at a point ''z_pt'', 
+        which cannot be a branch point or a singularity.
         """
-
         z_path = get_path_to(z_pt, self.base_point)
-        sheet_tracks = self.track_sheets_along_path(z_path)
-        final_x = [sheet_list[-1] for sheet_list in sheet_tracks]
+        sheets = self.get_sheets_along_path(z_path)
+        final_xs = [s_i[-1] for s_i in sheets]
         final_sheets = {i : x for i, x in enumerate(final_x)}
         return final_sheets
 
     
-    def analyze_branch_point(self, bp):
-        path_to_pb = get_path_to(bp.z, self.base_point)
-        tracked_sheets = self.track_sheets_along_path(path_to_bp,
-                                                      is_path_to_bp=True)
-        sheets_at_bp = [sheet_list[-1] for sheet_list in tracked_sheets]
-        bp.enum_sh = [[i, s_i] for i, s_i in enumerate(sheets_at_bp)]
-        
-        #groups = []
-        #singles = []
-
-        clusters = []
-        for i, x in enum_sh:
-            is_single = True
-            for c_index, c in enumerate(clusters):
-                x_belongs_to_c = belongs_to_cluster(x, c, enum_sh)
-                if x_belongs_to_c == True:
-                    clusters[c_index].append(i)
-                    is_single = False
-                    break
-            if is_single == True:
-                clusters.append([i])
-
-        bp.groups = [c for c in clusters if len(c) > 1]
-        bp.singles = [c[0] for c in clusters if len(c) == 1]
-
-        #return {'groups' : groups, \
-        #        'singles' : singles, \
-        #        'enum_sh' : enum_sh, \
-        #        'tracked_sheets' : tracked_sheets, \
-        #        'path_to_branch_point' : z_bp_path
-        #        }
-    
-        bp.positive_roots = get_positive_roots_of_branch_point(
-            bp, self.sw.g_data.positive_roots, self.sheet_weight_dictionary,  
-        )
-        bp.order = len(bp.positive_roots) + 1
-
-        path_around_bp = get_path_around(bp.z, self.base_point,
-                                         self.min_distance)
-        bp.monodromy = self.sheet_monodromy(path_around_bp)
-
-    def analyze_irregular_singularity(self, irr_sing):
-        path_around_z = get_path_around(z)
-        self.monodromy = (
-            self.sheet_monodromy(path_around_z)
-        )
-        
-
-    def sheet_monodromy(self, z_path):
+    #def sheet_monodromy(self, z_path):
+    def get_sheet_monodromy(self, z_path):
         """
         Compares the x-coordinates of sheets at the 
         beginning and at the end of a CLOSED path.
@@ -427,10 +334,10 @@ class Trivialization:
         new_sheets = M . old_sheets
         """
 
-        initial_sheets = self.reference_sheets
-        final_x = [sheet_list[-1] 
-                   for sheet_list in self.track_sheets_along_path(z_path)]
-        final_sheets = [[i, x] for i, x in enumerate(final_x)]
+        initial_xs = self.reference_xs
+        sheets_along_path = self.get_sheets_along_path(z_path)
+        final_xs = [s_i[-1] for s_i in sheets_along_path]
+        final_sheets = [[i, x] for i, x in enumerate(final_xs)]
 
         ### Now we compare the initial and final sheets 
         ### to extract the monodromy permutation
@@ -486,81 +393,53 @@ class Trivialization:
         return perm_matrix
 
 
-    def build_dictionary(self):
-        """
-        Build a dictionary between reference sheets 
-        and the weights of the fundamental representation of the cover.
-        """
-        g_data = self.sw.g_data
-        algebra_name = g_data.root_system
-        algebra_type = g_data.type
-        representation = g_data.representation
-        weights = g_data.weyl_orbit_1
-        #weights_n = g_data.weyl_orbit_n
+    def analyze_branch_point(self, bp, g_data):
+        path_to_pb = get_path_to(bp.z, self.base_point)
+        #tracked_sheets = self.track_sheets_along_path(path_to_bp,
+        sheets_along_path = self.get_sheets_along_path(
+            path_to_bp, is_path_to_bp=True
+        )
+        xs_at_bp = [s_i[-1] for s_i in sheets_along_path]
+        bp.enum_sh = [[i, x_i] for i, x_i in enumerate(xs_at_bp)]
+        
+        clusters = []
+        for i, x in enum_sh:
+            is_single = True
+            for c_index, c in enumerate(clusters):
+                x_belongs_to_c = belongs_to_cluster(x, c, enum_sh)
+                if x_belongs_to_c == True:
+                    clusters[c_index].append(i)
+                    is_single = False
+                    break
+            if is_single == True:
+                clusters.append([i])
 
-        if representation != 1:
-            raise NotImplementedError
+        bp.groups = [c for c in clusters if len(c) > 1]
+        bp.singles = [c[0] for c in clusters if len(c) == 1]
 
-        ### The 1st fundamental weight, in the base of coroots.
-        ### It's just [1,0,...,0]
-        #first_fund_weight = [kr_delta(j, 0) 
-        #                     for j in range(self.sw.g_data.rank)]
+        #return {'groups' : groups, \
+        #        'singles' : singles, \
+        #        'enum_sh' : enum_sh, \
+        #        'tracked_sheets' : tracked_sheets, \
+        #        'path_to_branch_point' : z_bp_path
+        #        }
+    
+        bp.positive_roots = get_positive_roots_of_branch_point(
+            bp, g_data.positive_roots, self.sheet_weight_dictionary,  
+        )
+        bp.order = len(bp.positive_roots) + 1
 
-        ### Here we stick to the 1st fundamental rep, which is minuscule
-        ### and multiplicities will all be 1.
-        #weights, multiplicities = weight_system(algebra_name,
-        #                                        first_fund_weight)
+        path_around_bp = get_path_around(bp.z, self.base_point,
+                                         self.min_distance)
+        bp.monodromy = self.sheet_monodromy(path_around_bp)
 
-        if algebra_type == 'A':
-            #def fund_weights(i):
-            #    return np.array(weights[i - 1])
-            
-            #return {i : fund_weights(i + 1) for i, x in self.reference_sheets}
-            return {i: weights for range(rank+1)} 
+    def analyze_irregular_singularity(self, irr_sing):
+        path_around_z = get_path_around(z)
+        self.monodromy = (
+            self.sheet_monodromy(path_around_z)
+        )
+        
 
-        elif algebra_type == 'D':
-            ### It's very important to sort the weights,
-            ### as this ensures that the first half of them 
-            ### will not contain both a positive and its negative.
-            sorted_weights = sorted(weights)
-
-            def pos_fund_weights(i):
-                return np.array(sorted_weights[i - 1])
-            
-            def neg_fund_weights(i):
-                return -1 * pos_fund_weights(i)
-
-            positive_sheets = [
-                [i, x] for i, x in self.reference_sheets if d_positivity(x)
-            ]
-            negative_sheets = [
-                [i, x] for i, x in self.reference_sheets if not d_positivity(x)
-            ]
-            sorted_negative_sheets = sort_negatives(
-                positive_sheets, negative_sheets
-            )
-            pos_dict = {i : pos_fund_weights(j+1) 
-                        for j, [i, x] in enumerate(positive_sheets)}
-            neg_dict = {i : neg_fund_weights(j+1) 
-                        for j, [i, x] in enumerate(sorted_negative_sheets)}
-            full_dict = pos_dict.copy()
-            full_dict.update(neg_dict)
-            return full_dict
-
-
-        elif algebra_type == 'E':
-            ### !!!!!
-            ### Here I am pairing any sheet with any weight of E_6 and E_7 
-            ### However, the Weyl group does not contains permutations 
-            ### of 27 (resp 56) elements so it's probably NOT OK to 
-            ### pair sheets with weights as we like.
-            ### !!!!!
-            #def fund_weights(i):
-            #    return np.array(weights[i - 1])
-            #
-            #return {i : fund_weights(i + 1) for i, x in self.reference_sheets}
-            raise NotImplementedError
-            
 def get_path_to(z_pt, base_pt):
     """
     Return a rectangular path from the base point to z_pt.
@@ -596,6 +475,54 @@ def get_path_around(z_pt, base_pt, min_distance):
 
     return (path_segment_1 + path_segment_2 + path_segment_3 +
             path_segment_4 + path_segment_5)
+
+
+### TODO: Try using numba.
+def get_sorted_xs(ref_xs, new_xs, check_tracking=True, 
+                  index=None, z_0=None, z_1=None):
+    """
+    Returns a sorted version of 'new_xs'
+    based on matching the closest points with 
+    'ref_xs'
+    """
+    sorted_xs = []
+    for s_1 in ref_xs:
+        closest_candidate = new_xs[0]
+        min_d = abs(s_1 - closest_candidate)
+        for s_2 in new_xs:
+            if abs(s_2 - s_1) < min_d:
+                min_d = abs(s_2 - s_1)
+                closest_candidate = s_2
+        sorted_xs.append(closest_candidate)
+    
+    if check_tracking == True:
+        ### Now we check that sheet tracking is not making a mistake.
+        unique_sorted_xs = delete_duplicates(sorted_xs)
+        if len(unique_sorted_xs) < len(sorted_xs):
+            print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
+            print "old xs" 
+            print ref_xs
+            print "new xs"
+            print new_xs
+            raise ValueError(
+                '\nCannot track the sheets!\n'
+                'Probably passing too close to a branch point.'
+            )
+        else:
+            return sorted_xs
+    else:
+        ### If the path is one ending on a branch-point, 
+        ### the check that tracking is correct is disabled
+        ### because it would produce an error, since by definition
+        ### sheets will be indistinguishable at the very end.
+        return sorted_xs
+
+
+def kr_delta(i, j):
+    if i == j:
+        return 1
+    else:
+        return 0
 
 
 def get_positive_roots_of_branch_point(bp, positive_roots, sheet_weight_dict):
@@ -639,74 +566,6 @@ def get_positive_roots_of_branch_point(bp, positive_roots, sheet_weight_dict):
     #return independent_vanishing_positive_roots
     return keep_linearly_independent_vectors(vanishing_positive_roots)
 
-def sort_sheets(ref_sheets, new_sheets, check_tracking=True,
-                index=None, z_0=None, z_1=None):
-    """
-    Returns a sorted version of 'new_sheets'
-    based on matching the closest points with 
-    'ref_sheets'
-    """
-    sorted_sheets = []
-    for s_1 in ref_sheets:
-        closest_candidate = new_sheets[0]
-        min_d = abs(s_1 - closest_candidate)
-        for s_2 in new_sheets:
-            if abs(s_2 - s_1) < min_d:
-                min_d = abs(s_2 - s_1)
-                closest_candidate = s_2
-        sorted_sheets.append(closest_candidate)
-    
-    if check_tracking == True:
-        ### Now we check that sheet tracking is not making a mistake.
-        unique_sorted_sheets = delete_duplicates(sorted_sheets)
-        if len(unique_sorted_sheets) < len(sorted_sheets):
-            print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
-            print "old sheets" 
-            print ref_sheets
-            print "new sheets"
-            print new_sheets
-            raise ValueError('\nCannot track the sheets!\n'+\
-                    'Probably passing too close to a branch point.')
-        else:
-            return sorted_sheets
-    else:
-        ### If the path is one ending on a branch-point, 
-        ### the check that tracking is correct is disabled
-        ### because it would produce an error, since by definition
-        ### sheets will be indistinguishable at the very end.
-        return sorted_sheets
-
-
-def kr_delta(i, j):
-    if i == j:
-        return 1
-    else:
-        return 0
-
-def delete_duplicates(l):
-    seen = set()
-    uniq = []
-    for x in l:
-        if x not in seen:
-            uniq.append(x)
-            seen.add(x)
-    return uniq
-
-
-#def d_positivity(x):
-#    """
-#    Criterion for establishing whether a sheet of a D-type 
-#    vector-representation cover is positive or not.
-#    """
-#    if x.imag > 0 or (x.imag == 0 and x.real > 0):
-#        return True
-#    elif x.imag < 0 or (x.imag == 0 and x.real < 0):
-#        return False
-#    else:
-#        raise ValueError('There is a sheet located at x=0.0 for a D-type cover!'
-#                        +'\nBy Z_2 symmetry there must be two sheets at x=0.'
-#                        +'\nThis means that the basepoint is not good.')
-
 
 def belongs_to_cluster(x, c, enum_sh):
     """
@@ -731,17 +590,6 @@ def belongs_to_cluster(x, c, enum_sh):
     if test == True:
         return True
 
-def sort_negatives(pos, neg):
-    sorted_neg = []
-    for i, x in pos:
-        distances = [[j, y, abs(x - (-y))] for j, y in neg]
-        ### sorting them by distance, the closest will be the first one
-        sorted_distances = sorted(distances, key=lambda item: item[-1])
-        closest_sheet = sorted_distances[0][:2]
-        sorted_neg.append(closest_sheet)
-
-    return sorted_neg
-
 
 def keep_linearly_independent_vectors(vector_list):
     """
@@ -765,7 +613,3 @@ def keep_linearly_independent_vectors(vector_list):
             independent_list.append(v)
 
     return independent_list
-
-
-
-

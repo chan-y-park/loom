@@ -216,3 +216,15 @@ def get_ode(sw, phase, accuracy):
     )
 
     return ode
+
+
+def delete_duplicates(l):
+    seen = set()
+    uniq = []
+    for x in l:
+        if x not in seen:
+            uniq.append(x)
+            seen.add(x)
+    return uniq
+
+

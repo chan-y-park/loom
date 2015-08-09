@@ -12,6 +12,35 @@ x, z = sympy.symbols('x z')
 
 
 class GData:
+    """
+    ffr_weights:
+        List of weights of the FIRST fundamental representation,
+            [v_0, ... , v_k , ...],
+        where 'v_k' are numpy arrays corresponding to weights.
+        - For g=A_n Lie algebras, the weights are given in IR^{n+1} as
+            v_0 = (1,0,...,0),
+            v_1 = (0,1,0,..), 
+            ...,
+            v_n = (0,...,0,1). 
+          In this case, it does not matter how we identify weights
+          with sheets, since the Weyl group acts by permuting all of 
+          them freely.
+        - For g=D_n, the weights are given in IR^{n} as
+            v_0 = (1,0,...,0),
+            v_1 = (0,1,...,0),
+            v_{n-1} = (0,...,0,1),
+            v_n = (-1,0,...,0),
+            v_{n+1} = (0,-1,...,0),
+            v_{2n-1} = (0,...,0,-1).
+          In this case, we diivde the sheets into positive and negative ones,
+          and assign the weights accordingly.
+          The assignment of positive sheets is almost arbitrary: from each pair
+          of positive/negative sheets one can pick either, as long as one makes
+          an even number of "sign mistakes". We don't keep track of this,
+          as a result there is an ambiguity in distinguishing one spinor 
+          representation from the other
+        - For other algebras, the order is imposed by SAGE.
+    """
     def __init__(self, root_system=None, representation_str=None):
         self.root_system = root_system
         ### type is 'A', 'D', or 'E'.
@@ -135,7 +164,7 @@ class SWCurve:
             self.num_eq = None
 
 
-    def get_xs(self, z_0, for_ffr=False):
+    def get_xs(self, z_0, g_data=None, for_ffr=False):
         """
         Return a numpy array of x-coordinates over z = z_0.
         """
@@ -143,6 +172,11 @@ class SWCurve:
             eq = self.ffr_num_eq
         else:
             eq = self.num_eq
+        ### TODO: Remove the following block after implementing
+        ### the equation of the curve for a general rep.
+        if eq is None:
+            return self.get_aligned_xs(z_0, g_data)
+
         fx = eq.subs(z, z_0)
         #xs = sympy.solve(fx, x)
         ### The following may fail when the curve is not a polynomial.
@@ -237,7 +271,7 @@ class SWDiff:
         self.num_v = self.sym_v.subs(parameters)
 
 
-class SWData:
+class SWData(object):
     """
     A class containing a Seiberg-Witten curve in the first
     fundamental representation,
@@ -252,6 +286,7 @@ class SWData:
         self.parameters = config['sw_parameters']
         self.differentials = eval(config['differentials'])
         self.g_data = GData(config['root_system'], config['representation'])
+        self.accuracy = config['accuracy']
 
         ### PSL2C-transformed z & dz
         Cz = PSL2C(config['mt_params'], z, inverse=True) 
@@ -287,22 +322,44 @@ class SWData:
                 for p in config['punctures']
             ]
 
+        self.ramification_points = get_ramification_points(
+            self.curve.num_eq, self.accuracy
+        )
 
-def get_xs_of_weights(g_data, ffr_xs):
-    xs = numpy.zeros(len(g_data.weights), dtype=complex)
 
-    if g_data.type == 'A' or g_data.type == 'D':
-        for i, cs in enumerate(g_data.weight_coefficients):
-            for j, c_j in enumerate(cs):
-                xs[i] += c_j * ffr_xs[j]
-    else:
-        raise NotImplementedError
+    #def get_local_sw_diff(sw, ramification_point):
+    def get_local_sw_diff(self):
+        rp = self.ramification_point
+        num_eq = self.curve.num_eq
+        num_v = self.diff.num_v
 
-    return xs
-    
+        # use Dz = z - rp.z & Dx = x - rp.x
+        Dz, Dx = sympy.symbols('Dz, Dx')
+        local_curve = (
+            num_eq.subs(x, rp.x+Dx).subs(z, rp.z+Dz)
+            .series(Dx, 0, rp.i+1).removeO()
+            .series(Dz, 0, 2).removeO()
+        )
+        # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
+        a = local_curve.n().coeff(Dz).coeff(Dx, 0)
+        b = local_curve.n().coeff(Dx**rp.i).coeff(Dz, 0)
+        # Dx = Dx(Dz)
+        Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
+        local_diff = (
+            num_v.subs(x, rp.x+Dx_Dz).subs(z, rp.z+Dz)
+            .series(Dz, 0, 1).removeO()
+        )
+        # get the coefficient and the exponent of the leading term
+        (diff_c, diff_e) = local_diff.leadterm(Dz)
+        if diff_e == 0:
+            # remove the constant term from the local_diff
+            local_diff -= local_diff.subs(Dz, 0)
+            (diff_c, diff_e) = local_diff.leadterm(Dz)
 
-def get_ramification_points(sw, accuracy):
-    f = sw.curve.num_eq
+        return (complex(diff_c.n()), diff_e)
+
+
+def get_ramification_points(f, accuracy):
 
     ramification_points = []
 
@@ -319,8 +376,12 @@ def get_ramification_points(sw, accuracy):
         ):
             continue
         fx_at_z_0 = f.subs(z, z_0)
-        fx_at_z_0_coeffs = map(complex, sympy.Poly(fx_at_z_0, x).all_coeffs())
-        mx = get_root_multiplicity(fx_at_z_0_coeffs, complex(x_0), accuracy)
+        fx_at_z_0_coeffs = map(
+            complex, sympy.Poly(fx_at_z_0, x).all_coeffs()
+        )
+        mx = get_root_multiplicity(
+            fx_at_z_0_coeffs, complex(x_0), accuracy
+        )
         if mx > 1:
             fz_at_x_0 = f.subs(x, x_0)
             fz_at_x_0_coeffs = map(complex, 
@@ -330,7 +391,8 @@ def get_ramification_points(sw, accuracy):
                                        accuracy)
             if mz > 1:
                 continue
-            label = 'ramification point #{}'.format(len(ramification_points))
+            label = ('ramification point #{}'
+                     .format(len(ramification_points))
             rp = RamificationPoint(complex(z_0), complex(x_0), mx, label)
             logging.info("{}: z = {}, x = {}, i = {}."
                          .format(label, rp.z, rp.x, rp.i))
@@ -338,33 +400,19 @@ def get_ramification_points(sw, accuracy):
     return ramification_points
 
 
-def get_local_sw_diff(sw, ramification_point):
-    rp = ramification_point
-    # use Dz = z - rp.z & Dx = x - rp.x
-    Dz, Dx = sympy.symbols('Dz, Dx')
-    local_curve = (
-        sw.curve.num_eq
-        .subs(x, rp.x+Dx)
-        .subs(z, rp.z+Dz)
-        .series(Dx, 0, rp.i+1).removeO()
-        .series(Dz, 0, 2).removeO()
-    )
-    # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
-    a = local_curve.n().coeff(Dz).coeff(Dx, 0)
-    b = local_curve.n().coeff(Dx**rp.i).coeff(Dz, 0)
-    # Dx = Dx(Dz)
-    Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
-    local_diff = (
-        sw.diff.num_v
-        .subs(x, rp.x+Dx_Dz)
-        .subs(z, rp.z+Dz)
-        .series(Dz, 0, 1).removeO()
-    )
-    # get the coefficient and the exponent of the leading term
-    (diff_c, diff_e) = local_diff.leadterm(Dz)
-    if diff_e == 0:
-        # remove the constant term from the local_diff
-        local_diff -= local_diff.subs(Dz, 0)
-        (diff_c, diff_e) = local_diff.leadterm(Dz)
+def get_xs_of_weights(g_data, ffr_xs):
+    g_data = self.g_data
+    ffr_xs = self.ffr_xs
+    xs = numpy.zeros(len(g_data.weights), dtype=complex)
 
-    return (complex(diff_c.n()), diff_e)
+    if g_data.type == 'A' or g_data.type == 'D':
+        for i, cs in enumerate(g_data.weight_coefficients):
+            for j, c_j in enumerate(cs):
+                xs[i] += c_j * ffr_xs[j]
+    else:
+        raise NotImplementedError
+
+    return xs
+        
+
+

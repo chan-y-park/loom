@@ -200,8 +200,8 @@ class SWall(object):
             self[step] = y_i 
 
 
-def get_s_wall_seeds(sw, theta, ramification_point, config,):
-    rp = ramification_point
+def get_s_wall_seeds(sw, theta, config,):
+    rp = sw.ramification_point
     delta = config['accuracy']
     dt = config['size_of_small_step']
 
@@ -216,7 +216,7 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
 
     # 1.1 find the coefficient and the exponent of the leading term
     # of the SW differential at the ramification point.
-    lambda_0, diff_e = get_local_sw_diff(sw, rp)
+    lambda_0, diff_e = sw.get_local_sw_diff()
 
     # 1.2 find c_i, a phase factor for each S-wall.
     omega_1 = exp(2*pi*1j/rp.i)
