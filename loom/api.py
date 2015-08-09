@@ -11,7 +11,7 @@ import pdb
 
 from config import LoomConfig
 #from geometry import SWData, get_ramification_points
-from geometry import SWDataWithTrivialization
+from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
@@ -69,7 +69,7 @@ def generate_spectral_network(config, phase=None):
                      .format(phase))
         spectral_network = SpectralNetwork(
             phase=phase, 
-            ramification_points=ramification_points,
+            #ramification_points=ramification_points,
             config=config
         ) 
 
@@ -81,7 +81,9 @@ def generate_spectral_network(config, phase=None):
         logging.info('Generate multiple spectral networks.')
         logging.info('phase_range = {}.'.format(phase_range))
         spectral_network_list = parallel_get_spectral_network(
-            sw, ramification_points, config
+            sw, 
+            #ramification_points,
+            config,
         ) 
 
     end_time = time.time()

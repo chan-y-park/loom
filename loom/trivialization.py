@@ -2,9 +2,12 @@ import sympy
 import matplotlib.pyplot as plt
 import cmath
 import numpy as np
+
 from sympy import Poly
 from cmath import exp, pi
 from numpy.linalg import matrix_rank
+from itertools import combinations
+
 from geometry import SWData
 from misc import delete_duplicates
 
@@ -153,10 +156,11 @@ class IrregularSingularity:
         print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
 
 
+### TODO: Use g_data.weights at the base point as labels of sheets,
+### instead of integer indicies. Just a conceptual issue, because
+### the integer indicies are labeling g_data.weights in the same order.
 class SWDataWithTrivialization(SWData):
     """
-    The Trivialization class.
-
     All branch cuts are assumed to run vertically, emanating
     upwards from branch points and irregular singularities.
 
@@ -202,18 +206,11 @@ class SWDataWithTrivialization(SWData):
     ### Although I am not printing any explicit warning/error message 
     ### and the computation will go through for higher-type, but give a 
     ### wrong answer!
-    def __init__(self, sw, ramification_points,):
-        # Seiberg-Witten data encapsulated in SWData.
-        #self.sw = sw
+    def __init__(self, config,):
+        super(SWData, self).__init__(config)
 
         self.branch_points = []
         self.irregular_singularities = []
-        self.reference_sheets = None
-        self.sheet_weight_dictionary = None
-        self.base_point = None
-        self.min_distance = None
-        #self.max_distance = None
-        #self.center = None
 
         # z-coords of branch points.
         bpzs = delete_duplicates(
@@ -243,9 +240,10 @@ class SWDataWithTrivialization(SWData):
         ### sw.g_data.weights, i.e. reference_sheets[i]
         ### is the value of x corresponding to 
         ### sw.g_data.weights[i].
-        self.reference_xs = sw.curve.get_aligned_xs(self.base_point,
-                                                    sw.g_data)
-        self.reference_sheets = {i: x for i, x in enumerate(self.reference_xs)}
+        self.referece_ffr_xs, self.reference_xs = self.get_aligned_xs(
+            self.base_point,
+        )
+        #self.reference_sheets = {i: x for i, x in enumerate(self.reference_xs)}
         
         ### XXX: sheet_weight_dictionary -> sw.g_data.weights
         #self.sheet_weight_dictionary = self.build_dictionary()
@@ -263,8 +261,9 @@ class SWDataWithTrivialization(SWData):
             self.irregular_singularities.append(irr_sing)
 
         
-    #def track_sheets_along_path(self, z_path, sw, is_path_to_bp=False):
-    def get_sheets_along_path(self, z_path, sw, is_path_to_bp=False):
+    ### TODO: Need to implement tracking without using aligned x's?
+    def get_sheets_along_path(self, z_path, is_path_to_bp=False,
+                              from_ffr=True):
         """
         Tracks the sheets along a path.
         It checks at each step that tracking is successful,
@@ -278,38 +277,37 @@ class SWDataWithTrivialization(SWData):
         ### still perform it, and suppress the check only towards the 
         ### end of the tracking.
 
-        g_data = sw.g_data
-        #sheets_0 = [x for i, x in self.reference_sheets]
+        g_data = self.g_data
+        ffr_xs_0 = self.reference_ffr_xs
         xs_0 = self.reference_xs
         ### Each element is a sheet, which is a list of x's along the path.
         ### Initialized with reference_xs.
+        ### TODO: set each element to an integer rather than a float.
         sheets_along_path = [[x] for x in xs_0]
         
-        if is_path_to_bp == False:
-            for i, z in enumerate(z_path):
-                #sheets_1 = self.sheets_at_z(z)
-                xs_1 = sw.curve.get_xs(z, g_data=g_data)
-                sorted_xs = get_sorted_xs(
-                    xs_0, xs_1, check_tracking=True, 
+        for i, z in enumerate(z_path):
+            #xs_1 = self.get_xs(z)
+            ffr_xs_1, xs_1 = self.get_aligned_xs(z)
+            if is_path_to_bp == False:
+                sorted_ffr_xs = get_sorted_xs(
+                    ffr_xs_0, ffr_xs_1, check_tracking=True, 
                     index=1, z_0=z_path[i-1], z_1=z_path[i]
                 )
-                for i, s_i in enumerate(sheets_along_path):
-                    s_i.append(xs_0[i])
-                xs_0 = sorted_xs
+            else:
+                sorted_ffr_xs = get_sorted_sheets(ffr_xs_0, ffr_xs_1,
+                                              check_tracking=False)
+            if g_data.fundamental_representation_index == 1:
+                sorted_xs = sorted_ffr_xs
+            else:
+                sorted_xs = self.get_xs_of_weights_from_ffr_xs(sorted_ffr_xs)
+            for j, s_j in enumerate(sheets_along_path):
+                s_j.append(sorted_xs[j])
+            ffr_xs_0 = sorted_ffr_xs
 
-            return sheets_along_path
-            ### the result is of the form [sheet_path_1, sheet_path_2, ...]
-            ### where sheet_path_i = [x_0, x_1, ...] are the fiber coordinates
-            ### of the sheet along the path
-        else:
-            for i, z in enumerate(z_path):
-                xs_1 = sw.curve.get_xs(z, g_data=g_data)
-                sorted_xs = get_sorted_sheets(xs_0, xs_1, check_tracking=False)
-                for i, s_i in enumerate(sheets_along_path):
-                    s_i.append(xs_0[i])
-                xs_0 = sorted_xs
-
-            return sheets_along_path
+        ### the result is of the form [sheet_path_1, sheet_path_2, ...]
+        ### where sheet_path_i = [x_0, x_1, ...] are the fiber coordinates
+        ### of the sheet along the path
+        return sheets_along_path
 
 
     def get_sheets_at_z(self, z_pt, g_data=None):
@@ -324,7 +322,7 @@ class SWDataWithTrivialization(SWData):
         return final_sheets
 
     
-    #def sheet_monodromy(self, z_path):
+    ### TODO: Review this method.
     def get_sheet_monodromy(self, z_path):
         """
         Compares the x-coordinates of sheets at the 
@@ -393,9 +391,9 @@ class SWDataWithTrivialization(SWData):
         return perm_matrix
 
 
-    def analyze_branch_point(self, bp, g_data):
+    def analyze_branch_point(self, bp):
+        g_data = self.g_data
         path_to_pb = get_path_to(bp.z, self.base_point)
-        #tracked_sheets = self.track_sheets_along_path(path_to_bp,
         sheets_along_path = self.get_sheets_along_path(
             path_to_bp, is_path_to_bp=True
         )
@@ -417,26 +415,20 @@ class SWDataWithTrivialization(SWData):
         bp.groups = [c for c in clusters if len(c) > 1]
         bp.singles = [c[0] for c in clusters if len(c) == 1]
 
-        #return {'groups' : groups, \
-        #        'singles' : singles, \
-        #        'enum_sh' : enum_sh, \
-        #        'tracked_sheets' : tracked_sheets, \
-        #        'path_to_branch_point' : z_bp_path
-        #        }
-    
         bp.positive_roots = get_positive_roots_of_branch_point(
-            bp, g_data.positive_roots, self.sheet_weight_dictionary,  
+            bp, self.g_data,  
         )
         bp.order = len(bp.positive_roots) + 1
 
         path_around_bp = get_path_around(bp.z, self.base_point,
                                          self.min_distance)
-        bp.monodromy = self.sheet_monodromy(path_around_bp)
+        bp.monodromy = self.get_sheet_monodromy(path_around_bp)
+
 
     def analyze_irregular_singularity(self, irr_sing):
         path_around_z = get_path_around(z)
         self.monodromy = (
-            self.sheet_monodromy(path_around_z)
+            self.get_sheet_monodromy(path_around_z)
         )
         
 
@@ -525,7 +517,7 @@ def kr_delta(i, j):
         return 0
 
 
-def get_positive_roots_of_branch_point(bp, positive_roots, sheet_weight_dict):
+def get_positive_roots_of_branch_point(bp, g_data):
     """
     Determines the positive roots associated with 
     a branch point's 'structure', i.e. how the sheets
@@ -534,36 +526,36 @@ def get_positive_roots_of_branch_point(bp, positive_roots, sheet_weight_dict):
     any redundant roots that can be obtained as linear
     combinations of others.
     """
-    #algebra = self.algebra
     vanishing_positive_roots = []
+    positive_roots = g_data.positive_roots
+    ### Note that bp.groups carries indicies, which can be used
+    ### to map each x at the reference point to the weights, i.e.
+    ### reference_xs[i] <-> weights[i].
+    weights = g_data.weights
 
-    for g in groups:
+
+    for g in bp.groups:
         ### Within each group of colliding sheets/weights,
         ### consider all possible pairs, and compute 
         ### the corresponding difference.
         ### Then add it to the vanishing positive roots.
-        for i, s_1 in enumerate(g):
-            for j, s_2 in enumerate(g[i+1:]):
-                v_1 = sheet_weight_dict[s_1]
-                v_2 = sheet_weight_dict[s_2]
-                ### XXX: weights and roots are written in floats.
-                ### Should we worry about the precision?
-                #if any((v_1 - v_2 == x).all() for x in positive_roots):
-                if any(np.allclose(v_1 - v_2, x) for x in positive_roots):
-                    vanishing_positive_roots.append(v_1 - v_2)
+        for s_1, s_2 in combinations(g, 2):
+            v_1 = weights[s_1]
+            v_2 = weights[s_2]
+            if any(np.allclose(v_1 - v_2, x) for x in positive_roots):
+                vanishing_positive_roots.append(v_1 - v_2)
 
-                elif any(np.allclose(v_2 - v_1, x) for x in positive_roots):
-                    vanishing_positive_roots.append(v_2 - v_1)
+            elif any(np.allclose(v_2 - v_1, x) for x in positive_roots):
+                vanishing_positive_roots.append(v_2 - v_1)
 
-                else:
-                    raise ValueError("Branch point doesn't correspond "
-                                     "to a positive root.")
+            else:
+                raise ValueError("Branch point doesn't correspond "
+                                 "to a positive root.")
 
     ### Finally, cleanup the duplicates, 
-    ### as well as the roots which are not 
-    ### linearly independent
-    #independent_vanishing_positive_roots = keep_linearly_independent_vectors(vanishing_positive_roots)
-    #return independent_vanishing_positive_roots
+    ### as well as the roots which are not linearly independent
+    ### TODO: Check if we really need to remove linearly depedent 
+    ### roots. Isn't it part of the information a branch pt carries?
     return keep_linearly_independent_vectors(vanishing_positive_roots)
 
 

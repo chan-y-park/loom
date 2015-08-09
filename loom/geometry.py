@@ -164,101 +164,6 @@ class SWCurve:
             self.num_eq = None
 
 
-    def get_xs(self, z_0, g_data=None, for_ffr=False):
-        """
-        Return a numpy array of x-coordinates over z = z_0.
-        """
-        if for_ffr is True:
-            eq = self.ffr_num_eq
-        else:
-            eq = self.num_eq
-        ### TODO: Remove the following block after implementing
-        ### the equation of the curve for a general rep.
-        if eq is None:
-            return self.get_aligned_xs(z_0, g_data)
-
-        fx = eq.subs(z, z_0)
-        #xs = sympy.solve(fx, x)
-        ### The following may fail when the curve is not a polynomial.
-        sym_poly = sympy.Poly(fx, x, domain='CC')
-        coeff_list = map(complex, sym_poly.all_coeffs())
-        return numpy.roots(coeff_list)
-
-
-    def get_aligned_xs(self, z_0, g_data):
-        ### Return a numpy array of x-coordinates of the fibers over z.
-        ### The order of x's is the same as the order of the weights
-        ### in g_data.weights.
-        algebra_name = g_data.root_system
-        ffr_weights = g_data.ffr_weights
-        weights = g_data.weights
-        weight_basis = g_data.weight_basis
-        weight_coeffs = g_data.weight_coefficients
-
-        ### First order x's of the first fundamental cover
-        ### according to the order of ''g_data.weights'',
-        ### then construct the list of x's for the given representation
-        ### ordered according to weights.
-        ffr_xs = self.get_xs(z_0, for_ffr=True) 
-
-        if g_data.type == 'A':
-            """
-            Can consider ffr_xs to be aligned according to ffr_weights,
-            [(1, 0, 0, 0, 0, 0),
-             (0, 1, 0, 0, 0, 0),
-             ...,
-             (0, 0, 0, 0, 0, 1)].
-            """
-            if g_data.fundamental_representation_index == 1:
-                xs = ffr_xs
-            else:
-                xs = get_xs_of_weights(g_data, ffr_xs)
-
-        elif g_data.type == 'D':
-            """
-            Align ffr_xs according to ffr_weights,
-            [(1, 0, 0, 0, 0),
-             (0, 1, 0, 0, 0),
-             ...,
-             (0, 0, 0, 0, 1),
-             (-1, 0, 0, 0, 0),
-             ...
-             (0, 0, 0, 0, -1)]      
-            """
-            sorted_ffr_xs = sorted(
-                ffr_xs, key=lambda z: (z.real, z.imag), reverse=True,
-            )
-            positive_xs = []
-            negative_xs = []
-            for i in range(g_data.rank):
-                px_i = sorted_ffr_xs[i]
-                nx_i = sorted_ffr_xs[-(i+1)]
-                if numpy.isclose(px_i, -nx_i) is False:
-                    warn("get_ordered_xs(): No pairing of x's in the D-type, "
-                         "({}, {}) != (x, -x).".format(px_i, nx_i))
-                else:
-                    positive_xs.append(px_i)
-                    negative_xs.append(nx_i)
-            aligned_ffr_xs = positive_xs + negative_xs
-
-            if g_data.fundamental_representation_index == 1:
-                xs = aligned_ffr_xs
-            else:
-                xs = get_xs_of_weights(g_data, aligned_ffr_xs)
-
-        elif g_data.type == 'E':
-            ### !!!!!
-            ### Here I am pairing any sheet with any weight of E_6 and E_7 
-            ### However, the Weyl group does not contains permutations 
-            ### of 27 (resp 56) elements so it's probably NOT OK to 
-            ### pair sheets with weights as we like.
-            ### !!!!!
-            #xs = ffr_xs
-            raise NotImplementedError
-     
-        return xs
-
-
 
 class SWDiff:
     def __init__(self, v_str, g_data=None, Cz=None, dCz=None, parameters=None):
@@ -326,6 +231,122 @@ class SWData(object):
             self.curve.num_eq, self.accuracy
         )
 
+
+    def get_xs(self, z_0, for_ffr=False):
+        """
+        Return a numpy array of x-coordinates over z = z_0.
+        """
+        g_data = self.g_data
+        if for_ffr is True:
+            eq = self.ffr_num_eq
+        else:
+            eq = self.num_eq
+        ### TODO: Remove the following block after implementing
+        ### the equation of the curve for a general rep.
+        if eq is None:
+            return self.get_aligned_xs(z_0, g_data)
+
+        fx = eq.subs(z, z_0)
+        #xs = sympy.solve(fx, x)
+        ### The following may fail when the curve is not a polynomial.
+        sym_poly = sympy.Poly(fx, x, domain='CC')
+        coeff_list = map(complex, sym_poly.all_coeffs())
+        return numpy.roots(coeff_list)
+
+
+    def get_aligned_xs(self, z_0):
+        ### Returns (aligned_ffr_xs, aligned_xs), where each element is
+        ### a numpy array of x-coordinates of the fibers over z.
+        ### The order of x's is the same as the order of the weights
+        ### in g_data.weights.
+
+        #algebra_name = self.g_data.root_system
+        algebra_type = self.g_data.type
+        #ffr_weights = self.g_data.ffr_weights
+        #weights = self.g_data.weights
+        #weight_basis = self.g_data.weight_basis
+        #weight_coeffs = self.g_data.weight_coefficients
+        fund_rep_index = self.g_data.fundamental_representation_index
+
+        ### First order x's of the first fundamental cover
+        ### according to the order of ''g_data.weights'',
+        ### then construct the list of x's for the given representation
+        ### ordered according to weights.
+        ffr_xs = self.get_xs(z_0, for_ffr=True) 
+
+        if algebra_type == 'A':
+            """
+            Can consider ffr_xs to be aligned according to ffr_weights,
+            [(1, 0, 0, 0, 0, 0),
+             (0, 1, 0, 0, 0, 0),
+             ...,
+             (0, 0, 0, 0, 0, 1)].
+            """
+            aligned_ffr_xs = ffr_xs
+
+            if fund_rep_index == 1 or for_ffr == True:
+                xs = ffr_xs
+            else:
+                xs = self.get_xs_of_weights_from_ffr_xs(ffr_xs)
+
+        elif algebra_type == 'D':
+            """
+            Align ffr_xs according to ffr_weights,
+            [(1, 0, 0, 0, 0),
+             (0, 1, 0, 0, 0),
+             ...,
+             (0, 0, 0, 0, 1),
+             (-1, 0, 0, 0, 0),
+             ...
+             (0, 0, 0, 0, -1)]      
+            """
+            sorted_ffr_xs = sorted(
+                ffr_xs, key=lambda z: (z.real, z.imag), reverse=True,
+            )
+            positive_xs = []
+            negative_xs = []
+            for i in range(g_data.rank):
+                px_i = sorted_ffr_xs[i]
+                nx_i = sorted_ffr_xs[-(i+1)]
+                if numpy.isclose(px_i, -nx_i) is False:
+                    warn("get_ordered_xs(): No pairing of x's in the D-type, "
+                         "({}, {}) != (x, -x).".format(px_i, nx_i))
+                else:
+                    positive_xs.append(px_i)
+                    negative_xs.append(nx_i)
+            aligned_ffr_xs = positive_xs + negative_xs
+
+            if fund_rep_index == 1 or for_ffr == True:
+                xs = aligned_ffr_xs
+            else:
+                xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
+
+        elif g_data.type == 'E':
+            ### !!!!!
+            ### Here I am pairing any sheet with any weight of E_6 and E_7 
+            ### However, the Weyl group does not contains permutations 
+            ### of 27 (resp 56) elements so it's probably NOT OK to 
+            ### pair sheets with weights as we like.
+            ### !!!!!
+            #xs = ffr_xs
+            raise NotImplementedError
+     
+        return (aligned_ffr_xs, xs)
+
+
+    def get_xs_of_weights_from_ffr_xs(self, ffr_xs):
+        g_data = self.g_data
+        xs = numpy.zeros(len(g_data.weights), dtype=complex)
+
+        if g_data.type == 'A' or g_data.type == 'D':
+            for i, cs in enumerate(g_data.weight_coefficients):
+                for j, c_j in enumerate(cs):
+                    xs[i] += c_j * ffr_xs[j]
+        else:
+            raise NotImplementedError
+
+        return xs
+            
 
     #def get_local_sw_diff(sw, ramification_point):
     def get_local_sw_diff(self):
@@ -399,20 +420,5 @@ def get_ramification_points(f, accuracy):
             ramification_points.append(rp)
     return ramification_points
 
-
-def get_xs_of_weights(g_data, ffr_xs):
-    g_data = self.g_data
-    ffr_xs = self.ffr_xs
-    xs = numpy.zeros(len(g_data.weights), dtype=complex)
-
-    if g_data.type == 'A' or g_data.type == 'D':
-        for i, cs in enumerate(g_data.weight_coefficients):
-            for j, c_j in enumerate(cs):
-                xs[i] += c_j * ffr_xs[j]
-    else:
-        raise NotImplementedError
-
-    return xs
-        
 
 

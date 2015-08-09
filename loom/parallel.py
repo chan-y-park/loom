@@ -16,7 +16,7 @@ def init_process():
 def a_child_process(
     sw,
     phase,
-    ramification_points,
+    #ramification_points,
     config,
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks
@@ -29,7 +29,11 @@ def a_child_process(
                  .format(job_id, theta_n, phase)
     )
 
-    spectral_network = SpectralNetwork(phase, ramification_points, config) 
+    spectral_network = SpectralNetwork(
+        phase, 
+        #ramification_points, 
+        config
+    ) 
 
     spectral_network.grow(sw, config)
 
@@ -45,7 +49,7 @@ def a_child_process(
 
 def parallel_get_spectral_network(
     sw, 
-    ramification_points, 
+    #ramification_points, 
     config,
 ):
     spectral_network_list = []
@@ -90,7 +94,7 @@ def parallel_get_spectral_network(
                 args=(
                     sw,
                     phase,
-                    ramification_points,
+                    #ramification_points,
                     config,
                     shared_n_started_spectral_networks,
                     shared_n_finished_spectral_networks,

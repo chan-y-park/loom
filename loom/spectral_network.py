@@ -27,14 +27,14 @@ class SpectralNetwork:
         self,
         phase=None,
         #ramification_points=[],
-        ramification_points=None,
-        config=None,
+        #ramification_points=None,
+        #config=None,
     ):
         self.phase = phase
-        if ramification_points is None:
-            self.ramification_points = []
-        else:
-            self.ramification_points = ramification_points
+        #if ramification_points is None:
+        #    self.ramification_points = []
+        #else:
+        #    self.ramification_points = ramification_points
         self.hit_table = None 
         #self.hit_table = HitTable(config['size_of_bin'])
 
@@ -59,8 +59,10 @@ class SpectralNetwork:
         logging.info('Start growing a new spectral network...')
 
         logging.info('Seed S-walls at ramification points...')
-        for rp in self.ramification_points:
-            s_wall_seeds = get_s_wall_seeds(sw, self.phase, rp, config)
+        #for rp in self.ramification_points:
+        for rp in sw.ramification_points:
+            #s_wall_seeds = get_s_wall_seeds(sw, self.phase, rp, config)
+            s_wall_seeds = get_s_wall_seeds(sw, self.phase, config)
             for z_0, x_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
@@ -80,7 +82,8 @@ class SpectralNetwork:
         ppzs = sw.punctures
 
         rpzs = []
-        for rp in self.ramification_points:
+        #for rp in self.ramification_points:
+        for rp in sw.ramification_points:
             rpzs.append(rp.z)
 
         n_finished_s_walls = 0 
@@ -142,9 +145,9 @@ class SpectralNetwork:
         json_data = {}
 
         json_data['phase'] = self.phase
-        json_data['ramification_points'] = [
-            rp.get_json_data() for rp in self.ramification_points
-        ]
+        #json_data['ramification_points'] = [
+        #    rp.get_json_data() for rp in self.ramification_points
+        #]
         json_data['s_walls'] = [s_wall.get_json_data()
                                 for s_wall in self.s_walls]
         json_data['joints'] = [joint.get_json_data()
@@ -164,10 +167,10 @@ class SpectralNetwork:
 
         self.phase = json_data['phase']
 
-        for rp_data in json_data['ramification_points']:
-            rp = RamificationPoint()
-            rp.set_json_data(rp_data)
-            self.ramification_points.append(rp)
+        #for rp_data in json_data['ramification_points']:
+        #    rp = RamificationPoint()
+        #    rp.set_json_data(rp_data)
+        #    self.ramification_points.append(rp)
 
         for s_wall_data in json_data['s_walls']:
             an_s_wall = SWall()
