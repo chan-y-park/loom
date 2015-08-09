@@ -57,12 +57,13 @@ class SpectralNetwork:
         logging.info('Seed S-walls at ramification points...')
         for rp in self.ramification_points:
             s_wall_seeds = get_s_wall_seeds(sw, self.phase, rp, config)
-            for z_0, x_0 in s_wall_seeds:
+            for z_0, x_0, M_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
                     SWall(
                         z_0=z_0,
                         x_0=x_0,
+                        M_0=M_0,
                         parents=[rp.label],
                         label=label,
                         n_steps=n_steps,
@@ -121,6 +122,7 @@ class SpectralNetwork:
                     SWall(
                         z_0=joint.z,
                         x_0=joint.x,
+                        M_0=joint.M,
                         parents=joint.parents,
                         label=label,
                         n_steps=n_steps,
@@ -267,8 +269,15 @@ class SpectralNetwork:
                         ip_x_p_0 = n_nearest(ip_xs, x_p[0], 1)[0]
                         ip_x_p_1 = n_nearest(ip_xs, x_p[1], 1)[0]
 
+                        # find mass of parent S-walls: this is approximate,
+                        # since we don't interpolate precisely to the joint
+                        # TODO: improve by doing precise interpolation
+                        M_n = new_s_wall.M[t_n]
+                        M_p = prev_s_wall.M[t_p]
+
                         a_joint = get_joint(
                             ip_z, ip_x_n_0, ip_x_n_1, ip_x_p_0, ip_x_p_1,
+                            M_n, M_p,
                             new_s_wall.label,
                             prev_s_wall.label,
                             accuracy=config['accuracy'],
@@ -395,10 +404,16 @@ class SpectralNetwork:
                             d_ip_x0 = n_nearest(ip_xs, d_x[0], 1)[0]
                             d_ip_x1 = n_nearest(ip_xs, d_x[1], 1)[0]
 
+                            # TODO: correctly populate the masses of the
+                            # parent walls
+                            M_0 = 0
+                            M_1 = 0
+
                             a_joint_label = ('joint ' +
                                              '#{}'.format(len(self.joints)))
                             a_joint = get_joint(
                                 ip_z, c_ip_x0, c_ip_x1, d_ip_x0, d_ip_x1,
+                                M_0, M_1,
                                 self.s_walls[i_c].label,
                                 self.s_walls[i_d].label,
                                 config['accuracy'],

@@ -199,14 +199,15 @@ def get_ode(sw, phase, accuracy):
     F = sympy.lambdify((z, x), -df_dz/df_dx)
     v = sympy.lambdify((z, x), sw.diff.num_v)
 
-    def ode_f(t, zx1x2):
-        z_i = zx1x2[0]
-        x1_i = zx1x2[1]
-        x2_i = zx1x2[2]
+    def ode_f(t, zx1x2M):
+        z_i = zx1x2M[0]
+        x1_i = zx1x2M[1]
+        x2_i = zx1x2M[2]
         dz_i_dt = exp(phase*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
         dx1_i_dt = F(z_i, x1_i) * dz_i_dt
         dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-        return [dz_i_dt, dx1_i_dt, dx2_i_dt]
+        dM_dt = 1
+        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
 
     ode = scipy.integrate.ode(ode_f)
     ode.set_integrator(
