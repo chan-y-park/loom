@@ -67,9 +67,9 @@ class SWDiff:
 
 class SWData:
     """
-    A class containing a Seiberg-Witten curve 
+    A class containing a Seiberg-Witten curve
         f(z, x) = 0
-    and a Seiberg-Witten differential of the form 
+    and a Seiberg-Witten differential of the form
         \lambda = v(x, z) dz
     """
     def __init__(self, config):
@@ -79,25 +79,25 @@ class SWData:
         self.punctures = None
 
         # PSL2C-transformed z & dz
-        Cz = PSL2C(config['mt_params'], z, inverse=True) 
+        Cz = PSL2C(config['mt_params'], z, inverse=True)
         dCz = Cz.diff(z)
 
         # Seiberg-Witten curve
         self.curve.sym_eq = sympy.simplify(
             sympy.sympify(self.curve.eq_str).subs(z, Cz)
         )
-        # num_eq is from sym_eq with its parameters 
+        # num_eq is from sym_eq with its parameters
         # substituted with numerical values.
         self.curve.num_eq = self.curve.sym_eq.subs(self.parameters)
         logging.info('\nSeiberg-Witten curve: %s = 0\n',
                      sympy.latex(self.curve.num_eq))
 
         # Seiberg-Witten differential
-        # sym_v is a SymPy expression. 
+        # sym_v is a SymPy expression.
         self.diff.sym_v = sympy.simplify(
             sympy.sympify(self.diff.v_str).subs(z, Cz) * dCz
         )
-        # num_v is from sym_v with its parameters 
+        # num_v is from sym_v with its parameters
         # substituted with numerical values.
         self.diff.num_v = self.diff.sym_v.subs(self.parameters)
         logging.info('\nSeiberg-Witten differential: %s dz\n',
@@ -134,9 +134,9 @@ def get_ramification_points(sw, accuracy):
         mx = get_root_multiplicity(fx_at_z_0_coeffs, complex(x_0), accuracy)
         if mx > 1:
             fz_at_x_0 = f.subs(x, x_0)
-            fz_at_x_0_coeffs = map(complex, 
+            fz_at_x_0_coeffs = map(complex,
                                    sympy.Poly(fz_at_x_0, z).all_coeffs())
-            
+
             mz = get_root_multiplicity(fz_at_x_0_coeffs, complex(z_0),
                                        accuracy)
             if mz > 1:
@@ -188,7 +188,7 @@ def get_fibers(config, z_0):
     sw = SWData(config)
     fx = sw.curve.num_eq.subs(z, z_0)
     xs = sympy.solve(fx, x)
-    return map(complex, xs) 
+    return map(complex, xs)
 
 
 def sage_solve_poly_system(poly_system):

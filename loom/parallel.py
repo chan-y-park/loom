@@ -29,7 +29,7 @@ def a_child_process(
                  .format(job_id, theta_n, phase)
     )
 
-    spectral_network = SpectralNetwork(phase, ramification_points, config) 
+    spectral_network = SpectralNetwork(phase, ramification_points, config)
 
     spectral_network.grow(sw, config)
 
@@ -44,8 +44,8 @@ def a_child_process(
 
 
 def parallel_get_spectral_network(
-    sw, 
-    ramification_points, 
+    sw,
+    ramification_points,
     config,
 ):
     spectral_network_list = []
@@ -86,7 +86,7 @@ def parallel_get_spectral_network(
     try:
         results = [
             pool.apply_async(
-                a_child_process, 
+                a_child_process,
                 args=(
                     sw,
                     phase,

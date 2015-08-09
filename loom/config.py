@@ -35,7 +35,7 @@ class LoomConfig:
     def __init__(self):
         self.data = {}
         #self.data['sw_parameters'] = {}
-        self.parser = None 
+        self.parser = None
 
 
     def __setitem__(self, option, value):

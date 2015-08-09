@@ -18,9 +18,9 @@ from misc import PSL2C, put_on_cylinder
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
-        self, 
+        self,
         spectral_network,
-        z_range_limits=None, 
+        z_range_limits=None,
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
@@ -31,7 +31,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             if plot_on_cylinder is True:
                 z_range_limits = [-pi, pi, -5, 5]
             else:
-                z_range_limits = [-5, 5, -5, 5] 
+                z_range_limits = [-5, 5, -5, 5]
         x_min, x_max, y_min, y_max = z_range_limits
 
         branch_points = []
@@ -42,7 +42,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                 rp_z = rp.z
             branch_points.append([rp_z.real, rp_z.imag])
             labels['branch_points'].append(rp.label)
-   
+
         joints = []
         for i, jp in enumerate(spectral_network.joints):
             if plot_on_cylinder is True:
@@ -68,7 +68,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                         split_at.append(j)
                 z_segs = numpy.split(zs_on_cylinder, split_at)
             else:
-                z_segs = [s_wall.z] 
+                z_segs = [s_wall.z]
 
             for z_seg in z_segs:
                 segments.append([z_seg.real, z_seg.imag])
@@ -92,8 +92,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
 class NetworkPlot(SpectralNetworkPlotBase):
     """
     This class implements UIs using matplotlib widgets
-    so that it can be backend-independent. 
-    
+    so that it can be backend-independent.
+
     The content of this class is independent of the parent class.
     It only depends on the grandparent class, which should be
     'NetworkPlotBase'. Therefore this class can inherit any class
@@ -101,7 +101,7 @@ class NetworkPlot(SpectralNetworkPlotBase):
     parent in the definition of this class.
     """
     def __init__(
-        self, 
+        self,
         title=None,
     ):
         super(NetworkPlot, self).__init__(
@@ -161,7 +161,7 @@ class NetworkPlot(SpectralNetworkPlotBase):
             self.button_prev.on_clicked(self.show_prev_plot)
 
             self.index_text = self.figure.text(
-                center - index_width/2, (button_bottom+button_height)/2, 
+                center - index_width/2, (button_bottom+button_height)/2,
                 "{}/{}".format(self.current_plot_idx, len(self.plots)-1)
             )
 
@@ -176,15 +176,15 @@ class NetworkPlot(SpectralNetworkPlotBase):
 
 class NetworkPlotTk(SpectralNetworkPlotBase):
     """
-    This class implements UIs using Tkinter. 
-    
+    This class implements UIs using Tkinter.
+
     The content of this class is independent of the parent class.
     It only depends on the grandparent class, which should be
     'NetworkPlotBase'. Therefore this class can inherit any class
     whose parent is 'NetworkPlotBase'; just change the name of the
     parent in the definition of this class.
     """
-    def __init__(self, 
+    def __init__(self,
         master=None,
         title=None,
     ):
@@ -197,7 +197,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
             master.withdraw()
         self.master = master
 
-        # Create a Toplevel widget, which is a child of GUILoom 
+        # Create a Toplevel widget, which is a child of GUILoom
         # and contains plots,
         self.toplevel = tk.Toplevel(master)
         self.toplevel.wm_title(title)
@@ -205,7 +205,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         self.plot_idx_scale = None
 
         self.plot_idx_entry = None
-        self.plot_idx_entry_var = tk.StringVar() 
+        self.plot_idx_entry_var = tk.StringVar()
         self.plot_idx_entry_var.trace('w', self.plot_idx_entry_change)
 
         self.canvas = FigureCanvas(
@@ -219,7 +219,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         toolbar = NavigationToolbar(self.canvas, self.toplevel)
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-    
+
 
     def scale_action(self, scale_value):
         new_plot_idx = int(scale_value)
@@ -298,7 +298,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
                 showvalue=0,
                 to=len(self.plots)-1,
                 variable=self.current_plot_idx,
-            ) 
+            )
             self.plot_idx_scale.pack(
                 expand=True,
                 fill=tk.X,
@@ -312,7 +312,7 @@ def plot_s_walls(
     plot_range=[-5, 5, -5, 5],
     plot_data_points=False,
     marked_points=[],
-    colors=['b', 'g', 'r', 'c', 'm', 'y'], 
+    colors=['b', 'g', 'r', 'c', 'm', 'y'],
 ):
     x_min, x_max, y_min, y_max = plot_range
 
@@ -329,10 +329,10 @@ def plot_s_walls(
     )
     # Plot branch points
     for rp in ramification_points:
-        zax.plot(rp.z.real, rp.z.imag, 'x', markeredgewidth=2, markersize=8, 
+        zax.plot(rp.z.real, rp.z.imag, 'x', markeredgewidth=2, markersize=8,
                  color='k', label=rp.label,)
     for jp in joints:
-        zax.plot(jp.z.real, jp.z.imag, '+', markeredgewidth=2, markersize=8, 
+        zax.plot(jp.z.real, jp.z.imag, '+', markeredgewidth=2, markersize=8,
                  color='k', label=jp.label,)
     for p in marked_points:
         zax.plot(p[0].real, p[0].imag, 'o', markeredgewidth=2,
@@ -347,13 +347,13 @@ def plot_s_walls(
         aspect='equal',
     )
     for rp in ramification_points:
-        xax.plot(rp.x.real, rp.x.imag, 'x', markeredgewidth=2, markersize=8, 
+        xax.plot(rp.x.real, rp.x.imag, 'x', markeredgewidth=2, markersize=8,
                  color='k', label=rp.label,)
     for jp in joints:
         for j, x_j in enumerate(jp.x):
             xax.plot(
                 x_j.real, x_j.imag,
-                '+', markeredgewidth=2, markersize=8, color='k', 
+                '+', markeredgewidth=2, markersize=8, color='k',
                 label=(jp.label + ', {}'.format(j)),
             )
     for p in marked_points:
@@ -365,7 +365,7 @@ def plot_s_walls(
         # z-plane
         zrs = s_wall.z.real
         zis = s_wall.z.imag
-        zax.plot(zrs, zis, '-', color=s_wall_color, 
+        zax.plot(zrs, zis, '-', color=s_wall_color,
                  label=s_wall.label)
         if(plot_data_points == True):
             zax.plot(zrs, zis, 'o', color=s_wall_color, label=s_wall.label)
@@ -376,15 +376,15 @@ def plot_s_walls(
             xrs = x_j.real
             xis = x_j.imag
             xax.plot(
-                xrs, xis, '-', color=s_wall_color, 
+                xrs, xis, '-', color=s_wall_color,
                 label=(s_wall.label + ',{}'.format(j))
             )
             if(plot_data_points == True):
                 xax.plot(
-                    xrs, xis, 'o', color=s_wall_color, 
+                    xrs, xis, 'o', color=s_wall_color,
                     label=(s_wall.label + ',{}'.format(j))
                 )
-            
+
     mpldatacursor.datacursor(
         formatter='{label}'.format,
         #tolerance=2,
@@ -395,7 +395,7 @@ def plot_s_walls(
     pyplot.show()
 
 def plot_segments(
-    segments, 
+    segments,
     marked_points=[],
     plot_range=[-5, 5, -5, 5],
     plot_data_points=False
@@ -421,4 +421,4 @@ def plot_segments(
                     color='k')
 
     pyplot.show()
-    
+

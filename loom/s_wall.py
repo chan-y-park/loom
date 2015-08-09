@@ -18,7 +18,7 @@ class Joint:
     def __init__(self, z=None, x=None, parents=None, label=None,):
         self.z = z
         self.x = x
-        self.parents = parents 
+        self.parents = parents
         self.label = label
 
     def __eq__(self, other):
@@ -47,7 +47,7 @@ class Joint:
         for i in range(len(self.x)):
             if (abs(self.x[i] - other.x[i]) > accuracy):
                 return False
-        return True 
+        return True
 
 
 class SWall(object):
@@ -56,8 +56,8 @@ class SWall(object):
         """
         SWall.z is a NumPy array of length n_steps+1,
         where z[t] is the base coordinate.
-        
-        SWall.x is a Numpy array of the fiber coordinates at t, i.e. 
+
+        SWall.x is a Numpy array of the fiber coordinates at t, i.e.
             SWall.x[t] = [x[t][0], x[t][1], ...].
         """
         if n_steps is None:
@@ -85,7 +85,7 @@ class SWall(object):
 
     def __getitem__(self, t):
         """
-        Get the data of the S-wall at t, where 
+        Get the data of the S-wall at t, where
             data = [z[t], x[t][0], x[t][1], ...]
         """
         return numpy.concatenate([[self.z[t]], self.x[t]])
@@ -112,13 +112,13 @@ class SWall(object):
 
 
     def set_json_data(self, json_data):
-        self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']]) 
+        self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
         self.x = numpy.array(
             [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
         )
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
-    
+
 
     def get_turning_points(self):
         """
@@ -159,7 +159,7 @@ class SWall(object):
         size_of_small_step = config['size_of_small_step']
         size_of_large_step = config['size_of_large_step']
         size_of_neighborhood = config['size_of_neighborhood']
-        size_of_puncture_cutoff = config['size_of_puncture_cutoff'] 
+        size_of_puncture_cutoff = config['size_of_puncture_cutoff']
 
         step = 0
         z_i = self.z[0]
@@ -181,7 +181,7 @@ class SWall(object):
 
             # Stop if z is ouside the range limit.
             if z_range_limits is not None:
-                if (z_i.real < z_real_min or 
+                if (z_i.real < z_real_min or
                     z_i.real > z_real_max or
                     z_i.imag < z_imag_min or
                     z_i.imag > z_imag_max):
@@ -189,7 +189,7 @@ class SWall(object):
                     break
 
             # Adjust the step size if z is near a branch point.
-            if (len(rpzs) > 0 and 
+            if (len(rpzs) > 0 and
                 min([abs(z_i - rpz) for rpz in rpzs]) < size_of_neighborhood):
                 dt = size_of_small_step
             else:
@@ -197,7 +197,7 @@ class SWall(object):
 
             y_i = ode.integrate(ode.t + dt)
             z_i = y_i[0]
-            self[step] = y_i 
+            self[step] = y_i
 
 
 def get_s_wall_seeds(sw, theta, ramification_point, config,):
@@ -206,7 +206,7 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
     dt = config['size_of_small_step']
 
     ###
-    # 1. Find the first-order approximations of the starting points 
+    # 1. Find the first-order approximations of the starting points
     # of S-walls around a given branch point, which is of the form
     # \Delta z_i = c_i / (\lambda_0)^(rp.i/(rp.i+1))
     # at a branch point from a ramification point, and
@@ -232,14 +232,14 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
         for i in range(1, rp.i):
             new_locs = []
             # and go over all the omegas
-            for j in range(rp.i): 
+            for j in range(rp.i):
                 if j+i < rp.i:
                     new_loc = 1/(omega[j]-omega[j+i])
                 else:
                     new_loc = 1/(omega[j]-omega[j+i-rp.i])
                 new_loc = cpow(new_loc, rp.i, rp.i+1)
                 new_locs += [new_loc*beta_i for beta_i in beta]
-            new_locs = remove_duplicate(new_locs, 
+            new_locs = remove_duplicate(new_locs,
                                         lambda l1, l2: abs(l1 - l2) < delta)
             cs += [(c*exp(theta*1j*sympy.Rational(rp.i, rp.i+1)) /
                     cpow(lambda_0, rp.i, rp.i+1)) for c in new_locs]
@@ -255,29 +255,29 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
         logging.error('unknown form of sw.diff at rp ({}, {}): '
                       'diff_e  = {}'.format(rp.z, rp.x, diff_e))
         raise GetSWallSeedsError(diff_e)
-        
+
     cs = gather(cs, lambda c1, c2: abs(c1 - c2) < delta)
     logging.debug('list of c = %s, # = %d', cs, len(cs))
 
-    # 2. Now calculate \Delta z_i for each S-wall and 
-    # find the two points on the curve that are projected onto it.  
+    # 2. Now calculate \Delta z_i for each S-wall and
+    # find the two points on the curve that are projected onto it.
     seeds = []
     for c in cs:
         cv = c[0]   # value of c
         cm = c[1]   # multiplicity of c
-        # resize to the size of the small step 
+        # resize to the size of the small step
         Delta_z = cv/abs(cv)*delta
         z_0 = rp.z + Delta_z
         xs_at_z_0 = find_xs_at_z_0(sw.curve.num_eq, z_0, rp.x, rp.i)
-        dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
+        dev_phases = [pi for i in range(len(xs_at_z_0)**2)]
         for i in range(len(xs_at_z_0)):
-            diffx = sw.diff.num_v.subs(z, z_0) 
+            diffx = sw.diff.num_v.subs(z, z_0)
             v_i = complex(diffx.subs(x, xs_at_z_0[i]))
             for j in range(len(xs_at_z_0)):
                 if i == j:
                     continue
                 else:
-                    v_j = complex(diffx.subs(x, xs_at_z_0[j])) 
+                    v_j = complex(diffx.subs(x, xs_at_z_0[j]))
                     delta_z = exp(1j*theta)/(v_i - v_j)*dt
                     # flattened index
                     fij = i*len(xs_at_z_0) + j
@@ -288,11 +288,11 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
             seeds.append(
                 [z_0, [xs_at_z_0[i], xs_at_z_0[j]]]
             )
-        
+
     return seeds
 
 
-def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy=None, 
+def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy=None,
               xs_at_z=None, g_data=None, label=None):
     """
     Return a joint if formed, otherwise return None.
@@ -332,5 +332,5 @@ def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):
             return False
         else:
             return True
-        
-    
+
+
