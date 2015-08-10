@@ -6,7 +6,7 @@ from warnings import warn
 from pprint import pformat
 
 import sage_subprocess
-from misc import ctor2, r2toc, get_root_multiplicity, PSL2C
+from misc import ctor2, r2toc, get_root_multiplicity, PSL2C, n_nearest_indices
 
 x, z = sympy.symbols('x z')
 
@@ -217,7 +217,6 @@ class SWCurve:
         return numpy.roots(coeff_list)
 
 
-
 class SWDiff:
     def __init__(self, v_str, g_data=None, Cz=None, dCz=None, parameters=None):
         ### sym_v is a SymPy expression. 
@@ -306,6 +305,7 @@ class SWData(object):
 
         #algebra_name = self.g_data.root_system
         algebra_type = self.g_data.type
+        algebra_rank = self.g_data.rank
         #ffr_weights = self.g_data.ffr_weights
         #weights = self.g_data.weights
         #weight_basis = self.g_data.weight_basis
@@ -344,23 +344,33 @@ class SWData(object):
              ...
              (0, 0, 0, 0, -1)]      
             """
-            sorted_ffr_xs = sorted(
-                ffr_xs, key=lambda z: (z.real, z.imag), reverse=True,
+            sorted_ffr_xs = numpy.array(
+                sorted(ffr_xs, key=lambda z: (z.real, z.imag), reverse=True,)
             )
-            positive_xs = []
-            negative_xs = []
-            for i in range(g_data.rank):
-                px_i = sorted_ffr_xs[i]
-                nx_i = sorted_ffr_xs[-(i+1)]
-                if numpy.isclose(px_i, -nx_i) is False:
+            ### Pick x's corresponding to the positive weights.
+            ### The order among the positive x's is arbitrary.
+            positive_xs = sorted_ffr_xs[:algebra_rank]
+            ### Then pick an x corresponding to each negative weight
+            ### aligned according to the positive x's.
+            negative_xs = numpy.zeros_like(positive_xs)
+            for nx in sorted_ffr_xs[algebra_rank:]:
+                difference = numpy.fromiter(
+                    (abs(px - (-nx)) for px in positive_xs),
+                    dtype=float,
+                )
+                j = difference.argsort()[0]
+                ### Check the pairing of positive and negative x's.
+                px_j = positive_xs[j]
+                if numpy.isclose(px_j, -nx) is False:
                     warn("get_ordered_xs(): No pairing of x's in the D-type, "
-                         "({}, {}) != (x, -x).".format(px_i, nx_i))
+                         "({}, {}) != (x, -x).".format(px_j, nx))
                 else:
-                    positive_xs.append(px_i)
-                    negative_xs.append(nx_i)
-            aligned_ffr_xs = positive_xs + negative_xs
+                    ### Put the negative x at the same index
+                    ### as its positive pair.
+                    negative_xs[j] = nx
+            aligned_ffr_xs = numpy.concatenate((positive_xs, negative_xs))
 
-            if fund_rep_index == 1 or for_ffr == True:
+            if fund_rep_index == 1:
                 xs = aligned_ffr_xs
             else:
                 xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
