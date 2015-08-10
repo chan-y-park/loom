@@ -2,6 +2,7 @@ import sympy
 import matplotlib.pyplot as plt
 import cmath
 import numpy as np
+import logging
 
 from sympy import Poly
 from cmath import exp, pi
@@ -103,20 +104,6 @@ class BranchPoint:
         self.order = None
         self.monodromy = None
 
-        #self.data = trivialization.analyze_branch_point(self.z)
-        #self.trivialization = trivialization
-        
-        #bp_data = trivialization.analyze_branch_point(self.z)
-        #self.sheet_tracks_to_bp = bp_data['tracked_sheets']
-        #self.path_to_bp = bp_data['path_to_branch_point']
-
-        #self.sheet_tracks_around_bp = (
-        #    trivialization.track_sheets_along_path(path_around_z)
-        #)
-
-        #path_around_z = trivialization.path_around_pt(z)
-        #self.monodromy = trivialization.sheet_monodromy(path_around_z)
-
     def print_info(self):
         print "\n---------------------------------------------------------\
                \nBranch Point at z = %s\
@@ -125,7 +112,6 @@ class BranchPoint:
         print "this is the branch point structure"
         print "groups = {}".format(self.groups)
         print "singles = {}".format(self.singles)
-        print "positive roots = {}".format(self.positive_roots)
         print "order = {}".format(self.order)
         print "sheets at the branch point = {}".format(self.enum_sh)
         print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
@@ -240,6 +226,10 @@ class SWDataWithTrivialization(SWData):
         ### sw.g_data.weights, i.e. reference_sheets[i]
         ### is the value of x corresponding to 
         ### sw.g_data.weights[i].
+        logging.info(
+            "SWDataWithTrivialization(): getting aligned x's "
+            "at the base point z = {}".format(self.base_point)
+        )
         self.reference_ffr_xs, self.reference_xs = self.get_aligned_xs(
             self.base_point,
         )
@@ -331,6 +321,10 @@ class SWDataWithTrivialization(SWData):
         the basis of reference sheets, such that
         new_sheets = M . old_sheets
         """
+        logging.info(
+            "Aanalyzing the monodromy around a closed path "
+            "of length {}.".format(len(z_path))
+        )
         initial_xs = self.reference_xs
         initial_sheets = [[i, x] for i, x in enumerate(initial_xs)]
         final_xs = [sheet_i[-1] 
@@ -394,6 +388,10 @@ class SWDataWithTrivialization(SWData):
 
 
     def analyze_branch_point(self, bp):
+        logging.info(
+            "Analyzing a branch point at z = {}."
+            .format(bp.z)
+        )
         g_data = self.g_data
         path_to_bp = get_path_to(bp.z, self.base_point)
         sheets_along_path = self.get_sheets_along_path(
@@ -429,7 +427,11 @@ class SWDataWithTrivialization(SWData):
 
 
     def analyze_irregular_singularity(self, irr_sing):
-        path_around_z = get_path_around(z)
+        logging.info(
+            "Analyzing an irregular singularity at z = {}."
+            .format(irr_sing.z)
+        )
+        path_around_z = get_path_around(irr_sing.z)
         self.monodromy = (
             self.get_sheet_monodromy(path_around_z)
         )
@@ -439,6 +441,7 @@ def get_path_to(z_pt, base_pt):
     """
     Return a rectangular path from the base point to z_pt.
     """
+    logging.info("Constructing a path [{}, {}]".format(base_pt, z_pt))
     z_0 = base_pt
     z_1 = 1j * base_pt.imag + z_pt.real
     z_2 = z_pt
@@ -452,6 +455,7 @@ def get_path_to(z_pt, base_pt):
 
 
 def get_path_around(z_pt, base_pt, min_distance):
+    logging.info("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
     z_1 = 1j * base_pt.imag + z_pt.real
     radius = min_distance / 2.0

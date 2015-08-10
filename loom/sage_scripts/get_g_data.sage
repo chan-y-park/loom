@@ -135,14 +135,9 @@ def main(root_system, highest_weight):
                            for weight in weights]
 
     data = {
-        #'omega_1': omega_1,
-        #'omega_n': omega_n,
-        #'weyl_orbit_1': weyl_orbit_1,
-        #'weyl_orbit_n': weyl_orbit_n,
         'ffr_weights': ffr_weights,
         'roots': A.roots(),
         'positive_roots': A.positive_roots(),
-        #'weight_multiplicities': weight_multiplicities,
         'weights': weights,
         'multiplicities': multiplicities,
         'weight_basis': weight_basis,

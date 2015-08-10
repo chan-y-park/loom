@@ -64,7 +64,7 @@ class GData:
             for i, n_i in enumerate(self.highest_weight):
                 height += n_i
                 if n_i == 1:
-                    self.fundamental_representation_index = i
+                    self.fundamental_representation_index = i + 1
             if height > 1:
                 self.fundamental_representation_index = None 
                 warn('{} is not a fundamental representation.'
@@ -78,14 +78,9 @@ class GData:
                      "{}".format(root_system, representation_str,
                                  pformat(sage_data)))
 
-        #self.omega_1 = numpy.array(sage_data['omega_1'])
-        #self.omega_n = numpy.array(sage_data['omega_n'])
-        #self.weyl_orbit_1 = numpy.array(sage_data['weyl_orbit_1'])
-        #self.weyl_orbit_n = numpy.array(sage_data['weyl_orbit_n'])
         self.ffr_weights = numpy.array(sage_data['ffr_weights'])
         self.roots = numpy.array(sage_data['roots'])
         self.positive_roots = numpy.array(sage_data['positive_roots'])
-        #self.weight_multiplicities = sage_data['weight_multiplicities']
         self.weights = numpy.array(sage_data['weights'])
         self.multiplicities = numpy.array(sage_data['multiplicities'])
         self.weight_basis = numpy.array(sage_data['weight_basis']),
@@ -158,11 +153,12 @@ class SWCurve:
             self.sym_eq = self.ffr_sym_eq
             self.num_eq = self.ffr_num_eq
         else:
-            warn('class SWCurve with a general representation '
-                 'is not implemented yet.')
+            logging.warning(
+                'class SWCurve with a general representation '
+                'is not implemented yet.'
+            )
             self.sym_eq = None 
             self.num_eq = None
-
 
 
 class SWDiff:
