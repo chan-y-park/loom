@@ -227,9 +227,50 @@ class SWData(object):
                 for p in config['punctures']
             ]
 
-        self.ramification_points = get_ramification_points(
-            self.curve.num_eq, self.accuracy
-        )
+        self.ramification_points = self.get_ramification_points()
+
+
+    def get_ramification_points(self):
+        f = self.curve.num_eq
+        accuracy = self.accuracy
+
+        ramification_points = []
+
+        # NOTE: solve_poly_system vs. solve
+        #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
+        #sols = sympy.solve([f, f.diff(x)], z, x)
+        #if sols is None:
+        #    # Use Sage instead
+        #    sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
+        sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
+        for z_0, x_0 in sols:
+            if (len(self.punctures) > 0 and
+                (min([abs(z_0 - p) for p in sw.punctures]) < accuracy)
+            ):
+                continue
+            fx_at_z_0 = f.subs(z, z_0)
+            fx_at_z_0_coeffs = map(
+                complex, sympy.Poly(fx_at_z_0, x).all_coeffs()
+            )
+            mx = get_root_multiplicity(
+                fx_at_z_0_coeffs, complex(x_0), accuracy
+            )
+            if mx > 1:
+                fz_at_x_0 = f.subs(x, x_0)
+                fz_at_x_0_coeffs = map(complex, 
+                                       sympy.Poly(fz_at_x_0, z).all_coeffs())
+                
+                mz = get_root_multiplicity(fz_at_x_0_coeffs, complex(z_0),
+                                           accuracy)
+                if mz > 1:
+                    continue
+                label = ('ramification point #{}'
+                         .format(len(ramification_points)))
+                rp = RamificationPoint(complex(z_0), complex(x_0), mx, label)
+                logging.info("{}: z = {}, x = {}, i = {}."
+                             .format(label, rp.z, rp.x, rp.i))
+                ramification_points.append(rp)
+        return ramification_points
 
 
     def get_xs(self, z_0, for_ffr=False):
@@ -238,9 +279,9 @@ class SWData(object):
         """
         g_data = self.g_data
         if for_ffr is True:
-            eq = self.ffr_num_eq
+            eq = self.curve.ffr_num_eq
         else:
-            eq = self.num_eq
+            eq = self.curve.num_eq
         ### TODO: Remove the following block after implementing
         ### the equation of the curve for a general rep.
         if eq is None:
@@ -378,47 +419,6 @@ class SWData(object):
             (diff_c, diff_e) = local_diff.leadterm(Dz)
 
         return (complex(diff_c.n()), diff_e)
-
-
-def get_ramification_points(f, accuracy):
-
-    ramification_points = []
-
-    # NOTE: solve_poly_system vs. solve
-    #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
-    #sols = sympy.solve([f, f.diff(x)], z, x)
-    #if sols is None:
-    #    # Use Sage instead
-    #    sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
-    sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
-    for z_0, x_0 in sols:
-        if (len(sw.punctures) > 0 and
-            (min([abs(z_0 - p) for p in sw.punctures]) < accuracy)
-        ):
-            continue
-        fx_at_z_0 = f.subs(z, z_0)
-        fx_at_z_0_coeffs = map(
-            complex, sympy.Poly(fx_at_z_0, x).all_coeffs()
-        )
-        mx = get_root_multiplicity(
-            fx_at_z_0_coeffs, complex(x_0), accuracy
-        )
-        if mx > 1:
-            fz_at_x_0 = f.subs(x, x_0)
-            fz_at_x_0_coeffs = map(complex, 
-                                   sympy.Poly(fz_at_x_0, z).all_coeffs())
-            
-            mz = get_root_multiplicity(fz_at_x_0_coeffs, complex(z_0),
-                                       accuracy)
-            if mz > 1:
-                continue
-            label = ('ramification point #{}'
-                     .format(len(ramification_points))
-            rp = RamificationPoint(complex(z_0), complex(x_0), mx, label)
-            logging.info("{}: z = {}, x = {}, i = {}."
-                         .format(label, rp.z, rp.x, rp.i))
-            ramification_points.append(rp)
-    return ramification_points
 
 
 

@@ -207,18 +207,18 @@ class SWDataWithTrivialization(SWData):
     ### and the computation will go through for higher-type, but give a 
     ### wrong answer!
     def __init__(self, config,):
-        super(SWData, self).__init__(config)
+        super(SWDataWithTrivialization, self).__init__(config)
 
         self.branch_points = []
         self.irregular_singularities = []
 
         # z-coords of branch points.
         bpzs = delete_duplicates(
-            [r.z for r in ramification_points if not r.is_puncture]
+            [r.z for r in self.ramification_points if not r.is_puncture]
         )
         # z-coords of irregular singularities.
         iszs = delete_duplicates(
-            [r.z for r in ramification_points if r.is_puncture]
+            [r.z for r in self.ramification_points if r.is_puncture]
         )
         
         ### Automatically choose a basepoint, based on the positions of
@@ -240,7 +240,7 @@ class SWDataWithTrivialization(SWData):
         ### sw.g_data.weights, i.e. reference_sheets[i]
         ### is the value of x corresponding to 
         ### sw.g_data.weights[i].
-        self.referece_ffr_xs, self.reference_xs = self.get_aligned_xs(
+        self.reference_ffr_xs, self.reference_xs = self.get_aligned_xs(
             self.base_point,
         )
         #self.reference_sheets = {i: x for i, x in enumerate(self.reference_xs)}
@@ -294,7 +294,7 @@ class SWDataWithTrivialization(SWData):
                     index=1, z_0=z_path[i-1], z_1=z_path[i]
                 )
             else:
-                sorted_ffr_xs = get_sorted_sheets(ffr_xs_0, ffr_xs_1,
+                sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1,
                                               check_tracking=False)
             if g_data.fundamental_representation_index == 1:
                 sorted_xs = sorted_ffr_xs
@@ -331,10 +331,10 @@ class SWDataWithTrivialization(SWData):
         the basis of reference sheets, such that
         new_sheets = M . old_sheets
         """
-
         initial_xs = self.reference_xs
-        sheets_along_path = self.get_sheets_along_path(z_path)
-        final_xs = [s_i[-1] for s_i in sheets_along_path]
+        initial_sheets = [[i, x] for i, x in enumerate(initial_xs)]
+        final_xs = [sheet_i[-1] 
+                    for sheet_i in self.get_sheets_along_path(z_path)]
         final_sheets = [[i, x] for i, x in enumerate(final_xs)]
 
         ### Now we compare the initial and final sheets 
@@ -363,8 +363,10 @@ class SWDataWithTrivialization(SWData):
                 uniq.append(s[1])
                 seen.add(s[1])
         if len(uniq) < len(sorted_sheets):
-            raise ValueError('\nError in determination of monodromy!\n'+\
-                'Cannot match uniquely the initial sheets to the final ones.')
+            raise ValueError(
+                '\nError in determination of monodromy!\n' +
+                'Cannot match uniquely the initial sheets to the final ones.'
+            )
         else:
             pass
 
@@ -393,12 +395,12 @@ class SWDataWithTrivialization(SWData):
 
     def analyze_branch_point(self, bp):
         g_data = self.g_data
-        path_to_pb = get_path_to(bp.z, self.base_point)
+        path_to_bp = get_path_to(bp.z, self.base_point)
         sheets_along_path = self.get_sheets_along_path(
             path_to_bp, is_path_to_bp=True
         )
         xs_at_bp = [s_i[-1] for s_i in sheets_along_path]
-        bp.enum_sh = [[i, x_i] for i, x_i in enumerate(xs_at_bp)]
+        enum_sh = [[i, x_i] for i, x_i in enumerate(xs_at_bp)]
         
         clusters = []
         for i, x in enum_sh:
@@ -412,6 +414,7 @@ class SWDataWithTrivialization(SWData):
             if is_single == True:
                 clusters.append([i])
 
+        bp.enum_sh = enum_sh
         bp.groups = [c for c in clusters if len(c) > 1]
         bp.singles = [c[0] for c in clusters if len(c) == 1]
 
