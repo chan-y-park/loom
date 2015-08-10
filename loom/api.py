@@ -69,8 +69,6 @@ def generate_spectral_network(config, phase=None):
                      .format(phase))
         spectral_network = SpectralNetwork(
             phase=phase, 
-            #ramification_points=ramification_points,
-            config=config
         ) 
 
         spectral_network.grow(sw, config)
@@ -82,7 +80,6 @@ def generate_spectral_network(config, phase=None):
         logging.info('phase_range = {}.'.format(phase_range))
         spectral_network_list = parallel_get_spectral_network(
             sw, 
-            #ramification_points,
             config,
         ) 
 

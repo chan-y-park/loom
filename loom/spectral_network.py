@@ -26,21 +26,10 @@ class SpectralNetwork:
     def __init__(
         self,
         phase=None,
-        #ramification_points=[],
-        #ramification_points=None,
-        #config=None,
     ):
         self.phase = phase
-        #if ramification_points is None:
-        #    self.ramification_points = []
-        #else:
-        #    self.ramification_points = ramification_points
-        self.hit_table = None 
-        #self.hit_table = HitTable(config['size_of_bin'])
-
         self.s_walls = []
         self.joints = []
-        #self.g_data = None 
 
 
     def grow(self, sw, config):
@@ -53,15 +42,12 @@ class SpectralNetwork:
         that there is a joint from which an S-wall is not grown
         if the depth of the joint is too deep.
         """
-        #self.g_data = sage_get_g_data(config)
         accuracy = config['accuracy']
         n_steps=config['num_of_steps']
         logging.info('Start growing a new spectral network...')
 
         logging.info('Seed S-walls at ramification points...')
-        #for rp in self.ramification_points:
         for rp in sw.ramification_points:
-            #s_wall_seeds = get_s_wall_seeds(sw, self.phase, rp, config)
             s_wall_seeds = get_s_wall_seeds(sw, self.phase, config)
             for z_0, x_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
@@ -82,7 +68,6 @@ class SpectralNetwork:
         ppzs = sw.punctures
 
         rpzs = []
-        #for rp in self.ramification_points:
         for rp in sw.ramification_points:
             rpzs.append(rp.z)
 
@@ -98,7 +83,6 @@ class SpectralNetwork:
                 logging.info('Growing S-wall #{}...'.format(i))
                 self.s_walls[i].grow(ode, rpzs, ppzs, config,)
                 new_joints += self.get_new_joints(i, sw, config)
-                #new_joints += self.get_new_joints_with_hit_table(i, sw, config)
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
@@ -145,17 +129,10 @@ class SpectralNetwork:
         json_data = {}
 
         json_data['phase'] = self.phase
-        #json_data['ramification_points'] = [
-        #    rp.get_json_data() for rp in self.ramification_points
-        #]
         json_data['s_walls'] = [s_wall.get_json_data()
                                 for s_wall in self.s_walls]
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
-        if self.hit_table is None:
-            json_data['hit_table'] = None 
-        else:
-            json_data['hit_table'] = self.hit_table.get_json_data()
         json.dump(json_data, file_object, **kwargs)
     
 
@@ -166,11 +143,6 @@ class SpectralNetwork:
         json_data = json.load(file_object, **kwargs)
 
         self.phase = json_data['phase']
-
-        #for rp_data in json_data['ramification_points']:
-        #    rp = RamificationPoint()
-        #    rp.set_json_data(rp_data)
-        #    self.ramification_points.append(rp)
 
         for s_wall_data in json_data['s_walls']:
             an_s_wall = SWall()
@@ -460,137 +432,3 @@ class SpectralNetwork:
                     except NoIntersection:
                         pass
         return new_joints
-
-
-    def get_new_joints_with_hit_table(self, new_s_wall_index, sw, config):
-        """
-        Find joints between the newly grown segment of the given S-wall
-        and the other S-walls. This checks joints that are formed by two
-        S-walls only, not considering the possibility of a joint of three
-        S-walls, which in principle can happen but is unlikely in a numerical
-        setup.
-        """
-        if self.hit_table is None:
-            self.hit_table = HitTable(config['size_of_bin'])
-        new_joints = []
-        if (config['root_system'] in ['A1',]):
-            logging.info('There is no joint for the given root system {}.'
-                         .format(config['root_system']))
-            return new_joints
-
-        i_c = new_s_wall_index
-        new_s_wall = self.s_walls[i_c]
-        new_curve = numpy.array([new_s_wall.z.real, new_s_wall.z.imag]).T
-        new_bin_keys = self.hit_table.fill(i_c, new_curve)
-
-        # first get the intersections on the z-plane
-        for bin_key in new_bin_keys:
-            if len(self.hit_table[bin_key]) == 1:
-                # only one S-wall in the bin, skip the rest.
-                continue
-            for i_a, i_b in combinations(self.hit_table[bin_key], 2):
-                # Don't check self-intersections.
-                if i_a == i_c:
-                    i_d = i_b   # i_b != i_c
-                elif i_b == i_c:
-                    i_d = i_a   # i_a != i_c
-                else:
-                    # Both segments are not in the newly added curve.
-                    # Don't check the intersection.
-                    continue
-
-                for t_c_i, t_c_f in self.hit_table[bin_key][i_c]:
-                    for t_d_i, t_d_f in self.hit_table[bin_key][i_d]:
-                        # Check if the two segments have a common x-range.  
-                        x_c = [x_i for x_i 
-                               in self.s_walls[i_c].x[t_c_i:t_c_f+1].T]
-                        x_d = [x_i for x_i
-                               in self.s_walls[i_d].x[t_d_i:t_d_f+1].T]
-                        have_common_x_range = False
-                        for x_a, x_b in (
-                            (x_c_i, x_d_i) for x_c_i in x_c for x_d_i in x_d
-                        ):
-                            x_r_range, x_i_range = (
-                                find_curve_range_intersection(
-                                    (x_a.real, x_a.imag),
-                                    (x_b.real, x_b.imag),
-                                )
-                            )
-                            if (x_r_range.is_EmptySet and 
-                                x_r_range.is_EmptySet and 
-                                x_i_range.is_FiniteSet and
-                                x_i_range.is_FiniteSet):
-                                continue
-                            else:
-                                have_common_x_range = True
-                                break
-                        if have_common_x_range is False:
-                            # No common x range, therefore no joint.
-                            continue
-
-                        # Find an intersection on the z-plane.
-                        seg_c_z = self.s_walls[i_c].z[t_c_i:t_c_f+1]
-                        seg_d_z = self.s_walls[i_d].z[t_d_i:t_d_f+1]
-                        try:
-                            ip_x, ip_y = find_intersection_of_segments(
-                                (seg_c_z.real, seg_c_z.imag),
-                                (seg_d_z.real, seg_d_z.imag),
-                                config['accuracy'],
-                                self.hit_table.get_bin_location(bin_key),
-                                self.hit_table.get_bin_size(),
-                            )
-                            ip_z = ip_x + 1j*ip_y
-
-                            # segment_c
-                            #seg_c_z = self.s_walls[i_c].z[t_c_i:t_c_f+1]
-                            # index of z of segment_c nearest to ip_z
-                            ip_t_c = (
-                                n_nearest_indices(seg_c_z, ip_z, 1)[0] +
-                                t_c_i
-                            )
-                            #z_c = s_wall_c.z[ip_t_c]
-                            c_x = self.s_walls[i_c].x[ip_t_c]
-
-                            # segment_d
-                            #seg_d_z = s_wall_d.z[t_d_i:t_d_f+1]
-                            # index of z of segment_d nearest to ip_z
-                            ip_t_d = (
-                                n_nearest_indices(seg_d_z, ip_z, 1)[0] +
-                                t_d_i
-                            )
-                            #z_d = s_wall_d.z[ip_t_d]
-                            d_x = self.s_walls[i_d].x[ip_t_d]
-
-                            # TODO: need to put the joint into the parent
-                            # S-walls?
-
-                            # find the values of x at z = ip_z.
-                            ip_xs = find_xs_at_z_0(sw.curve.num_eq, ip_z)
-                            c_ip_x0 = n_nearest(ip_xs, c_x[0], 1)[0]
-                            c_ip_x1 = n_nearest(ip_xs, c_x[1], 1)[0]
-                            d_ip_x0 = n_nearest(ip_xs, d_x[0], 1)[0]
-                            d_ip_x1 = n_nearest(ip_xs, d_x[1], 1)[0]
-                            
-                            a_joint_label = ('joint ' +
-                                             '#{}'.format(len(self.joints)))
-                            a_joint = get_joint(
-                                ip_z, c_ip_x0, c_ip_x1, d_ip_x0, d_ip_x1,
-                                self.s_walls[i_c].label, 
-                                self.s_walls[i_d].label,
-                                config['accuracy'],
-                                root_system=config['root_system'],
-                                label=a_joint_label,
-                            )
-
-                            if(a_joint is None):
-                                continue
-                            else:
-                                new_joints.append(a_joint)
-                            
-                        except NoIntersection:
-                            pass
-
-        return new_joints
-
-
-
