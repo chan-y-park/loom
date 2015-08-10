@@ -3,11 +3,13 @@ import matplotlib.pyplot as plt
 import cmath
 import numpy as np
 import logging
+import pdb
 
 from sympy import Poly
 from cmath import exp, pi
 from numpy.linalg import matrix_rank
 from itertools import combinations
+from pprint import pprint
 
 from geometry import SWData
 from misc import delete_duplicates
@@ -96,25 +98,28 @@ class BranchPoint:
     """
     def __init__(self, z=None):
         self.z = z
+
         self.groups = None 
         self.singles = None
         self.enum_sh = None
-        #self.path_to_z = None
         self.positive_roots = None 
         self.order = None
+
+        #self.path_to_z = None
+        #self.path_around_z = None
+        #self.sheets_around_z = None
         self.monodromy = None
 
     def print_info(self):
-        print "\n---------------------------------------------------------\
-               \nBranch Point at z = %s\
-               \n---------------------------------------------------------"\
-               % self.z
-        print "this is the branch point structure"
-        print "groups = {}".format(self.groups)
-        print "singles = {}".format(self.singles)
-        print "order = {}".format(self.order)
-        print "sheets at the branch point = {}".format(self.enum_sh)
-        print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
+        print(
+            "---------------------------------------------------------\n"
+            "Branch Point at z = {}\n"
+            "---------------------------------------------------------"
+            .format(self.z)
+        )
+        for key, value in vars(self).iteritems():
+            print("{}:".format(key))
+            pprint(value)
 
 class IrregularSingularity:
     """
@@ -124,22 +129,22 @@ class IrregularSingularity:
     """
     def __init__(self, z=None):
         self.z = z
+        
+        #self.path_to_z = None
+        #self.path_around_z = None
+        #self.sheets_around_z = None
         self.monodromy = None
         
-        #path_around_z = trivialization.path_around(z)
-        #self.sheet_tracks_around_irr_sing = (
-        #    trivialization.track_sheets_along_path(path_around_z)
-        #)
-        #self.monodromy = (
-        #    trivialization.sheet_monodromy(path_around_z)
-        #)
-        
     def print_info(self):
-        print "\n---------------------------------------------------------\
-               \nIrregular singularity at z = %s\
-               \n---------------------------------------------------------"\
-               % self.z
-        print "sheet monodromy permutation matrix = \n{}".format(self.monodromy)        
+        print(
+            "---------------------------------------------------------\n"
+            "Irregular singularity at z = {}\n"
+            "---------------------------------------------------------"
+            .format(self.z)
+        )
+        for key, value in vars(self).iteritems():
+            print("{}:".format(key))
+            pprint(value)
 
 
 ### TODO: Use g_data.weights at the base point as labels of sheets,
@@ -158,9 +163,9 @@ class SWDataWithTrivialization(SWData):
         should correspond to the curve in the FIRST fundamental
         representation of the Lie algebra
     
-    ramification_points : 
+    ffr_ramification_points : 
         a list of objects of the type RamificationPoint, corresponding
-        to the given sw_data.
+        to the given Seiberg-Witten curve in the first fundamental rep.
 
     Attributes & Methods
     --------------------
@@ -200,11 +205,11 @@ class SWDataWithTrivialization(SWData):
 
         # z-coords of branch points.
         bpzs = delete_duplicates(
-            [r.z for r in self.ramification_points if not r.is_puncture]
+            [r.z for r in self.ffr_ramification_points if not r.is_puncture]
         )
         # z-coords of irregular singularities.
         iszs = delete_duplicates(
-            [r.z for r in self.ramification_points if r.is_puncture]
+            [r.z for r in self.ffr_ramification_points if r.is_puncture]
         )
         
         ### Automatically choose a basepoint, based on the positions of
@@ -227,8 +232,8 @@ class SWDataWithTrivialization(SWData):
         ### is the value of x corresponding to 
         ### sw.g_data.weights[i].
         logging.info(
-            "SWDataWithTrivialization(): getting aligned x's "
-            "at the base point z = {}".format(self.base_point)
+            "Getting aligned x's at the base point z = {}."
+            .format(self.base_point)
         )
         self.reference_ffr_xs, self.reference_xs = self.get_aligned_xs(
             self.base_point,
@@ -276,7 +281,6 @@ class SWDataWithTrivialization(SWData):
         sheets_along_path = [[x] for x in xs_0]
         
         for i, z in enumerate(z_path):
-            #xs_1 = self.get_xs(z)
             ffr_xs_1, xs_1 = self.get_aligned_xs(z)
             if is_path_to_bp == False:
                 sorted_ffr_xs = get_sorted_xs(
@@ -308,7 +312,7 @@ class SWDataWithTrivialization(SWData):
         z_path = get_path_to(z_pt, self.base_point)
         sheets = self.get_sheets_along_path(z_path)
         final_xs = [s_i[-1] for s_i in sheets]
-        final_sheets = {i : x for i, x in enumerate(final_x)}
+        final_sheets = {i : x for i, x in enumerate(final_xs)}
         return final_sheets
 
     
@@ -321,8 +325,8 @@ class SWDataWithTrivialization(SWData):
         the basis of reference sheets, such that
         new_sheets = M . old_sheets
         """
-        logging.info(
-            "Aanalyzing the monodromy around a closed path "
+        logging.debug(
+            "Analyzing the monodromy around a closed path "
             "of length {}.".format(len(z_path))
         )
         initial_xs = self.reference_xs
@@ -394,6 +398,7 @@ class SWDataWithTrivialization(SWData):
         )
         g_data = self.g_data
         path_to_bp = get_path_to(bp.z, self.base_point)
+        #bp.path_to_z = path_to_bp
         sheets_along_path = self.get_sheets_along_path(
             path_to_bp, is_path_to_bp=True
         )
@@ -423,6 +428,8 @@ class SWDataWithTrivialization(SWData):
 
         path_around_bp = get_path_around(bp.z, self.base_point,
                                          self.min_distance)
+        #bp.path_around_z = path_around_bp
+        #bp.sheets_around_z = self.get_sheets_along_path(path_around_bp)
         bp.monodromy = self.get_sheet_monodromy(path_around_bp)
 
 
@@ -432,6 +439,8 @@ class SWDataWithTrivialization(SWData):
             .format(irr_sing.z)
         )
         path_around_z = get_path_around(irr_sing.z)
+        #irr_sing.path_around_z = path_around_z
+        #irr_sing.sheets_around_z = self.get_sheets_along_path(path_around_z)
         self.monodromy = (
             self.get_sheet_monodromy(path_around_z)
         )
@@ -441,7 +450,7 @@ def get_path_to(z_pt, base_pt):
     """
     Return a rectangular path from the base point to z_pt.
     """
-    logging.info("Constructing a path [{}, {}]".format(base_pt, z_pt))
+    logging.debug("Constructing a path [{}, {}]".format(base_pt, z_pt))
     z_0 = base_pt
     z_1 = 1j * base_pt.imag + z_pt.real
     z_2 = z_pt
@@ -455,7 +464,7 @@ def get_path_to(z_pt, base_pt):
 
 
 def get_path_around(z_pt, base_pt, min_distance):
-    logging.info("Constructing a closed path around z = {}".format(z_pt))
+    logging.debug("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
     z_1 = 1j * base_pt.imag + z_pt.real
     radius = min_distance / 2.0

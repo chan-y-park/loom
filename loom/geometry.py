@@ -132,33 +132,90 @@ class PuncturePoint:
 
 
 class SWCurve:
-    def __init__(self, differentials=None, g_data=None, Cz=None, 
-                 parameters=None):
-        ### First, build a cover in the first fundamental representation.
-        N = len(g_data.ffr_weights)
-        ffr_eq_str = 'x^{} '.format(N)
-        for k, u_k in differentials.iteritems():
-            ffr_eq_str += '+ ({}) '.format(u_k)
-            if k != N:
-                ffr_eq_str += '* x^{}'.format(N-k)
+    def __init__(self, differentials=None, Cz=None, parameters=None,
+                 ffr_weights=None,):
+        if ffr_weights is not None:
+            ### Build a cover in the first fundamental representation.
+            N = len(ffr_weights)
+            ffr_eq_str = 'x^{} '.format(N)
+            for k, u_k in differentials.iteritems():
+                ffr_eq_str += '+ ({}) '.format(u_k)
+                if k != N:
+                    ffr_eq_str += '* x^{}'.format(N-k)
 
-        self.ffr_sym_eq = sympy.simplify(
-            sympy.sympify(ffr_eq_str).subs(z, Cz)
-        )
-        self.ffr_num_eq = self.ffr_sym_eq.subs(parameters)
-
-        ### TODO: Need to build a cover in a general representation
-        ### from the differentials, using symmetric polynomials.
-        if g_data.fundamental_representation_index == 1:
-            self.sym_eq = self.ffr_sym_eq
-            self.num_eq = self.ffr_num_eq
+            self.sym_eq = sympy.simplify(
+                sympy.sympify(ffr_eq_str).subs(z, Cz)
+            )
+            self.num_eq = self.sym_eq.subs(parameters)
         else:
+            ### TODO: Need to build a cover in a general representation
+            ### from the differentials, using symmetric polynomials.
             logging.warning(
                 'class SWCurve with a general representation '
                 'is not implemented yet.'
             )
             self.sym_eq = None 
             self.num_eq = None
+
+
+    def get_ramification_points(self, accuracy, punctures=None):
+        f = self.num_eq
+        if f is None:
+            raise NotImplementedError
+
+        ramification_points = []
+
+        # NOTE: solve_poly_system vs. solve
+        #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
+        #sols = sympy.solve([f, f.diff(x)], z, x)
+        #if sols is None:
+        #    # Use Sage instead
+        #    sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
+        sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
+        for z_0, x_0 in sols:
+            if (len(punctures) > 0 and
+                (min([abs(z_0 - p) for p in punctures]) < accuracy)
+            ):
+                continue
+            fx_at_z_0 = f.subs(z, z_0)
+            fx_at_z_0_coeffs = map(
+                complex, sympy.Poly(fx_at_z_0, x).all_coeffs()
+            )
+            mx = get_root_multiplicity(
+                fx_at_z_0_coeffs, complex(x_0), accuracy
+            )
+            if mx > 1:
+                fz_at_x_0 = f.subs(x, x_0)
+                fz_at_x_0_coeffs = map(complex, 
+                                       sympy.Poly(fz_at_x_0, z).all_coeffs())
+                
+                mz = get_root_multiplicity(fz_at_x_0_coeffs, complex(z_0),
+                                           accuracy)
+                if mz > 1:
+                    continue
+                label = ('ramification point #{}'
+                         .format(len(ramification_points)))
+                rp = RamificationPoint(complex(z_0), complex(x_0), mx, label)
+                logging.info("{}: z = {}, x = {}, i = {}."
+                             .format(label, rp.z, rp.x, rp.i))
+                ramification_points.append(rp)
+        return ramification_points
+
+
+    def get_xs(self, z_0):
+        """
+        Return a numpy array of x-coordinates over z = z_0.
+        """
+        if self.num_eq is None:
+            raise NotImplementedError
+
+        fx = self.num_eq.subs(z, z_0)
+        #xs = sympy.solve(fx, x)
+        ### The following may fail when the curve is not a polynomial.
+        sym_poly = sympy.Poly(fx, x, domain='CC')
+        coeff_list = map(complex, sym_poly.all_coeffs())
+        return numpy.roots(coeff_list)
+
 
 
 class SWDiff:
@@ -187,21 +244,30 @@ class SWData(object):
         self.parameters = config['sw_parameters']
         self.differentials = eval(config['differentials'])
         self.g_data = GData(config['root_system'], config['representation'])
-        self.accuracy = config['accuracy']
+        #self.accuracy = config['accuracy']
 
         ### PSL2C-transformed z & dz
         Cz = PSL2C(config['mt_params'], z, inverse=True) 
         dCz = Cz.diff(z)
 
-        self.curve = SWCurve(
+        self.ffr_curve = SWCurve(
             differentials=self.differentials, 
-            g_data=self.g_data,
             Cz=Cz,
             parameters=self.parameters,
+            ffr_weights=self.g_data.ffr_weights,
         )
+        logging.info('Seiberg-Witten curve in the 1st fundamental '
+                     'representation: {} = 0'
+                     .format(sympy.latex(self.ffr_curve.num_eq)))
+        ### TODO: SWCurve in a general representation.
+        if self.g_data.fundamental_representation_index == 1:
+            self.curve = self.ffr_curve
+        else:
+            logging.warning(
+                'Seiberg-Witten curve in a general representation '
+                'is not implemented yet.'
+            )
 
-        logging.info('\nSeiberg-Witten curve: %s = 0\n',
-                     sympy.latex(self.curve.num_eq))
 
         # Seiberg-Witten differential
         self.diff = SWDiff(
@@ -223,72 +289,13 @@ class SWData(object):
                 for p in config['punctures']
             ]
 
-        self.ramification_points = self.get_ramification_points()
-
-
-    def get_ramification_points(self):
-        f = self.curve.num_eq
-        accuracy = self.accuracy
-
-        ramification_points = []
-
-        # NOTE: solve_poly_system vs. solve
-        #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
-        #sols = sympy.solve([f, f.diff(x)], z, x)
-        #if sols is None:
-        #    # Use Sage instead
-        #    sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
-        sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
-        for z_0, x_0 in sols:
-            if (len(self.punctures) > 0 and
-                (min([abs(z_0 - p) for p in sw.punctures]) < accuracy)
-            ):
-                continue
-            fx_at_z_0 = f.subs(z, z_0)
-            fx_at_z_0_coeffs = map(
-                complex, sympy.Poly(fx_at_z_0, x).all_coeffs()
-            )
-            mx = get_root_multiplicity(
-                fx_at_z_0_coeffs, complex(x_0), accuracy
-            )
-            if mx > 1:
-                fz_at_x_0 = f.subs(x, x_0)
-                fz_at_x_0_coeffs = map(complex, 
-                                       sympy.Poly(fz_at_x_0, z).all_coeffs())
-                
-                mz = get_root_multiplicity(fz_at_x_0_coeffs, complex(z_0),
-                                           accuracy)
-                if mz > 1:
-                    continue
-                label = ('ramification point #{}'
-                         .format(len(ramification_points)))
-                rp = RamificationPoint(complex(z_0), complex(x_0), mx, label)
-                logging.info("{}: z = {}, x = {}, i = {}."
-                             .format(label, rp.z, rp.x, rp.i))
-                ramification_points.append(rp)
-        return ramification_points
-
-
-    def get_xs(self, z_0, for_ffr=False):
-        """
-        Return a numpy array of x-coordinates over z = z_0.
-        """
-        g_data = self.g_data
-        if for_ffr is True:
-            eq = self.curve.ffr_num_eq
-        else:
-            eq = self.curve.num_eq
-        ### TODO: Remove the following block after implementing
-        ### the equation of the curve for a general rep.
-        if eq is None:
-            return self.get_aligned_xs(z_0, g_data)
-
-        fx = eq.subs(z, z_0)
-        #xs = sympy.solve(fx, x)
-        ### The following may fail when the curve is not a polynomial.
-        sym_poly = sympy.Poly(fx, x, domain='CC')
-        coeff_list = map(complex, sym_poly.all_coeffs())
-        return numpy.roots(coeff_list)
+        logging.info(
+            "Calculating ramification points of the Seiberg-Witten curve "
+            "in the first fundamental rep."
+        )
+        self.ffr_ramification_points = self.ffr_curve.get_ramification_points(
+            config['accuracy'], punctures=self.punctures,
+        )
 
 
     def get_aligned_xs(self, z_0):
@@ -309,7 +316,7 @@ class SWData(object):
         ### according to the order of ''g_data.weights'',
         ### then construct the list of x's for the given representation
         ### ordered according to weights.
-        ffr_xs = self.get_xs(z_0, for_ffr=True) 
+        ffr_xs = self.ffr_curve.get_xs(z_0) 
 
         if algebra_type == 'A':
             """
@@ -321,10 +328,10 @@ class SWData(object):
             """
             aligned_ffr_xs = ffr_xs
 
-            if fund_rep_index == 1 or for_ffr == True:
-                xs = ffr_xs
+            if fund_rep_index == 1:
+                xs = aligned_ffr_xs
             else:
-                xs = self.get_xs_of_weights_from_ffr_xs(ffr_xs)
+                xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
 
         elif algebra_type == 'D':
             """
