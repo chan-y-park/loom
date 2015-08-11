@@ -116,11 +116,17 @@ def delete_duplicates(l):
     return uniq
 
 
-def plot_branch_points(ramification_points, figure, y_max):
-    loci = delete_duplicates([r.z for r in ramification_points])
-    for z in loci:
+def plot_branch_points(bps, figure, y_max):
+    loci = [bp.z for bp in bps]
+    for i, z in enumerate(loci):
         figure.cross(x=z.real, y=z.imag, size=20, color="#E6550D", line_width=2, angle=0.5)
         figure.line(x=[z.real,z.real], y=[z.imag, y_max], line_width=2, color="#E6550D", line_dash='dashed')
+        figure.text(x=[z.real], y=[z.imag], 
+                text = ['['+str(i)+']'],
+                text_align='left',
+                text_baseline='top',
+                text_font='times', text_font_style='italic', text_font_size='12pt'
+               )
     return None
 
 
@@ -199,6 +205,37 @@ def s_wall_data_table(swn):
 
     return data_table
 
+def branch_point_data_table(sw_data):
+    ### ASSUMING square-root type branch points for now
+    ### TO DO : Generalize
+    bpts = sw_data.branch_points
+    g_data = sw_data.g_data
+    g_roots = list(g_data.roots)
+
+    root_dictionary = {'alpha_' + str(i) : rt for i, rt in enumerate(g_roots)}
+    data = dict(
+            bp_label=['['+str(i)+'], '+bp.label for i,bp in enumerate(bpts)],
+            bp_position=[str(bp.z) for bp in bpts],
+            bp_root_label=[ \
+                            [k for k, v in root_dictionary.iteritems() \
+                                if numpy.array_equal(v, 
+                                                bp.positive_roots[0])][0] \
+                            for bp in bpts\
+                        ],
+            bp_root=[str(bp.positive_roots[0]) for bp in bpts]
+        )
+    source = ColumnDataSource(data)
+
+    columns = [
+            TableColumn(field="bp_label", title="branch points"),
+            TableColumn(field="bp_position", title="position"),
+            TableColumn(field="bp_root_label", title="Root label"),
+            TableColumn(field="bp_root", title="Root type"),
+        ]
+    data_table = DataTable(source=source, columns=columns, width=800)
+
+    return data_table
+
 
 def weight_data_table(weight_dictionary):
     weight_labels = weight_dictionary.keys()
@@ -255,18 +292,19 @@ def g_data_tables(data):
     root_dictionary = {'alpha_' + str(i) : rt for i, rt in enumerate(g_roots)}
     show(vform(weight_data_table(weight_dictionary))) 
     show(vform(root_data_table(root_dictionary, data)))
+    show(vform(branch_point_data_table(data.sw_data)))
 
 
 
 def create_root_color_map(g_data):
     g_roots = list(g_data.roots)
     n_rts = len(g_roots)
-    x = numpy.random.random(size=n_rts) * 100
-    y = numpy.random.random(size=n_rts) * 100
-    z = numpy.random.random(size=n_rts) * 100
+    x = numpy.random.random(size=n_rts) * 50
+    y = numpy.random.random(size=n_rts) * 50
+    z = numpy.random.random(size=n_rts) * 50
     colors = [
     "#%02x%02x%02x" % (r, g, b) for r, g, b in \
-            zip(numpy.floor(50+2*x), numpy.floor(50+2*y), numpy.floor(50+2*z))
+            zip(numpy.floor(50+x), numpy.floor(50+y), numpy.floor(50+z))
     ]
     return {colors[i] : rt for i, rt in enumerate(g_roots)}
 
