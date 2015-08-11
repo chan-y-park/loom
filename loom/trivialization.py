@@ -6,7 +6,7 @@ import logging
 import pdb
 
 from sympy import Poly
-from cmath import exp, pi
+from cmath import exp, pi, phase
 from numpy.linalg import matrix_rank
 from itertools import combinations
 from pprint import pprint
@@ -114,6 +114,7 @@ class BranchPoint:
         #self.sheets_around_z = None
         self.monodromy = None
         self.ffr_ramification_points = None
+        self.label = None
 
     def print_info(self):
         print(
@@ -249,8 +250,9 @@ class SWDataWithTrivialization(SWData):
         #self.sheet_weight_dictionary = self.build_dictionary()
 
         ### Construct the list of branch points
-        for z_bp in bpzs:
+        for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
+            bp.label = 'Branch point #{}'.format(i)
             self.analyze_branch_point(bp)
             self.branch_points.append(bp)
             bp.print_info()
@@ -311,12 +313,12 @@ class SWDataWithTrivialization(SWData):
         return sheets_along_path
 
 
-    def get_sheets_at_z(self, z_pt, g_data=None):
+    def get_sheets_at_z(self, z_pt, g_data=None, is_seed_point=False):
         """
         Returns a dict of (sheet_index, x) at a point ''z_pt'', 
         which cannot be a branch point or a singularity.
         """
-        z_path = get_path_to(z_pt, self.base_point)
+        z_path = get_path_to(z_pt, self)
         sheets = self.get_sheets_along_path(z_path)
         final_xs = [s_i[-1] for s_i in sheets]
         final_sheets = {i : x for i, x in enumerate(final_xs)}
@@ -404,7 +406,7 @@ class SWDataWithTrivialization(SWData):
             .format(bp.z)
         )
         g_data = self.g_data
-        path_to_bp = get_path_to(bp.z, self.base_point)
+        path_to_bp = get_path_to(bp.z, self)
         #bp.path_to_z = path_to_bp
         sheets_along_path = self.get_sheets_along_path(
             path_to_bp, is_path_to_bp=True
@@ -457,21 +459,80 @@ class SWDataWithTrivialization(SWData):
         )
         
 
-def get_path_to(z_pt, base_pt):
+def get_path_to(z_pt, sw_data):
     """
     Return a rectangular path from the base point to z_pt.
+    If the path has to pass too close to a branch point, 
+    we avoid the latter by drawing an arc around it.
     """
+    
+    base_pt = sw_data.base_point
+    closest_bp = None
+    radius = sw_data.min_distance / 10.0
+
     logging.debug("Constructing a path [{}, {}]".format(base_pt, z_pt))
-    z_0 = base_pt
-    z_1 = 1j * base_pt.imag + z_pt.real
-    z_2 = z_pt
-    half_steps = int(N_PATH_TO_PT / 2)
-    return (
-        [z_0 + ((z_1 - z_0) / half_steps) * i 
-         for i in range(half_steps + 1)] + 
-        [z_1 + ((z_2 - z_1) / half_steps) * i 
-         for i in range(half_steps + 1)]                
-    )
+
+    ### Determine if the path will need to pass 
+    ### close to a branch point.
+    for bp in sw_data.branch_points:
+        delta_z = z_pt - bp.z
+        if abs(delta_z.real) < radius and delta_z.imag > 0:
+            closest_bp = bp
+            break
+
+    # If there the path does not pass near a branch point:
+    if closest_bp == None:
+        z_0 = base_pt
+        z_1 = 1j * base_pt.imag + z_pt.real
+        z_2 = z_pt
+        half_steps = int(N_PATH_TO_PT / 2)
+        return (
+            [z_0 + ((z_1 - z_0) / half_steps) * i 
+             for i in range(half_steps + 1)] + 
+            [z_1 + ((z_2 - z_1) / half_steps) * i 
+             for i in range(half_steps + 1)]                
+        )
+
+    # If there the path needs to pass near a branch point:
+    else:
+        z_0 = base_pt
+        z_1 = 1j * base_pt.imag + closest_bp.z.real
+        z_2 = 1j * (closest_bp.z.imag - radius) + closest_bp.z.real
+        z_3 = closest_bp.z + radius * exp(1j * phase(z_pt - closest_bp.z))
+        z_4 = z_pt
+        
+        if (z_pt - closest_bp.z).real > 0:
+            ### way_around = 'ccw'
+            sign = 1.0
+            delta_theta = phase(z_pt - closest_bp.z) + pi / 2
+        else:
+            ### way_around = 'cw'
+            sign = -1.0
+            delta_theta = 3 * pi / 2 - phase(z_pt - closest_bp.z) 
+
+        steps = int(N_PATH_TO_PT / 5)
+
+        path_segment_1 = [z_0 + ((z_1 - z_0) / steps) * i
+                          for i in range(steps + 1)]
+        path_segment_2 = [z_1 + ((z_2 - z_1) / steps) * i 
+                          for i in range(steps + 1)]
+        path_segment_3 = [closest_bp.z + radius * (-1j) * 
+                                exp(sign * 1j * (delta_theta) 
+                                    * (float(i) / float(steps))
+                                    ) 
+                          for i in range(steps +1)]
+        path_segment_4 = [z_3 + ((z_4 - z_3) / steps) * i
+                          for i in range(steps + 1)]
+        
+        # print "RUNNING CLOSE TO A BRANCH POINT: here is the path"
+        # print "FROM {} \nTO {}".format(base_pt, z_pt)
+        # print "THROUGH \n{}\n{}\n{}\n{}\n{}\n\n".format(z_0, z_1, z_2, z_3, z_4)
+        # print (path_segment_1 + path_segment_2 
+        #         + path_segment_3 + path_segment_4)
+
+        return (path_segment_1 + path_segment_2 
+                + path_segment_3 + path_segment_4)
+    
 
 
 def get_path_around(z_pt, base_pt, min_distance):
@@ -632,3 +693,5 @@ def keep_linearly_independent_vectors(vector_list):
             independent_list.append(v)
 
     return independent_list
+
+

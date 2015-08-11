@@ -34,7 +34,7 @@ class SpectralNetwork:
         self.sw_data =sw_data
 
 
-    def grow(self, sw, config):
+    def grow(self, config):
         """
         Grow the spectral network by seeding SWall's
         and then calling SWall.grow() for each S-wall.
@@ -49,32 +49,31 @@ class SpectralNetwork:
         logging.info('Start growing a new spectral network...')
 
         logging.info('Seed S-walls at ramification points...')
-        ### TODO: Currently an S-wall is born out of a ramification point,
-        ### but conceptually it should emanate from a branch point.
-        for rp in sw.ffr_ramification_points:
-            s_wall_seeds = get_s_wall_seeds(sw, self.phase, rp, config)
+        
+        for bp in self.sw_data.branch_points:
+            s_wall_seeds = get_s_wall_seeds(self.sw_data, self.phase, 
+                                                        bp, config)
             for z_0, x_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
                     SWall(
                         z_0=z_0,
                         x_0=x_0,
-                        parents=[rp.label],
+                        parents=[bp.label],
                         label=label,
                         n_steps=n_steps,
+                        spectral_network=self,
                     )
                 )
 
         logging.info('Setup the ODE integrator...')
-        ode = get_ode(sw, self.phase, accuracy)
+        ode = get_ode(self.sw_data, self.phase, accuracy)
 
         logging.info('Start growing a new spectral network...')
-        ppzs = sw.punctures
+        ppzs = self.sw_data.punctures
 
-        rpzs = []
-        for rp in sw.ffr_ramification_points:
-            rpzs.append(rp.z)
-
+        bpzs = [bp.z for bp in self.sw_data.branch_points]
+        
         n_finished_s_walls = 0 
         iteration = 0
         while(iteration < config['num_of_iterations']):
@@ -85,8 +84,8 @@ class SpectralNetwork:
             new_joints = []     # number of new joints found in each iteration
             for i in range(n_finished_s_walls, len(self.s_walls)):
                 logging.info('Growing S-wall #{}...'.format(i))
-                self.s_walls[i].grow(ode, rpzs, ppzs, config,)
-                new_joints += self.get_new_joints(i, sw, config)
+                self.s_walls[i].grow(ode, bpzs, ppzs, config,)
+                new_joints += self.get_new_joints(i, config)
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
@@ -119,6 +118,7 @@ class SpectralNetwork:
                         parents=joint.parents,
                         label=label,
                         n_steps=n_steps,
+                        spectral_network=self,
                     )
                 )
             iteration += 1
@@ -159,12 +159,12 @@ class SpectralNetwork:
             self.joints.append(a_joint)
 
 
-    def get_new_joints(self, new_s_wall_index, sw, config):
+    def get_new_joints(self, new_s_wall_index, config):
         try:
             linux_distribution = platform.linux_distribution()[0]
             if linux_distribution != '':
                 return self.get_new_joints_using_cgal(
-                    new_s_wall_index, sw, config,
+                    new_s_wall_index, config,
                     linux_distribution=linux_distribution,
                 )
             else:
@@ -174,9 +174,9 @@ class SpectralNetwork:
                             'get_new_joints_using_cgal() to '
                             'get_new_joints_using_interpolation().')
             return self.get_new_joints_using_interpolation(new_s_wall_index,
-                                                           sw, config,)
+                                                           config,)
 
-    def get_new_joints_using_cgal(self, new_s_wall_index, sw, config,
+    def get_new_joints_using_cgal(self, new_s_wall_index, config,
                                   linux_distribution=None):
         """
         Find new wall-wall intersections using CGAL 2d curve intersection.
@@ -302,7 +302,7 @@ class SpectralNetwork:
                     # S-walls?
 
                     # find the values of x at z = ip_z.
-                    ip_xs = find_xs_at_z_0(sw.curve.num_eq, ip_z)
+                    ip_xs = find_xs_at_z_0(self.sw_data, ip_z)
                     ip_x_n_0 = n_nearest(ip_xs, x_n[0], 1)[0]
                     ip_x_n_1 = n_nearest(ip_xs, x_n[1], 1)[0]
                     ip_x_p_0 = n_nearest(ip_xs, x_p[0], 1)[0]
@@ -314,7 +314,7 @@ class SpectralNetwork:
                         prev_s_wall.label,
                         accuracy=config['accuracy'],
                         xs_at_z=ip_xs,
-                        g_data=sw.g_data,
+                        g_data=self.sw_data.g_data,
                     )
 
                     if(a_joint is None):
@@ -328,7 +328,7 @@ class SpectralNetwork:
         return new_joints
 
 
-    def get_new_joints_using_interpolation(self, new_s_wall_index, sw, config):
+    def get_new_joints_using_interpolation(self, new_s_wall_index, config):
         """
         Find joints between the newly grown segment of the given S-wall
         and the other S-walls by interpolating S-walls with functions and
@@ -409,7 +409,7 @@ class SpectralNetwork:
                         # S-walls?
 
                         # find the values of x at z = ip_z.
-                        ip_xs = find_xs_at_z_0(sw.curve.num_eq, ip_z)
+                        ip_xs = find_xs_at_z_0(self.sw_data, ip_z)
                         ip_x_n_0 = n_nearest(ip_xs, x_n[0], 1)[0]
                         ip_x_n_1 = n_nearest(ip_xs, x_n[1], 1)[0]
                         ip_x_p_0 = n_nearest(ip_xs, x_p[0], 1)[0]
@@ -421,7 +421,7 @@ class SpectralNetwork:
                             prev_s_wall.label,
                             accuracy=config['accuracy'],
                             xs_at_z=ip_xs,
-                            g_data=sw.g_data,
+                            g_data=self.sw_data.g_data,
                         )
 
                         if(a_joint is None):

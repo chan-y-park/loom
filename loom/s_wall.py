@@ -9,6 +9,7 @@ from geometry import get_local_sw_diff
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
                   GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0,)
 
+
 x, z = sympy.symbols('x z')
 
 # Number of x's at a fixed z
@@ -52,7 +53,7 @@ class Joint:
 
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, parents=None,
-                 label=None, n_steps=None,):
+                 label=None, n_steps=None, spectral_network=None,):
         """
         SWall.z is a NumPy array of length n_steps+1,
         where z[t] is the base coordinate.
@@ -70,6 +71,17 @@ class SWall(object):
             self.x[0] = x_0
         self.parents = parents
         self.label = label
+        
+        self.spectral_network = spectral_network
+        ### FIX THESE : NEED TO BE POINT-DEPENDENT NOTIONS!!!
+        self.root = get_s_wall_root(z_0, x_0, 
+                                spectral_network.sw_data,)
+        ### A list of ordered pairs [...[i, j]...]
+        ### such that weights[j] - weights[i] = root
+        self.weight_pairs = \
+                spectral_network.sw_data.g_data.ordered_weight_pairs(
+                                                            self.root,)
+        
         # XXX: interface for marking branch-cut crossings.
         self.splitting = []
 
@@ -200,8 +212,16 @@ class SWall(object):
             self[step] = y_i 
 
 
-def get_s_wall_seeds(sw, theta, ramification_point, config,):
-    rp = ramification_point
+def get_s_wall_seeds(sw, theta, branch_point, config,):
+    ### S-walls are seeded from branch points.
+    ### Each branch point has a number of ramification 
+    ### points lying above it.
+    ### Regardless of the representation, it is sufficient
+    ### to consider one of these ramification points
+    ### to extract the seed data.
+    ### We thus stick to any ramification point of the 
+    ### fundamental representation.
+    rp = branch_point.ffr_ramification_points[0]
     delta = config['accuracy']
     dt = config['size_of_small_step']
 
@@ -268,7 +288,7 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
         # resize to the size of the small step 
         Delta_z = cv/abs(cv)*delta
         z_0 = rp.z + Delta_z
-        xs_at_z_0 = find_xs_at_z_0(sw.curve.num_eq, z_0, rp.x, rp.i)
+        xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i)
         dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
         for i in range(len(xs_at_z_0)):
             diffx = sw.diff.num_v.subs(z, z_0) 
@@ -334,3 +354,20 @@ def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):
         raise NotImplementedError
         
     
+
+def get_s_wall_root(z, xs, sw_data):
+    x_i, x_j = xs
+
+    ### The following is a dictionary
+    sheets_at_z = sw_data.get_sheets_at_z(z)
+    xs_at_z = sheets_at_z.values()
+    
+    ### Sheet matching x_i
+    closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
+    i = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_i][0]
+
+    ### Sheet matching x_j
+    closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
+    j = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_j][0]
+
+    return sw_data.g_data.weights[j] - sw_data.g_data.weights[i]

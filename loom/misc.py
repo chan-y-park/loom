@@ -132,15 +132,29 @@ def unravel(k, row_size, column_size=None):
     return (i, j) 
 
 
-def find_xs_at_z_0(f_z_x, z_0, x_0=None, num_x=1):
-    """
-    solve f(x, z_0) = 0 and return num_x x's nearest to x_0.
-    """
-    x, z = sympy.symbols('x z')
+def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1):
+    # """
+    # solve f(x, z_0) = 0 and return num_x x's nearest to x_0.
+    # """
+    # f_z_x = sw_data.curve.num_eq
+    # x, z = sympy.symbols('x z')
 
-    f_x_at_z_0 = f_z_x.subs(z, z_0)
-    f_x_at_z_0_coeffs = map(complex, sympy.Poly(f_x_at_z_0, x).all_coeffs())
-    xs_at_z_0 = numpy.roots(f_x_at_z_0_coeffs)
+    # f_x_at_z_0 = f_z_x.subs(z, z_0)
+    # f_x_at_z_0_coeffs = map(complex, sympy.Poly(f_x_at_z_0, x).all_coeffs())
+    # xs_at_z_0 = numpy.roots(f_x_at_z_0_coeffs)
+    # if x_0 is None:
+    #     return xs_at_z_0
+    # else:
+    #     return sorted(xs_at_z_0,
+    #                   lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
+    
+    ###  
+    """
+    Get x's above z_0 and return the num_x of them 
+    which are nearest to x_0.
+    """
+    
+    xs_at_z_0 = sw_data.get_sheets_at_z(z_0).values()
     if x_0 is None:
         return xs_at_z_0
     else:
