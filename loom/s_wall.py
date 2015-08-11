@@ -7,8 +7,9 @@ from cmath import exp, pi, phase
 
 from geometry import get_local_sw_diff
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
-                  GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0,)
-
+                  GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0,
+                   left_right, clock,)
+from scipy import interpolate
 
 x, z = sympy.symbols('x z')
 
@@ -73,18 +74,21 @@ class SWall(object):
         self.label = label
         
         self.spectral_network = spectral_network
-        ### FIX THESE : NEED TO BE POINT-DEPENDENT NOTIONS!!!
-        self.root = get_s_wall_root(z_0, x_0, 
+
+        self.cuts_intersections = []
+        self.splittings = []
+        self.local_roots = []
+        self.local_weight_pairs = []
+
+        self.initial_root = get_s_wall_root(z_0, x_0, 
                                 spectral_network.sw_data,)
+
         ### A list of ordered pairs [...[i, j]...]
         ### such that weights[j] - weights[i] = root
-        self.weight_pairs = \
-                spectral_network.sw_data.g_data.ordered_weight_pairs(
-                                                            self.root,)
+        self.initial_weight_pairs = \
+                self.spectral_network.sw_data.g_data.ordered_weight_pairs(
+                                            self.initial_root,)
         
-        # XXX: interface for marking branch-cut crossings.
-        self.splitting = []
-
 
     def __setitem__(self, t, data):
         """
@@ -163,7 +167,7 @@ class SWall(object):
         ramification_point_zs,
         puncture_point_zs,
         config,
-    ):
+        ):
         rpzs = ramification_point_zs
         ppzs = puncture_point_zs
         z_range_limits = config['z_range_limits']
@@ -210,6 +214,89 @@ class SWall(object):
             y_i = ode.integrate(ode.t + dt)
             z_i = y_i[0]
             self[step] = y_i 
+
+        self.check_cuts()
+
+
+    def check_cuts(self):
+        # determine at which points the wall crosses a cut, for instance
+        # (55,107,231) would mean that we change charge 3 times
+        # hence self.splittings would have length 3 while
+        # self.root would have length 4.
+        branch_points = self.spectral_network.sw_data.branch_points
+        # bpzs = [bp.z for bp in branch_points]
+        bpzs_r = [bp.z.real for bp in branch_points]
+        
+        # parametrizing the x-coordinate of the k-wall's coordinates
+        # as a function of proper time
+        traj_t = numpy.array(range(len(self.z)))
+        traj_x = numpy.array([w.real for w in self.z])
+        
+        # Scan over branch cuts, see if path ever crosses one 
+        # based on x-coordinates only
+        for b_pt_num, x_0 in list(enumerate(bpzs_r)):
+            g = interpolate.splrep(traj_t, traj_x - x_0, s=0)
+            # now produce a list of integers corresponding to points in the 
+            # S-wall's coordinate list that seem to cross branch-cuts
+            # based on the z-coordinate's real part.
+            # Will get a list [i_0, i_1, ...] of intersections
+            intersections = map(int, map(round, interpolate.sproot(g)))
+            # removing duplicates
+            intersections = list(set(intersections))
+            # enforcing imaginary-part of z-coordinate intersection criterion:
+            # branch cuts extend vertically
+            y_0 = branch_points[b_pt_num].z.imag
+            intersections = [i for i in intersections if \
+                                               self.z[i].imag > y_0 ]
+            # adding the branch-point identifier to each intersection
+            intersections = [[branch_points[b_pt_num], i] \
+                                                   for i in intersections]
+            # dropping intersections of a primary S-wall with the 
+            # branch cut emanating from its parent branch-point
+            # if such intersections happens at t=0
+            intersections = [[bp, i] for bp, i in intersections if \
+                                   not (bp.label == self.parents[0] and i == 0)]
+            # add the direction to the intersection data: either 'cw' or 'ccw'
+            intersections = [[bp, i, clock(left_right(self.z, i))]\
+                           for bp, i in intersections]
+
+            self.cuts_intersections += intersections
+        ### Might be worth implementing an algorithm for handling 
+        ### overlapping branch cuts: e.g. the one with a lower starting point 
+        ### will be taken to be on the left, or a similar criterion.
+        ### Still, there will be other sorts of problems, it is necessary
+        ### to just rotate the z-plane and avoid such situations.
+
+        ### now sort intersections according to where they happen in proper 
+        ### time; recall that the elements of cuts_intersections are organized 
+        ### as      [..., [branch_point, t, 'ccw'] ,...]
+        ### where 't' is the integer of proper time at the intersection.
+        self.cuts_intersections = sorted(self.cuts_intersections , \
+                                       cmp = lambda k1,k2: cmp(k1[1],k2[1]))
+
+        logging.debug(\
+        '\nS-wall {}\nintersects the following cuts at the points\n{}\n'\
+        .format(self.label, intersections))
+
+        ### now define the lis of splitting points (for convenience) ad the 
+        ### list of local charges
+        self.splittings = [t for bp, t, chi in self.cuts_intersections]
+        self.local_roots = [self.initial_root]
+        self.local_weight_pairs = [self.initial_weight_pairs]
+        for k in range(len(self.cuts_intersections)):
+            branch_point = self.cuts_intersections[k][0]   # branch-point
+            # t = self.cuts_intersections[k][1]           # proper time
+            direction = self.cuts_intersections[k][2]     # 'ccw' or 'cw'
+            current_root = self.local_roots[-1]
+            new_root = self.spectral_network.sw_data.g_data.weyl_monodromy(
+                                        current_root, branch_point, direction)
+            new_weight_pairs = \
+                self.spectral_network.sw_data.g_data.ordered_weight_pairs(
+                                                                    new_root)
+            self.local_roots.append(new_root)
+            self.local_weight_pairs.append(new_weight_pairs)
+
+
 
 
 def get_s_wall_seeds(sw, theta, branch_point, config,):

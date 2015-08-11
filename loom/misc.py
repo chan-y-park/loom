@@ -242,3 +242,32 @@ def delete_duplicates(l):
     return uniq
 
 
+def clock(direction):
+    if direction == 'left':
+        return 'ccw'
+    elif direction == 'right':
+        return 'cw'
+    else:
+        logging.info('\nCannot read direction!\n')
+
+
+def left_right(l, point):
+    """
+    given the list 
+    l = [..., z, ...]
+    and a point in the list (specified by the corresponding integer),
+    determines whether x increases or decreases at that point, 
+    returning repsectively 'left' or 'right'
+    """
+    if point > len(l)-1:
+        logging.info('Cant determine direction, point doesnt belong to list!')
+    elif point > 0:
+        if l[point-1].real < l[point].real:
+            return 'right'
+        else:
+            return 'left'
+    elif point == 0:
+        if l[point].real < l[point+1].real:
+            return 'right'
+        else:
+            return 'left'
