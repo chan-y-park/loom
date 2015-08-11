@@ -47,8 +47,10 @@ class SpectralNetwork:
         logging.info('Start growing a new spectral network...')
 
         logging.info('Seed S-walls at ramification points...')
-        for rp in sw.ramification_points:
-            s_wall_seeds = get_s_wall_seeds(sw, self.phase, config)
+        ### TODO: Currently an S-wall is born out of a ramification point,
+        ### but conceptually it should emanate from a branch point.
+        for rp in sw.ffr_ramification_points:
+            s_wall_seeds = get_s_wall_seeds(sw, self.phase, rp, config)
             for z_0, x_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
@@ -68,7 +70,7 @@ class SpectralNetwork:
         ppzs = sw.punctures
 
         rpzs = []
-        for rp in sw.ramification_points:
+        for rp in sw.ffr_ramification_points:
             rpzs.append(rp.z)
 
         n_finished_s_walls = 0 

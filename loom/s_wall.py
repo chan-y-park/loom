@@ -5,7 +5,7 @@ import pdb
 
 from cmath import exp, pi, phase
 
-#from geometry import get_local_sw_diff
+from geometry import get_local_sw_diff
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
                   GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0,)
 
@@ -200,8 +200,8 @@ class SWall(object):
             self[step] = y_i 
 
 
-def get_s_wall_seeds(sw, theta, config,):
-    rp = sw.ramification_point
+def get_s_wall_seeds(sw, theta, ramification_point, config,):
+    rp = ramification_point
     delta = config['accuracy']
     dt = config['size_of_small_step']
 
@@ -216,7 +216,7 @@ def get_s_wall_seeds(sw, theta, config,):
 
     # 1.1 find the coefficient and the exponent of the leading term
     # of the SW differential at the ramification point.
-    lambda_0, diff_e = sw.get_local_sw_diff()
+    lambda_0, diff_e = get_local_sw_diff(sw, rp)
 
     # 1.2 find c_i, a phase factor for each S-wall.
     omega_1 = exp(2*pi*1j/rp.i)
@@ -317,21 +317,20 @@ def get_joint(z, x1_i, x2_i, x1_j, x2_j, parent_i, parent_j, accuracy=None,
 
 
 def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):
-#    return False
-    root_system = g_data["root_system"]
-    k = g_data["representation"]
+    root_system = g_data.root_system
+    k = g_data.fundamental_representation_index
     # NOTE: A shortcut. Use this after checking this function
     # works correctly.
     if root_system[0] == 'A':
         if k == 1:
             return True
-        else:
-            # XXX: This part is not implemented yet.
-            return False
     elif root_system[0] == 'D' and k == 1:
         if abs(x1-(-x2)) < accuracy:
             return False
         else:
             return True
+    else:
+        # TODO
+        raise NotImplementedError
         
     

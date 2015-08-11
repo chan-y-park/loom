@@ -402,36 +402,35 @@ class SWData(object):
         return xs
             
 
-    #def get_local_sw_diff(sw, ramification_point):
-    def get_local_sw_diff(self):
-        rp = self.ramification_point
-        num_eq = self.curve.num_eq
-        num_v = self.diff.num_v
+def get_local_sw_diff(sw, ramification_point):
+    rp = ramification_point
+    num_eq = sw.curve.num_eq
+    num_v = sw.diff.num_v
 
-        # use Dz = z - rp.z & Dx = x - rp.x
-        Dz, Dx = sympy.symbols('Dz, Dx')
-        local_curve = (
-            num_eq.subs(x, rp.x+Dx).subs(z, rp.z+Dz)
-            .series(Dx, 0, rp.i+1).removeO()
-            .series(Dz, 0, 2).removeO()
-        )
-        # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
-        a = local_curve.n().coeff(Dz).coeff(Dx, 0)
-        b = local_curve.n().coeff(Dx**rp.i).coeff(Dz, 0)
-        # Dx = Dx(Dz)
-        Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
-        local_diff = (
-            num_v.subs(x, rp.x+Dx_Dz).subs(z, rp.z+Dz)
-            .series(Dz, 0, 1).removeO()
-        )
-        # get the coefficient and the exponent of the leading term
+    ### use Dz = z - rp.z & Dx = x - rp.x
+    Dz, Dx = sympy.symbols('Dz, Dx')
+    local_curve = (
+        num_eq.subs(x, rp.x+Dx).subs(z, rp.z+Dz)
+        .series(Dx, 0, rp.i+1).removeO()
+        .series(Dz, 0, 2).removeO()
+    )
+    ### curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
+    a = local_curve.n().coeff(Dz).coeff(Dx, 0)
+    b = local_curve.n().coeff(Dx**rp.i).coeff(Dz, 0)
+    ### Dx = Dx(Dz)
+    Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
+    local_diff = (
+        num_v.subs(x, rp.x+Dx_Dz).subs(z, rp.z+Dz)
+        .series(Dz, 0, 1).removeO()
+    )
+    # get the coefficient and the exponent of the leading term
+    (diff_c, diff_e) = local_diff.leadterm(Dz)
+    if diff_e == 0:
+        # remove the constant term from the local_diff
+        local_diff -= local_diff.subs(Dz, 0)
         (diff_c, diff_e) = local_diff.leadterm(Dz)
-        if diff_e == 0:
-            # remove the constant term from the local_diff
-            local_diff -= local_diff.subs(Dz, 0)
-            (diff_c, diff_e) = local_diff.leadterm(Dz)
 
-        return (complex(diff_c.n()), diff_e)
+    return (complex(diff_c.n()), diff_e)
 
 
 
