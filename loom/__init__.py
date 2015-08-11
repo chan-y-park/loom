@@ -7,7 +7,7 @@ elif platform.system() == 'Linux':
         os.environ['DISPLAY']
         matplotlib.use('TkAgg')
     except KeyError:
-        matplotlib.use('Agg') 
+        matplotlib.use('Agg')
 else:
     print('Use default backend defined in matplotlibrc: '
           '{}'.format(matplotlib.rcParams['backend']))

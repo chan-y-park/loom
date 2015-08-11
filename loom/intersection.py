@@ -28,10 +28,10 @@ class NoIntersection(Exception):
 
 def remove_duplicate_intersection(new_ilist, old_ilist):
     """
-    Remove any duplicate in new_ilist1, then remove intersections 
+    Remove any duplicate in new_ilist1, then remove intersections
     of new_ilist that already exist in old_ilist
     """
-    temp_ilist = new_ilist 
+    temp_ilist = new_ilist
 
     for intersection1, intersection2 in combinations(temp_ilist, 2):
         if intersection1 == intersection2:
@@ -39,7 +39,7 @@ def remove_duplicate_intersection(new_ilist, old_ilist):
         else:
             continue
 
-    temp_ilist = new_ilist 
+    temp_ilist = new_ilist
 
     for new_intersection in temp_ilist:
         for intersection in old_ilist:
@@ -50,7 +50,7 @@ def remove_duplicate_intersection(new_ilist, old_ilist):
 def find_curve_range_intersection(curve_1, curve_2, cut_at_inflection=False):
     """
     Return intersections of x- and y-ranges of two real curves,
-    which are parametric curves on the xy-plane given as 
+    which are parametric curves on the xy-plane given as
     (x_array, y_array), a tuple of NumPy arrays.
     """
     x1, y1 = curve_1

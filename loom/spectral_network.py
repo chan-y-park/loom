@@ -14,7 +14,7 @@ from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
 from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode)
 from hit_table import HitTable
 from intersection import (NoIntersection,
-                          find_intersection_of_segments, 
+                          find_intersection_of_segments,
                           find_curve_range_intersection)
 
 
@@ -31,12 +31,12 @@ class SpectralNetwork:
             self.ramification_points = []
         else:
             self.ramification_points = ramification_points
-        self.hit_table = None 
+        self.hit_table = None
         #self.hit_table = HitTable(config['size_of_bin'])
 
         self.s_walls = []
         self.joints = []
-        self.g_data = None 
+        self.g_data = None
 
 
     def grow(self, sw, config):
@@ -57,12 +57,13 @@ class SpectralNetwork:
         logging.info('Seed S-walls at ramification points...')
         for rp in self.ramification_points:
             s_wall_seeds = get_s_wall_seeds(sw, self.phase, rp, config)
-            for z_0, x_0 in s_wall_seeds:
+            for z_0, x_0, M_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
                     SWall(
                         z_0=z_0,
                         x_0=x_0,
+                        M_0=M_0,
                         parents=[rp.label],
                         label=label,
                         n_steps=n_steps,
@@ -79,7 +80,7 @@ class SpectralNetwork:
         for rp in self.ramification_points:
             rpzs.append(rp.z)
 
-        n_finished_s_walls = 0 
+        n_finished_s_walls = 0
         iteration = 0
         while(iteration < config['num_of_iterations']):
             """
@@ -120,7 +121,8 @@ class SpectralNetwork:
                 self.s_walls.append(
                     SWall(
                         z_0=joint.z,
-                        x_0=joint.x, 
+                        x_0=joint.x,
+                        M_0=joint.M,
                         parents=joint.parents,
                         label=label,
                         n_steps=n_steps,
@@ -146,11 +148,11 @@ class SpectralNetwork:
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
         if self.hit_table is None:
-            json_data['hit_table'] = None 
+            json_data['hit_table'] = None
         else:
             json_data['hit_table'] = self.hit_table.get_json_data()
         json.dump(json_data, file_object, **kwargs)
-    
+
 
     def set_from_json_data(self, file_object, **kwargs):
         """
@@ -185,7 +187,7 @@ class SpectralNetwork:
         Find joints between the newly grown segment of the given S-wall
         and the other S-walls by interpolating S-walls with functions and
         finding roots of the pairwise differences of the functions.
-        
+
         This checks joints that are formed by two
         S-walls only, not considering the possibility of a joint of three
         S-walls, which in principle can happen but is unlikely in a numerical
@@ -215,10 +217,10 @@ class SpectralNetwork:
                 for i_p in range(len(prev_tps)+1):
                     z_seg_p = prev_z_segs[i_p]
 
-                    # Check if the two segments have a common x-range.  
+                    # Check if the two segments have a common x-range.
                     have_common_x_range = False
                     for x_a, x_b in (
-                        (x_a, x_b) for x_a in new_x_segs[i_n].T 
+                        (x_a, x_b) for x_a in new_x_segs[i_n].T
                         for x_b in prev_x_segs[i_p].T
                     ):
                         x_r_range, x_i_range = (
@@ -228,8 +230,8 @@ class SpectralNetwork:
                                 cut_at_inflection=False,
                             )
                         )
-                        if ((x_r_range.is_EmptySet is True) or 
-                            (x_r_range.is_EmptySet is True) or 
+                        if ((x_r_range.is_EmptySet is True) or
+                            (x_r_range.is_EmptySet is True) or
                             x_i_range.is_FiniteSet or
                             x_i_range.is_FiniteSet):
                             continue
@@ -243,8 +245,8 @@ class SpectralNetwork:
                     # Find an intersection on the z-plane.
                     try:
                         ip_x, ip_y = find_intersection_of_segments(
-                            (z_seg_n.real, z_seg_n.imag), 
-                            (z_seg_p.real, z_seg_p.imag), 
+                            (z_seg_n.real, z_seg_n.imag),
+                            (z_seg_p.real, z_seg_p.imag),
                             config['accuracy'],
                         )
                         ip_z = ip_x + 1j*ip_y
@@ -267,9 +269,16 @@ class SpectralNetwork:
                         ip_x_p_0 = n_nearest(ip_xs, x_p[0], 1)[0]
                         ip_x_p_1 = n_nearest(ip_xs, x_p[1], 1)[0]
 
+                        # find mass of parent S-walls: this is approximate,
+                        # since we don't interpolate precisely to the joint
+                        # TODO: improve by doing precise interpolation
+                        M_n = new_s_wall.M[t_n]
+                        M_p = prev_s_wall.M[t_p]
+
                         a_joint = get_joint(
                             ip_z, ip_x_n_0, ip_x_n_1, ip_x_p_0, ip_x_p_1,
-                            new_s_wall.label, 
+                            M_n, M_p,
+                            new_s_wall.label,
                             prev_s_wall.label,
                             accuracy=config['accuracy'],
                             xs_at_z=ip_xs,
@@ -325,8 +334,8 @@ class SpectralNetwork:
 
                 for t_c_i, t_c_f in self.hit_table[bin_key][i_c]:
                     for t_d_i, t_d_f in self.hit_table[bin_key][i_d]:
-                        # Check if the two segments have a common x-range.  
-                        x_c = [x_i for x_i 
+                        # Check if the two segments have a common x-range.
+                        x_c = [x_i for x_i
                                in self.s_walls[i_c].x[t_c_i:t_c_f+1].T]
                         x_d = [x_i for x_i
                                in self.s_walls[i_d].x[t_d_i:t_d_f+1].T]
@@ -340,8 +349,8 @@ class SpectralNetwork:
                                     (x_b.real, x_b.imag),
                                 )
                             )
-                            if (x_r_range.is_EmptySet and 
-                                x_r_range.is_EmptySet and 
+                            if (x_r_range.is_EmptySet and
+                                x_r_range.is_EmptySet and
                                 x_i_range.is_FiniteSet and
                                 x_i_range.is_FiniteSet):
                                 continue
@@ -394,12 +403,18 @@ class SpectralNetwork:
                             c_ip_x1 = n_nearest(ip_xs, c_x[1], 1)[0]
                             d_ip_x0 = n_nearest(ip_xs, d_x[0], 1)[0]
                             d_ip_x1 = n_nearest(ip_xs, d_x[1], 1)[0]
-                            
+
+                            # TODO: correctly populate the masses of the
+                            # parent walls
+                            M_0 = 0
+                            M_1 = 0
+
                             a_joint_label = ('joint ' +
                                              '#{}'.format(len(self.joints)))
                             a_joint = get_joint(
                                 ip_z, c_ip_x0, c_ip_x1, d_ip_x0, d_ip_x1,
-                                self.s_walls[i_c].label, 
+                                M_0, M_1,
+                                self.s_walls[i_c].label,
                                 self.s_walls[i_d].label,
                                 config['accuracy'],
                                 root_system=config['root_system'],
@@ -410,7 +425,7 @@ class SpectralNetwork:
                                 continue
                             else:
                                 new_joints.append(a_joint)
-                            
+
                         except NoIntersection:
                             pass
 
@@ -419,7 +434,7 @@ class SpectralNetwork:
 
 def sage_get_g_data(config):
     g_data_str = subprocess.check_output(
-        ["sage", "./loom/sage_scripts/get_g_data.sage", 
+        ["sage", "./loom/sage_scripts/get_g_data.sage",
          config["root_system"], config["representation"]]
     )
     g_data = eval(g_data_str)

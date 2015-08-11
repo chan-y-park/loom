@@ -27,7 +27,7 @@ def set_logging(level):
         logging_level = logging.WARNING
         logging_format = '%(message)s'
 
-    logging.basicConfig(level=logging_level, format=logging_format, 
+    logging.basicConfig(level=logging_level, format=logging_format,
                         stream=sys.stdout)
 
 
@@ -49,10 +49,10 @@ def generate_spectral_network(config, phase=None):
         logging.info('Generate a single spectral network at theta = {}.'
                      .format(phase))
         spectral_network = SpectralNetwork(
-            phase=phase, 
+            phase=phase,
             ramification_points=ramification_points,
             config=config
-        ) 
+        )
 
         spectral_network.grow(sw, config)
 
@@ -63,7 +63,7 @@ def generate_spectral_network(config, phase=None):
         logging.info('phase_range = {}.'.format(phase_range))
         spectral_network_list = parallel_get_spectral_network(
             sw, ramification_points, config
-        ) 
+        )
 
     end_time = time.time()
     logging.info('end cpu time: %.8f', end_time)
@@ -91,7 +91,7 @@ def load_config(path=None):
     config.read(path)
 
     return config
-    
+
 
 def load_spectral_network(data_dir=None):
     if data_dir is None:
@@ -106,7 +106,7 @@ def load_spectral_network(data_dir=None):
         root.destroy()
         if data_dir == '':
             return (None, None)
- 
+
     logging.info('Opening data directory "{}"...'.format(data_dir))
 
     config = LoomConfig()
@@ -158,7 +158,7 @@ def save_spectral_network(config, spectral_networks, data_dir=None,
         timestamp = str(int(time.time()))
         data_dir = os.path.join(
             os.curdir,
-            'data', 
+            'data',
             timestamp
         )
 

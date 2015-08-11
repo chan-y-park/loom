@@ -7,10 +7,10 @@ class NetworkPlotBase(object):
     def __init__(self, matplotlib_figure=None,):
         self.plots = []
         self.data_cursor = None
-        self.current_plot_idx = None 
+        self.current_plot_idx = None
 
         self.figure = matplotlib_figure
-    
+
 
     def draw(self, phase=None, branch_points=None, joints=None, walls=None,
              labels=None, plot_range=[-5, 5, -5, 5], plot_joints=False,
@@ -52,9 +52,9 @@ class NetworkPlotBase(object):
         # Plot branch points.
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
+            axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8,
                       color='k', label=labels['branch_points'][i],)
-   
+
         # Plot joints.
         if plot_joints is True:
             for i, jp in enumerate(joints):
