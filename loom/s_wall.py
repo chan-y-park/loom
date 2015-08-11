@@ -255,7 +255,8 @@ class SWall(object):
             # branch cut emanating from its parent branch-point
             # if such intersections happens at t=0
             intersections = [[bp, i] for bp, i in intersections if \
-                                   not (bp.label == self.parents[0] and i == 0)]
+                                   not (bp.label == self.parents[0] \
+                                                and (i == 0 or i==1))]
             # add the direction to the intersection data: either 'cw' or 'ccw'
             intersections = [[bp, i, clock(left_right(self.z, i))]\
                            for bp, i in intersections]

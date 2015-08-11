@@ -55,25 +55,45 @@ def dynamic_alignment(angle):
     elif cos(angle) < -0.707:
         return 'right'
 
-def plot_s_wall(s, figure, label):
+def plot_s_wall(s, figure, label, root_color_map):
+    n_sec = len(s.splittings) + 1
+
+    if n_sec == 1:
+        sections = [s.z]
+    else:
+        sections = [s.z[0:(s.splittings[0]+1)]] + \
+                    [s.z[s.splittings[i]:(s.splittings[i+1]+1)] \
+                        for i in range(len(s.splittings)-2)] + \
+                    [s.z[s.splittings[-1]:-1]]
+
+    roots = s.local_roots
+
+    for i, sec in enumerate(sections):
+        z_r = [z.real for z in sec]
+        z_i = [z.imag for z in sec]
+
+        # plot the lines
+        sec_root =roots[i]
+        color = [k for k, v in root_color_map.iteritems() \
+                                if numpy.array_equal(v, sec_root)][0]
+        figure.line(z_r, z_i, line_width=2, line_color=color)
+
+    ### Plot arrows
     z_r = [z.real for z in s.z]
     z_i = [z.imag for z in s.z]
-    hl = int(len(z_r) / 2.0)
+    hl = int(numpy.floor(len(z_r) / 2.0))
     hl_angle = phase((z_r[hl+1] - z_r[hl]) + 1j*(z_i[hl+1] - z_i[hl]))
-    text_offset = dynamic_offset(hl_angle)
-    text_z = s.z[hl] + text_offset
     # fl = len(z_r) - 1
     # fl_angle = phase((z_r[fl] - z_r[fl-1]) + 1j*(z_i[fl] - z_i[fl-1]))
     # text_z = s.z[fl] + dynamic_displacement(fl_angle)
-    
-    # plot the lines
-    figure.line(z_r, z_i, line_width=2)
+    figure.triangle(x=z_r[hl], y=z_i[hl], size=7, line_width=2, 
+        angle=(hl_angle - pi/2), line_color='black', fill_color='black')
 
-    # plot the arrows
-    figure.triangle(x=z_r[hl], y=z_i[hl], size=10, line_width=2, 
-        angle=(hl_angle - pi/2))
-
-    # plot the labels
+        
+    ### Now plot the labels
+    hl_angle = phase((z_r[hl+1] - z_r[hl]) + 1j*(z_i[hl+1] - z_i[hl]))
+    text_offset = dynamic_offset(hl_angle)
+    text_z = s.z[hl] + text_offset
     figure.text(x=[text_z.real], y=[text_z.imag], 
                 # text=[s.label],
                 text = [label],
@@ -83,7 +103,7 @@ def plot_s_wall(s, figure, label):
                 text_font='times', text_font_style='italic', text_font_size='12pt'
                )
 
-    return None
+    pass
 
 
 def delete_duplicates(l):
@@ -104,10 +124,10 @@ def plot_branch_points(ramification_points, figure, y_max):
     return None
 
 
-def plot_swn(swn, figure, y_max):
+def plot_swn(swn, figure, y_max, root_color_map):
     # add the S-walls
     for i, s in enumerate(swn.s_walls):
-        plot_s_wall(s, figure, str(i))
+        plot_s_wall(s, figure, str(i), root_color_map)
 
     # add the branch points
     plot_branch_points(swn.sw_data.branch_points, figure, y_max)
@@ -115,6 +135,8 @@ def plot_swn(swn, figure, y_max):
 
 def plot_multi_swn(data):
     swn_list = data.spectral_networks
+    g_data = swn_list[0].sw_data.g_data
+    root_color_map = create_root_color_map(g_data)
     plots = []
     swn_tables = []
     #TO BE GIVEN BY HAND, CLIPPING BOUNDARY
@@ -124,7 +146,7 @@ def plot_multi_swn(data):
     for swn in swn_list:
         # create a figure object
         p = figure(width=600, height=600)
-        plot_swn(swn, p, y_max)
+        plot_swn(swn, p, y_max, root_color_map)
         plot_tables = swn_data_tables(swn)
         plots.append(vform(p, plot_tables))
     return plots
@@ -233,3 +255,18 @@ def g_data_tables(data):
     root_dictionary = {'alpha_' + str(i) : rt for i, rt in enumerate(g_roots)}
     show(vform(weight_data_table(weight_dictionary))) 
     show(vform(root_data_table(root_dictionary, data)))
+
+
+
+def create_root_color_map(g_data):
+    g_roots = list(g_data.roots)
+    n_rts = len(g_roots)
+    x = numpy.random.random(size=n_rts) * 100
+    y = numpy.random.random(size=n_rts) * 100
+    z = numpy.random.random(size=n_rts) * 100
+    colors = [
+    "#%02x%02x%02x" % (r, g, b) for r, g, b in \
+            zip(numpy.floor(50+2*x), numpy.floor(50+2*y), numpy.floor(50+2*z))
+    ]
+    return {colors[i] : rt for i, rt in enumerate(g_roots)}
+
