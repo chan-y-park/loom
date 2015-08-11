@@ -26,10 +26,12 @@ class SpectralNetwork:
     def __init__(
         self,
         phase=None,
+        sw_data=None,
     ):
         self.phase = phase
         self.s_walls = []
         self.joints = []
+        self.sw_data =sw_data
 
 
     def grow(self, sw, config):

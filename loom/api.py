@@ -74,6 +74,7 @@ def generate_spectral_network(config, phase=None):
                      .format(phase))
         spectral_network = SpectralNetwork(
             phase=phase, 
+            sw_data=sw,
         ) 
 
         spectral_network.grow(sw, config)

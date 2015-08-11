@@ -59,11 +59,11 @@ class BranchPoint:
         of the trivialization class; x is the corresponding
         coordinate in the fiber above the branch point.
 
-    path_to_bp :
+    path_to_bp - UNAVAILABLE :
         A path running from the basepoint of the trivialization
         to the branch point without crossing any branch cut.
     
-    sheet_tracks_to_bp :
+    sheet_tracks_to_bp - UNAVAILABLE :
         A list of sheet tracks, i.e. the x-values of each
         sheet as it is tracked along a path that runs to
         the branch point, to determine collision structure 
@@ -73,11 +73,11 @@ class BranchPoint:
         A minimal list of positive roots characterizing the 
         groups of colliding sheets at the branch point.
     
-    path_around_bp :
+    path_around_bp - UNAVAILABLE :
         A path encircling the branch point and no one else,
         used to compute the monodromy.
     
-    sheet_tracks_around_bp :
+    sheet_tracks_around_bp - UNAVAILABLE :
         A list of sheet tracks, i.e. the x-values of each
         sheet as it is tracked along a path that runs around 
         the branch point, to determine the monodromy.
@@ -95,6 +95,10 @@ class BranchPoint:
         k of the walls delimiting the chamber.
         The order of the branch point is then k + 1.
 
+    ffr_ramification_points :
+        A list of all ramification point objects, which 
+        lie in the fiber above the branch point.
+
     """
     def __init__(self, z=None):
         self.z = z
@@ -109,6 +113,7 @@ class BranchPoint:
         #self.path_around_z = None
         #self.sheets_around_z = None
         self.monodromy = None
+        self.ffr_ramification_points = None
 
     def print_info(self):
         print(
@@ -433,6 +438,10 @@ class SWDataWithTrivialization(SWData):
         #bp.path_around_z = path_around_bp
         #bp.sheets_around_z = self.get_sheets_along_path(path_around_bp)
         bp.monodromy = self.get_sheet_monodromy(path_around_bp)
+
+        bp.ffr_ramification_points = [rp 
+                    for rp in self.ffr_ramification_points
+                    if rp.z == bp.z]
 
 
     def analyze_irregular_singularity(self, irr_sing):
