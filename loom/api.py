@@ -142,9 +142,7 @@ def load_spectral_network(data_dir=None):
     data_file_list.sort()
     for data_file in data_file_list:
         logging.info('Loading {}...'.format(data_file))
-        spectral_network = SpectralNetwork(
-            config=config,
-        )
+        spectral_network = SpectralNetwork()
         with open(data_file, 'r') as fp:
             spectral_network.set_from_json_data(fp)
             spectral_network_list.append(spectral_network)

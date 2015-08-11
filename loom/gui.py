@@ -10,7 +10,8 @@ from math import pi
 from config import LoomConfig
 from api import (generate_spectral_network, load_config, load_spectral_network,
                  save_config, save_spectral_network, 
-                 make_spectral_network_plot,)
+                 make_spectral_network_plot, SpectralNetworkData,)
+from trivialization import SWDataWithTrivialization
 
 class GUILoom:
     def __init__(self, config=None, spectral_networks=[],):
@@ -28,6 +29,7 @@ class GUILoom:
         self.entry_var = {} 
         self.mb = None
         self.check = {}
+        self.sw_data = None
         self.spectral_networks = spectral_networks
 
 
@@ -207,6 +209,8 @@ class GUILoom:
 
     def menu_load_data_action(self):
         self.config, self.spectral_networks = load_spectral_network()
+        self.sw_data = SWDataWithTrivialization(self.config)
+        logging.info('Finished loading spectral network data.')
         return None
 
     def menu_save_data_action(self):
@@ -256,19 +260,21 @@ class GUILoom:
     def button_generate_action(self):
         self.update_config_from_entries()
 
-        self.spectral_networks = generate_spectral_network(
+        spectral_network_data = generate_spectral_network(
             self.config,
             phase=eval(self.entry_phase.get()),
         )
+        self.sw_data = spectral_network_data.sw_data
+        self.spectral_networks = spectral_network_data.spectral_networks
 
         return None
 
     def button_plot_action(self):
         # Plot spectral networks.
         if (len(self.spectral_networks) > 0):
+            snd = SpectralNetworkData(self.sw_data, self.spectral_networks)
             spectral_network_plot = make_spectral_network_plot(
-                self.config, 
-                self.spectral_networks,
+                snd,
                 master=self.root,
                 plot_on_cylinder=self.check_plot_on_cylinder,
             )
