@@ -234,7 +234,7 @@ def make_spectral_network_plot(spectral_network_data, master=None,
                      '@ theta = {}...'.format(spectral_network.phase))
         spectral_network_plot.draw(
             spectral_network, 
-            spectral_network_data.sw_data.ffr_ramification_points
+            spectral_network_data.sw_data.branch_points
         )
 
     if show_plot is True:

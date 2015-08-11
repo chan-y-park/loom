@@ -20,8 +20,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
         self, 
         spectral_network,
-        ramification_points,
-        #z_range_limits=None, 
+        branch_points,
+        punctures=None, 
         plot_range=None, 
         plot_joints=False,
         plot_data_points=False,
@@ -33,14 +33,15 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             if plot_on_cylinder is True:
                 plot_range = [[-pi, pi], [-5, 5]]
 
-        branch_points = []
-        for i, rp in enumerate(ramification_points):
+        branch_point_xys = []
+        for i, bp in enumerate(branch_points):
             if plot_on_cylinder is True:
-                rp_z = put_on_cylinder(rp.z, C)
+                bp_z = put_on_cylinder(bp.z, C)
             else:
-                rp_z = rp.z
-            branch_points.append([rp_z.real, rp_z.imag])
-            labels['branch_points'].append(rp.label)
+                bp_z = bp.z
+            branch_point_xys.append([bp_z.real, bp_z.imag])
+            label = 'Positive roots: {}'.format(bp.positive_roots)
+            labels['branch_points'].append(label)
    
         joints = []
         for i, jp in enumerate(spectral_network.joints):
@@ -78,7 +79,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
 
         super(SpectralNetworkPlotBase, self).draw(
             phase=spectral_network.phase,
-            branch_points=branch_points,
+            branch_points=branch_point_xys,
             joints=joints,
             walls=walls,
             labels=labels,

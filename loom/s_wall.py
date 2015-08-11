@@ -60,6 +60,7 @@ class SWall(object):
         SWall.x is a Numpy array of the fiber coordinates at t, i.e. 
             SWall.x[t] = [x[t][0], x[t][1], ...].
         """
+        ### FIXME: self.zs & self.xs instead of z & x?
         if n_steps is None:
             self.z = []
             self.x = []
@@ -70,7 +71,7 @@ class SWall(object):
             self.x[0] = x_0
         self.parents = parents
         self.label = label
-        # XXX: interface for marking branch-cut crossings.
+        # TODO: interface for marking branch-cut crossings.
         self.splitting = []
 
 

@@ -16,7 +16,6 @@ from itertools import combinations
 from geometry import RamificationPoint, SWData
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
 from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode)
-from hit_table import HitTable
 from intersection import (NoIntersection,
                           find_intersection_of_segments, 
                           find_curve_range_intersection)
@@ -122,6 +121,31 @@ class SpectralNetwork:
             iteration += 1
 
             logging.info('Iteration #{} finished.'.format(iteration))
+
+        ### Decorate S-walls with trivialization.
+        for k, s_wall in enumerate(self.s_walls):
+            logging.info('Adding trivialization info to S-wall #{}'
+                         .format(k))
+            ### Find weights corresponding to the x's of the endpoint
+            ### of the S-wall.
+            final_z = s_wall.z[-1]
+            sheet_xs = sw.get_sheet_xs_at_z(final_z)
+            sheets = []
+            ### Identify S-wall's x's with sheet #'s. 
+            s_wall_xs = s_wall.x[-1]
+            for x in s_wall_xs:
+                difference = numpy.fromiter(
+                    (abs(x - sheet_x) for sheet_x in sheet_xs),
+                    dtype=float,
+                )
+                i = difference.argsort()[0]
+                sheets.append(i)
+            ### Now sheets = [i_0, i_1], where s_wall.x[0][i_0] corresponds
+            ### to g_data.weights[i_0] and similarly for i_1.
+            s_wall.label += '\nweights = ('
+            for i in sheets:
+                s_wall.label += '{},'.format(sw.g_data.weights[i])
+            s_wall.label += ')'
 
 
     def save_json_data(self, file_object, **kwargs):
@@ -349,8 +373,7 @@ class SpectralNetwork:
         new_x_segs = numpy.split(new_s_wall.x, new_tps, axis=0,)
 
         # NOTE: Here we find only a single joint between two S-walls.
-        # If needed, change the part of getting the z-intersection
-        # such that it finds multiple z-intersections, or use HitTable.
+        # Use CGAL to find multiple z-intersections.
         for prev_s_wall in self.s_walls[:new_s_wall_index]:
             prev_tps = prev_s_wall.get_turning_points()
             prev_z_segs = numpy.split(prev_s_wall.z, prev_tps, axis=0,)

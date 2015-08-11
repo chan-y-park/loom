@@ -304,16 +304,21 @@ class SWDataWithTrivialization(SWData):
         return sheets_along_path
 
 
-    def get_sheets_at_z(self, z_pt, g_data=None):
+    def get_sheet_xs_at_z(self, z_pt):
         """
-        Returns a dict of (sheet_index, x) at a point ''z_pt'', 
+        Returns a list of x's over a point ''z_pt'', 
         which cannot be a branch point or a singularity.
+
+        x's are aligned according to g_data.weights.
+        That is, final_x[0] is on the same sheet
+        as reference_xs[0], both of which correspond to
+        g_data.weight[0].
         """
         z_path = get_path_to(z_pt, self.base_point)
         sheets = self.get_sheets_along_path(z_path)
         final_xs = [s_i[-1] for s_i in sheets]
-        final_sheets = {i : x for i, x in enumerate(final_xs)}
-        return final_sheets
+        #final_sheets = {i : x for i, x in enumerate(final_xs)}
+        return final_xs
 
     
     ### TODO: Review this method.
