@@ -173,19 +173,19 @@ class SWDataWithTrivialization(SWData):
     base_point : 
         the base point of the trivialization
 
-    reference_sheets :
-        a list x's 
+    reference_ffr_xs :
+        a list of x's 
             [x_0, x_1, ..., x_i, ...]
         where 'i' is an integer label for the sheet,
         and 'x' is its position in the fiber of T^*C 
         over the basepoint. This is aligned with 
         g_data.ffr_weights.
 
-    sheets_at_z(z) :
+    get_sheets_at_z(z) :
         this method returns the set of sheets and their integer label 
         identifier at any point 'z' on the C-plane.
         The labels are consistent with those at the basepoint.
-        To get the corresponding weights, of the firt fundamental 
+        To get the corresponding weights, of the first fundamental 
         representation, use g_data.weights[i].
         The output looks like this
         {0 : x_0, ... , i : x_i, ...}
@@ -248,12 +248,14 @@ class SWDataWithTrivialization(SWData):
             bp = BranchPoint(z=z_bp)
             self.analyze_branch_point(bp)
             self.branch_points.append(bp)
+            bp.print_info()
 
         ### Construct the list of irregular singularities
         for z_irr_sing in iszs:
             irr_sing = IrregularSingularity(z=z_irr_sing)
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
+            irr_sing.print_info()
 
         
     ### TODO: Need to implement tracking without using aligned x's?
