@@ -89,6 +89,12 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             walls.append(segments)
             labels['walls'].append(seg_labels)
 
+
+        logging.info(
+                '\n------------------------'+
+                '\nphase : {}'.format(spectral_network.phase) +
+                '\n------------------------\n'
+            )
         print_legend(g_data)
 
         print_spectral_network_data(
