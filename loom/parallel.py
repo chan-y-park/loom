@@ -30,10 +30,9 @@ def a_child_process(
 
     spectral_network = SpectralNetwork(
         phase, 
-        sw_data=sw,
     ) 
 
-    spectral_network.grow(config)
+    spectral_network.grow(config, sw)
 
     shared_n_finished_spectral_networks.value += 1
     logging.info('Finished generating spectral network #{}/{}.'

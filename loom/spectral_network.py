@@ -26,15 +26,12 @@ class SpectralNetwork:
     def __init__(
         self,
         phase=None,
-        sw_data=None,
     ):
         self.phase = phase
         self.s_walls = []
         self.joints = []
-        self.sw_data =sw_data
 
-
-    def grow(self, config):
+    def grow(self, config, sw_data):
         """
         Grow the spectral network by seeding SWall's
         and then calling SWall.grow() for each S-wall.
@@ -50,8 +47,8 @@ class SpectralNetwork:
 
         logging.info('Seed S-walls at ramification points...')
         
-        for bp in self.sw_data.branch_points:
-            s_wall_seeds = get_s_wall_seeds(self.sw_data, self.phase, 
+        for bp in sw_data.branch_points:
+            s_wall_seeds = get_s_wall_seeds(sw_data, self.phase, 
                                                         bp, config)
             for z_0, x_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
@@ -62,17 +59,16 @@ class SpectralNetwork:
                         parents=[bp.label],
                         label=label,
                         n_steps=n_steps,
-                        spectral_network=self,
                     )
                 )
 
         logging.info('Setup the ODE integrator...')
-        ode = get_ode(self.sw_data, self.phase, accuracy)
+        ode = get_ode(sw_data, self.phase, accuracy)
 
         logging.info('Start growing a new spectral network...')
-        ppzs = self.sw_data.punctures
+        ppzs = sw_data.punctures
 
-        bpzs = [bp.z for bp in self.sw_data.branch_points]
+        bpzs = [bp.z for bp in sw_data.branch_points]
         
         n_finished_s_walls = 0 
         iteration = 0
@@ -84,8 +80,8 @@ class SpectralNetwork:
             new_joints = []     # number of new joints found in each iteration
             for i in range(n_finished_s_walls, len(self.s_walls)):
                 logging.info('Growing S-wall #{}...'.format(i))
-                self.s_walls[i].grow(ode, bpzs, ppzs, config,)
-                new_joints += self.get_new_joints(i, config)
+                self.s_walls[i].grow(ode, bpzs, ppzs, config, sw_data)
+                new_joints += self.get_new_joints(i, config, sw_data)
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
@@ -118,7 +114,6 @@ class SpectralNetwork:
                         parents=joint.parents,
                         label=label,
                         n_steps=n_steps,
-                        spectral_network=self,
                     )
                 )
             iteration += 1
@@ -159,12 +154,13 @@ class SpectralNetwork:
             self.joints.append(a_joint)
 
 
-    def get_new_joints(self, new_s_wall_index, config):
+    def get_new_joints(self, new_s_wall_index, config, sw_data):
         try:
             linux_distribution = platform.linux_distribution()[0]
             if linux_distribution != '':
                 return self.get_new_joints_using_cgal(
                     new_s_wall_index, config,
+                    sw_data, 
                     linux_distribution=linux_distribution,
                 )
             else:
@@ -174,10 +170,10 @@ class SpectralNetwork:
                             'get_new_joints_using_cgal() to '
                             'get_new_joints_using_interpolation().')
             return self.get_new_joints_using_interpolation(new_s_wall_index,
-                                                           config,)
+                                                           config, sw_data)
 
     def get_new_joints_using_cgal(self, new_s_wall_index, config,
-                                  linux_distribution=None):
+                                  sw_data, linux_distribution=None):
         """
         Find new wall-wall intersections using CGAL 2d curve intersection.
         """
@@ -302,7 +298,7 @@ class SpectralNetwork:
                     # S-walls?
 
                     # find the values of x at z = ip_z.
-                    ip_xs = find_xs_at_z_0(self.sw_data, ip_z)
+                    ip_xs = find_xs_at_z_0(sw_data, ip_z)
                     ip_x_n_0 = n_nearest(ip_xs, x_n[0], 1)[0]
                     ip_x_n_1 = n_nearest(ip_xs, x_n[1], 1)[0]
                     ip_x_p_0 = n_nearest(ip_xs, x_p[0], 1)[0]
@@ -314,7 +310,7 @@ class SpectralNetwork:
                         prev_s_wall.label,
                         accuracy=config['accuracy'],
                         xs_at_z=ip_xs,
-                        g_data=self.sw_data.g_data,
+                        g_data=sw_data.g_data,
                     )
 
                     if(a_joint is None):
@@ -328,7 +324,10 @@ class SpectralNetwork:
         return new_joints
 
 
-    def get_new_joints_using_interpolation(self, new_s_wall_index, config):
+    def get_new_joints_using_interpolation(
+                                            self, new_s_wall_index, 
+                                            config, sw_data
+                                        ):
         """
         Find joints between the newly grown segment of the given S-wall
         and the other S-walls by interpolating S-walls with functions and
@@ -409,7 +408,7 @@ class SpectralNetwork:
                         # S-walls?
 
                         # find the values of x at z = ip_z.
-                        ip_xs = find_xs_at_z_0(self.sw_data, ip_z)
+                        ip_xs = find_xs_at_z_0(sw_data, ip_z)
                         ip_x_n_0 = n_nearest(ip_xs, x_n[0], 1)[0]
                         ip_x_n_1 = n_nearest(ip_xs, x_n[1], 1)[0]
                         ip_x_p_0 = n_nearest(ip_xs, x_p[0], 1)[0]
@@ -421,7 +420,7 @@ class SpectralNetwork:
                             prev_s_wall.label,
                             accuracy=config['accuracy'],
                             xs_at_z=ip_xs,
-                            g_data=self.sw_data.g_data,
+                            g_data=sw_data.g_data,
                         )
 
                         if(a_joint is None):
