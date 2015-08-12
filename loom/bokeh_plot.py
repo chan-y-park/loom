@@ -299,12 +299,12 @@ def g_data_tables(data):
 def create_root_color_map(g_data):
     g_roots = list(g_data.roots)
     n_rts = len(g_roots)
-    x = numpy.random.random(size=n_rts) * 50
-    y = numpy.random.random(size=n_rts) * 50
-    z = numpy.random.random(size=n_rts) * 50
+    x = numpy.random.random(size=n_rts) * 200
+    y = numpy.random.random(size=n_rts) * 200
+    z = numpy.random.random(size=n_rts) * 200
     colors = [
     "#%02x%02x%02x" % (r, g, b) for r, g, b in \
-            zip(numpy.floor(50+x), numpy.floor(50+y), numpy.floor(50+z))
+            zip(numpy.floor(x), numpy.floor(y), numpy.floor(z))
     ]
     return {colors[i] : rt for i, rt in enumerate(g_roots)}
 
