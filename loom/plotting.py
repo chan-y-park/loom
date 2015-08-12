@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.widgets import Button
 from matplotlib import pyplot
 from math import pi
+
 from network_plot import NetworkPlotBase
 from misc import PSL2C, put_on_cylinder
 
@@ -369,7 +370,7 @@ def print_spectral_network_data(s_walls, branch_points, g_data):
                 ]
                 for loc_wts in s.local_weight_pairs
             ]
-        logging.info(
+        print(
                 '\n' + s.label + 
                 '\troot types : {}\n'.format(rt_labels) +
                 '\t\tsheet pairs : {}\n'.format(wt_labels)
@@ -377,7 +378,7 @@ def print_spectral_network_data(s_walls, branch_points, g_data):
 
     for bp in branch_points:
         rt_labels = [get_label(rt, root_dictionary) for rt in bp.positive_roots]
-        logging.info(
+        print(
                 '\n' + bp.label + 
                 '\tposition : {}\n'.format(bp.z) +
                 '\t\troot type : {}\n'.format(rt_labels)
@@ -403,17 +404,17 @@ def print_legend(g_data):
     weight_labels = weight_dictionary.keys()
     weights = weight_dictionary.values()
 
-    logging.info('\n\t--- The Root System ---\n')
+    print('\n\t--- The Root System ---\n')
     for i in range(len(roots)):
-        logging.info(
+        print(
                 root_labels[i] + 
                 '\t\t{}\n'.format(list(roots[i])) +
                 'ordered weight pairs : \t{}\n'.format(weight_pairs[i])
             )
 
-    logging.info('\n\t--- The Weight System ---\n')
+    print('\n\t--- The Weight System ---\n')
     for i in range(len(weights)):
-        logging.info(
+        print(
                 weight_labels[i] + 
                 '\t\t{}\n'.format(list(weights[i])) 
             )
