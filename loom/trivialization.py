@@ -255,14 +255,14 @@ class SWDataWithTrivialization(SWData):
             bp.label = 'Branch point #{}'.format(i)
             self.analyze_branch_point(bp)
             self.branch_points.append(bp)
-            bp.print_info()
+            # bp.print_info()
 
         ### Construct the list of irregular singularities
         for z_irr_sing in iszs:
             irr_sing = IrregularSingularity(z=z_irr_sing)
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
-            irr_sing.print_info()
+            # irr_sing.print_info()
 
         
     ### TODO: Need to implement tracking without using aligned x's?
