@@ -6,8 +6,10 @@ elif platform.system() == 'Linux':
     try:
         os.environ['DISPLAY']
         matplotlib.use('TkAgg')
+        print('Use TkAgg backend for matplotlib.')
     except KeyError:
-        matplotlib.use('Agg')
+        matplotlib.use('Agg') 
+        print('Use Agg backend for matplotlib.')
 else:
     print('Use default backend defined in matplotlibrc: '
           '{}'.format(matplotlib.rcParams['backend']))
@@ -19,8 +21,8 @@ from api import load_spectral_network as load
 from api import save_spectral_network as save
 from api import make_spectral_network_plot as plot
 from api import load_config, save_config
-from plotting import plot_s_walls
-from geometry import get_fibers
+# from plotting import plot_s_walls
+#from geometry import get_fibers
 
 set_logging('info')
 

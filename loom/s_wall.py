@@ -7,7 +7,7 @@ from cmath import exp, pi, phase
 
 from geometry import get_local_sw_diff
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
-                  GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0,)
+                  GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0)
 
 x, z = sympy.symbols('x z')
 
@@ -65,6 +65,7 @@ class SWall(object):
         SWall.x is a Numpy array of the fiber coordinates at t, i.e.
             SWall.x[t] = [x[t][0], x[t][1], ...].
         """
+        ### FIXME: self.zs & self.xs instead of z & x?
         if n_steps is None:
             self.z = []
             self.x = []
@@ -78,9 +79,11 @@ class SWall(object):
             self.M[0] = M_0
         self.parents = parents
         self.label = label
-        # XXX: interface for marking branch-cut crossings.
-        self.splitting = []
 
+        self.cuts_intersections = []
+        self.splittings = []
+        self.local_roots = []
+        self.local_weight_pairs = []        
 
     def __setitem__(self, t, data):
         """
@@ -163,7 +166,7 @@ class SWall(object):
         ramification_point_zs,
         puncture_point_zs,
         config,
-    ):
+        ):
         rpzs = ramification_point_zs
         ppzs = puncture_point_zs
         z_range_limits = config['z_range_limits']
@@ -182,7 +185,7 @@ class SWall(object):
         ode.set_initial_value(y_i)
 
         if z_range_limits is not None:
-            z_real_min, z_real_max, z_imag_min, z_imag_max = z_range_limits
+            [z_real_min, z_real_max], [z_imag_min, z_imag_max] = z_range_limits
 
         while ode.successful() and step < num_of_steps:
             step += 1
@@ -221,8 +224,18 @@ class SWall(object):
             self[step] = y_i
 
 
-def get_s_wall_seeds(sw, theta, ramification_point, config,):
-    rp = ramification_point
+
+
+def get_s_wall_seeds(sw, theta, branch_point, config,):
+    ### S-walls are seeded from branch points.
+    ### Each branch point has a number of ramification 
+    ### points lying above it.
+    ### Regardless of the representation, it is sufficient
+    ### to consider one of these ramification points
+    ### to extract the seed data.
+    ### We thus stick to any ramification point of the 
+    ### fundamental representation.
+    rp = branch_point.ffr_ramification_points[0]
     delta = config['accuracy']
     dt = config['size_of_small_step']
 
@@ -289,8 +302,8 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
         # resize to the size of the small step
         Delta_z = cv/abs(cv)*delta
         z_0 = rp.z + Delta_z
-        xs_at_z_0 = find_xs_at_z_0(sw.curve.num_eq, z_0, rp.x, rp.i)
-        dev_phases = [pi for i in range(len(xs_at_z_0)**2)]
+        xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i)
+        dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
         for i in range(len(xs_at_z_0)):
             diffx = sw.diff.num_v.subs(z, z_0)
             v_i = complex(diffx.subs(x, xs_at_z_0[i]))
@@ -339,20 +352,21 @@ def get_joint(z, x1_i, x2_i, x1_j, x2_j, M1, M2, parent_i, parent_j, accuracy=No
 
 
 def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):
-    root_system = g_data["root_system"]
-    k = g_data["representation"]
+    root_system = g_data.root_system
+    k = g_data.fundamental_representation_index
     # NOTE: A shortcut. Use this after checking this function
     # works correctly.
     if root_system[0] == 'A':
         if k == 1:
             return True
-        else:
-            # XXX: This part is not implemented yet.
-            return False
     elif root_system[0] == 'D' and k == 1:
         if abs(x1-(-x2)) < accuracy:
             return False
         else:
             return True
-
+    else:
+        # TODO
+        raise NotImplementedError
+        
+    
 

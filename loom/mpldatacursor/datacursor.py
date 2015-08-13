@@ -19,12 +19,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
+import itertools
 import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cbook
 from matplotlib import offsetbox
 
+import matplotlib
 from matplotlib.contour import ContourSet
 from matplotlib.image import AxesImage
 from matplotlib.collections import PathCollection, LineCollection
@@ -33,6 +35,8 @@ from matplotlib.container import Container
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 import matplotlib.dates as mdates
+from matplotlib.ticker import ScalarFormatter
+from matplotlib.backend_bases import PickEvent
 
 from . import pick_info
 
@@ -42,8 +46,11 @@ class DataCursor(object):
 
     default_annotation_kwargs = dict(xy=(0, 0), xytext=(-15, 15),
                 textcoords='offset points', picker=True,
-                bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
-                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
+                bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5,
+                          edgecolor='black'),
+                arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=0',
+                                edgecolor='black'),
+                )
 
     default_keybindings = dict(hide='d', toggle='t')
 
@@ -161,6 +168,7 @@ class DataCursor(object):
         self.hide_button = hide_button
         self.axes = tuple(set(art.axes for art in self.artists))
         self.figures = tuple(set(ax.figure for ax in self.axes))
+        self._mplformatter = ScalarFormatter(useOffset=False, useMathText=True)
 
         if formatter is None:
             self.formatter = self._formatter
@@ -218,8 +226,14 @@ class DataCursor(object):
 
         elif not self._event_ignored(event):
             # Otherwise, start a timer and show the annotation box
-            self.timer_expired[event.artist.axes] = False
-            self.ax_timer[event.artist.axes].start()
+            try:
+                self.ax_timer[event.artist.axes].start()
+                self.timer_expired[event.artist.axes] = False
+            except AttributeError:
+                # Nbagg timers can't be started with some versions.
+                # If this happens (AttributeError) don't use timers at all
+                pass
+
             self._show_annotation_box(event)
 
     def _event_ignored(self, event):
@@ -238,6 +252,7 @@ class DataCursor(object):
             # Return if multiple events are firing
             if not self.timer_expired[event.artist.axes]:
                 return True
+
         return False
 
     def _show_annotation_box(self, event):
@@ -322,14 +337,18 @@ class DataCursor(object):
         if is_date(ax.yaxis):
             y = format_date(y)
 
+        # Display x and y with range-specific formatting
+        x = self._format_coord(x, ax.get_xlim())
+        y = self._format_coord(y, ax.get_ylim())
+
         output = []
         for key, val in zip(['x', 'y', 'z', 's'], [x, y, z, s]):
             if val is not None:
                 try:
                     output.append(u'{key}: {val:0.3g}'.format(key=key, val=val))
                 except ValueError:
-                    # For masked arrays, etc, "z" value may be a string...
-                    # Similarly, x or y will be strings if they are dates.
+                    # X & Y will be strings at this point.
+                    # For masked arrays, etc, "z" and s values may be a string
                     output.append(u'{key}: {val}'.format(key=key, val=val))
 
         # label may be None or an empty string (for an un-labeled AxesImage)...
@@ -341,6 +360,25 @@ class DataCursor(object):
             output.append(u'Point: ' + u', '.join(kwargs['point_label']))
 
         return u'\n'.join(output)
+
+    def _format_coord(self, x, limits):
+        """
+        Handles display-range-specific formatting for the x and y coords.
+
+        Parameters
+        ----------
+        x : number
+            The number to be formatted
+        limits : 2-item sequence
+            The min and max of the current display limits for the axis.
+        """
+        formatter = self._mplformatter
+        # Trick the formatter into thinking we have an axes
+        # The 7 tick locations is arbitrary but gives a reasonable detail level
+        formatter.locs = np.linspace(limits[0], limits[1], 7)
+        formatter._set_format(*limits)
+        formatter._set_orderOfMagnitude(abs(np.diff(limits)))
+        return formatter.pprint_val(x)
 
     def annotate(self, ax, **kwargs):
         """
@@ -427,7 +465,6 @@ class DataCursor(object):
             else:
                 event = 'button_press_event'
             cids = [fig.canvas.mpl_connect(event, self._select)]
-            cids.append(fig.canvas.mpl_connect('pick_event', self))
 
             # None of this should be necessary. Workaround for a bug in some
             # mpl versions
@@ -442,12 +479,6 @@ class DataCursor(object):
 
         if not getattr(self, '_enabled', False):
             self._cids = [(fig, connect(fig)) for fig in self.figures]
-            for artist in self.artists:
-                artist.set_picker(self.tolerance)
-            for annotation in self.annotations.values():
-                # Annotation boxes need to be pickable so we can hide them on
-                # right-click (or whatever self.hide_button is).
-                annotation.set_picker(self.tolerance)
             self._enabled = True
         return self
 
@@ -496,12 +527,35 @@ class DataCursor(object):
         twinned axes.  Therefore, we manually go through all artists managed by
         this datacursor and fire a pick event if the mouse is over an a managed
         artist."""
+        def event_axes_data(event, ax):
+            """Creates a new event will have xdata and ydata based on *ax*."""
+            # We need to redefine event.xdata and event.ydata for twinned axes
+            # to work correctly
+            point = event.x, event.y
+            x, y = ax.transData.inverted().transform_point(point)
+            event = copy.copy(event)
+            event.xdata, event.ydata = x, y
+            return event
+
+        if self.draggable:
+            # If we're on top of an annotation box, don't do anything
+            for anno in self.annotations.values():
+                fixed_event = event_axes_data(event, anno.axes)
+                if anno.contains(fixed_event)[0]:
+                    return
+
         for artist in self.artists:
-            artist.pick(event)
-            
-        from itertools import chain        
-        over_something = [x.contains(event)[0] for x in chain(self.artists, self.annotations.values())]
-        
+            fixed_event = event_axes_data(event, artist.axes)
+            inside, info = artist.contains(fixed_event)
+            if inside:
+                fig = artist.figure
+                new_event = PickEvent('pick_event', fig.canvas, fixed_event,
+                                     artist, **info)
+                self(new_event)
+
+        all_artists = itertools.chain(self.artists, self.annotations.values())
+        over_something = [x.contains(event)[0] for x in all_artists]
+
         if any(self.timer_expired.values()) and not self.draggable:
             # Not hovering over anything...
             if not any(over_something) and self.hover:
@@ -558,3 +612,8 @@ class HighlightingDataCursor(DataCursor):
                       picker=None)
         artist.axes.add_artist(highlight)
         return highlight
+
+# Workaround for bug in matplotlib 1.4.x series
+if matplotlib.__version__.startswith('1.4'):
+    DataCursor.default_annotation_kwargs['bbox']['alpha'] = 1
+    DataCursor.default_annotation_kwargs['bbox']['fc'] = 'khaki'
