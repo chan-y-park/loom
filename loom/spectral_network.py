@@ -121,31 +121,31 @@ class SpectralNetwork:
             iteration += 1
 
             logging.info('Iteration #{} finished.'.format(iteration))
-
-        ### Decorate S-walls with trivialization.
-        for k, s_wall in enumerate(self.s_walls):
-            logging.info('Adding trivialization info to S-wall #{}'
-                         .format(k))
-            ### Find weights corresponding to the x's of the endpoint
-            ### of the S-wall.
-            final_z = s_wall.z[-1]
-            sheet_xs = sw.get_sheet_xs_at_z(final_z)
-            sheets = []
-            ### Identify S-wall's x's with sheet #'s. 
-            s_wall_xs = s_wall.x[-1]
-            for x in s_wall_xs:
-                difference = numpy.fromiter(
-                    (abs(x - sheet_x) for sheet_x in sheet_xs),
-                    dtype=float,
-                )
-                i = difference.argsort()[0]
-                sheets.append(i)
-            ### Now sheets = [i_0, i_1], where s_wall.x[0][i_0] corresponds
-            ### to g_data.weights[i_0] and similarly for i_1.
-            s_wall.label += '\nweights = ('
-            for i in sheets:
-                s_wall.label += '{},'.format(sw.g_data.weights[i])
-            s_wall.label += ')'
+#
+#        ### Decorate S-walls with trivialization.
+#        for k, s_wall in enumerate(self.s_walls):
+#            logging.info('Adding trivialization info to S-wall #{}'
+#                         .format(k))
+#            ### Find weights corresponding to the x's of the endpoint
+#            ### of the S-wall.
+#            final_z = s_wall.z[-1]
+#            sheet_xs = sw.get_sheet_xs_at_z(final_z)
+#            sheets = []
+#            ### Identify S-wall's x's with sheet #'s. 
+#            s_wall_xs = s_wall.x[-1]
+#            for x in s_wall_xs:
+#                difference = numpy.fromiter(
+#                    (abs(x - sheet_x) for sheet_x in sheet_xs),
+#                    dtype=float,
+#                )
+#                i = difference.argsort()[0]
+#                sheets.append(i)
+#            ### Now sheets = [i_0, i_1], where s_wall.x[0][i_0] corresponds
+#            ### to g_data.weights[i_0] and similarly for i_1.
+#            s_wall.label += '\nweights = ('
+#            for i in sheets:
+#                s_wall.label += '{},'.format(sw.g_data.weights[i])
+#            s_wall.label += ')'
 
 
     def save_json_data(self, file_object, **kwargs):
