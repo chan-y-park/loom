@@ -153,11 +153,11 @@ class GUILoom:
             variable=self.check['plot_on_cylinder']
         ).grid(row=grid_row, column=grid_col)
 
-        # Set default parameters.
+        ### Set default parameters.
         for option in self.entry_var:
             self.entry_var[option].set(self.config[option])
 
-        # 'Generate' button
+        ### 'Generate' button
         grid_row += 1
         grid_col = 0
         self.button_generate = tk.Button(
@@ -168,7 +168,7 @@ class GUILoom:
         grid_col += 1
         self.button_generate.grid(row=grid_row, column=grid_col, sticky=tk.E)
 
-        # 'Plot' button
+        ### 'Plot' button
         grid_col += 1
         self.button_plot = tk.Button(
             self.root,
@@ -177,6 +177,33 @@ class GUILoom:
         )
         grid_col += 1
         self.button_plot.grid(row=grid_row, column=grid_col, sticky=tk.E)
+
+        ### FIXME: for debugging by chan
+#        grid_col += 1
+#        self.button_plot = tk.Button(
+#            self.root,
+#            text='Print config',
+#            command=self.button_print_config_action,
+#        )
+#        grid_col += 1
+#        self.button_plot.grid(row=grid_row, column=grid_col, sticky=tk.E)
+
+
+    def button_print_config_action(self):
+        self.update_config_from_entries()
+        print("config in parser:")
+        for section in self.config.parser.sections():
+            print("section: {}".format(section))
+            for option in self.config.parser.options(section):
+                print(
+                    "{} = {}".format(
+                        option, self.config.parser.getstr(section, option)
+                    )
+                )
+
+        print("config :")
+        for option, value in self.config.iteritems():
+            print("{} = {}".format(option, value))
 
 
     def check_plot_on_cylinder(self):
@@ -233,13 +260,10 @@ class GUILoom:
 
 
     def update_config_from_entries(self):
-        # Read config options from Entries.
+        ### Read config options from Entries.
         for section in self.config.parser.sections():
-            # Reset the given section of config.parser
-            if (section == 'directories'):
-                continue
-            elif (section == 'Seiberg-Witten parameters'):
-                # Reset the given section of config.parser
+            if (section == 'Seiberg-Witten parameters'):
+                ### Reset the given section of config.parser
                 for option in self.config.parser.options(section):
                     self.config.parser.remove_option(section, option)
 
@@ -247,14 +271,14 @@ class GUILoom:
                 self.config['sw_parameters'] = params_input
                 for var, val in params_input.iteritems():
                     self.config.parser.set(section, var, str(val))
-                continue
-            for option in self.config.parser.options(section):
-                value = self.entry_var[option].get()
-                if (section == 'symbolic expressions'):
-                    self.config[option] = value
-                elif (section == 'numerical parameters'):
-                    self.config[option] = eval(value)
-                self.config.parser.set(section, option, value)
+            else:
+                for option in self.config.parser.options(section):
+                    value = self.entry_var[option].get()
+                    if (section == 'numerical parameters'):
+                        self.config[option] = eval(value)
+                    else:
+                        self.config[option] = value
+                    self.config.parser.set(section, option, value)
 
 
     def button_generate_action(self):

@@ -56,8 +56,21 @@ class NetworkPlotBase(object):
         # Plot branch points.
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
-                      color='k', label=labels['branch_points'][i],)
+            axes.plot(
+                        bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
+                        color='k', 
+                        label=labels['branch_points'][i],
+                    )
+
+        # Plot branch cuts, vertically.
+        for i, bp in enumerate(branch_points):
+            bpx, bpy = bp
+            axes.plot(
+                    [bpx, bpx], [bpy, axes.get_ylim()[1]], ':', 
+                    color='k', 
+                    label='Cut of '+labels['branch_points'][i],
+                )
+
    
         # Plot joints.
         if plot_joints is True:

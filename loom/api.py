@@ -76,7 +76,7 @@ def generate_spectral_network(config, phase=None):
             phase=phase, 
         ) 
 
-        spectral_network.grow(sw, config)
+        spectral_network.grow(config, sw)
 
         spectral_networks = [spectral_network]
 
@@ -234,7 +234,8 @@ def make_spectral_network_plot(spectral_network_data, master=None,
                      '@ theta = {}...'.format(spectral_network.phase))
         spectral_network_plot.draw(
             spectral_network, 
-            spectral_network_data.sw_data.branch_points
+            spectral_network_data.sw_data.branch_points,
+            g_data=spectral_network_data.sw_data.g_data
         )
 
     if show_plot is True:

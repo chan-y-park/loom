@@ -7,7 +7,7 @@ from cmath import exp, pi, phase
 
 from geometry import get_local_sw_diff
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
-                  GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0,)
+                  GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0)
 
 x, z = sympy.symbols('x z')
 
@@ -71,9 +71,11 @@ class SWall(object):
             self.x[0] = x_0
         self.parents = parents
         self.label = label
-        # TODO: interface for marking branch-cut crossings.
-        self.splitting = []
 
+        self.cuts_intersections = []
+        self.splittings = []
+        self.local_roots = []
+        self.local_weight_pairs = []        
 
     def __setitem__(self, t, data):
         """
@@ -152,7 +154,7 @@ class SWall(object):
         ramification_point_zs,
         puncture_point_zs,
         config,
-    ):
+        ):
         rpzs = ramification_point_zs
         ppzs = puncture_point_zs
         z_range_limits = config['z_range_limits']
@@ -201,8 +203,18 @@ class SWall(object):
             self[step] = y_i 
 
 
-def get_s_wall_seeds(sw, theta, ramification_point, config,):
-    rp = ramification_point
+
+
+def get_s_wall_seeds(sw, theta, branch_point, config,):
+    ### S-walls are seeded from branch points.
+    ### Each branch point has a number of ramification 
+    ### points lying above it.
+    ### Regardless of the representation, it is sufficient
+    ### to consider one of these ramification points
+    ### to extract the seed data.
+    ### We thus stick to any ramification point of the 
+    ### fundamental representation.
+    rp = branch_point.ffr_ramification_points[0]
     delta = config['accuracy']
     dt = config['size_of_small_step']
 
@@ -269,7 +281,7 @@ def get_s_wall_seeds(sw, theta, ramification_point, config,):
         # resize to the size of the small step 
         Delta_z = cv/abs(cv)*delta
         z_0 = rp.z + Delta_z
-        xs_at_z_0 = find_xs_at_z_0(sw.curve.num_eq, z_0, rp.x, rp.i)
+        xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i)
         dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
         for i in range(len(xs_at_z_0)):
             diffx = sw.diff.num_v.subs(z, z_0) 
@@ -335,3 +347,4 @@ def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):
         raise NotImplementedError
         
     
+

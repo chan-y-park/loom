@@ -88,6 +88,27 @@ class GData:
         ### of self.weights[i] in the self.basis.
         self.weight_coefficients = numpy.array(sage_data['weight_coefficients'])
 
+    def ordered_weight_pairs(self, root):
+        pairs = []
+
+        for i, w_1 in enumerate(self.weights):
+            for j, w_2 in enumerate(self.weights):
+                if numpy.array_equal(w_2 - w_1, root):
+                    pairs.append([i, j])
+
+        return pairs
+
+    def weyl_monodromy(self, root, bp, direction):
+        ### TO DO ###
+        ### For now, we ASSUME that branch points are 
+        ### of SQUARE-ROOT type. Need to update this 
+        ### for more general cases.
+        bp_root = bp.positive_roots[0]
+
+        new_root = root - (2 * bp_root * (numpy.dot(root, bp_root))/numpy.dot(bp_root,bp_root))
+
+        return new_root
+
 
 class RamificationPoint:
     def __init__(self, z=None, x=None, i=None, label=None, is_puncture=False):
