@@ -73,7 +73,8 @@ class SWall(object):
         else:
             self.z = numpy.empty(n_steps+1, complex)
             self.x = numpy.empty(n_steps+1, (complex, num_x_over_z))
-            self.M = numpy.empty(n_steps+1, float)
+            #self.M = numpy.empty(n_steps+1, float)
+            self.M = numpy.empty(n_steps+1, complex)
             self.z[0] = z_0
             self.x[0] = x_0
             self.M[0] = M_0
@@ -327,8 +328,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     return seeds
 
 
-def get_joint(z, x1_i, x2_i, x1_j, x2_j, M1, M2, parent_i, parent_j, accuracy=None,
-              xs_at_z=None, g_data=None, label=None):
+def get_joint(z, x1_i, x2_i, x1_j, x2_j, M1, M2, parent_i, parent_j,
+              accuracy=None, xs_at_z=None, g_data=None, label=None):
     """
     Return a joint if formed, otherwise return None.
     """

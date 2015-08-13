@@ -318,10 +318,12 @@ class SpectralNetwork:
                     # t_n: index of new_s_wall.z nearest to ip_z
                     t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
                     x_n = new_s_wall.x[t_n]
+                    M_n = new_s_wall.M[t_n]
 
                     # t_p: index of z_seg_p nearest to ip_z
                     t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
                     x_p = prev_s_wall.x[t_p]
+                    M_p = new_s_wall.M[t_p]
 
                     # TODO: need to put the joint into the parent
                     # S-walls?
@@ -334,7 +336,7 @@ class SpectralNetwork:
                     ip_x_p_1 = n_nearest(ip_xs, x_p[1], 1)[0]
 
                     a_joint = get_joint(
-                        ip_z, ip_x_n_0, ip_x_n_1, ip_x_p_0, ip_x_p_1,
+                        ip_z, ip_x_n_0, ip_x_n_1, ip_x_p_0, ip_x_p_1, M_n, M_p,
                         new_s_wall.label, 
                         prev_s_wall.label,
                         accuracy=config['accuracy'],
