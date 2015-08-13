@@ -130,18 +130,19 @@ def plot_branch_points(bps, figure, y_max):
     return None
 
 
-def plot_swn(swn, figure, y_max, root_color_map):
+def plot_swn(swn, sw_data, figure, y_max, root_color_map):
     # add the S-walls
     for i, s in enumerate(swn.s_walls):
         plot_s_wall(s, figure, str(i), root_color_map)
 
     # add the branch points
-    plot_branch_points(swn.sw_data.branch_points, figure, y_max)
+    plot_branch_points(sw_data.branch_points, figure, y_max)
 
 
-def plot_multi_swn(data):
-    swn_list = data.spectral_networks
-    g_data = swn_list[0].sw_data.g_data
+def plot_multi_swn(spectral_network_data):
+    swn_list = spectral_network_data.spectral_networks
+    sw_data = spectral_network_data.sw_data
+    g_data = sw_data.g_data
     root_color_map = create_root_color_map(g_data)
     plots = []
     swn_tables = []
@@ -152,8 +153,8 @@ def plot_multi_swn(data):
     for swn in swn_list:
         # create a figure object
         p = figure(width=600, height=600)
-        plot_swn(swn, p, y_max, root_color_map)
-        plot_tables = swn_data_tables(swn)
+        plot_swn(swn, sw_data, p, y_max, root_color_map)
+        plot_tables = swn_data_tables(swn, sw_data)
         plots.append(vform(p, plot_tables))
     return plots
 
@@ -176,8 +177,8 @@ def dummy_weight_label():
     return 'mu_'+str(randint(0,5))
 
 
-def s_wall_data_table(swn):
-    g_data = swn.sw_data.g_data
+def s_wall_data_table(swn, sw_data):
+    g_data = sw_data.g_data
     g_roots = list(g_data.roots)
 
     root_dictionary = {'alpha_' + str(i) : rt for i, rt in enumerate(g_roots)}
@@ -255,10 +256,10 @@ def weight_data_table(weight_dictionary):
 
     return data_table
 
-def root_data_table(root_dictionary, data):
+def root_data_table(root_dictionary, sw_data):
     root_labels = root_dictionary.keys()
     roots = root_dictionary.values()
-    g_data = data.spectral_networks[0].sw_data.g_data
+    g_data = sw_data.g_data
 
     data = dict(
             root_label=[rl for rl in root_labels],
@@ -280,19 +281,20 @@ def root_data_table(root_dictionary, data):
 
     return data_table
 
-def swn_data_tables(swn):
-    return s_wall_data_table(swn)
+def swn_data_tables(swn, sw_data):
+    return s_wall_data_table(swn, sw_data)
 
-def g_data_tables(data):
-    swn_list = data.spectral_networks
-    g_data = swn_list[0].sw_data.g_data
+def g_data_tables(spectral_network_data):
+    swn_list = spectral_network_data.spectral_networks
+    sw_data = spectral_network_data.sw_data
+    g_data = sw_data.g_data
     g_roots = list(g_data.roots)
     g_weights = list(g_data.weights)
     weight_dictionary = {'mu_' + str(i) : w for i, w in enumerate(g_weights)}
     root_dictionary = {'alpha_' + str(i) : rt for i, rt in enumerate(g_roots)}
     show(vform(weight_data_table(weight_dictionary))) 
-    show(vform(root_data_table(root_dictionary, data)))
-    show(vform(branch_point_data_table(data.sw_data)))
+    show(vform(root_data_table(root_dictionary, sw_data)))
+    show(vform(branch_point_data_table(sw_data)))
 
 
 
