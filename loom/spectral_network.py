@@ -51,12 +51,13 @@ class SpectralNetwork:
         for bp in sw_data.branch_points:
             s_wall_seeds = get_s_wall_seeds(sw_data, self.phase, 
                                                         bp, config)
-            for z_0, x_0 in s_wall_seeds:
+            for z_0, x_0, M_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
                     SWall(
                         z_0=z_0,
                         x_0=x_0,
+                        M_0=M_0,
                         parents=[bp.label],
                         label=label,
                         n_steps=n_steps,
