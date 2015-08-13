@@ -7,7 +7,7 @@ class NetworkPlotBase(object):
     def __init__(self, matplotlib_figure=None,):
         self.plots = []
         self.data_cursor = None
-        self.current_plot_idx = None 
+        self.current_plot_idx = None
 
         self.figure = matplotlib_figure
         if self.figure is not None:

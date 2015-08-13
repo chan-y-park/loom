@@ -80,10 +80,10 @@ def gather(a_list, compare, result=None):
         else:
             next_list.append(e_i)
     if len(next_list) == 0:
-        return result 
+        return result
     else:
         return gather(next_list, compare, result)
-    
+
 
 def remove_duplicate(a_list, compare):
     return [e[0] for e in gather(a_list, compare)]
@@ -123,13 +123,13 @@ def unravel(k, row_size, column_size=None):
 
     i = k / row_size
     j = k % row_size
-    
+
     if i > column_size:
         logging.error('i = {} should not be greater than '
                       'the size of the column = {}.'.format(i, column_size))
         raise UnravelError(k)
 
-    return (i, j) 
+    return (i, j)
 
 
 def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1):
@@ -182,21 +182,21 @@ def PSL2C(C, z, inverse=False, numerical=False):
 
     if numerical is True:
         return (complex(a) * z + complex(b))/(complex(c) * z + complex(d))
-    else: 
+    else:
         u = sympy.symbols('u')
         Cu = (a*u+b)/(c*u+d)
 
         if z == oo:
-            Cz = limit(Cu, u, z) 
+            Cz = limit(Cu, u, z)
         else:
             Cz = Cu.subs(u, z)
 
-        return Cz 
+        return Cz
 
 
 def put_on_cylinder(z, mt_params=None):
     """
-    Put PSL2C-transformed z-coords  
+    Put PSL2C-transformed z-coords
     onto the original cylinder.
     """
     return log(PSL2C(mt_params, z, inverse=True, numerical=True))/1.0j
@@ -213,14 +213,15 @@ def get_ode(sw, phase, accuracy):
     F = sympy.lambdify((z, x), -df_dz/df_dx)
     v = sympy.lambdify((z, x), sw.diff.num_v)
 
-    def ode_f(t, zx1x2):
-        z_i = zx1x2[0]
-        x1_i = zx1x2[1]
-        x2_i = zx1x2[2]
+    def ode_f(t, zx1x2M):
+        z_i = zx1x2M[0]
+        x1_i = zx1x2M[1]
+        x2_i = zx1x2M[2]
         dz_i_dt = exp(phase*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
         dx1_i_dt = F(z_i, x1_i) * dz_i_dt
         dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-        return [dz_i_dt, dx1_i_dt, dx2_i_dt]
+        dM_dt = 1
+        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
 
     ode = scipy.integrate.ode(ode_f)
     ode.set_integrator(

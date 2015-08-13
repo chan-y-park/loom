@@ -17,16 +17,16 @@ class GUILoom:
     def __init__(self, config=None, spectral_networks=[],):
         root = tk.Tk()
         root.wm_title('loom')
-        
+
         # Put the window at the center
         ws = root.winfo_screenwidth()
         hs = root.winfo_screenheight()
         root.geometry('+{}+{}'.format(ws/2, hs/2))
-        
+
         self.root = root
         self.config = config
         self.entry = {}
-        self.entry_var = {} 
+        self.entry_var = {}
         self.mb = None
         self.check = {}
         self.sw_data = None
@@ -74,7 +74,7 @@ class GUILoom:
             self.root,
             textvariable=self.entry_phase
         )
-            
+
         # Entry & Label layout
         grid_row += 1
         grid_col = 0
@@ -118,14 +118,15 @@ class GUILoom:
         )
 
         for option in ['mt_params', 'punctures', 'z_range_limits',
-                       'num_of_steps', 'num_of_iterations', 
+                       'num_of_steps', 'num_of_iterations',
                        'size_of_small_step', 'size_of_large_step',
                        'size_of_neighborhood', 'size_of_puncture_cutoff',
                        'size_of_ramification_pt_cutoff',
-                       'size_of_bin', 'accuracy', 'n_processes']:
+                       'size_of_bin', 'accuracy', 'n_processes',
+                       'mass_limit']:
             grid_row += 1
             grid_col = 0
-            tk.Label(self.root, 
+            tk.Label(self.root,
                      text=option).grid(row=grid_row, column=grid_col)
             grid_col += 1
             self.entry[option].grid(row=grid_row, column=grid_col)
@@ -161,7 +162,7 @@ class GUILoom:
         grid_row += 1
         grid_col = 0
         self.button_generate = tk.Button(
-            self.root, 
+            self.root,
             text='Generate',
             command=self.button_generate_action,
         )
@@ -210,9 +211,9 @@ class GUILoom:
         check = self.check['plot_on_cylinder'].get()
         if check == 1:
             return True
-        else: 
+        else:
             return False
-            
+
 
     def menu_load_config_action(self):
         config = load_config()
@@ -220,7 +221,7 @@ class GUILoom:
             return None
         else:
             self.config = config
-        
+
         for option, value in self.config.iteritems():
             try:
                 self.entry_var[option].set(value)

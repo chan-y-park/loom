@@ -114,7 +114,7 @@ def load_config(config_file=None):
     config.read(config_file)
 
     return config
-    
+
 
 def load_spectral_network(data_dir=None):
     if data_dir is None:
@@ -129,7 +129,7 @@ def load_spectral_network(data_dir=None):
         root.destroy()
         if data_dir == '':
             return (None, None)
- 
+
     logging.info('Opening data directory "{}"...'.format(data_dir))
 
     config = LoomConfig()
@@ -179,7 +179,7 @@ def save_spectral_network(config, spectral_networks, data_dir=None,
         timestamp = str(int(time.time()))
         data_dir = os.path.join(
             os.curdir,
-            'data', 
+            'data',
             timestamp
         )
 

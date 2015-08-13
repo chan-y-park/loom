@@ -84,7 +84,7 @@ def parallel_get_spectral_network(
     try:
         results = [
             pool.apply_async(
-                a_child_process, 
+                a_child_process,
                 args=(
                     sw,
                     phase,

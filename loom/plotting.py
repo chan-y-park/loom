@@ -19,7 +19,7 @@ from bokeh_plot import create_root_color_map, root_color
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
-        self, 
+        self,
         spectral_network,
         branch_points,
         punctures=None, 
@@ -126,8 +126,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
 class NetworkPlot(SpectralNetworkPlotBase):
     """
     This class implements UIs using matplotlib widgets
-    so that it can be backend-independent. 
-    
+    so that it can be backend-independent.
+
     The content of this class is independent of the parent class.
     It only depends on the grandparent class, which should be
     'NetworkPlotBase'. Therefore this class can inherit any class
@@ -135,7 +135,7 @@ class NetworkPlot(SpectralNetworkPlotBase):
     parent in the definition of this class.
     """
     def __init__(
-        self, 
+        self,
         title=None,
     ):
         super(NetworkPlot, self).__init__(
@@ -195,7 +195,7 @@ class NetworkPlot(SpectralNetworkPlotBase):
             self.button_prev.on_clicked(self.show_prev_plot)
 
             self.index_text = self.figure.text(
-                center - index_width/2, (button_bottom+button_height)/2, 
+                center - index_width/2, (button_bottom+button_height)/2,
                 "{}/{}".format(self.current_plot_idx, len(self.plots)-1)
             )
 
@@ -210,15 +210,15 @@ class NetworkPlot(SpectralNetworkPlotBase):
 
 class NetworkPlotTk(SpectralNetworkPlotBase):
     """
-    This class implements UIs using Tkinter. 
-    
+    This class implements UIs using Tkinter.
+
     The content of this class is independent of the parent class.
     It only depends on the grandparent class, which should be
     'NetworkPlotBase'. Therefore this class can inherit any class
     whose parent is 'NetworkPlotBase'; just change the name of the
     parent in the definition of this class.
     """
-    def __init__(self, 
+    def __init__(self,
         master=None,
         title=None,
     ):
@@ -236,7 +236,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
             self.root = master
         self.master = master
 
-        # Create a Toplevel widget, which is a child of GUILoom 
+        # Create a Toplevel widget, which is a child of GUILoom
         # and contains plots,
         self.toplevel = tk.Toplevel(self.root)
         self.toplevel.wm_title(title)
@@ -245,7 +245,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         self.plot_idx_scale = None
 
         self.plot_idx_entry = None
-        self.plot_idx_entry_var = tk.StringVar() 
+        self.plot_idx_entry_var = tk.StringVar()
         self.plot_idx_entry_var.trace('w', self.plot_idx_entry_change)
 
         self.canvas = FigureCanvas(
@@ -345,7 +345,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
                 showvalue=0,
                 to=len(self.plots)-1,
                 variable=self.current_plot_idx,
-            ) 
+            )
             self.plot_idx_scale.pack(
                 expand=True,
                 fill=tk.X,

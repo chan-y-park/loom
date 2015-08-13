@@ -16,7 +16,7 @@ import pdb
 from config import LoomConfig
 from gui import open_gui
 from api import (
-    set_logging, load_config, load_spectral_network, generate_spectral_network, 
+    set_logging, load_config, load_spectral_network, generate_spectral_network,
     save_spectral_network,
 )
 
@@ -45,14 +45,14 @@ def run_with_optlist(optlist):
         'show-plot': False,
         'show-plot-on-cylinder': False,
     }
-        
+
     for opt, arg in optlist:
         if (opt == '-c' and len(arg) > 0):
             opts['config-file'] = arg
         elif (opt == '-g' or opt == '--gui-mode'):
-            opts['gui-mode'] = eval(arg) 
+            opts['gui-mode'] = eval(arg)
         elif (opt == '-h' or opt == '--help'):
-            return print_help() 
+            return print_help()
         elif (opt == '-l' or opt == '--logging-level'):
             opts['logging-level'] = arg
         elif (opt == '-p' or opt == '--phase'):
@@ -67,7 +67,7 @@ def run_with_optlist(optlist):
 
     set_logging(opts['logging-level'])
 
-    # Load config & data according to the command line args. 
+    # Load config & data according to the command line args.
     if opts['load-data'] is not None:
         data_dir = opts['load-data']
         config, spectral_networks = load_spectral_network(data_dir)
@@ -93,7 +93,7 @@ def run_with_optlist(optlist):
         )
         if (opts['show-plot'] or opts['show-plot-on-cylinder']) is True:
             make_spectral_network_plot(
-                config, 
+                config,
                 spectral_network_list,
                 plot_on_cylinder=opts['show-plot-on-cylinder'],
             )
@@ -103,7 +103,7 @@ def run_with_optlist(optlist):
 
     return (config, spectral_networks)
 
-def run_with_sys_argv(argv):    
+def run_with_sys_argv(argv):
     """
     Set options from sys.argv when running on the command line,
     then start running the main code.
@@ -117,7 +117,7 @@ def run_with_sys_argv(argv):
 
 def run(optstr=''):
     """
-    Set options from string 'optstr' when running on the interpreter, 
+    Set options from string 'optstr' when running on the interpreter,
     then start running the main code.
     """
     return run_with_sys_argv(optstr.split())
@@ -127,7 +127,7 @@ def print_help():
 
 -c CFG_FILE_NAME:
     Read CFG_FILE_NAME to set up the configuration.
-    When this option is not set, by default use 
+    When this option is not set, by default use
         loom/config_file/default.ini
 
 -g VALUE, --gui-mode=VALUE:
@@ -139,13 +139,13 @@ def print_help():
 
 -p, --phase THETA:
     Generate a spectral network at the phase of THETA.
-    Overrides 'phase_range' of the configuration file. 
+    Overrides 'phase_range' of the configuration file.
 
 --load-data DATA_FILE:
     Load data from a file. If DATA_FILE is not specified,
     shows a file dialog window to open a directory
     containing data files.
-    
+
 --show-plot:
     Diaplay the spectral network plot.
 
