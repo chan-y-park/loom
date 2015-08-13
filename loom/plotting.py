@@ -15,7 +15,7 @@ from math import pi
 
 from network_plot import NetworkPlotBase
 from misc import PSL2C, put_on_cylinder
-
+from bokeh_plot import create_root_color_map, root_color
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
@@ -55,6 +55,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             labels['joints'].append(jp.label)
 
         walls = []
+        walls_roots = []
         for i, s_wall in enumerate(spectral_network.s_walls):
             segments = []
             seg_labels = []
@@ -87,6 +88,12 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                 # seg_labels.append(s_wall.label)
 
             walls.append(segments)
+            walls_roots.append(s_wall.local_roots)
+            root_color_map = create_root_color_map(g_data)
+            walls_colors = (
+                    [[root_color(root, root_color_map) 
+                    for root in w_roots] for w_roots in walls_roots]
+                )
             labels['walls'].append(seg_labels)
 
 
@@ -108,6 +115,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             branch_points=branch_points_z,
             joints=joints,
             walls=walls,
+            walls_colors=walls_colors,
             labels=labels,
             plot_range=plot_range,
             plot_joints=plot_joints,

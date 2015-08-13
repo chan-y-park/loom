@@ -14,8 +14,8 @@ class NetworkPlotBase(object):
             self.figure.clf()
     
     def draw(self, phase=None, branch_points=None, joints=None, walls=None,
-             labels=None, plot_range=None, plot_joints=False,
-             plot_data_points=False,):
+            walls_colors=None, labels=None, plot_range=None, 
+            plot_joints=False, plot_data_points=False,):
         """
         branch_points = [[bpx, bpy], ...]
         joints = [[jpx, jpy], ...]
@@ -49,8 +49,9 @@ class NetworkPlotBase(object):
                 if plot_data_points is True:
                     axes.plot(xs, ys, 'o', color='k')
 
+                seg_color = walls_colors[i][j]
                 axes.plot(seg_xs, seg_ys, '-',
-                          #color='b',
+                          color=seg_color,
                           label=labels['walls'][i][j],)
 
         # Plot branch points.
