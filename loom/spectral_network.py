@@ -13,10 +13,9 @@ import pdb
 from cmath import exp
 from itertools import combinations
 
-from geometry import RamificationPoint, SWData
+from geometry import RamificationPoint, SWData, find_xs_at_z_0
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
-from misc import (n_nearest, n_nearest_indices, find_xs_at_z_0, get_ode,
-                    left_right, clock,)
+from misc import (n_nearest, n_nearest_indices, get_ode, left_right, clock,)
 from intersection import (NoIntersection,
                           find_intersection_of_segments,
                           find_curve_range_intersection)

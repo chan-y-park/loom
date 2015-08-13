@@ -75,7 +75,7 @@ class GUILoom:
             textvariable=self.entry_phase
         )
 
-        # Entry & Label layout
+        ### Entry & Label layout
         grid_row += 1
         grid_col = 0
         tk.Label(self.root,
@@ -84,17 +84,6 @@ class GUILoom:
         self.entry['differentials'].grid(
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW
         )
-
-#        grid_row += 1
-#        grid_col = 0
-#        tk.Label(self.root,
-#                 text='sw_diff').grid(row=grid_row, column=grid_col)
-#        grid_col += 1
-#        self.entry['sw_diff_v'].config(justify=tk.RIGHT)
-#        self.entry['sw_diff_v'].grid(row=grid_row, column=grid_col)
-#        grid_col += 1
-#        tk.Label(self.root,
-#                 text='dz').grid(row=grid_row, column=grid_col, sticky=tk.W)
 
         grid_row += 1
         grid_col = 0
@@ -144,7 +133,7 @@ class GUILoom:
         grid_col += 1
         self.entry['phase'].grid(row=grid_row, column=grid_col)
 
-        # Check plot_on_cylinder
+        ### Check plot_on_cylinder
         grid_row += 1
         grid_col = 0
         self.check['plot_on_cylinder'] = tk.IntVar()
@@ -179,7 +168,7 @@ class GUILoom:
         grid_col += 1
         self.button_plot.grid(row=grid_row, column=grid_col, sticky=tk.E)
 
-        ### FIXME: for debugging by chan
+        ### chan: FIXME: for debugging
 #        grid_col += 1
 #        self.button_plot = tk.Button(
 #            self.root,
@@ -236,10 +225,14 @@ class GUILoom:
 
 
     def menu_load_data_action(self):
-        self.config, self.spectral_networks = load_spectral_network()
+        config, spectral_networks = load_spectral_network()
+        if config is None:
+            return None
+        self.config = config 
+        self.spectral_networks = spectral_networks
         self.sw_data = SWDataWithTrivialization(self.config)
         logging.info('Finished loading spectral network data.')
-        return None
+
 
     def menu_save_data_action(self):
         dir_opts = {
@@ -295,7 +288,7 @@ class GUILoom:
         return None
 
     def button_plot_action(self):
-        # Plot spectral networks.
+        ### Plot spectral networks.
         if (len(self.spectral_networks) > 0):
             snd = SpectralNetworkData(self.sw_data, self.spectral_networks)
             spectral_network_plot = make_spectral_network_plot(

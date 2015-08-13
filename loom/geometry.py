@@ -47,7 +47,6 @@ class GData:
         self.type = root_system[0]
         self.rank = eval(root_system[1:])
 
-        ### Index of the fundamental representation, i.e. n of \omega_n. 
         representation = eval(representation_str)
         if isinstance(representation, int):
             ### Representation is specified as an index
@@ -99,13 +98,14 @@ class GData:
         return pairs
 
     def weyl_monodromy(self, root, bp, direction):
-        ### TO DO ###
+        ### TODO ###
         ### For now, we ASSUME that branch points are 
         ### of SQUARE-ROOT type. Need to update this 
         ### for more general cases.
         bp_root = bp.positive_roots[0]
 
-        new_root = root - (2 * bp_root * (numpy.dot(root, bp_root))/numpy.dot(bp_root,bp_root))
+        new_root = root - (2 * bp_root * (numpy.dot(root, bp_root))
+                           / numpy.dot(bp_root,bp_root))
 
         return new_root
 
@@ -264,7 +264,6 @@ class SWData(object):
         self.parameters = config['sw_parameters']
         self.differentials = eval(config['differentials'])
         self.g_data = GData(config['root_system'], config['representation'])
-        #self.accuracy = config['accuracy']
 
         ### PSL2C-transformed z & dz
         Cz = PSL2C(config['mt_params'], z, inverse=True) 
@@ -289,7 +288,7 @@ class SWData(object):
             )
 
 
-        # Seiberg-Witten differential
+        ### Seiberg-Witten differential
         self.diff = SWDiff(
             'x',
             g_data=self.g_data,
@@ -324,13 +323,8 @@ class SWData(object):
         ### The order of x's is the same as the order of the weights
         ### in g_data.weights.
 
-        #algebra_name = self.g_data.root_system
         algebra_type = self.g_data.type
         algebra_rank = self.g_data.rank
-        #ffr_weights = self.g_data.ffr_weights
-        #weights = self.g_data.weights
-        #weight_basis = self.g_data.weight_basis
-        #weight_coeffs = self.g_data.weight_coefficients
         fund_rep_index = self.g_data.fundamental_representation_index
 
         ### First order x's of the first fundamental cover
@@ -421,7 +415,21 @@ class SWData(object):
             raise NotImplementedError
 
         return xs
-            
+
+
+def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1):
+    """
+    Get x's above z_0 and return the num_x of them 
+    which are nearest to x_0.
+    """
+    
+    xs_at_z_0 = sw_data.get_sheets_at_z(z_0).values()
+    if x_0 is None:
+        return xs_at_z_0
+    else:
+        return sorted(xs_at_z_0,
+                      lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
+   
 
 def get_local_sw_diff(sw, ramification_point):
     rp = ramification_point
@@ -452,6 +460,3 @@ def get_local_sw_diff(sw, ramification_point):
         (diff_c, diff_e) = local_diff.leadterm(Dz)
 
     return (complex(diff_c.n()), diff_e)
-
-
-

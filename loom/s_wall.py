@@ -5,9 +5,9 @@ import pdb
 
 from cmath import exp, pi, phase
 
-from geometry import get_local_sw_diff
+from geometry import get_local_sw_diff, find_xs_at_z_0
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
-                  GetSWallSeedsError, n_nearest_indices, find_xs_at_z_0)
+                  GetSWallSeedsError, n_nearest_indices,)
 
 x, z = sympy.symbols('x z')
 

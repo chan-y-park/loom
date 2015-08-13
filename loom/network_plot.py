@@ -117,10 +117,10 @@ class NetworkPlotBase(object):
             axes=self.plots[self.current_plot_idx],
             formatter='{label}'.format,
             tolerance=4,
-            hover=True,
+            #hover=True,
             #display='single',
-            #display='multiple',
-            #draggable=True,
+            display='multiple',
+            draggable=True,
         )
 
 

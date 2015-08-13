@@ -59,10 +59,10 @@ def parallel_get_spectral_network(
 
     n_cpu = multiprocessing.cpu_count()
     if (n_processes == 0):
-        # Use all the CPUs.
+        ### Use all the CPUs.
         n_processes = n_cpu
     elif (n_processes < 0):
-        # Leave |n_processes| CPUs.
+        ### Leave |n_processes| CPUs.
         if(n_cpu > -n_processes):
             n_processes = n_cpu - (-n_processes)
         else:
@@ -76,7 +76,7 @@ def parallel_get_spectral_network(
             logging.warning('Set n_processes to {}.'.format(n_cpu))
             n_processes = n_cpu
 
-    # Use n_processes CPUs.
+    ### Use n_processes CPUs.
     multiprocessing.freeze_support()
     pool =  multiprocessing.Pool(n_processes, init_process)
     logging.info('Number of processes in the pool: {}'.format(n_processes))

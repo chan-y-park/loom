@@ -49,7 +49,7 @@ def set_logging(level):
     ch.setLevel(logging_level)
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    # Log to a file 'log.mose.txt'
+    ### Log to a file 'log.mose.txt'
     fh = logging.FileHandler(LOGGING_FILE_NAME, 'w')
     fh.setLevel(logging_level)
     fh.setFormatter(formatter)
@@ -175,7 +175,7 @@ def save_config(config, path=None):
 def save_spectral_network(config, spectral_networks, data_dir=None,
                           make_zipped_file=True):
     if data_dir is None:
-        # Prepare to save spectral network data to files.
+        ### Prepare to save spectral network data to files.
         timestamp = str(int(time.time()))
         data_dir = os.path.join(
             os.curdir,
@@ -187,11 +187,11 @@ def save_spectral_network(config, spectral_networks, data_dir=None,
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
-    # Save configuration to a file.
+    ### Save configuration to a file.
     config_file_path = os.path.join(data_dir, 'config.ini')
     save_config(config, path=config_file_path)
 
-    # Save spectral network data.
+    ### Save spectral network data.
     for i, spectral_network in enumerate(spectral_networks):
         data_file_path = os.path.join(
             data_dir,
@@ -205,7 +205,7 @@ def save_spectral_network(config, spectral_networks, data_dir=None,
 
     if make_zipped_file is True:
         file_list = [config_file_path]
-        # Make a compressed data file.
+        ### Make a compressed data file.
         file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
         zipped_file_path = data_dir + '.zip'
         logging.info('Save compressed data to {}.'.format(zipped_file_path))
@@ -241,11 +241,4 @@ def make_spectral_network_plot(spectral_network_data, master=None,
     if show_plot is True:
         spectral_network_plot.show()
 
-    #if master is None:
-    #    try:
-    #        raw_input('Press any key to continue...')
-    #    except NameError:
-    #        pass
     return spectral_network_plot
-
-

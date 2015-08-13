@@ -34,7 +34,6 @@ class LoomConfig:
     """
     def __init__(self):
         self.data = {}
-        #self.data['sw_parameters'] = {}
         self.parser = None
 
 
@@ -66,7 +65,7 @@ class LoomConfig:
         with open(config_file, 'r') as fp:
             config_parser.readfp(fp)
 
-        # Initialize sw_parameters
+        ### Initialize sw_parameters
         self['sw_parameters'] = {}
 
         for section in config_parser.sections():
