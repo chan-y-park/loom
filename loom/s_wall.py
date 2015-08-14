@@ -7,20 +7,58 @@ from cmath import exp, pi, phase
 
 from geometry import get_local_sw_diff, find_xs_at_z_0
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
-                  GetSWallSeedsError, n_nearest_indices,)
+                  GetSWallSeedsError, n_nearest_indices, is_root)
 
 x, z = sympy.symbols('x z')
 
+# TODO: Generalize this.
 # Number of x's at a fixed z
 num_x_over_z = 2
 
 class Joint:
-    def __init__(self, z=None, x=None, M=None, parents=None, label=None,):
+    def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
+                t_1=None, t_2=None, label=None, sw_data=None):
+        alpha_1 = s_wall_1.get_root_at_t(t_1)
+        alpha_2 = s_wall_2.get_root_at_t(t_2) 
+
         self.z = z
-        self.x = x
-        self.M = M
-        self.parents = parents
-        self.label = label
+        self.root = alpha_1 + alpha_2
+        self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
+        self.parents = [s_wall_1.label, s_wall_2.label]
+        self.label = [s_wall_1.label, s_wall_2.label]
+
+        xs_at_z = find_xs_at_z_0(sw_data, z)
+        new_wall_weight_pairs = sw_data.g_data.ordered_weight_pairs(self.root)
+        w_p_0 = new_wall_weight_pairs[0]
+        x_i = xs_at_z[w_p_0[0]]
+        x_j = xs_at_z[w_p_0[1]]
+        self.x = [x_i, x_j]
+
+        # For each pair of pairs: [i, j] from the first wall
+        # and [j, k] from the second wall, we build 
+        # the list of 'combos'.
+        # This is a list [..., [[i, j], [j, k]],...]
+        combos = []
+        weight_pairs_1 = s_wall_1.get_weight_pairs_at_t(t_1)
+        weight_pairs_2 = s_wall_2.get_weight_pairs_at_t(t_2)
+        for w_p in new_wall_weight_pairs:
+            w_i = w_p[0]
+            w_k = w_p[1]
+            ij_in_1 = [pair for pair in weight_pairs_1 if (pair[0]==w_i)]
+            ij_in_2 = [pair for pair in weight_pairs_2 if (pair[0]==w_i)]
+            jk_in_1 = [pair for pair in weight_pairs_1 if (pair[1]==w_k)]
+            jk_in_2 = [pair for pair in weight_pairs_2 if (pair[1]==w_k)]
+            if len(ij_in_1)>0 and len(jk_in_2)>0:
+                combos.append([ij_in_1[0], jk_in_2[0]])
+            elif len(ij_in_2)>0 and len(jk_in_1)>0:
+                combos.append([ij_in_2[0], jk_in_1[0]])
+            else:
+                raise ValueError('Cannot pick ij, jk pairs ' +
+                                'from colliding S-walls\n{}\n{}'.format(
+                                    weight_pairs_1, weight_pairs_2)
+                                )
+        self.combos = combos
+
 
     def __eq__(self, other):
         return self.label == other.label
@@ -28,7 +66,6 @@ class Joint:
     def get_json_data(self):
         json_data = {
             'z': ctor2(self.z),
-            'x': [ctor2(x_i) for x_i in self.x],
             'M': self.M,
             'parents': [parent for parent in self.parents],
             'label': self.label,
@@ -37,7 +74,6 @@ class Joint:
 
     def set_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
-        self.x = [r2toc(x_i) for x_i in json_data['x']]
         self.M = json_data['M']
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
@@ -55,24 +91,25 @@ class Joint:
         return True
 
 
+# TODO: Instead of seeding with x_0, it would make 
+# more sense to give the initial root-type.
+# From that, and the trivialization module, we can
+# extract the value of x_0, in principle.
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, M_0=None, parents=None,
                  label=None, n_steps=None,):
         """
         SWall.z is a NumPy array of length n_steps+1,
         where z[t] is the base coordinate.
-
-        SWall.x is a Numpy array of the fiber coordinates at t, i.e.
-            SWall.x[t] = [x[t][0], x[t][1], ...].
         """
         ### FIXME: self.zs & self.xs instead of z & x?
         if n_steps is None:
             self.z = []
-            #self.x = []
             self.M = []
         else:
             self.z = numpy.empty(n_steps+1, complex)
-            self.x = numpy.empty(n_steps+1, (complex, num_x_over_z))
+            # self.x = numpy.empty(n_steps+1, (complex, num_x_over_z))
+            self.x = numpy.empty(n_steps+1, (complex, 2))
             #self.M = numpy.empty(n_steps+1, float)
             self.M = numpy.empty(n_steps+1, complex)
             self.z[0] = z_0
@@ -260,7 +297,9 @@ class SWall(object):
 
     def get_sheets_at_t(self, t, sw_data):
         """
-        Return a list of pairs of values.
+        Given an integer t which parametrizes a point 
+        of the trajectory in proper time, return 
+        a list of pairs of values.
         For sheet labels [... [i, j] ...] at given t,
         return [... [x_i, x_j] ...]
         """
@@ -372,28 +411,42 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     return seeds
 
 
-def get_joint(z, x1_i, x2_i, x1_j, x2_j, M1, M2, parent_i, parent_j,
-              accuracy=None, xs_at_z=None, g_data=None, label=None):
+# def get_joint(z, x1_i, x2_i, x1_j, x2_j, M1, M2, parent_i, parent_j,
+#               accuracy=None, xs_at_z=None, g_data=None, label=None):
+#     """
+#     Return a joint if formed, otherwise return None.
+#     """
+
+#     if (abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
+#         return None
+#     elif (abs(x2_i - x1_j) < accuracy):
+#         if differ_by_root(
+#             x1_i, x2_j, accuracy=accuracy, xs=xs_at_z, g_data=g_data,
+#         ):
+#             return Joint(z, [x1_i, x2_j], M1+M2, [parent_i, parent_j], label)
+#         else:
+#             return None
+#     elif (abs(x2_j - x1_i) < accuracy):
+#         if differ_by_root(
+#             x1_j, x2_i, accuracy=accuracy, xs=xs_at_z, g_data=g_data,
+#         ):
+#             return Joint(z, [x1_j, x2_i], M1+M2, [parent_j, parent_i], label)
+#         else:
+#             return None
+
+def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, 
+              sw_data=None, label=None):
     """
     Return a joint if formed, otherwise return None.
     """
 
-    if (abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
+    alpha_1 = s_wall_1.get_root_at_t(t_1)
+    alpha_2 = s_wall_2.get_root_at_t(t_2)
+
+    if is_root(alpha_1 + alpha_2, sw_data.g_data):
+        return Joint(z, s_wall_1, s_wall_2, t_1, t_2, label, sw_data)
+    else:
         return None
-    elif (abs(x2_i - x1_j) < accuracy):
-        if differ_by_root(
-            x1_i, x2_j, accuracy=accuracy, xs=xs_at_z, g_data=g_data,
-        ):
-            return Joint(z, [x1_i, x2_j], M1+M2, [parent_i, parent_j], label)
-        else:
-            return None
-    elif (abs(x2_j - x1_i) < accuracy):
-        if differ_by_root(
-            x1_j, x2_i, accuracy=accuracy, xs=xs_at_z, g_data=g_data,
-        ):
-            return Joint(z, [x1_j, x2_i], M1+M2, [parent_j, parent_i], label)
-        else:
-            return None
 
 
 def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):

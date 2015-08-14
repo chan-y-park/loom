@@ -153,9 +153,11 @@ class IrregularSingularity:
             pprint(value)
 
 
-### TODO: Use g_data.weights at the base point as labels of sheets,
-### instead of integer indicies. Just a conceptual issue, because
-### the integer indicies are labeling g_data.weights in the same order.
+# TODO: Use g_data.weights at the base point as labels of sheets,
+# instead of integer indicies. Just a conceptual issue, because
+# the integer indicies are labeling g_data.weights in the same order.
+# PL: not sure if we want to do that: for a human interface, 
+# labeling by integers is much more readable.
 class SWDataWithTrivialization(SWData):
     """
     All branch cuts are assumed to run vertically, emanating
@@ -196,13 +198,13 @@ class SWDataWithTrivialization(SWData):
         The output looks like this
         {0 : x_0, ... , i : x_i, ...}
     """
-    ### NOTE: I am assuming that branch points do not overlap vertically
-    ### this should be guaranteed by introducing an automatic rotation of 
-    ### the z-plane before calling this class.
-    ### NOTE: I am restricting to square-root type branch points.
-    ### Although I am not printing any explicit warning/error message 
-    ### and the computation will go through for higher-type, but give a 
-    ### wrong answer!
+    # NOTE: I am assuming that branch points do not overlap vertically
+    # this should be guaranteed by introducing an automatic rotation of 
+    # the z-plane before calling this class.
+    # NOTE: I am restricting to square-root type branch points.
+    # Although I am not printing any explicit warning/error message 
+    # and the computation will go through for higher-type, but give a 
+    # wrong answer!
     def __init__(self, config,):
         super(SWDataWithTrivialization, self).__init__(config)
 
@@ -218,8 +220,8 @@ class SWDataWithTrivialization(SWData):
             [r.z for r in self.ffr_ramification_points if r.is_puncture]
         )
         
-        ### Automatically choose a basepoint, based on the positions of
-        ### both branch points and irregular singularities
+        # Automatically choose a basepoint, based on the positions of
+        # both branch points and irregular singularities
         all_points_z = bpzs + iszs
         all_distances = [abs(x - y) for x in all_points_z
                          for y in all_points_z]
@@ -227,16 +229,16 @@ class SWDataWithTrivialization(SWData):
         center = sum([z_pt for z_pt in all_points_z]) / len(all_points_z)
         self.base_point = center - 1j * max_distance
         
-        ### Minimun distance between the base point and 
-        ### branch points/punctures.
+        # Minimun distance between the base point and 
+        # branch points/punctures.
         non_zero_distances = [x for x in all_distances if x!=0.0]
         self.min_distance = min(non_zero_distances)
 
-        ### Fix reference x's at the basepoints.
-        ### These sheets are aligned in the order of
-        ### sw.g_data.weights, i.e. reference_sheets[i]
-        ### is the value of x corresponding to 
-        ### sw.g_data.weights[i].
+        # Fix reference x's at the basepoints.
+        # These sheets are aligned in the order of
+        # sw.g_data.weights, i.e. reference_sheets[i]
+        # is the value of x corresponding to 
+        # sw.g_data.weights[i].
         logging.info(
             "Getting aligned x's at the base point z = {}."
             .format(self.base_point)

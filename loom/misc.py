@@ -257,3 +257,14 @@ def left_right(l, point):
             return 'right'
         else:
             return 'left'
+
+
+def is_root(np_array, g_data):
+    ans = False
+    for rt in list(g_data.roots):
+        if (np_array == rt).all():
+            ans = True
+            break
+        else:
+            pass
+    return ans
