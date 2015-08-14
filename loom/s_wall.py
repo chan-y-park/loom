@@ -68,7 +68,7 @@ class SWall(object):
         ### FIXME: self.zs & self.xs instead of z & x?
         if n_steps is None:
             self.z = []
-            self.x = []
+            #self.x = []
             self.M = []
         else:
             self.z = numpy.empty(n_steps+1, complex)
@@ -224,7 +224,51 @@ class SWall(object):
             M_i = y_i[num_x_over_z+1]
             self[step] = y_i
 
+    def get_root_at_t(self, t):
+        """
+        Given an integer t which parametrizes a point 
+        of the trajectory in proper time, return the local 
+        root at that point.
+        """
+        if t < 0 or t > (len(self.z) - 1):
+            raise ValueError
+        else:
+            closed_splittings = self.splittings + [len(self.z) - 1]
+            for i, sp in enumerate(closed_splittings):
+                if t <= sp:
+                    return self.local_roots[i]
+                    break
+                else:
+                    pass
 
+    def get_weight_pairs_at_t(self, t):
+        """
+        Given an integer t which parametrizes a point 
+        of the trajectory in proper time, return the local 
+        pair of weights at that point.
+        """        
+        if t < 0 or t > (len(self.z) - 1):
+            raise ValueError
+        else:
+            closed_splittings = self.splittings + [len(self.z) - 1]
+            for i, sp in enumerate(closed_splittings):
+                if t <= sp:
+                    return self.local_weight_pairs[i]
+                    break
+                else:
+                    pass
+
+    def get_sheets_at_t(self, t, sw_data):
+        """
+        Return a list of pairs of values.
+        For sheet labels [... [i, j] ...] at given t,
+        return [... [x_i, x_j] ...]
+        """
+        z = self.z[t]
+        # the following is a dictionary
+        xs_at_z = sw_data.get_sheets_at_z(z)
+        weight_pairs = self.get_weight_pairs_at_t(t)
+        return [[xs_at_z[w_p[0]], xs_at_z[w_p[1]]] for w_p in weight_pairs]
 
 
 def get_s_wall_seeds(sw, theta, branch_point, config,):
