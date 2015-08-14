@@ -326,13 +326,6 @@ class SpectralNetwork:
                     # TODO: need to put the joint into the parent
                     # S-walls?
 
-                    # find the values of x at z = ip_z.
-                    ip_xs = find_xs_at_z_0(sw_data, ip_z)
-                    ip_x_n_0 = n_nearest(ip_xs, x_n[0], 1)[0]
-                    ip_x_n_1 = n_nearest(ip_xs, x_n[1], 1)[0]
-                    ip_x_p_0 = n_nearest(ip_xs, x_p[0], 1)[0]
-                    ip_x_p_1 = n_nearest(ip_xs, x_p[1], 1)[0]
-
                     a_joint = get_joint(
                         ip_z, 
                         prev_s_wall,
@@ -434,13 +427,6 @@ class SpectralNetwork:
 
                         # TODO: need to put the joint into the parent
                         # S-walls?
-
-                        # find the values of x at z = ip_z.
-                        ip_xs = find_xs_at_z_0(sw_data, ip_z)
-                        ip_x_n_0 = n_nearest(ip_xs, x_n[0], 1)[0]
-                        ip_x_n_1 = n_nearest(ip_xs, x_n[1], 1)[0]
-                        ip_x_p_0 = n_nearest(ip_xs, x_p[0], 1)[0]
-                        ip_x_p_1 = n_nearest(ip_xs, x_p[1], 1)[0]
 
                         # find mass of parent S-walls: this is approximate,
                         # since we don't interpolate precisely to the joint

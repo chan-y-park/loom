@@ -372,6 +372,7 @@ def print_spectral_network_data(s_walls, branch_points, g_data):
     root_dictionary = make_root_dictionary(g_data)
     weight_dictionary = make_weight_dictionary(g_data)
 
+    logging.info('\n\t--- The S-Wall Data ---\n')
     for s in s_walls:
         rt_labels = [get_label(rt, root_dictionary) for rt in s.local_roots]
         wt_labels = [
@@ -384,15 +385,16 @@ def print_spectral_network_data(s_walls, branch_points, g_data):
                 ]
                 for loc_wts in s.local_weight_pairs
             ]
-        print(
+        logging.info(
                 '\n' + s.label + 
                 '\troot types : {}\n'.format(rt_labels) +
                 '\t\tsheet pairs : {}\n'.format(wt_labels)
             )
 
+    logging.info('\n\t--- The Branch Points ---\n')
     for bp in branch_points:
         rt_labels = [get_label(rt, root_dictionary) for rt in bp.positive_roots]
-        print(
+        logging.info(
                 '\n' + bp.label + 
                 '\tposition : {}\n'.format(bp.z) +
                 '\t\troot type : {}\n'.format(rt_labels)
@@ -418,17 +420,17 @@ def print_legend(g_data):
     weight_labels = weight_dictionary.keys()
     weights = weight_dictionary.values()
 
-    print('\n\t--- The Root System ---\n')
+    logging.info('\n\t--- The Root System ---\n')
     for i in range(len(roots)):
-        print(
+        logging.info(
                 root_labels[i] + 
                 '\t\t{}\n'.format(list(roots[i])) +
                 'ordered weight pairs : \t{}\n'.format(weight_pairs[i])
             )
 
-    print('\n\t--- The Weight System ---\n')
+    logging.info('\n\t--- The Weight System ---\n')
     for i in range(len(weights)):
-        print(
+        logging.info(
                 weight_labels[i] + 
                 '\t\t{}\n'.format(list(weights[i])) 
             )

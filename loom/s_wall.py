@@ -101,10 +101,17 @@ class SWall(object):
         """
         SWall.z is a NumPy array of length n_steps+1,
         where z[t] is the base coordinate.
+
+        SWall.x is a Numpy array of the fiber coordinates at t, i.e.
+        SWall.x[t] = [x[t][0], x[t][1], ...]. 
+        (NOTE: for now, we just use two sheets, they serve only for 
+        numerical ode evolution. To get the sheets use the method
+        SWall.get_sheets_at_t() instead.)
         """
         ### FIXME: self.zs & self.xs instead of z & x?
         if n_steps is None:
             self.z = []
+            self.x = []
             self.M = []
         else:
             self.z = numpy.empty(n_steps+1, complex)
