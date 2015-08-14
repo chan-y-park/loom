@@ -323,7 +323,7 @@ class SpectralNetwork:
                     # t_p: index of z_seg_p nearest to ip_z
                     t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
                     x_p = prev_s_wall.x[t_p]
-                    M_p = new_s_wall.M[t_p]
+                    M_p = prev_s_wall.M[t_p]
 
                     # TODO: need to put the joint into the parent
                     # S-walls?
