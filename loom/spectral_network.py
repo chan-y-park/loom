@@ -528,7 +528,7 @@ class SpectralNetwork:
                 )
             # dropping intersections of a primary S-wall with the 
             # branch cut emanating from its parent branch-point
-            # if such intersections happens at t=0
+            # if such intersections happens at t=0 or t=1
             intersections = (
                     [[bp, i] for bp, i in intersections if (
                     not (bp.label == s_wall.parents[0] and (i == 0 or i==1))
@@ -578,15 +578,15 @@ class SpectralNetwork:
 def get_s_wall_root(z, xs, sw_data):
     x_i, x_j = xs
 
-    ### The following is a dictionary
+    # The following is a dictionary
     sheets_at_z = sw_data.get_sheets_at_z(z)
     xs_at_z = sheets_at_z.values()
     
-    ### Sheet matching x_i
+    # Sheet matching x_i
     closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
     i = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_i][0]
 
-    ### Sheet matching x_j
+    # Sheet matching x_j
     closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
     j = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_j][0]
 
