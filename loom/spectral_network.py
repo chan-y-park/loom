@@ -109,16 +109,17 @@ class SpectralNetwork:
                 joint.label = 'joint #{}'.format(len(self.joints))
                 self.joints.append(joint)
                 label = 'S-wall #{}'.format(len(self.s_walls))
-                self.s_walls.append(
-                    SWall(
-                        z_0=joint.z,
-                        x_0=joint.x,
-                        M_0=joint.M,
-                        parents=joint.parents,
-                        label=label,
-                        n_steps=n_steps,
+                if config['mass_limit'] is None or joint.M < config['mass_limit']:
+                    self.s_walls.append(
+                        SWall(
+                            z_0=joint.z,
+                            x_0=joint.x,
+                            M_0=joint.M,
+                            parents=joint.parents,
+                            label=label,
+                            n_steps=n_steps,
+                        )
                     )
-                )
             iteration += 1
 
             logging.info('Iteration #{} finished.'.format(iteration))
