@@ -324,8 +324,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     ### Regardless of the representation, it is sufficient
     ### to consider one of these ramification points
     ### to extract the seed data.
-    ### We thus stick to any ramification point of the 
-    ### fundamental representation.
+    ### We thus stick to (any)one ramification point of the 
+    ### fundamental representation to get the seeds.
     rp = branch_point.ffr_ramification_points[0]
     delta = config['accuracy']
     dt = config['size_of_small_step']
@@ -341,7 +341,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
 
     # 1.1 find the coefficient and the exponent of the leading term
     # of the SW differential at the ramification point.
-    lambda_0, diff_e = get_local_sw_diff(sw, rp)
+    lambda_0, diff_e = get_local_sw_diff(sw, rp, ffr=True)
 
     # 1.2 find c_i, a phase factor for each S-wall.
     omega_1 = exp(2*pi*1j/rp.i)

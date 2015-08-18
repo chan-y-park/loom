@@ -190,7 +190,11 @@ def get_ode(sw, phase, accuracy):
     x, z = sympy.symbols('x z')
     ode_absolute_tolerance = accuracy
 
-    f = sw.curve.num_eq
+    # Even for higher-reps, we always use the 
+    # first fundamental representation curve 
+    # for evolving the network
+    # f = sw.curve.num_eq
+    f = sw.ffr_curve.num_eq
     df_dz = f.diff(z)
     df_dx = f.diff(x)
     # F = -(\partial f/\partial z)/(\partial f/\partial x)

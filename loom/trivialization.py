@@ -267,9 +267,9 @@ class SWDataWithTrivialization(SWData):
             # irr_sing.print_info()
 
         
-    ### TODO: Need to implement tracking without using aligned x's?
-    def get_sheets_along_path(self, z_path, is_path_to_bp=False,
-                              from_ffr=True):
+    # TODO: Need to implement tracking without using aligned x's?
+    # PL: Do we actually need to?
+    def get_sheets_along_path(self, z_path, is_path_to_bp=False):
         """
         Tracks the sheets along a path.
         It checks at each step that tracking is successful,

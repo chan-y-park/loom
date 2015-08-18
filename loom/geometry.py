@@ -431,10 +431,15 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1):
                       lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
    
 
-def get_local_sw_diff(sw, ramification_point):
-    rp = ramification_point
-    num_eq = sw.curve.num_eq
-    num_v = sw.diff.num_v
+def get_local_sw_diff(sw, ramification_point, ffr=None):
+    if ffr==None or ffr==False:
+        rp = ramification_point
+        num_eq = sw.curve.num_eq
+        num_v = sw.diff.num_v
+    elif ffr==True:
+        rp = ramification_point
+        num_eq = sw.ffr_curve.num_eq
+        num_v = sw.diff.num_v
 
     ### use Dz = z - rp.z & Dx = x - rp.x
     Dz, Dx = sympy.symbols('Dz, Dx')
