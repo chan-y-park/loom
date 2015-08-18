@@ -87,13 +87,19 @@ class GData:
         ### of self.weights[i] in the self.basis.
         self.weight_coefficients = numpy.array(sage_data['weight_coefficients'])
 
-    def ordered_weight_pairs(self, root):
+    def ordered_weight_pairs(self, root, ffr=False):
         pairs = []
 
-        for i, w_1 in enumerate(self.weights):
-            for j, w_2 in enumerate(self.weights):
-                if numpy.array_equal(w_2 - w_1, root):
-                    pairs.append([i, j])
+        if ffr==False:
+            for i, w_1 in enumerate(self.weights):
+                for j, w_2 in enumerate(self.weights):
+                    if numpy.array_equal(w_2 - w_1, root):
+                        pairs.append([i, j])
+        elif ffr==True:
+            for i, w_1 in enumerate(self.ffr_weights):
+                for j, w_2 in enumerate(self.ffr_weights):
+                    if numpy.array_equal(w_2 - w_1, root):
+                        pairs.append([i, j])
 
         return pairs
 
@@ -417,13 +423,13 @@ class SWData(object):
         return xs
 
 
-def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1):
+def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     """
     Get x's above z_0 and return the num_x of them 
     which are nearest to x_0.
     """
     
-    xs_at_z_0 = sw_data.get_sheets_at_z(z_0).values()
+    xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=ffr).values()
     if x_0 is None:
         return xs_at_z_0
     else:

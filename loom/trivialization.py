@@ -269,7 +269,7 @@ class SWDataWithTrivialization(SWData):
         
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
-    def get_sheets_along_path(self, z_path, is_path_to_bp=False):
+    def get_sheets_along_path(self, z_path, is_path_to_bp=False, ffr=False):
         """
         Tracks the sheets along a path.
         It checks at each step that tracking is successful,
@@ -290,6 +290,7 @@ class SWDataWithTrivialization(SWData):
         ### Initialized with reference_xs.
         ### TODO: set each element to an integer rather than a float.
         sheets_along_path = [[x] for x in xs_0]
+        ffr_sheets_along_path = [[x] for x in ffr_xs_0]
         
         for i, z in enumerate(z_path):
             ffr_xs_1, xs_1 = self.get_aligned_xs(z)
@@ -304,24 +305,29 @@ class SWDataWithTrivialization(SWData):
             if g_data.fundamental_representation_index == 1:
                 sorted_xs = sorted_ffr_xs
             else:
-                sorted_xs = self.get_xs_of_weights_from_ffr_xs(sorted_ffr_xs)
+                sorted_xs = self.get_xs_of_weights_from_ffr_xs(sorted_ffr_xs)                
             for j, s_j in enumerate(sheets_along_path):
                 s_j.append(sorted_xs[j])
+            for j, s_j in enumerate(ffr_sheets_along_path):
+                s_j.append(sorted_ffr_xs[j])
             ffr_xs_0 = sorted_ffr_xs
 
         ### the result is of the form [sheet_path_1, sheet_path_2, ...]
         ### where sheet_path_i = [x_0, x_1, ...] are the fiber coordinates
         ### of the sheet along the path
-        return sheets_along_path
+        if ffr==False:
+            return sheets_along_path
+        elif ffr==True:
+            return ffr_sheets_along_path
 
 
-    def get_sheets_at_z(self, z_pt, g_data=None, is_seed_point=False):
+    def get_sheets_at_z(self, z_pt, g_data=None, ffr=False):
         """
         Returns a dict of (sheet_index, x) at a point ''z_pt'', 
         which cannot be a branch point or a singularity.
         """
         z_path = get_path_to(z_pt, self)
-        sheets = self.get_sheets_along_path(z_path)
+        sheets = self.get_sheets_along_path(z_path, ffr=ffr)
         final_xs = [s_i[-1] for s_i in sheets]
         final_sheets = {i : x for i, x in enumerate(final_xs)}
         return final_sheets

@@ -25,6 +25,7 @@ class Joint:
         self.root = alpha_1 + alpha_2
         self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
         self.parents = [s_wall_1.label, s_wall_2.label]
+        self.indices = [t_1, t_2]
         self.label = [s_wall_1.label, s_wall_2.label]
 
         xs_at_z = find_xs_at_z_0(sw_data, z)
@@ -33,6 +34,14 @@ class Joint:
         x_i = xs_at_z[w_p_0[0]]
         x_j = xs_at_z[w_p_0[1]]
         self.x = [x_i, x_j]
+
+        ffr_xs_at_z = find_xs_at_z_0(sw_data, z, ffr=True)
+        ffr_new_wall_weight_pairs = sw_data.g_data.ordered_weight_pairs(
+                                                        self.root, ffr=True)
+        ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
+        ffr_x_i = ffr_xs_at_z[ffr_w_p_0[0]]
+        ffr_x_j = ffr_xs_at_z[ffr_w_p_0[1]]
+        self.ffr_x = [ffr_x_i, ffr_x_j]
 
         # For each pair of pairs: [i, j] from the first wall
         # and [j, k] from the second wall, we build 
@@ -393,7 +402,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         # resize to the size of the small step
         Delta_z = cv/abs(cv)*delta
         z_0 = rp.z + Delta_z
-        xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i)
+        xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i, ffr=True)
         dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
         for i in range(len(xs_at_z_0)):
             diffx = sw.diff.num_v.subs(z, z_0)

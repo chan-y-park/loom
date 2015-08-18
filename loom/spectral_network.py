@@ -113,7 +113,9 @@ class SpectralNetwork:
                     self.s_walls.append(
                         SWall(
                             z_0=joint.z,
-                            x_0=joint.x,
+                            # The numerics of S-walls involves sheets
+                            # from the first fundamental cover.
+                            x_0=joint.ffr_x,
                             M_0=joint.M,
                             parents=joint.parents,
                             label=label,
@@ -332,7 +334,7 @@ class SpectralNetwork:
                         new_s_wall,                         
                         t_p, 
                         t_n,
-                        sw_data=sw_data.sw_data,
+                        sw_data=sw_data
                     )
 
                     if(a_joint is None):
@@ -418,12 +420,15 @@ class SpectralNetwork:
                         ip_z = ip_x + 1j*ip_y
 
                         # t_n: index of z_seg_n nearest to ip_z
-                        t_n = n_nearest_indices(z_seg_n, ip_z, 1)[0]
-                        x_n = new_x_segs[i_n][t_n]
+                        # t_n = n_nearest_indices(z_seg_n, ip_z, 1)[0]
+                        # x_n = new_x_segs[i_n][t_n]
+                        t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
+
 
                         # t_p: index of z_seg_p nearest to ip_z
-                        t_p = n_nearest_indices(z_seg_p, ip_z, 1)[0]
-                        x_p = prev_x_segs[i_p][t_p]
+                        # t_p = n_nearest_indices(z_seg_p, ip_z, 1)[0]
+                        # x_p = prev_x_segs[i_p][t_p]
+                        t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
 
                         # TODO: need to put the joint into the parent
                         # S-walls?
@@ -462,6 +467,7 @@ class SpectralNetwork:
         # Determine the initial root-type
         z_0 = s_wall.z[0]
         x_0 = s_wall.x[0]
+        # ffr_x_0 = s_wall.ffr_x[0]
         initial_root = get_s_wall_root(z_0, x_0, sw_data,)
         # A list of ordered pairs [...[i, j]...]
         # such that weights[j] - weights[i] = root
@@ -557,11 +563,18 @@ class SpectralNetwork:
             s_wall.local_roots.append(new_root)
             s_wall.local_weight_pairs.append(new_weight_pairs)
 
-def get_s_wall_root(z, xs, sw_data):
-    x_i, x_j = xs
-
+def get_s_wall_root(z, ffr_xs, sw_data):
+    x_i, x_j = ffr_xs
+    
+    # Recall that S-wall numerical evolution
+    # is based on the first fundamental representation.
+    # In particular, the xs above are values of sheets 
+    # from the 1st fundamental rep cover, and should 
+    # be compared with the corresponding trivialization.
+    # This is taken care of by setting the key argument
+    # ffr=True when calling get_sheets_at_z.
     # The following is a dictionary
-    sheets_at_z = sw_data.get_sheets_at_z(z)
+    sheets_at_z = sw_data.get_sheets_at_z(z, ffr=True)
     xs_at_z = sheets_at_z.values()
     
     # Sheet matching x_i
@@ -572,4 +585,4 @@ def get_s_wall_root(z, xs, sw_data):
     closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
     j = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_j][0]
 
-    return sw_data.g_data.weights[j] - sw_data.g_data.weights[i]
+    return sw_data.g_data.ffr_weights[j] - sw_data.g_data.ffr_weights[i]

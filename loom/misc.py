@@ -94,8 +94,12 @@ def n_nearest(a_list, value, n):
     Find n elements of a_list nearest to value and return them,
     by comparing the euclidean norms.
     """
-    compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
-    return sorted(a_list, compare)[:n]
+    # The following didn't work, because
+    # 'sorted' takes a key function with a SINGLE variable.
+    # compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
+    # return sorted(a_list, compare)[:n]
+    compare = lambda v: abs(v - value)
+    return sorted(a_list, key=compare)[:n]
 
 
 def n_nearest_indices(a_list, value, n):
@@ -103,11 +107,12 @@ def n_nearest_indices(a_list, value, n):
     Find n elements of a_list nearest to value and return their indices,
     by comparing the euclidean norms.
     """
-    compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
-    key = lambda k: a_list[k]
-    sorted_indices = sorted(range(len(a_list)), compare, key)
-
-    return sorted_indices[:n]
+    # compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
+    # return sorted(a_list, compare)[:n]
+    sorted_nearest_values = n_nearest(a_list, value, n)
+    sorted_nearest_indices = [list(a_list).index(v) 
+                                    for v in sorted_nearest_values]
+    return sorted_nearest_indices
 
 
 def unravel(k, row_size, column_size=None):
