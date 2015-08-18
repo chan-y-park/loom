@@ -473,10 +473,10 @@ class SpectralNetwork:
         s_wall.local_weight_pairs = [initial_weight_pairs]
 
         # If the length of the S-wall's coordinates
-        # is 2 or less, do not check cuts.
+        # is 3 or less, do not check cuts.
         # Otherwise, the interpolation methood would
         # raise an error.
-        if len(s_wall.z) < 3:
+        if len(s_wall.z) <= 3:
             return None
 
         branch_points = sw_data.branch_points
