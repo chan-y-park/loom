@@ -260,30 +260,30 @@ class SpectralNetwork:
             if prev_s_wall.label in new_s_wall.parents:
                 continue
                     
-            # Check if the two S-walls have a common x-range.  
-            have_common_x_range = False
-            for x_a, x_b in (
-                (x_a, x_b) for x_a in new_s_wall.x.T 
-                for x_b in prev_s_wall.x.T
-            ):
-                x_r_range, x_i_range = (
-                    find_curve_range_intersection(
-                        (x_a.real, x_a.imag),
-                        (x_b.real, x_b.imag),
-                        cut_at_inflection=False,
-                    )
-                )
-                if ((x_r_range.is_EmptySet is True) or 
-                    (x_r_range.is_EmptySet is True) or 
-                    x_i_range.is_FiniteSet or
-                    x_i_range.is_FiniteSet):
-                    continue
-                else:
-                    have_common_x_range = True
-                    break
-            if have_common_x_range is False:
-                # No common x range, therefore no joint.
-                continue
+            # # Check if the two S-walls have a common x-range.  
+            # have_common_x_range = False
+            # for x_a, x_b in (
+            #     (x_a, x_b) for x_a in new_s_wall.x.T 
+            #     for x_b in prev_s_wall.x.T
+            # ):
+            #     x_r_range, x_i_range = (
+            #         find_curve_range_intersection(
+            #             (x_a.real, x_a.imag),
+            #             (x_b.real, x_b.imag),
+            #             cut_at_inflection=False,
+            #         )
+            #     )
+            #     if ((x_r_range.is_EmptySet is True) or 
+            #         (x_r_range.is_EmptySet is True) or 
+            #         x_i_range.is_FiniteSet or
+            #         x_i_range.is_FiniteSet):
+            #         continue
+            #     else:
+            #         have_common_x_range = True
+            #         break
+            # if have_common_x_range is False:
+            #     # No common x range, therefore no joint.
+            #     continue
 
             # Find an intersection on the z-plane.
             try:
@@ -371,45 +371,46 @@ class SpectralNetwork:
         new_s_wall = self.s_walls[new_s_wall_index]
         new_tps = new_s_wall.get_turning_points()
         new_z_segs = numpy.split(new_s_wall.z, new_tps, axis=0,)
-        new_x_segs = numpy.split(new_s_wall.x, new_tps, axis=0,)
+        # new_x_segs = numpy.split(new_s_wall.x, new_tps, axis=0,)
 
         # NOTE: Here we find only a single joint between two S-walls.
         # Use CGAL to find multiple z-intersections.
         for prev_s_wall in self.s_walls[:new_s_wall_index]:
             prev_tps = prev_s_wall.get_turning_points()
             prev_z_segs = numpy.split(prev_s_wall.z, prev_tps, axis=0,)
-            prev_x_segs = numpy.split(prev_s_wall.x, prev_tps, axis=0,)
+            # prev_x_segs = numpy.split(prev_s_wall.x, prev_tps, axis=0,)
 
             for i_n in range(len(new_tps)+1):
                 z_seg_n = new_z_segs[i_n]
                 for i_p in range(len(prev_tps)+1):
                     z_seg_p = prev_z_segs[i_p]
 
-                    # Check if the two segments have a common x-range.
-                    have_common_x_range = False
-                    for x_a, x_b in (
-                        (x_a, x_b) for x_a in new_x_segs[i_n].T
-                        for x_b in prev_x_segs[i_p].T
-                    ):
-                        x_r_range, x_i_range = (
-                            find_curve_range_intersection(
-                                (x_a.real, x_a.imag),
-                                (x_b.real, x_b.imag),
-                                cut_at_inflection=False,
-                            )
-                        )
-                        if ((x_r_range.is_EmptySet is True) or
-                            (x_r_range.is_EmptySet is True) or
-                            x_i_range.is_FiniteSet or
-                            x_i_range.is_FiniteSet):
-                            continue
-                        else:
-                            have_common_x_range = True
-                            break
-                    if have_common_x_range is False:
-                        # No common x range, therefore no joint.
-                        continue
+                    # # Check if the two segments have a common x-range.
+                    # have_common_x_range = False
+                    # for x_a, x_b in (
+                    #     (x_a, x_b) for x_a in new_x_segs[i_n].T
+                    #     for x_b in prev_x_segs[i_p].T
+                    # ):
+                    #     x_r_range, x_i_range = (
+                    #         find_curve_range_intersection(
+                    #             (x_a.real, x_a.imag),
+                    #             (x_b.real, x_b.imag),
+                    #             cut_at_inflection=False,
+                    #         )
+                    #     )
+                    #     if ((x_r_range.is_EmptySet is True) or
+                    #         (x_r_range.is_EmptySet is True) or
+                    #         x_i_range.is_FiniteSet or
+                    #         x_i_range.is_FiniteSet):
+                    #         continue
+                    #     else:
+                    #         have_common_x_range = True
+                    #         break
+                    # if have_common_x_range is False:
+                    #     # No common x range, therefore no joint.
+                    #     continue
 
+                    
                     # Find an intersection on the z-plane.
                     try:
                         ip_x, ip_y = find_intersection_of_segments(
