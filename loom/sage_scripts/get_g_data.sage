@@ -21,8 +21,6 @@ def pick_basis(ffr_weights, algebra_type, algebra_rank):
         return vector_list[:algebra_rank]
 
     else:
-        ### XXX: This doesn't work with for example E6,
-        ### not enough number of linearly independent ffr_weights.
         dim = len(vector_list[0])
         
         r = Matrix(basis).rank()
@@ -82,6 +80,8 @@ def sort_ffr_weights(ffr_weights, algebra_type, algebra_rank):
         ]
         sorted_ffr_negative_weights = [-v for v in sorted_ffr_positive_weights]
         return sorted_ffr_positive_weights + sorted_ffr_negative_weights
+    elif algebra_type == 'E':
+        return ffr_weights
     else:
         print('sort_ffr_weights(): there is no sorting rule for {}-type, '
               'returns without sorting. '.format(algebra_type))
@@ -95,8 +95,21 @@ def main(root_system, highest_weight):
     ### A represent the weight space in the orthonormal basis.
     A = R.ambient_space()
 
-    ### omgea_1 is the 1st fundamental weight
-    omega_1 = A.fundamental_weight(1)   
+    if algebra_type == 'A' or algebra_type == 'D':
+        ### omega_1 is the 1st fundamental weight
+        omega_1 = A.fundamental_weight(1)   
+
+    elif algebra_type == 'E':
+        if algebra_rank == 6:
+            ### omega_1 is the 1st fundamental weight
+            omega_1 = A.fundamental_weight(1)   
+        elif algebra_rank == 7:
+            ### omega_1 is the 7th fundamental weight
+            omega_1 = A.fundamental_weight(7)   
+    else:
+        raise ValueError('There are no minuscule ' +
+                        'representations for this algebra.')
+    
     ### weyl_orbit_1 consists of weights in the 1st fundamental rep.
     weyl_orbit_1 = omega_1.orbit()
     ffr_weights = sort_ffr_weights(weyl_orbit_1, algebra_type, algebra_rank)

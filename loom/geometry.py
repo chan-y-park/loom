@@ -10,6 +10,11 @@ from misc import ctor2, r2toc, get_root_multiplicity, PSL2C, n_nearest_indices
 
 x, z = sympy.symbols('x z')
 
+N_NULL_TRIPLES = 45
+N_NULL_QUARTETS = 1008
+NULL_TRIPLES_INDIVIDUAL = 5
+NULL_QUARTETS_INDIVIDUAL = 72
+SHEET_NULL_TOLERANCE = 0.001
 
 class GData:
     """
@@ -337,6 +342,8 @@ class SWData(object):
         ### according to the order of ''g_data.weights'',
         ### then construct the list of x's for the given representation
         ### ordered according to weights.
+        # NOTE: does this correspond to the 7th irrep for E7?
+        #       We need that one for that algebra
         ffr_xs = self.ffr_curve.get_xs(z_0) 
 
         if algebra_type == 'A':
@@ -397,14 +404,18 @@ class SWData(object):
                 xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
 
         elif g_data.type == 'E':
-            ### !!!!!
-            ### Here I am pairing any sheet with any weight of E_6 and E_7 
-            ### However, the Weyl group does not contains permutations 
-            ### of 27 (resp 56) elements so it's probably NOT OK to 
-            ### pair sheets with weights as we like.
-            ### !!!!!
-            #xs = ffr_xs
-            raise NotImplementedError
+            if algebra_rank == 6:
+                ffr_weights_list = list(self.g_data.ffr_weights)
+                aligned_ffr_xs = sort_sheets_for_e_6_ffr(
+                                                        ffr_xs, 
+                                                        ffr_weights_list
+                                                        )
+                if fund_rep_index == 1:
+                    xs = aligned_ffr_xs
+                else:
+                    xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
+            elif algebra_rank == 7:
+                raise NotImplementedError
      
         return (aligned_ffr_xs, xs)
 
@@ -471,3 +482,146 @@ def get_local_sw_diff(sw, ramification_point, ffr=None):
         (diff_c, diff_e) = local_diff.leadterm(Dz)
 
     return (complex(diff_c.n()), diff_e)
+
+
+# triples of null weights for E_6
+def null_weight_triples(weights):
+    null_vec = numpy.array([0 for i in range(len(list(weights[0])))])
+    null_triples = []
+    for i, w_i in enumerate(weights):
+        for j, w_j in enumerate(weights):
+            for k, w_k in enumerate(weights):
+                if i < j < k:
+                    if (w_i + w_j + w_k == null_vec):
+                        null_triples.append([i,j,k])
+
+    return sorted(null_triples)
+
+# The quintet of WEIGHT triples for the i-th weight
+def w_quintet(i, null_triples):
+    return [t for t in null_triples if i in t]
+    
+# Check whether a weight label i
+# is contained in a quintet of triples
+# Return 0 for 'No' and '1' for 'Yes'
+def w_quintet_contained(i, quintet):
+    ans = 0
+    for t in quintet:
+        if i in t:
+            ans = 1
+            break
+    return ans
+
+
+def null_sheet_triples(sheets):
+    null_triples = []
+    for i, x_i in enumerate(sheets):
+        for j, x_j in enumerate(sheets):
+            for k, x_k in enumerate(sheets):
+                if i < j < k:
+                    if (abs(x_i + x_j + x_k) < SHEET_NULL_TOLERANCE):
+                        null_triples.append([x_i, x_j, x_k])
+
+    return sorted(null_triples)
+
+# The quintet of SHEET triples for sheet x
+def s_quintet(x, null_triples):
+    return [t for t in null_triples if x in t]
+    
+# Check whether a sheet x
+# is contained in a quintet of triples
+# Return 0 for 'No' and '1' for 'Yes'
+def s_quintet_contained(x, quintet):
+    ans = 0
+    for t in quintet:
+        if x in t:
+            ans = 1
+            break
+    return ans
+
+def sort_sheets_for_e_6_ffr(sheets, weights):
+    """
+    Return the list of sheets sorted 
+    according to the list of weights.
+    The output is a list such that
+    sheets[i] will correspond to weights[i].
+    """
+    sorted_sheets = [None for w in weights]
+    x_0 = sheets[0]
+    mu_0 = weights[0]
+
+    n_w_triples = null_weight_triples(weights)
+    n_s_triples = null_sheet_triples(sheets)
+
+    # Start sorting
+    sorted_sheets[0] = x_0
+
+    # The quintet of triples of \mu_0
+    q_0 = w_quintet(0, n_w_triples)
+
+    # The quintet of SHEET triples of x_0
+    s_q_0 = s_quintet(x_0, n_s_triples)
+
+    # Get the list of sheets appearing in the quintet s_q_0
+    # The weyl symmetry allows us to fix the these
+    known_sheets = [x_0]
+    for i in range(NULL_TRIPLES_INDIVIDUAL):
+        # Get the (unordered) pair of sheets [x_i, x_j] 
+        # from each triple [x_0, x_i, x_j]
+        s_pair = [s for s in s_q_0[i] if s!=x_0]
+        # Get the (unordered) pair of weight-labels [i, j] 
+        # from each triple [0, i, j]
+        w_pair = [k for k in q_0[i] if k!=0]
+
+        sorted_sheets[w_pair[0]] = s_pair[0]
+        sorted_sheets[w_pair[1]] = s_pair[1]
+
+        known_sheets.append(s_pair[0])
+        known_sheets.append(s_pair[1])
+
+    # Get the list of weights appearing in the quintet q_0
+    known_weights = [0]
+    for t in q_0:
+        for i in t:
+            if i in known_weights:
+                continue
+            else:
+                known_weights.append(i)
+
+    missing_weights = [i for i in range(len(weights)) 
+                                        if not i in known_weights]
+    missing_sheets = [x for x in range(len(sheets)) 
+                                        if not i in known_sheets]
+    
+    # List all the combos of which WEIGHT quintets 
+    # must/must not contain all missing WEIGHTS
+    weight_combos = [[w_quintet_contained(j, w_quintet(i, n_w_triples)) 
+                        for i in known_weights] for j in missing_weights]
+
+    # List all the combos of which SHEET quintets 
+    # must/must not contain all missing SHEETS
+    sheet_combos = [[s_quintet_contained(x, s_quintet(y, n_s_triples)) 
+                        for y in known_sheets] for x in missing_sheets]
+
+    # Now match the patterns of inclusion in the quintets
+    # between missing weights and missing sheets.
+    # When the patterns match, assign the corresponding 
+    # sheet to the list of sorted ones.
+    for i in range(len(missing_sheets)):
+        s_combo = sheet_combos[i]
+        for j in range(len(missing_weights)):
+            w_combo = weight_combos[j]
+            if s_combo == w_combo:
+                sorted_sheets[j] = missing_sheets[i]
+            else:
+                pass
+
+
+    # A basic check that we didn't pick a sheet twice
+    if len(sorted_sheets) == len(delete_duplicates(sorted_sheets)):
+        pass
+    else:
+        raise ValueError('Something is wrong with the sorting of sheets')
+
+    return sorted_sheets
+
