@@ -218,6 +218,9 @@ class SpectralNetwork:
         lib_name = 'libcgal_intersection'
         if linux_distribution == 'Ubuntu':
             lib_name += '_ubuntu'
+        elif linux_distribution == 'debian':
+            ### FIXME: Anaconda Python returns 'debian' instead of 'Ubuntu'.
+            lib_name += '_ubuntu'
         elif linux_distribution == 'Scientific Linux':
             lib_name += '_het-math2'
         else:
