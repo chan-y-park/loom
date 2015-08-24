@@ -76,7 +76,16 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                 if n_sec == 1: 
                     z_segs = [s_wall.z]
                 else:
-                    z_segs = numpy.split(s_wall.z, s_wall.splittings)
+                    # z_segs = numpy.split(s_wall.z, s_wall.splittings)
+                    # start with initial piece
+                    z_segs = [numpy.array(s_wall.z[0:s_wall.splittings[0]+1])]
+                    for i in range(len(s_wall.splittings)-1):
+                        s_0 = s_wall.splittings[i]
+                        s_1 = s_wall.splittings[i+1]
+                        z_segs.append(numpy.array(s_wall.z[s_0:s_1+1]))
+                    # add the last piece
+                    z_segs.append(numpy.array(
+                                        s_wall.z[len(s_wall.splittings)-1:]))
                 
                 seg_labels = (
                         [s_wall.label + '\n' + lab for 

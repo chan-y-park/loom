@@ -4,6 +4,7 @@ import sympy
 import pdb
 
 from cmath import exp, pi, phase
+from math import floor
 
 from geometry import get_local_sw_diff, find_xs_at_z_0
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
@@ -324,6 +325,76 @@ class SWall(object):
         xs_at_z = sw_data.get_sheets_at_z(z)
         weight_pairs = self.get_weight_pairs_at_t(t)
         return [[xs_at_z[w_p[0]], xs_at_z[w_p[1]]] for w_p in weight_pairs]
+
+    def enhance_at_cuts(self):
+        # Add the intersection points of Swalls and branch cuts
+        # also update the intersection data accordingly
+        wall_pieces_z = []
+
+        # split the wall into piececs, at the end of each 
+        # piece add the corresponding intersection point
+        old_cuts_intersections = [i for i in self.cuts_intersections]
+        for i, int_data in enumerate(old_cuts_intersections):
+            bp, t_0, chi = int_data
+            point_to_add = get_intermediate_point(
+                                        self.z[t_0], self.z[t_0+1], bp.z)
+            if i == 0:
+                piece = list(self.z[:t_0+1])
+                piece.append(point_to_add)
+            else:
+                t_0_prev = old_cuts_intersections[i-1][1]
+                piece = list(self.z[t_0_prev+1:t_0+1])
+                piece.append(point_to_add)
+            wall_pieces_z.append(piece)
+        # get the last piece of the wall
+        last_t_0 = old_cuts_intersections[-1][1]
+        last_piece = list(self.z[last_t_0+1:])
+        wall_pieces_z.append(last_piece)
+
+        # now assemble the new pieces
+        splittings = []
+        new_s_wall_z = []
+        for piece in wall_pieces_z:
+            new_s_wall_z += piece
+            #recall that the newly added point is at
+            # the end of each piece
+            splittings.append(len(new_s_wall_z) - 1)
+        # now remove the last splitting, because at the end 
+        # of the last piece there is no actual branch cut
+        self.splittings = splittings[:len(splittings)-1]
+        # update the z coordinates
+        self.z = numpy.array(new_s_wall_z)
+        # update the intersection data
+        new_cuts_intersections = []
+        for i, int_data in enumerate(old_cuts_intersections):
+            bp, t_old, chi = int_data
+            t_new = self.splittings[i]
+            new_cuts_intersections.append([bp, t_new, chi])
+        
+        self.cuts_intersections = new_cuts_intersections
+
+        pass
+
+
+
+
+
+
+def get_intermediate_point(z_1, z_2, z_med):
+    """
+    get the intermediate point between z_1 and z_2
+    in correspondence of the real part of z_med
+    """
+    x_1 = z_1.real
+    y_1 = z_1.imag
+    x_2 = z_2.real
+    y_2 = z_2.imag
+    x_med = z_med.real
+    # if not x_2 < x_med < x_1 or x_1 < x_med < x_2:
+    #     print 'ERROR: x_1={}, x_2={}, x_med={}'.format(x_1,x_2,x_med)
+    slope = (y_2 - y_1) / (x_2 - x_1)
+    y_med = y_1 + slope * (x_med - x_1)
+    return x_med + 1j * y_med
 
 
 def get_s_wall_seeds(sw, theta, branch_point, config,):
