@@ -21,7 +21,7 @@ def pick_basis(ffr_weights, algebra_type, algebra_rank):
         return vector_list[:algebra_rank]
 
     else:
-        dim = len(vector_list[0])
+        dim = algebra_rank
         
         r = Matrix(basis).rank()
         
