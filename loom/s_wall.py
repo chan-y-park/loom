@@ -335,7 +335,11 @@ class SWall(object):
     def enhance_at_cuts(self):
         # Add the intersection points of Swalls and branch cuts
         # also update the intersection data accordingly
+        # NOTE: we update the .z and .M attributes of the SWall 
+        # class, but we don't update the .x attribute, as it seems 
+        # unnecessary for now
         wall_pieces_z = []
+        wall_pieces_M = []
 
         # split the wall into piececs, at the end of each 
         # piece add the corresponding intersection point
@@ -344,22 +348,38 @@ class SWall(object):
             bp, t_0, chi = int_data
             point_to_add = get_intermediate_point(
                                         self.z[t_0], self.z[t_0+1], bp.z)
+            mass_to_add = get_intermediate_mass(
+                                                self.M[t_0], self.M[t_0+1], 
+                                                self.z[t_0], self.z[t_0+1], 
+                                                point_to_add
+                                                )
             if i == 0:
                 piece = list(self.z[:t_0+1])
                 piece.append(point_to_add)
+                mass_piece = list(self.M[:t_0+1])
+                mass_piece.append(mass_to_add)
             else:
                 t_0_prev = old_cuts_intersections[i-1][1]
                 piece = list(self.z[t_0_prev+1:t_0+1])
                 piece.append(point_to_add)
+                mass_piece = list(self.M[t_0_prev+1:t_0+1])
+                mass_piece.append(mass_to_add)
+
             wall_pieces_z.append(piece)
+            wall_pieces_M.append(mass_piece)
+
         # get the last piece of the wall
         last_t_0 = old_cuts_intersections[-1][1]
         last_piece = list(self.z[last_t_0+1:])
         wall_pieces_z.append(last_piece)
+        last_mass_piece = list(self.M[last_t_0+1:])
+        wall_pieces_M.append(last_mass_piece)
 
         # now assemble the new pieces
         splittings = []
         new_s_wall_z = []
+        new_s_wall_M = []
+        
         for piece in wall_pieces_z:
             new_s_wall_z += piece
             #recall that the newly added point is at
@@ -368,8 +388,16 @@ class SWall(object):
         # now remove the last splitting, because at the end 
         # of the last piece there is no actual branch cut
         self.splittings = splittings[:len(splittings)-1]
+
+        for mass_piece in wall_pieces_M:
+            new_s_wall_M += mass_piece
+
         # update the z coordinates
         self.z = numpy.array(new_s_wall_z)
+
+        # update the mass
+        self.M = numpy.array(new_s_wall_M)
+
         # update the intersection data
         new_cuts_intersections = []
         for i, int_data in enumerate(old_cuts_intersections):
@@ -401,6 +429,17 @@ def get_intermediate_point(z_1, z_2, z_med):
     slope = (y_2 - y_1) / (x_2 - x_1)
     y_med = y_1 + slope * (x_med - x_1)
     return x_med + 1j * y_med
+
+def get_intermediate_mass(m_1, m_2, z_1, z_2, z_med):
+    """
+    get the intermediate mass between m_1 and m_2
+    in correspondence of z_med
+    """
+    # if not x_2 < x_med < x_1 or x_1 < x_med < x_2:
+    #     print 'ERROR: x_1={}, x_2={}, x_med={}'.format(x_1,x_2,x_med)
+    slope = (m_2 - m_1) / (z_2 - z_1)
+    m_med = m_1 + slope * (z_med - z_1)
+    return m_med
 
 
 def get_s_wall_seeds(sw, theta, branch_point, config,):
