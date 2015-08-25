@@ -91,13 +91,8 @@ class Joint:
     def is_equal_to(self, other, accuracy):
         if(abs(self.z - other.z) > accuracy):
             return False
-        # TO FIX:
-        # Why should we exclude one of two joints 
-        # if they have equal masses?
-        # Couldn't this happen, and the joints be different ones?
-        # I am commenting this check for now.
-        # if(abs(self.M - other.M) > accuracy):
-        #     return False
+        if(abs(self.M - other.M) > accuracy):
+            return False
         if(len(self.x_s) != len(other.x_s)):
             return False
         for i in range(len(self.x_s)):
