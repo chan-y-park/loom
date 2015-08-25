@@ -32,9 +32,9 @@ class Joint:
         xs_at_z = find_xs_at_z_0(sw_data, z)
         new_wall_weight_pairs = sw_data.g_data.ordered_weight_pairs(self.root)
         w_p_0 = new_wall_weight_pairs[0]
-        x_i = xs_at_z[w_p_0[0]]
-        x_j = xs_at_z[w_p_0[1]]
-        self.x = [x_i, x_j]
+        x_i_s = [xs_at_z[w_p[0]] for w_p in new_wall_weight_pairs]
+        x_j_s = [xs_at_z[w_p[1]] for w_p in new_wall_weight_pairs]
+        self.x_s = [[x_i_s[k], x_j_s[k]] for k in range(len(x_i_s))]
 
         ffr_xs_at_z = find_xs_at_z_0(sw_data, z, ffr=True)
         ffr_new_wall_weight_pairs = sw_data.g_data.ordered_weight_pairs(
@@ -91,12 +91,18 @@ class Joint:
     def is_equal_to(self, other, accuracy):
         if(abs(self.z - other.z) > accuracy):
             return False
-        if(abs(self.M - other.M) > accuracy):
+        # TO FIX:
+        # Why should we exclude one of two joints 
+        # if they have equal masses?
+        # Couldn't this happen, and the joints be different ones?
+        # I am commenting this check for now.
+        # if(abs(self.M - other.M) > accuracy):
+        #     return False
+        if(len(self.x_s) != len(other.x_s)):
             return False
-        if(len(self.x) != len(other.x)):
-            return False
-        for i in range(len(self.x)):
-            if (abs(self.x[i] - other.x[i]) > accuracy):
+        for i in range(len(self.x_s)):
+            if ((abs(self.x_s[i][0] - other.x_s[i][0]) > accuracy)
+                or (abs(self.x_s[i][1] - other.x_s[i][1]) > accuracy)):
                 return False
         return True
 
