@@ -58,7 +58,7 @@ def dynamic_alignment(angle):
         return 'right'
 
 
-def plot_s_wall(s, figure, label, root_color_map):
+def plot_s_wall(s, figure, label, g_data):
     n_sec = len(s.splittings) + 1
 
     if n_sec == 1:
@@ -76,8 +76,8 @@ def plot_s_wall(s, figure, label, root_color_map):
         z_i = [z.imag for z in sec]
 
         ### Plot the lines.
-        sec_root =roots[i]
-        color = root_color(sec_root, root_color_map)
+        sec_root = roots[i]
+        color = g_data.root_color(sec_root)
         figure.line(z_r, z_i, line_width=2, line_color=color)
 
     ### Plot arrows.
@@ -127,10 +127,12 @@ def plot_branch_points(bps, figure, y_max):
     return None
 
 
-def plot_swn(swn, sw_data, figure, y_max, root_color_map):
+#def plot_swn(swn, sw_data, figure, y_max, root_color_map):
+def plot_swn(swn, sw_data, figure, y_max):
+    g_data = sw_data.g_data
     ### Add S-walls
     for i, s in enumerate(swn.s_walls):
-        plot_s_wall(s, figure, str(i), root_color_map)
+        plot_s_wall(s, figure, str(i), g_data)
 
     ### Add branch points
     plot_branch_points(sw_data.branch_points, figure, y_max)
@@ -139,8 +141,8 @@ def plot_swn(swn, sw_data, figure, y_max, root_color_map):
 def plot_multi_swn(spectral_network_data):
     swn_list = spectral_network_data.spectral_networks
     sw_data = spectral_network_data.sw_data
-    g_data = sw_data.g_data
-    root_color_map = create_root_color_map(g_data)
+    #g_data = sw_data.g_data
+    #root_color_map = create_root_color_map(g_data)
     plots = []
     swn_tables = []
     ### TO BE GIVEN BY HAND, CLIPPING BOUNDARY
@@ -150,7 +152,8 @@ def plot_multi_swn(spectral_network_data):
     for swn in swn_list:
         ### Create a figure object
         p = figure(width=600, height=600)
-        plot_swn(swn, sw_data, p, y_max, root_color_map)
+        #plot_swn(swn, sw_data, p, y_max, root_color_map)
+        plot_swn(swn, sw_data, p, y_max)
         plot_tables = swn_data_tables(swn, sw_data)
         plots.append(vform(p, plot_tables))
     return plots
@@ -295,20 +298,20 @@ def g_data_tables(spectral_network_data):
 
 
 
-def create_root_color_map(g_data):
-    g_roots = list(g_data.roots)
-    n_rts = len(g_roots)
-    x = numpy.random.random(size=n_rts) * 200
-    y = numpy.random.random(size=n_rts) * 200
-    z = numpy.random.random(size=n_rts) * 200
-    colors = [
-        "#%02x%02x%02x" % (r, g, b) 
-        for r, g, b in zip(numpy.floor(x), numpy.floor(y), numpy.floor(z))
-    ]
-    return {colors[i] : rt for i, rt in enumerate(g_roots)}
-
-def root_color(root, root_color_map):
-    return (
-        [k for k, v in root_color_map.iteritems()
-         if numpy.array_equal(v, root)][0]
-    )
+#def create_root_color_map(g_data):
+#    g_roots = list(g_data.roots)
+#    n_rts = len(g_roots)
+#    x = numpy.random.random(size=n_rts) * 200
+#    y = numpy.random.random(size=n_rts) * 200
+#    z = numpy.random.random(size=n_rts) * 200
+#    colors = [
+#        "#%02x%02x%02x" % (r, g, b) 
+#        for r, g, b in zip(numpy.floor(x), numpy.floor(y), numpy.floor(z))
+#    ]
+#    return {colors[i] : rt for i, rt in enumerate(g_roots)}
+#
+#def root_color(root, root_color_map):
+#    return (
+#        [k for k, v in root_color_map.iteritems()
+#         if numpy.array_equal(v, root)][0]
+#    )

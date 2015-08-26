@@ -247,12 +247,34 @@ def left_right(l, point):
             return 'left'
 
 
-def is_root(np_array, g_data):
-    ans = False
-    for rt in list(g_data.roots):
-        if (np_array == rt).all():
-            ans = True
-            break
-        else:
-            pass
-    return ans
+def split_with_overlap(np_1d_array, splittings, overlap=1):
+    """
+    Return a list of splitted numpy 1d array with a given overlap.
+    """
+    a = np_1d_array
+    ss = splittings
+    if overlap < 0:
+        raise ValueError("split_with_overlap(): overlap should be "
+                         "a non-negative integer.")
+    o = overlap
+    n_segs = len(ss) + 1
+
+    if n_segs == 1:
+        return [a]
+
+    # start with initial piece
+    segs = [a[:ss[0]+o]]
+    for i in range(len(ss)-1):
+        s_0 = ss[i] - o
+        s_1 = ss[i+1] + o
+        if s_0 < 0 or s_1 < 0:
+            raise ValueError("split_with_overlap(): overlap is too large.")
+        segs.append(a[s_0:s_1])
+    # add the last piece
+    s_f = ss[-1] - o
+    if s_f < 0:
+        raise ValueError("split_with_overlap(): overlap is too large.")
+    segs.append(a[s_f:])
+
+    return segs
+ 

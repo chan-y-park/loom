@@ -7,7 +7,8 @@ from pprint import pformat
 from itertools import combinations
 
 import sage_subprocess
-from misc import ctor2, r2toc, get_root_multiplicity, PSL2C, n_nearest_indices
+from misc import (ctor2, r2toc, get_root_multiplicity, PSL2C,
+                  delete_duplicates)
 
 x, z = sympy.symbols('x z')
 
@@ -94,6 +95,7 @@ class GData:
         self.weight_coefficients = numpy.array(
             sage_data['weight_coefficients']
         )
+        self.root_color_map = self.create_root_color_map()
 
     def ordered_weight_pairs(self, root, ffr=False):
         pairs = []
@@ -122,6 +124,29 @@ class GData:
                            / numpy.dot(bp_root,bp_root))
 
         return new_root
+
+
+    def create_root_color_map(self):
+        g_roots = list(self.roots)
+        n_rts = len(g_roots)
+        x = numpy.random.random(size=n_rts) * 200
+        y = numpy.random.random(size=n_rts) * 200
+        z = numpy.random.random(size=n_rts) * 200
+        colors = [
+            "#%02x%02x%02x" % (r, g, b) 
+            for r, g, b in zip(numpy.floor(x), numpy.floor(y), numpy.floor(z))
+        ]
+        return {colors[i] : rt for i, rt in enumerate(g_roots)}
+
+
+    def root_color(self, root):
+        if self.root_color_map is None:
+            self.root_color_map = self.create_root_color_map()
+        root_color_map = self.root_color_map
+        return (
+            [k for k, v in root_color_map.iteritems()
+             if numpy.array_equal(v, root)][0]
+        )
 
 
 class RamificationPoint:
@@ -403,7 +428,7 @@ class SWData(object):
             else:
                 xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
 
-        elif g_data.type == 'E':
+        elif algebra_type == 'E':
             if algebra_rank == 6:
                 ffr_weights_list = list(self.g_data.ffr_weights)
                 aligned_ffr_xs = sort_sheets_for_e_6_ffr(
@@ -486,7 +511,10 @@ def get_local_sw_diff(sw, ramification_point, ffr=None):
 def null_weight_triples(weights):
     null_vec = numpy.array([0 for i in range(len(list(weights[0])))])
     null_triples = []
-    for w_i, w_j, w_k in combinations(weights, 3):
+    for i, j, k in combinations(range(len(weights)), 3):
+        w_i = weights[i]
+        w_j = weights[j]
+        w_k = weights[k]
         # FIXME: weights are in general arrays of floats, so
         # there may be a numerical issue in the following comparison.
         if (w_i + w_j + w_k == null_vec):
@@ -530,7 +558,7 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
     """
     sorted_sheets = [None for w in weights]
     x_0 = sheets[0]
-    mu_0 = weights[0]
+    #mu_0 = weights[0]
 
     n_w_triples = null_weight_triples(weights)
     n_s_triples = null_sheet_triples(sheets)

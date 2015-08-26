@@ -1,3 +1,4 @@
+import os
 import numpy
 import pdb
 import logging
@@ -14,8 +15,8 @@ from matplotlib import pyplot
 from math import pi
 
 from network_plot import NetworkPlotBase
-from misc import PSL2C, put_on_cylinder
-from bokeh_plot import create_root_color_map, root_color
+from misc import PSL2C, put_on_cylinder, split_with_overlap
+#from bokeh_plot import create_root_color_map, root_color
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
@@ -71,26 +72,10 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                         split_at.append(j)
                 z_segs = numpy.split(zs_on_cylinder, split_at)
             else:
-                # z_segs = [s_wall.z] 
-                n_sec = len(s_wall.splittings) + 1
-                if n_sec == 1: 
-                    z_segs = [s_wall.z]
-                else:
-                    # z_segs = numpy.split(s_wall.z, s_wall.splittings)
-                    # start with initial piece
-                    z_segs = [numpy.array(s_wall.z[0:s_wall.splittings[0]+1])]
-                    for i in range(len(s_wall.splittings)-1):
-                        s_0 = s_wall.splittings[i]
-                        s_1 = s_wall.splittings[i+1]
-                        z_segs.append(numpy.array(s_wall.z[s_0:s_1+1]))
-                    # add the last piece
-                    z_segs.append(numpy.array(
-                                        s_wall.z[len(s_wall.splittings)-1:]))
+                z_segs = split_with_overlap(s_wall.z, s_wall.splittings)
                 
-                seg_labels = (
-                        [s_wall.label + '\n' + lab for 
-                        lab in map(str, s_wall.local_roots)]
-                    )
+            seg_labels = [s_wall.label + '\n' + lab
+                          for lab in map(str, s_wall.local_roots)]
 
             for z_seg in z_segs:
                 segments.append([z_seg.real, z_seg.imag])
@@ -98,11 +83,11 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
 
             walls.append(segments)
             walls_roots.append(s_wall.local_roots)
-            root_color_map = create_root_color_map(g_data)
-            walls_colors = (
-                    [[root_color(root, root_color_map) 
-                    for root in w_roots] for w_roots in walls_roots]
-                )
+            #root_color_map = create_root_color_map(g_data)
+            walls_colors = [
+                [g_data.root_color(root) for root in w_roots]
+                for w_roots in walls_roots
+            ]
             labels['walls'].append(seg_labels)
 
 
@@ -379,7 +364,7 @@ def make_weight_dictionary(g_data):
 
 def print_spectral_network_data(s_walls, branch_points, g_data):
     root_dictionary = make_root_dictionary(g_data)
-    weight_dictionary = make_weight_dictionary(g_data)
+    #weight_dictionary = make_weight_dictionary(g_data)
 
     logging.info('\n\t--- The S-Wall Data ---\n')
     for s in s_walls:
