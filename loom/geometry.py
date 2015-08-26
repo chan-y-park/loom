@@ -48,21 +48,21 @@ class GData:
     """
     def __init__(self, root_system=None, representation_str=None):
         self.root_system = root_system
-        ### type is 'A', 'D', or 'E'.
+        # type is 'A', 'D', or 'E'.
         self.type = root_system[0]
         self.rank = eval(root_system[1:])
 
         representation = eval(representation_str)
         if isinstance(representation, int):
-            ### Representation is specified as an index
-            ### of a fundamental representation, i.e. n of \omega_n.
+            # Representation is specified as an index
+            # of a fundamental representation, i.e. n of \omega_n.
             self.fundamental_representation_index = representation
             self.highest_weight = [
                 1 if i == (self.fundamental_representation_index - 1) else 0
                 for i in range(self.rank)
             ]
         elif isinstance(representation, list):
-            ### Representation is specified in the coroot(Dynkin) basis.
+            # Representation is specified in the coroot(Dynkin) basis.
             self.highest_weight = representation
             height = 0
             for i, n_i in enumerate(self.highest_weight):
@@ -88,31 +88,33 @@ class GData:
         self.weights = numpy.array(sage_data['weights'])
         self.multiplicities = numpy.array(sage_data['multiplicities'])
         self.weight_basis = numpy.array(sage_data['weight_basis']),
-        ### The i-th row of self.coefficients is the representation
-        ### of self.weights[i] in the self.basis.
-        self.weight_coefficients = numpy.array(sage_data['weight_coefficients'])
+        # The i-th row of self.coefficients is the representation
+        # of self.weights[i] in the self.basis.
+        self.weight_coefficients = numpy.array(
+            sage_data['weight_coefficients']
+        )
 
     def ordered_weight_pairs(self, root, ffr=False):
         pairs = []
 
-        if ffr==False:
-            for i, w_1 in enumerate(self.weights):
-                for j, w_2 in enumerate(self.weights):
-                    if numpy.array_equal(w_2 - w_1, root):
-                        pairs.append([i, j])
-        elif ffr==True:
-            for i, w_1 in enumerate(self.ffr_weights):
-                for j, w_2 in enumerate(self.ffr_weights):
-                    if numpy.array_equal(w_2 - w_1, root):
-                        pairs.append([i, j])
+        if ffr is False:
+            weights = self.weights
+        elif ffr is True:
+            weights = self.ffr_weights
+
+        for i, w_1 in enumerate(weights):
+            for j, w_2 in enumerate(weights):
+                # FIXME: Currently weights are arrays of floats,
+                # the following comparison may have a numerical issue.
+                if numpy.array_equal(w_2 - w_1, root):
+                    pairs.append([i, j])
 
         return pairs
 
     def weyl_monodromy(self, root, bp, direction):
-        ### TODO ###
-        ### For now, we ASSUME that branch points are 
-        ### of SQUARE-ROOT type. Need to update this 
-        ### for more general cases.
+        # TODO: For now, we ASSUME that branch points are 
+        # of SQUARE-ROOT type. Need to update this 
+        # for more general cases.
         bp_root = bp.positive_roots[0]
 
         new_root = root - (2 * bp_root * (numpy.dot(root, bp_root))
@@ -167,7 +169,7 @@ class SWCurve:
     def __init__(self, differentials=None, Cz=None, parameters=None,
                  ffr_weights=None,):
         if ffr_weights is not None:
-            ### Build a cover in the first fundamental representation.
+            # Build a cover in the first fundamental representation.
             N = len(ffr_weights)
             ffr_eq_str = 'x^{} '.format(N)
             for k, u_k in differentials.iteritems():
@@ -180,8 +182,8 @@ class SWCurve:
             )
             self.num_eq = self.sym_eq.subs(parameters)
         else:
-            ### TODO: Need to build a cover in a general representation
-            ### from the differentials, using symmetric polynomials.
+            # TODO: Need to build a cover in a general representation
+            # from the differentials, using symmetric polynomials.
             logging.warning(
                 'class SWCurve with a general representation '
                 'is not implemented yet.'
@@ -243,7 +245,7 @@ class SWCurve:
 
         fx = self.num_eq.subs(z, z_0)
         #xs = sympy.solve(fx, x)
-        ### The following may fail when the curve is not a polynomial.
+        # The following may fail when the curve is not a polynomial.
         sym_poly = sympy.Poly(fx, x, domain='CC')
         coeff_list = map(complex, sym_poly.all_coeffs())
         return numpy.roots(coeff_list)
@@ -251,12 +253,12 @@ class SWCurve:
 
 class SWDiff:
     def __init__(self, v_str, g_data=None, Cz=None, dCz=None, parameters=None):
-        ### sym_v is a SymPy expression. 
+        # sym_v is a SymPy expression. 
         self.sym_v = sympy.simplify(
             sympy.sympify(v_str).subs(z, Cz) * dCz
         )
-        ### num_v is from sym_v with its parameters 
-        ### substituted with numerical values.
+        # num_v is from sym_v with its parameters 
+        # substituted with numerical values.
         self.num_v = self.sym_v.subs(parameters)
 
 
@@ -276,7 +278,7 @@ class SWData(object):
         self.differentials = eval(config['differentials'])
         self.g_data = GData(config['root_system'], config['representation'])
 
-        ### PSL2C-transformed z & dz
+        # PSL2C-transformed z & dz
         Cz = PSL2C(config['mt_params'], z, inverse=True) 
         dCz = Cz.diff(z)
 
@@ -289,7 +291,7 @@ class SWData(object):
         logging.info('Seiberg-Witten curve in the 1st fundamental '
                      'representation: {} = 0'
                      .format(sympy.latex(self.ffr_curve.num_eq)))
-        ### TODO: SWCurve in a general representation.
+        # TODO: SWCurve in a general representation.
         if self.g_data.fundamental_representation_index == 1:
             self.curve = self.ffr_curve
         else:
@@ -299,7 +301,7 @@ class SWData(object):
             )
 
 
-        ### Seiberg-Witten differential
+        # Seiberg-Witten differential
         self.diff = SWDiff(
             'x',
             g_data=self.g_data,
@@ -329,31 +331,30 @@ class SWData(object):
 
 
     def get_aligned_xs(self, z_0):
-        ### Returns (aligned_ffr_xs, aligned_xs), where each element is
-        ### a numpy array of x-coordinates of the fibers over z.
-        ### The order of x's is the same as the order of the weights
-        ### in g_data.weights.
-
+        """
+        Returns (aligned_ffr_xs, aligned_xs), where each element is
+        a numpy array of x-coordinates of the fibers over z.
+        The order of x's is the same as the order of the weights
+        in g_data.weights.
+        """
         algebra_type = self.g_data.type
         algebra_rank = self.g_data.rank
         fund_rep_index = self.g_data.fundamental_representation_index
 
-        ### First order x's of the first fundamental cover
-        ### according to the order of ''g_data.weights'',
-        ### then construct the list of x's for the given representation
-        ### ordered according to weights.
+        # First order x's of the first fundamental cover
+        # according to the order of ''g_data.weights'',
+        # then construct the list of x's for the given representation
+        # ordered according to weights.
         # NOTE: does this correspond to the 7th irrep for E7?
         #       We need that one for that algebra
         ffr_xs = self.ffr_curve.get_xs(z_0) 
 
         if algebra_type == 'A':
-            """
-            Can consider ffr_xs to be aligned according to ffr_weights,
-            [(1, 0, 0, 0, 0, 0),
-             (0, 1, 0, 0, 0, 0),
-             ...,
-             (0, 0, 0, 0, 0, 1)].
-            """
+            # Can consider ffr_xs to be aligned according to ffr_weights,
+            # [(1, 0, 0, 0, 0, 0),
+            #  (0, 1, 0, 0, 0, 0),
+            #  ...,
+            #  (0, 0, 0, 0, 0, 1)].
             aligned_ffr_xs = ffr_xs
 
             if fund_rep_index == 1:
@@ -362,24 +363,22 @@ class SWData(object):
                 xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
 
         elif algebra_type == 'D':
-            """
-            Align ffr_xs according to ffr_weights,
-            [(1, 0, 0, 0, 0),
-             (0, 1, 0, 0, 0),
-             ...,
-             (0, 0, 0, 0, 1),
-             (-1, 0, 0, 0, 0),
-             ...
-             (0, 0, 0, 0, -1)]      
-            """
+            # Align ffr_xs according to ffr_weights,
+            # [(1, 0, 0, 0, 0),
+            #  (0, 1, 0, 0, 0),
+            #  ...,
+            #  (0, 0, 0, 0, 1),
+            #  (-1, 0, 0, 0, 0),
+            #  ...
+            #  (0, 0, 0, 0, -1)]      
             sorted_ffr_xs = numpy.array(
                 sorted(ffr_xs, key=lambda z: (z.real, z.imag), reverse=True,)
             )
-            ### Pick x's corresponding to the positive weights.
-            ### The order among the positive x's is arbitrary.
+            # Pick x's corresponding to the positive weights.
+            # The order among the positive x's is arbitrary.
             positive_xs = sorted_ffr_xs[:algebra_rank]
-            ### Then pick an x corresponding to each negative weight
-            ### aligned according to the positive x's.
+            # Then pick an x corresponding to each negative weight
+            # aligned according to the positive x's.
             negative_xs = numpy.zeros_like(positive_xs)
             for nx in sorted_ffr_xs[algebra_rank:]:
                 difference = numpy.fromiter(
@@ -387,14 +386,14 @@ class SWData(object):
                     dtype=float,
                 )
                 j = difference.argsort()[0]
-                ### Check the pairing of positive and negative x's.
+                # Check the pairing of positive and negative x's.
                 px_j = positive_xs[j]
                 if numpy.isclose(px_j, -nx) is False:
                     warn("get_ordered_xs(): No pairing of x's in the D-type, "
                          "({}, {}) != (x, -x).".format(px_j, nx))
                 else:
-                    ### Put the negative x at the same index
-                    ### as its positive pair.
+                    # Put the negative x at the same index
+                    # as its positive pair.
                     negative_xs[j] = nx
             aligned_ffr_xs = numpy.concatenate((positive_xs, negative_xs))
 
@@ -407,13 +406,13 @@ class SWData(object):
             if algebra_rank == 6:
                 ffr_weights_list = list(self.g_data.ffr_weights)
                 aligned_ffr_xs = sort_sheets_for_e_6_ffr(
-                                                        ffr_xs, 
-                                                        ffr_weights_list
-                                                        )
+                    ffr_xs, ffr_weights_list
+                )
                 if fund_rep_index == 1:
                     xs = aligned_ffr_xs
                 else:
-                    xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
+                    #xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
+                    raise NotImplementedError
             elif algebra_rank == 7:
                 raise NotImplementedError
      
@@ -449,26 +448,25 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
    
 
 def get_local_sw_diff(sw, ramification_point, ffr=None):
-    if ffr==None or ffr==False:
-        rp = ramification_point
+    rp = ramification_point
+    if ffr is None or ffr is False:
         num_eq = sw.curve.num_eq
         num_v = sw.diff.num_v
-    elif ffr==True:
-        rp = ramification_point
+    elif ffr is True:
         num_eq = sw.ffr_curve.num_eq
         num_v = sw.diff.num_v
 
-    ### use Dz = z - rp.z & Dx = x - rp.x
+    # use Dz = z - rp.z & Dx = x - rp.x
     Dz, Dx = sympy.symbols('Dz, Dx')
     local_curve = (
         num_eq.subs(x, rp.x+Dx).subs(z, rp.z+Dz)
         .series(Dx, 0, rp.i+1).removeO()
         .series(Dz, 0, 2).removeO()
     )
-    ### curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
+    # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
     a = local_curve.n().coeff(Dz).coeff(Dx, 0)
     b = local_curve.n().coeff(Dx**rp.i).coeff(Dz, 0)
-    ### Dx = Dx(Dz)
+    # Dx = Dx(Dz)
     Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
     local_diff = (
         num_v.subs(x, rp.x+Dx_Dz).subs(z, rp.z+Dz)
@@ -484,7 +482,6 @@ def get_local_sw_diff(sw, ramification_point, ffr=None):
     return (complex(diff_c.n()), diff_e)
 
 
-# triples of null weights for E_6
 def null_weight_triples(weights):
     null_vec = numpy.array([0 for i in range(len(list(weights[0])))])
     null_triples = []
@@ -496,21 +493,6 @@ def null_weight_triples(weights):
                         null_triples.append([i,j,k])
 
     return sorted(null_triples)
-
-# The quintet of WEIGHT triples for the i-th weight
-def w_quintet(i, null_triples):
-    return [t for t in null_triples if i in t]
-    
-# Check whether a weight label i
-# is contained in a quintet of triples
-# Return 0 for 'No' and '1' for 'Yes'
-def w_quintet_contained(i, quintet):
-    ans = 0
-    for t in quintet:
-        if i in t:
-            ans = 1
-            break
-    return ans
 
 
 def null_sheet_triples(sheets):
@@ -524,27 +506,30 @@ def null_sheet_triples(sheets):
 
     return sorted(null_triples)
 
-# The quintet of SHEET triples for sheet x
-def s_quintet(x, null_triples):
-    return [t for t in null_triples if x in t]
-    
-# Check whether a sheet x
-# is contained in a quintet of triples
-# Return 0 for 'No' and '1' for 'Yes'
-def s_quintet_contained(x, quintet):
+
+def get_quintets(e, null_triples):
+    """ Return the quintets of triples for the given weight/sheet."""
+    return [t for t in null_triples if e in t]
+
+
+def quintet_contained(e, quintet):
+    """
+    Check whether a weight/sheet e
+    is contained in a quintet of triples
+    Return 0 for 'No' and '1' for 'Yes'
+    """
     ans = 0
     for t in quintet:
-        if x in t:
+        if e in t:
             ans = 1
             break
     return ans
 
+
 def sort_sheets_for_e_6_ffr(sheets, weights):
     """
-    Return the list of sheets sorted 
-    according to the list of weights.
-    The output is a list such that
-    sheets[i] will correspond to weights[i].
+    Return the list of sheets sorted according to the list of weights.
+    The output is a list such that sheets[i] will correspond to weights[i].
     """
     sorted_sheets = [None for w in weights]
     x_0 = sheets[0]
@@ -557,10 +542,10 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
     sorted_sheets[0] = x_0
 
     # The quintet of triples of \mu_0
-    q_0 = w_quintet(0, n_w_triples)
+    q_0 = get_quintets(0, n_w_triples)
 
     # The quintet of SHEET triples of x_0
-    s_q_0 = s_quintet(x_0, n_s_triples)
+    s_q_0 = get_quintets(x_0, n_s_triples)
 
     # Get the list of sheets appearing in the quintet s_q_0
     # The weyl symmetry allows us to fix the these
@@ -595,12 +580,12 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
     
     # List all the combos of which WEIGHT quintets 
     # must/must not contain all missing WEIGHTS
-    weight_combos = [[w_quintet_contained(j, w_quintet(i, n_w_triples)) 
+    weight_combos = [[quintet_contained(j, get_quintets(i, n_w_triples)) 
                         for i in known_weights] for j in missing_weights]
 
     # List all the combos of which SHEET quintets 
     # must/must not contain all missing SHEETS
-    sheet_combos = [[s_quintet_contained(x, s_quintet(y, n_s_triples)) 
+    sheet_combos = [[quintet_contained(x, get_quintets(y, n_s_triples)) 
                         for y in known_sheets] for x in missing_sheets]
 
     # Now match the patterns of inclusion in the quintets

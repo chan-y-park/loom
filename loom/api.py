@@ -147,7 +147,9 @@ def load_spectral_network(data_dir=None):
             spectral_network.set_from_json_data(fp)
             spectral_network_list.append(spectral_network)
 
-    return (config, spectral_network_list)
+    data = SpectralNetworkData(sw, spectral_network_list)
+
+    return (config, data)
 
 
 def save_config(config, path=None):
