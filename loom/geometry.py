@@ -4,6 +4,7 @@ import logging
 import pdb
 from warnings import warn
 from pprint import pformat
+from itertools import combinations
 
 import sage_subprocess
 from misc import ctor2, r2toc, get_root_multiplicity, PSL2C, n_nearest_indices
@@ -485,24 +486,20 @@ def get_local_sw_diff(sw, ramification_point, ffr=None):
 def null_weight_triples(weights):
     null_vec = numpy.array([0 for i in range(len(list(weights[0])))])
     null_triples = []
-    for i, w_i in enumerate(weights):
-        for j, w_j in enumerate(weights):
-            for k, w_k in enumerate(weights):
-                if i < j < k:
-                    if (w_i + w_j + w_k == null_vec):
-                        null_triples.append([i,j,k])
+    for w_i, w_j, w_k in combinations(weights, 3):
+        # FIXME: weights are in general arrays of floats, so
+        # there may be a numerical issue in the following comparison.
+        if (w_i + w_j + w_k == null_vec):
+            null_triples.append([i,j,k])
 
     return sorted(null_triples)
 
 
 def null_sheet_triples(sheets):
     null_triples = []
-    for i, x_i in enumerate(sheets):
-        for j, x_j in enumerate(sheets):
-            for k, x_k in enumerate(sheets):
-                if i < j < k:
-                    if (abs(x_i + x_j + x_k) < SHEET_NULL_TOLERANCE):
-                        null_triples.append([x_i, x_j, x_k])
+    for x_i, x_j, x_k in combinations(sheets, 3):
+        if (abs(x_i + x_j + x_k) < SHEET_NULL_TOLERANCE):
+            null_triples.append([x_i, x_j, x_k])
 
     return sorted(null_triples)
 

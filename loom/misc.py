@@ -94,12 +94,8 @@ def n_nearest(a_list, value, n):
     Find n elements of a_list nearest to value and return them,
     by comparing the euclidean norms.
     """
-    # The following didn't work, because
-    # 'sorted' takes a key function with a SINGLE variable.
-    # compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
-    # return sorted(a_list, compare)[:n]
-    compare = lambda v: abs(v - value)
-    return sorted(a_list, key=compare)[:n]
+    compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
+    return sorted(a_list, cmp=compare)[:n]
 
 
 def n_nearest_indices(a_list, value, n):
@@ -107,12 +103,10 @@ def n_nearest_indices(a_list, value, n):
     Find n elements of a_list nearest to value and return their indices,
     by comparing the euclidean norms.
     """
-    # compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
-    # return sorted(a_list, compare)[:n]
-    sorted_nearest_values = n_nearest(a_list, value, n)
-    sorted_nearest_indices = [list(a_list).index(v) 
-                                    for v in sorted_nearest_values]
-    return sorted_nearest_indices
+    compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
+    key = lambda k: a_list[k]
+    sorted_indices = sorted(range(len(a_list)), cmp=compare, key=key)
+    return sorted_indices[:n]
 
 
 def unravel(k, row_size, column_size=None):
@@ -136,20 +130,6 @@ def unravel(k, row_size, column_size=None):
 
     return (i, j)
 
-#def find_xs_at_z_0(f_z_x, z_0, x_0=None, num_x=1):
-#    """
-#    solve f(x, z_0) = 0 and return num_x x's nearest to x_0.
-#    """
-#    x, z = sympy.symbols('x z')
-#
-#    f_x_at_z_0 = f_z_x.subs(z, z_0)
-#    f_x_at_z_0_coeffs = map(complex, sympy.Poly(f_x_at_z_0, x).all_coeffs())
-#    xs_at_z_0 = numpy.roots(f_x_at_z_0_coeffs)
-#    if x_0 is None:
-#        return xs_at_z_0
-#    else:
-#        return sorted(xs_at_z_0,
-#                      lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
 
 def PSL2C(C, z, inverse=False, numerical=False):
     """
@@ -198,7 +178,6 @@ def get_ode(sw, phase, accuracy):
     # Even for higher-reps, we always use the 
     # first fundamental representation curve 
     # for evolving the network
-    # f = sw.curve.num_eq
     f = sw.ffr_curve.num_eq
     df_dz = f.diff(z)
     df_dx = f.diff(x)

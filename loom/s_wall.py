@@ -8,7 +8,7 @@ from math import floor
 
 from geometry import get_local_sw_diff, find_xs_at_z_0
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
-                  GetSWallSeedsError, n_nearest_indices, is_root)
+                  GetSWallSeedsError, n_nearest_indices)
 
 x, z = sympy.symbols('x z')
 
@@ -560,6 +560,18 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
 #             return Joint(z, [x1_j, x2_i], M1+M2, [parent_j, parent_i], label)
 #         else:
 #             return None
+
+
+def is_root(np_array, g_data):
+    ans = False
+    for rt in list(g_data.roots):
+        if (np_array == rt).all():
+            ans = True
+            break
+        else:
+            pass
+    return ans
+
 
 def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, 
               sw_data=None, label=None):
