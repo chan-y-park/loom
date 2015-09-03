@@ -59,15 +59,16 @@ def dynamic_alignment(angle):
 
 
 def plot_s_wall(s, figure, label, g_data):
-    n_sec = len(s.splittings) + 1
+    splittings = s.get_splittings()
+    n_sec = len(splittings) + 1
 
     if n_sec == 1:
         sections = [s.z]
     else:
-        sections = [s.z[0:(s.splittings[0]+1)]] + \
-                    [s.z[s.splittings[i]:(s.splittings[i+1]+1)] \
-                        for i in range(len(s.splittings)-2)] + \
-                    [s.z[s.splittings[-1]:-1]]
+        sections = [s.z[0:(splittings[0]+1)]] + \
+                    [s.z[splittings[i]:(splittings[i+1]+1)] \
+                        for i in range(len(splittings)-2)] + \
+                    [s.z[splittings[-1]:-1]]
 
     roots = s.local_roots
 

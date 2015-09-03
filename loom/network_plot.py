@@ -47,7 +47,7 @@ class NetworkPlotBase(object):
                 seg_xs, seg_ys = segment
 
                 if plot_data_points is True:
-                    axes.plot(xs, ys, 'o', color='k')
+                    axes.plot(seg_xs, seg_ys, 'o', color='k')
 
                 seg_color = walls_colors[i][j]
                 axes.plot(seg_xs, seg_ys, '-',

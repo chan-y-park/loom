@@ -1,27 +1,33 @@
 import platform
 import os
 import numpy
+import scipy
+import sympy
 import ctypes
 import logging
-import signal
-import multiprocessing
-import subprocess
+#import signal
+#import multiprocessing
+#import subprocess
 import json
 
 import pdb
 
-from math import floor
+#from math import floor
 from cmath import exp
-from itertools import combinations
+#from itertools import combinations
 
-from geometry import RamificationPoint, find_xs_at_z_0
+#from geometry import RamificationPoint, find_xs_at_z_0
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
-from misc import (n_nearest, n_nearest_indices, left_right, clock,
-                  delete_duplicates)
-from intersection import (NoIntersection,
-                          find_intersection_of_segments,
-                          find_curve_range_intersection)
-from scipy import interpolate
+from misc import (
+    #n_nearest, 
+    n_nearest_indices, 
+    #left_right, clock, delete_duplicates
+)
+from intersection import (
+    NoIntersection, find_intersection_of_segments,
+    #find_curve_range_intersection
+)
+#from scipy import interpolate
 
 
 class SpectralNetwork:
@@ -328,11 +334,11 @@ class SpectralNetwork:
 
                     # t_n: index of new_s_wall.z nearest to ip_z
                     t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
-                    M_n = new_s_wall.M[t_n]
+                    #M_n = new_s_wall.M[t_n]
 
                     # t_p: index of z_seg_p nearest to ip_z
                     t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
-                    M_p = prev_s_wall.M[t_p]
+                    #M_p = prev_s_wall.M[t_p]
 
                     # TODO: need to put the joint into the parent
                     # S-walls?
@@ -446,8 +452,8 @@ class SpectralNetwork:
                         # find mass of parent S-walls: this is approximate,
                         # since we don't interpolate precisely to the joint
                         # TODO: improve by doing precise interpolation
-                        M_n = new_s_wall.M[t_n]
-                        M_p = prev_s_wall.M[t_p]
+                        #M_n = new_s_wall.M[t_n]
+                        #M_p = prev_s_wall.M[t_p]
                         a_joint = get_joint(
                             ip_z, 
                             prev_s_wall,

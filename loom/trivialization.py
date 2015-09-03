@@ -1,11 +1,11 @@
-import sympy
-import matplotlib.pyplot as plt
-import cmath
+#import sympy
+#import matplotlib.pyplot as plt
+#import cmath
 import numpy as np
 import logging
 import pdb
 
-from sympy import Poly
+#from sympy import Poly
 from cmath import exp, pi, phase
 from numpy.linalg import matrix_rank
 from itertools import combinations
@@ -413,7 +413,7 @@ class SWDataWithTrivialization(SWDataBase):
             "Analyzing a branch point at z = {}."
             .format(bp.z)
         )
-        g_data = self.g_data
+        #g_data = self.g_data
         path_to_bp = get_path_to(bp.z, self)
         #bp.path_to_z = path_to_bp
         sheets_along_path = self.get_sheets_along_path(

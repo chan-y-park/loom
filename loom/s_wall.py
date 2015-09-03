@@ -5,10 +5,12 @@ import pdb
 
 from cmath import exp, pi, phase
 from math import floor
+from scipy import interpolate
 
 from geometry import get_local_sw_diff, find_xs_at_z_0
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
-                  GetSWallSeedsError, n_nearest_indices)
+                  GetSWallSeedsError, n_nearest_indices, delete_duplicates,
+                  clock, left_right,)
 
 x, z = sympy.symbols('x z')
 
@@ -35,7 +37,7 @@ class Joint:
         # Probably this will not be additional information because
         # x's are calculated from the x's of the ffr cover.
         #xs_at_z = find_xs_at_z_0(sw_data, z)
-        #new_wall_weight_pairs = sw_data.g_data.ordered_weight_pairs(self.root)
+        new_wall_weight_pairs = sw_data.g_data.ordered_weight_pairs(self.root)
         ##w_p_0 = new_wall_weight_pairs[0]
         #x_i_s = [xs_at_z[w_p[0]] for w_p in new_wall_weight_pairs]
         #x_j_s = [xs_at_z[w_p[1]] for w_p in new_wall_weight_pairs]
@@ -392,7 +394,7 @@ class SWall(object):
                 #  the direction (either 'cw' or 'ccw')]
                 # to each intersection.
                 intersections.append(
-                    [b_pt_idx, t, clock(left_right(self.z, i))]
+                    [b_pt_idx, t, clock(left_right(self.z, t))]
                 )
             self.cuts_intersections += intersections
 
@@ -421,8 +423,8 @@ class SWall(object):
             self.enhance_at_cuts(branch_points)
             
             for k in range(len(self.cuts_intersections)):
-                b_pt_idx, t, direction = self.cuts_intersections[k]
-                branch_point = branch_points(b_pt_idx)
+                bp_idx, t, direction = self.cuts_intersections[k]
+                branch_point = branch_points[bp_idx]
 
                 current_root = self.local_roots[-1]
                 new_root = g_data.weyl_monodromy(
@@ -496,7 +498,7 @@ class SWall(object):
         t_0 = 0
         for int_data in self.cuts_intersections:
             bp_idx, t, chi = int_data
-            bp = branch_points(bp_idx)
+            bp = branch_points[bp_idx]
 
             z_1 = self.z[t]
             z_2 = self.z[t+1]
@@ -513,13 +515,13 @@ class SWall(object):
                                               z_1, z_2, z_to_add)
 
             z_piece = numpy.concatenate(
-                self.z[t_0:t+1], numpy.array([z_to_add])
+                (self.z[t_0:t+1], numpy.array([z_to_add], dtype=complex))
             )
             x_piece = numpy.concatenate(
-                self.x[t_0:t+1], numpy.array([xs_to_add])
+                (self.x[t_0:t+1], numpy.array([xs_to_add], dtype=complex))
             )
             M_piece = numpy.concatenate(
-                self.M[t_0:t+1], numpy.array([M_to_add])
+                (self.M[t_0:t+1], numpy.array([M_to_add], dtype=complex))
             )
             wall_pieces_z.append(z_piece)
             wall_pieces_x.append(x_piece)
@@ -538,7 +540,7 @@ class SWall(object):
 
         # Update the intersection data.
         new_cuts_intersections = []
-        for i, int_data in enumerate(old_cuts_intersections):
+        for i, int_data in enumerate(self.cuts_intersections):
             bp, t_old, chi = int_data
             t_new = t_old + i + 1
             new_cuts_intersections.append([bp, t_new, chi])

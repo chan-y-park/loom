@@ -1,13 +1,13 @@
 import os
-import time
-import glob
+#import time
+#import glob
 import logging
 import Tkinter as tk
 import tkFileDialog
 import pdb
 
-from math import pi
-from config import LoomConfig
+#from math import pi
+#from config import LoomConfig
 from api import (generate_spectral_network, load_config, load_spectral_network,
                  save_config, save_spectral_network, 
                  make_spectral_network_plot, SpectralNetworkData,)
@@ -291,7 +291,7 @@ class GUILoom:
         ### Plot spectral networks.
         if (len(self.spectral_networks) > 0):
             snd = SpectralNetworkData(self.sw_data, self.spectral_networks)
-            spectral_network_plot = make_spectral_network_plot(
+            make_spectral_network_plot(
                 snd,
                 master=self.root,
                 plot_on_cylinder=self.check_plot_on_cylinder,

@@ -1,12 +1,13 @@
 import numpy
-import scipy
+#import scipy
 import sympy
 import logging
-import pdb
+#import pdb
 
 from fractions import Fraction
 from sympy import limit, oo
-from cmath import exp, log
+#from cmath import exp, log
+from cmath import log
 
 
 class LocalDiffError(Exception):
@@ -213,31 +214,27 @@ def left_right(l, point):
             return 'left'
 
 
-def split_with_overlap(np_1d_array, splittings, overlap=1):
+def split_with_overlap(np_1d_array, splittings):
     """
-    Return a list of splitted numpy 1d array with a given overlap.
+    Return a list of splitted numpy 1d array with an overlapping element.
     """
     a = np_1d_array
     ss = splittings
-    if overlap < 0:
-        raise ValueError("split_with_overlap(): overlap should be "
-                         "a non-negative integer.")
-    o = overlap
     n_segs = len(ss) + 1
 
     if n_segs == 1:
         return [a]
 
     # start with initial piece
-    segs = [a[:ss[0]+o]]
+    segs = [a[:ss[0]+1]]
     for i in range(len(ss)-1):
-        s_0 = ss[i] - o
-        s_1 = ss[i+1] + o
+        s_0 = ss[i]
+        s_1 = ss[i+1] + 1
         if s_0 < 0 or s_1 < 0:
             raise ValueError("split_with_overlap(): overlap is too large.")
         segs.append(a[s_0:s_1])
     # add the last piece
-    s_f = ss[-1] - o
+    s_f = ss[-1]
     if s_f < 0:
         raise ValueError("split_with_overlap(): overlap is too large.")
     segs.append(a[s_f:])

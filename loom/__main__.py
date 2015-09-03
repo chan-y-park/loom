@@ -7,17 +7,17 @@ SciPy 0.15.1
 SymPy 0.7.6
 """
 import sys
-import logging
+#import logging
 import os
 import getopt
-import time
+#import time
 import pdb
 
-from config import LoomConfig
+#from config import LoomConfig
 from gui import open_gui
 from api import (
     set_logging, load_config, load_spectral_network, generate_spectral_network,
-    save_spectral_network,
+    save_spectral_network, make_spectral_network_plot,
 )
 
 shortopts = 'c:g:hl:p:'
@@ -94,7 +94,7 @@ def run_with_optlist(optlist):
         if (opts['show-plot'] or opts['show-plot-on-cylinder']) is True:
             make_spectral_network_plot(
                 config,
-                spectral_network_list,
+                spectral_networks,
                 plot_on_cylinder=opts['show-plot-on-cylinder'],
             )
         if opts['gui-mode'] is False:

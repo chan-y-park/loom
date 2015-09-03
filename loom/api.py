@@ -1,8 +1,9 @@
 import time
-import sys
+#import sys
 import os
 import glob
-import zipfile, zlib
+#import zipfile, zlib
+import zipfile
 import logging
 import Tkinter as tk
 import tkFileDialog

@@ -3,7 +3,7 @@ import numpy
 import pdb
 import logging
 import Tkinter as tk
-import mpldatacursor
+#import mpldatacursor
 
 import matplotlib
 from matplotlib.backends.backend_tkagg import (
@@ -15,7 +15,8 @@ from matplotlib import pyplot
 from math import pi
 
 from network_plot import NetworkPlotBase
-from misc import PSL2C, put_on_cylinder, split_with_overlap
+#from misc import PSL2C, put_on_cylinder, split_with_overlap
+from misc import put_on_cylinder, split_with_overlap
 #from bokeh_plot import create_root_color_map, root_color
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
@@ -72,7 +73,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                         split_at.append(j)
                 z_segs = numpy.split(zs_on_cylinder, split_at)
             else:
-                z_segs = split_with_overlap(s_wall.z, s_wall.splittings)
+                z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
                 
             seg_labels = [s_wall.label + '\n' + lab
                           for lab in map(str, s_wall.local_roots)]
@@ -221,7 +222,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
             matplotlib_figure=matplotlib.figure.Figure(),
         )
 
-        self.root = None
+        #self.root = None
         if master is None:
             root = tk.Tk()
             root.withdraw()

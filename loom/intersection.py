@@ -7,10 +7,11 @@ on a real 2-dim plane.
 import logging
 import numpy
 from scipy.interpolate import interp1d
-from scipy.interpolate import BarycentricInterpolator
-from scipy.interpolate import UnivariateSpline
+#from scipy.interpolate import BarycentricInterpolator
+#from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq, newton
-from sympy import Interval, Intersection
+#from sympy import Interval, Intersection
+from sympy import Interval
 from itertools import combinations
 
 import pdb
