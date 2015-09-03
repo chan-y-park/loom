@@ -11,7 +11,7 @@ from numpy.linalg import matrix_rank
 from itertools import combinations
 from pprint import pprint
 
-from geometry import SWData
+from geometry import SWDataBase
 from misc import delete_duplicates
 
 ### number of steps used to track the sheets along a leg 
@@ -158,7 +158,7 @@ class IrregularSingularity:
 # the integer indicies are labeling g_data.weights in the same order.
 # PL: not sure if we want to do that: for a human interface, 
 # labeling by integers is much more readable.
-class SWDataWithTrivialization(SWData):
+class SWDataWithTrivialization(SWDataBase):
     """
     All branch cuts are assumed to run vertically, emanating
     upwards from branch points and irregular singularities.

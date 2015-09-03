@@ -14,10 +14,10 @@ from math import floor
 from cmath import exp
 from itertools import combinations
 
-from geometry import RamificationPoint, SWData, find_xs_at_z_0
+from geometry import RamificationPoint, find_xs_at_z_0
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
-from misc import (n_nearest, n_nearest_indices, get_ode, left_right, clock,
-                    delete_duplicates)
+from misc import (n_nearest, n_nearest_indices, left_right, clock,
+                  delete_duplicates)
 from intersection import (NoIntersection,
                           find_intersection_of_segments,
                           find_curve_range_intersection)
@@ -65,7 +65,7 @@ class SpectralNetwork:
                     )
                 )
 
-        logging.info('Setup the ODE integrator...')
+        logging.debug('Setup the ODE integrator...')
         ode = get_ode(sw_data, self.phase, accuracy)
 
         logging.info('Start growing a new spectral network...')
@@ -82,9 +82,13 @@ class SpectralNetwork:
             """
             new_joints = []     # number of new joints found in each iteration
             for i in range(n_finished_s_walls, len(self.s_walls)):
+                s_i = self.s_walls[i]
                 logging.info('Growing S-wall #{}...'.format(i))
-                self.s_walls[i].grow(ode, bpzs, ppzs, config)
-                self.determine_root_types(self.s_walls[i], sw_data)
+                s_i.grow(ode, bpzs, ppzs, config)
+                #self.determine_root_types(self.s_walls[i], sw_data)
+                # Cut the grown S-walls at the intersetions with branch cuts
+                # and decorate each segment with its root data.
+                s_i.determine_root_types(sw_data)
                 new_joints += self.get_new_joints(i, config, sw_data)
 
             n_finished_s_walls = len(self.s_walls)
@@ -117,7 +121,7 @@ class SpectralNetwork:
                             z_0=joint.z,
                             # The numerics of S-walls involves sheets
                             # from the first fundamental cover.
-                            x_0=joint.ffr_x,
+                            x_0=joint.ode_xs,
                             M_0=joint.M,
                             parents=joint.parents,
                             label=label,
@@ -462,137 +466,148 @@ class SpectralNetwork:
                         pass
         return new_joints
 
-    def determine_root_types(self, s_wall, sw_data):
-        """
-        Determine at which points the wall crosses a cut, 
-        for instance [55, 107, 231] would mean that 
-        it changes root-type 3 times. 
-        Hence, s_wall.splittings would have length 3, 
-        while s_wall.local_roots would have length 4.
-        """
-        # Determine the initial root-type
-        z_0 = s_wall.z[0]
-        x_0 = s_wall.x[0]
-        # ffr_x_0 = s_wall.ffr_x[0]
-        initial_root = get_s_wall_root(z_0, x_0, sw_data,)
-        # A list of ordered pairs [...[i, j]...]
-        # such that weights[j] - weights[i] = root
-        initial_weight_pairs = (
-                    sw_data.g_data.ordered_weight_pairs(initial_root,)
-                    )
-        
-        s_wall.local_roots = [initial_root]
-        s_wall.local_weight_pairs = [initial_weight_pairs]
 
-        # If the length of the S-wall's coordinates
-        # is 3 or less, do not check cuts.
-        # Otherwise, the interpolation methood would
-        # raise an error.
-        if len(s_wall.z) <= 3:
-            return None
+# NOTE: chan: Moved to SWall.
+#    def determine_root_types(self, s_wall, sw_data):
+#        """
+#        Determine at which points the wall crosses a cut, 
+#        for instance [55, 107, 231] would mean that 
+#        it changes root-type 3 times. 
+#        Hence, s_wall.splittings would have length 3, 
+#        while s_wall.local_roots would have length 4.
+#        """
+#        # Determine the initial root-type
+#        z_0 = s_wall.z[0]
+#        x_0 = s_wall.x[0]
+#        # ffr_x_0 = s_wall.ffr_x[0]
+#        initial_root = get_s_wall_root(z_0, x_0, sw_data,)
+#        # A list of ordered pairs [...[i, j]...]
+#        # such that weights[j] - weights[i] = root
+#        initial_weight_pairs = (
+#                    sw_data.g_data.ordered_weight_pairs(initial_root,)
+#                    )
+#        
+#        s_wall.local_roots = [initial_root]
+#        s_wall.local_weight_pairs = [initial_weight_pairs]
+#
+#        # If the length of the S-wall's coordinates
+#        # is 3 or less, do not check cuts.
+#        # Otherwise, the interpolation methood would
+#        # raise an error.
+#        if len(s_wall.z) <= 3:
+#            return None
+#
+#        branch_points = sw_data.branch_points
+#        bpzs_r = [bp.z.real for bp in branch_points]
+#        
+#        # parametrizing the z-coordinate of the k-wall's coordinates
+#        # as a function of proper time
+#        traj_t = numpy.array(range(len(s_wall.z)))
+#        traj_x = numpy.array([w.real for w in s_wall.z])
+#        
+#        # Scan over branch cuts, see if path ever crosses one 
+#        # based on x-coordinates only
+#        for b_pt_num, x_0 in list(enumerate(bpzs_r)):
+#            g = interpolate.splrep(traj_t, traj_x - x_0, s=0)
+#            # now produce a list of integers corresponding to points in the 
+#            # S-wall's coordinate list that seem to cross branch-cuts
+#            # based on the z-coordinate's real part.
+#            # Now get the list of intersection points as integer values 
+#            # of the proper time, approximated by the floor function
+#            intersections = map(int, map(floor, interpolate.sproot(g)))
+#            
+#            # removing duplicates
+#            intersections = delete_duplicates(intersections)
+#            # enforcing imaginary-part of z-coordinate intersection criterion:
+#            # branch cuts extend vertically
+#            y_0 = branch_points[b_pt_num].z.imag
+#            intersections = (
+#                    [i for i in intersections if s_wall.z[i].imag > y_0 ]
+#                    )
+#            # adding the branch-point identifier to each intersection
+#            intersections = (
+#                [[branch_points[b_pt_num], i] for i in intersections]
+#                )
+#            # dropping intersections of a primary S-wall with the 
+#            # branch cut emanating from its parent branch-point
+#            # if such intersections happens at t=0 or t=1
+#            intersections = (
+#                    [[bp, i] for bp, i in intersections if (
+#                    not (bp.label == s_wall.parents[0] and (
+#                    i == 0 or i==1)
+#                    ))]
+#                )
+#            # add the direction to the intersection data: either 'cw' or 'ccw'
+#            intersections = ([
+#                        [bp, i, clock(left_right(s_wall.z, i))] 
+#                        for bp, i in intersections
+#                    ])
+#
+#            s_wall.cuts_intersections += intersections
+#        # Might be worth implementing an algorithm for handling 
+#        # overlapping branch cuts: e.g. the one with a lower starting point 
+#        # will be taken to be on the left, or a similar criterion.
+#        # Still, there will be other sorts of problems, it is necessary
+#        # to just rotate the z-plane and avoid such situations.
+#
+#        # now sort intersections according to where they happen in proper 
+#        # time; recall that the elements of cuts_intersections are organized 
+#        # as      [..., [branch_point, t, 'ccw'] ,...]
+#        # where 't' is the integer of proper time at the intersection.
+#        s_wall.cuts_intersections = sorted(
+#                                    s_wall.cuts_intersections, 
+#                                    cmp = lambda k1,k2: cmp(k1[1],k2[1])
+#                                    )
+#        logging.debug(
+#            '\nS-wall {}\nintersects the following'
+#            'cuts at the points\n{}\n'.format(s_wall.label, intersections))
+#
+#        if len(s_wall.cuts_intersections) > 0:
+#            # Add the actual intersection point to the S-wall
+#            # then update the attribute SWall.cuts_intersections accordingly
+#            s_wall.enhance_at_cuts()
+#            
+#            for k in range(len(s_wall.cuts_intersections)):
+#                branch_point = s_wall.cuts_intersections[k][0]   # branch-point
+#                # t = s_wall.cuts_intersections[k][1]           # proper time
+#                direction = s_wall.cuts_intersections[k][2]     # 'ccw' or 'cw'
+#                current_root = s_wall.local_roots[-1]
+#                new_root = sw_data.g_data.weyl_monodromy(
+#                                        current_root, branch_point, direction)
+#                new_weight_pairs = sw_data.g_data.ordered_weight_pairs(new_root)
+#                s_wall.local_roots.append(new_root)
+#                s_wall.local_weight_pairs.append(new_weight_pairs)
 
-        branch_points = sw_data.branch_points
-        bpzs_r = [bp.z.real for bp in branch_points]
-        
-        # parametrizing the z-coordinate of the k-wall's coordinates
-        # as a function of proper time
-        traj_t = numpy.array(range(len(s_wall.z)))
-        traj_x = numpy.array([w.real for w in s_wall.z])
-        
-        # Scan over branch cuts, see if path ever crosses one 
-        # based on x-coordinates only
-        for b_pt_num, x_0 in list(enumerate(bpzs_r)):
-            g = interpolate.splrep(traj_t, traj_x - x_0, s=0)
-            # now produce a list of integers corresponding to points in the 
-            # S-wall's coordinate list that seem to cross branch-cuts
-            # based on the z-coordinate's real part.
-            # Now get the list of intersection points as integer values 
-            # of the proper time, approximated by the floor function
-            intersections = map(int, map(floor, interpolate.sproot(g)))
-            
-            # removing duplicates
-            intersections = delete_duplicates(intersections)
-            # enforcing imaginary-part of z-coordinate intersection criterion:
-            # branch cuts extend vertically
-            y_0 = branch_points[b_pt_num].z.imag
-            intersections = (
-                    [i for i in intersections if s_wall.z[i].imag > y_0 ]
-                    )
-            # adding the branch-point identifier to each intersection
-            intersections = (
-                [[branch_points[b_pt_num], i] for i in intersections]
-                )
-            # dropping intersections of a primary S-wall with the 
-            # branch cut emanating from its parent branch-point
-            # if such intersections happens at t=0 or t=1
-            intersections = (
-                    [[bp, i] for bp, i in intersections if (
-                    not (bp.label == s_wall.parents[0] and (
-                    i == 0 or i==1)
-                    ))]
-                )
-            # add the direction to the intersection data: either 'cw' or 'ccw'
-            intersections = ([
-                        [bp, i, clock(left_right(s_wall.z, i))] 
-                        for bp, i in intersections
-                    ])
 
-            s_wall.cuts_intersections += intersections
-        # Might be worth implementing an algorithm for handling 
-        # overlapping branch cuts: e.g. the one with a lower starting point 
-        # will be taken to be on the left, or a similar criterion.
-        # Still, there will be other sorts of problems, it is necessary
-        # to just rotate the z-plane and avoid such situations.
+def get_ode(sw, phase, accuracy):
+    x, z = sympy.symbols('x z')
+    ode_absolute_tolerance = accuracy
 
-        # now sort intersections according to where they happen in proper 
-        # time; recall that the elements of cuts_intersections are organized 
-        # as      [..., [branch_point, t, 'ccw'] ,...]
-        # where 't' is the integer of proper time at the intersection.
-        s_wall.cuts_intersections = sorted(
-                                    s_wall.cuts_intersections, 
-                                    cmp = lambda k1,k2: cmp(k1[1],k2[1])
-                                    )
-        logging.debug(
-            '\nS-wall {}\nintersects the following'
-            'cuts at the points\n{}\n'.format(s_wall.label, intersections))
+    # Even for higher-reps, we always use the 
+    # first fundamental representation curve 
+    # for evolving the network
+    f = sw.ffr_curve.num_eq
+    df_dz = f.diff(z)
+    df_dx = f.diff(x)
+    # F = -(\partial f/\partial z)/(\partial f/\partial x)
+    F = sympy.lambdify((z, x), -df_dz/df_dx)
+    v = sympy.lambdify((z, x), sw.diff.num_v)
 
-        if len(s_wall.cuts_intersections) > 0:
-            # Add the actual intersection point to the S-wall
-            # then update the attribute SWall.cuts_intersections accordingly
-            s_wall.enhance_at_cuts()
-            
-            for k in range(len(s_wall.cuts_intersections)):
-                branch_point = s_wall.cuts_intersections[k][0]   # branch-point
-                # t = s_wall.cuts_intersections[k][1]           # proper time
-                direction = s_wall.cuts_intersections[k][2]     # 'ccw' or 'cw'
-                current_root = s_wall.local_roots[-1]
-                new_root = sw_data.g_data.weyl_monodromy(
-                                        current_root, branch_point, direction)
-                new_weight_pairs = sw_data.g_data.ordered_weight_pairs(new_root)
-                s_wall.local_roots.append(new_root)
-                s_wall.local_weight_pairs.append(new_weight_pairs)
+    def ode_f(t, zx1x2M):
+        z_i = zx1x2M[0]
+        x1_i = zx1x2M[1]
+        x2_i = zx1x2M[2]
+        dz_i_dt = exp(phase*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
+        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+        dM_dt = 1
+        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
 
+    ode = scipy.integrate.ode(ode_f)
+    ode.set_integrator(
+        'zvode',
+        #method='adams',
+        atol=ode_absolute_tolerance,
+    )
 
-def get_s_wall_root(z, ffr_xs, sw_data):
-    x_i, x_j = ffr_xs
-    
-    # Recall that S-wall numerical evolution
-    # is based on the first fundamental representation.
-    # In particular, the xs above are values of sheets 
-    # from the 1st fundamental rep cover, and should 
-    # be compared with the corresponding trivialization.
-    # This is taken care of by setting the key argument
-    # ffr=True when calling get_sheets_at_z.
-    # The following is a dictionary
-    sheets_at_z = sw_data.get_sheets_at_z(z, ffr=True)
-    xs_at_z = sheets_at_z.values()
-    
-    # Sheet matching x_i
-    closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
-    i = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_i][0]
-
-    # Sheet matching x_j
-    closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
-    j = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_j][0]
-
-    return sw_data.g_data.ffr_weights[j] - sw_data.g_data.ffr_weights[i]
+    return ode

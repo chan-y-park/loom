@@ -98,6 +98,9 @@ class GData:
         self.root_color_map = self.create_root_color_map()
 
     def ordered_weight_pairs(self, root, ffr=False):
+        """
+        Return list of pairs of weight indices.
+        """
         pairs = []
 
         if ffr is False:
@@ -115,6 +118,10 @@ class GData:
         return pairs
 
     def weyl_monodromy(self, root, bp, direction):
+        """
+        Returns a new root of the segment of an S-wall
+        when it crossed a branch cut from bp.
+        """
         # TODO: For now, we ASSUME that branch points are 
         # of SQUARE-ROOT type. Need to update this 
         # for more general cases.
@@ -288,7 +295,8 @@ class SWDiff:
         self.num_v = self.sym_v.subs(parameters)
 
 
-class SWData(object):
+#class SWData(object):
+class SWDataBase(object):
     """
     A class containing a Seiberg-Witten curve in the first
     fundamental representation,
