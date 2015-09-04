@@ -175,8 +175,9 @@ def save_config(config, path=None):
     return None
 
 
-def save_spectral_network(config, spectral_networks, data_dir=None,
+def save_spectral_network(config, spectral_network_data, data_dir=None,
                           make_zipped_file=True):
+    spectral_networks = spectral_network_data.spectral_networks
     if data_dir is None:
         ### Prepare to save spectral network data to files.
         timestamp = str(int(time.time()))

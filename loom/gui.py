@@ -225,12 +225,12 @@ class GUILoom:
 
 
     def menu_load_data_action(self):
-        config, spectral_networks = load_spectral_network()
+        config, spectral_network_data = load_spectral_network()
         if config is None:
             return None
         self.config = config 
-        self.spectral_networks = spectral_networks
-        self.sw_data = SWDataWithTrivialization(self.config)
+        self.spectral_networks = spectral_network_data.spectral_networks
+        self.sw_data = spectral_network_data.sw_data
         logging.info('Finished loading spectral network data.')
 
 
@@ -247,7 +247,9 @@ class GUILoom:
         else:
             self.update_config_from_entries()
             save_spectral_network(
-                self.config, self.spectral_networks, data_dir,
+                self.config, 
+                SpectralNetworkData(self.sw_data, self.spectral_networks,),
+                data_dir,
                 make_zipped_file=False,
             )
         return None

@@ -21,6 +21,17 @@ NUM_ODE_XS_OVER_Z = 2
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
                  t_1=None, t_2=None, label=None, sw_data=None):
+        self.z = None
+        self.M = None
+        self.parents = None
+        self.label = None
+        self.root = None
+        self.ode_xs = None
+        self.combos = None
+
+        if z is None:
+            # Return without setting attributes.
+            return
 
         self.z = z
         self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
@@ -91,7 +102,7 @@ class Joint:
             'M': ctor2(self.M),
             'parents': [parent for parent in self.parents],
             'label': self.label,
-            'root': self.root,
+            'root': self.root.tolist(),
             'ode_xs': [ctor2(x) for x in self.ode_xs],
             'combos': self.combos,
         }
@@ -101,11 +112,11 @@ class Joint:
     def set_json_data(self, json_data):
         # FIXME: Determine what data to load.
         self.z = r2toc(json_data['z'])
-        self.M = json_data['M']
+        self.M = r2toc(json_data['M'])
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
-        self.root = json_data['root']
-        self.ode_xs = json_data['ode_xs']
+        self.root = numpy.array(json_data['root'])
+        self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
         self.combos = json_data['combos']
 
 
@@ -205,7 +216,7 @@ class SWall(object):
     def get_json_data(self):
         json_data = {
             'z': numpy.array([self.z.real, self.z.imag]).T.tolist(),
-            'M': numpy.array(self.M).T.tolist(),
+            'M': numpy.array([self.M.real, self.M.imag]).T.tolist(),
             'x': numpy.rollaxis(
                 numpy.array([self.x.real, self.x.imag]), 0, 3
             ).tolist(),
@@ -213,7 +224,7 @@ class SWall(object):
             'label': self.label,
             #'splittings': self.splittings,
             'cuts_intersections': self.cuts_intersections,
-            'local_roots': self.local_roots.tolist(),
+            'local_roots': [root.tolist() for root in self.local_roots],
             'local_weight_pairs': self.local_weight_pairs,
         }
         return json_data
