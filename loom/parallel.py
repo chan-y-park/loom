@@ -29,7 +29,7 @@ def a_child_process(
     )
 
     spectral_network = SpectralNetwork(
-        phase, 
+        phase=phase, 
     ) 
 
     spectral_network.grow(config, sw)

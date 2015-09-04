@@ -112,7 +112,7 @@ class Joint:
     def is_equal_to(self, other, accuracy):
         if(abs(self.z - other.z) > accuracy):
             return False
-        if(self.root != other.root):
+        if numpy.array_equal(self.root, other.root) is not True:
             return False
         if(abs(self.M - other.M) > accuracy):
             return False

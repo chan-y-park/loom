@@ -104,8 +104,7 @@ class SpectralNetwork:
                              'at iteration #{}.'.format(iteration))
                 break
             else:
-                logging.info('Growing S-walls in iteration #{} finished; '
-                             'start finding joints of S-walls.'
+                logging.info('Growing S-walls in iteration #{} finished.'
                              .format(iteration))
 
             # Seed an S-wall for each new joint.
@@ -121,7 +120,8 @@ class SpectralNetwork:
                 joint.label = 'joint #{}'.format(len(self.joints))
                 self.joints.append(joint)
                 label = 'S-wall #{}'.format(len(self.s_walls))
-                if config['mass_limit'] is None or joint.M < config['mass_limit']:
+                if (config['mass_limit'] is None or 
+                    joint.M < config['mass_limit']):
                     self.s_walls.append(
                         SWall(
                             z_0=joint.z,
