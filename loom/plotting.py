@@ -92,18 +92,16 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             labels['walls'].append(seg_labels)
 
 
-        logging.info(
-                '\n------------------------'+
-                '\nphase : {}'.format(spectral_network.phase) +
-                '\n------------------------\n'
-            )
+        print('------------------------\n'
+              'phase : {}\n'.format(spectral_network.phase) +
+              '------------------------\n')
         print_legend(g_data)
 
         print_spectral_network_data(
                 spectral_network.s_walls, 
                 branch_points,
                 g_data
-            )
+        )
 
         super(SpectralNetworkPlotBase, self).draw(
             phase=spectral_network.phase,
@@ -367,33 +365,30 @@ def print_spectral_network_data(s_walls, branch_points, g_data):
     root_dictionary = make_root_dictionary(g_data)
     #weight_dictionary = make_weight_dictionary(g_data)
 
-    logging.info('\n\t--- The S-Wall Data ---\n')
+    print('\t--- The S-Wall Data ---\n')
     for s in s_walls:
         rt_labels = [get_label(rt, root_dictionary) for rt in s.local_roots]
         wt_labels = [
-                [
-                    [
-                    'mu_' + str(pair[0]), 
-                    'mu_' + str(pair[1])
-                    ]
-                    for pair in loc_wts
-                ]
-                for loc_wts in s.local_weight_pairs
-            ]
-        logging.info(
-                '\n' + s.label + 
-                '\troot types : {}\n'.format(rt_labels) +
-                '\t\tsheet pairs : {}\n'.format(wt_labels)
-            )
+            [
+                ['mu_' + str(pair[0]), 'mu_' + str(pair[1])] 
+                for pair in loc_wts
+            ] for loc_wts in s.local_weight_pairs
+        ]
+        print(
+            s.label + 
+            '\troot types : {}\n'.format(rt_labels) +
+            '\t\tsheet pairs : {}\n'.format(wt_labels)
+        )
 
-    logging.info('\n\t--- The Branch Points ---\n')
+    print('\t--- The Branch Points ---\n')
     for bp in branch_points:
-        rt_labels = [get_label(rt, root_dictionary) for rt in bp.positive_roots]
-        logging.info(
-                '\n' + bp.label + 
-                '\tposition : {}\n'.format(bp.z) +
-                '\t\troot type : {}\n'.format(rt_labels)
-            )
+        rt_labels = [get_label(rt, root_dictionary)
+                     for rt in bp.positive_roots]
+        print(
+            bp.label + 
+            '\tposition : {}\n'.format(bp.z) +
+            '\t\troot type : {}\n'.format(rt_labels)
+        )
 
 
 def get_label(value, dictionary):
@@ -407,28 +402,23 @@ def print_legend(g_data):
     root_labels = root_dictionary.keys()
     roots = root_dictionary.values()
     weight_pairs=[
-                [
-                    str('(mu_'+str(p[0])+', mu_'+str(p[1])+')') 
-                    for p in g_data.ordered_weight_pairs(rt)
-                ] for rt in roots
-            ]
+        [str('(mu_'+str(p[0])+', mu_'+str(p[1])+')') 
+         for p in g_data.ordered_weight_pairs(rt)]
+        for rt in roots
+    ]
     weight_labels = weight_dictionary.keys()
     weights = weight_dictionary.values()
 
-    logging.info('\n\t--- The Root System ---\n')
+    print('\t--- The Root System ---\n')
     for i in range(len(roots)):
-        logging.info(
-                root_labels[i] + 
-                '\t\t{}\n'.format(list(roots[i])) +
-                'ordered weight pairs : \t{}\n'.format(weight_pairs[i])
-            )
+        print(
+            root_labels[i] + ' : {}\n'.format(list(roots[i])) +
+            'ordered weight pairs : {}\n'.format(weight_pairs[i])
+        )
 
-    logging.info('\n\t--- The Weight System ---\n')
+    print('\t--- The Weight System ---\n')
     for i in range(len(weights)):
-        logging.info(
-                weight_labels[i] + 
-                '\t\t{}\n'.format(list(weights[i])) 
-            )
+        print(weight_labels[i] + ' : {}\n'.format(list(weights[i])))
     
 # def plot_s_walls(
 #     s_walls,

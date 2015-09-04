@@ -12,7 +12,8 @@ from itertools import combinations
 from pprint import pprint
 
 from geometry import SWDataBase
-from misc import delete_duplicates
+#from misc import delete_duplicates, n_unique
+from misc import n_unique
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
@@ -207,17 +208,21 @@ class SWDataWithTrivialization(SWDataBase):
     # wrong answer!
     def __init__(self, config,):
         super(SWDataWithTrivialization, self).__init__(config)
-
+        self.accuracy = config['accuracy']
         self.branch_points = []
         self.irregular_singularities = []
 
         # z-coords of branch points.
-        bpzs = delete_duplicates(
-            [r.z for r in self.ffr_ramification_points if not r.is_puncture]
+        #bpzs = delete_duplicates(
+        bpzs = n_unique(
+            [r.z for r in self.ffr_ramification_points if not r.is_puncture],
+            self.accuracy,
         )
         # z-coords of irregular singularities.
-        iszs = delete_duplicates(
-            [r.z for r in self.ffr_ramification_points if r.is_puncture]
+        #iszs = delete_duplicates(
+        iszs = n_unique(
+            [r.z for r in self.ffr_ramification_points if r.is_puncture],
+            self.accuracy,
         )
         
         # Automatically choose a basepoint, based on the positions of
@@ -231,7 +236,8 @@ class SWDataWithTrivialization(SWDataBase):
         
         # Minimun distance between the base point and 
         # branch points/punctures.
-        non_zero_distances = [x for x in all_distances if x!=0.0]
+        non_zero_distances = [x for x in all_distances
+                              if abs(x) > self.accuracy]
         self.min_distance = min(non_zero_distances)
 
         # Fix reference x's at the basepoints.
@@ -296,12 +302,14 @@ class SWDataWithTrivialization(SWDataBase):
             ffr_xs_1, xs_1 = self.get_aligned_xs(z)
             if is_path_to_bp == False:
                 sorted_ffr_xs = get_sorted_xs(
-                    ffr_xs_0, ffr_xs_1, check_tracking=True, 
-                    index=1, z_0=z_path[i-1], z_1=z_path[i]
+                    ffr_xs_0, ffr_xs_1, accuracy=self.accuracy,
+                    check_tracking=True, index=1,
+                    z_0=z_path[i-1], z_1=z_path[i],
                 )
             else:
                 sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1,
-                                              check_tracking=False)
+                                              accuracy=self.accuracy,
+                                              check_tracking=False,)
             if g_data.fundamental_representation_index == 1:
                 sorted_xs = sorted_ffr_xs
             else:
@@ -566,7 +574,7 @@ def get_path_around(z_pt, base_pt, min_distance):
 
 
 ### TODO: Try using numba.
-def get_sorted_xs(ref_xs, new_xs, check_tracking=True, 
+def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True, 
                   index=None, z_0=None, z_1=None):
     """
     Returns a sorted version of 'new_xs'
@@ -585,7 +593,7 @@ def get_sorted_xs(ref_xs, new_xs, check_tracking=True,
     
     if check_tracking == True:
         ### Now we check that sheet tracking is not making a mistake.
-        unique_sorted_xs = delete_duplicates(sorted_xs)
+        unique_sorted_xs = n_unique(sorted_xs, accuracy)
         if len(unique_sorted_xs) < len(sorted_xs):
             print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
             print "old xs" 

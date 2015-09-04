@@ -177,11 +177,29 @@ def delete_duplicates(l):
     seen = set()
     uniq = []
     for x in l:
+        if not isinstance(x, (int, bool, str, unicode)):
+            logging.warning('delete_duplicates(): testing the membership'
+                            'of an element of an unsupported type.')
         if x not in seen:
             uniq.append(x)
             seen.add(x)
     return uniq
 
+
+def n_unique(a, accuracy):
+    """
+    Get an array and return its unique elements
+    within a given accuracy.
+    """
+    if len(a) == 0:
+        return a
+    a_sorted = numpy.sort(numpy.array(a))
+    a_diff = numpy.diff(a_sorted)
+    a_unique = [a_sorted[0]]
+    for i, d in enumerate(a_diff):
+        if abs(d) > accuracy:
+            a_unique.append(a_sorted[i+1])
+    return a_unique
 
 def clock(direction):
     if direction == 'left':

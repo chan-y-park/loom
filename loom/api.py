@@ -238,7 +238,8 @@ def make_spectral_network_plot(spectral_network_data, master=None,
         spectral_network_plot.draw(
             spectral_network, 
             spectral_network_data.sw_data.branch_points,
-            g_data=spectral_network_data.sw_data.g_data
+            g_data=spectral_network_data.sw_data.g_data,
+            **kwargs
         )
 
     if show_plot is True:
