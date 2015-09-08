@@ -1,8 +1,8 @@
+import os
 import numpy
 import pdb
 import logging
 import Tkinter as tk
-import mpldatacursor
 
 import matplotlib
 from matplotlib.backends.backend_tkagg import (
@@ -12,37 +12,38 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.widgets import Button
 from matplotlib import pyplot
 from math import pi
-from network_plot import NetworkPlotBase
-from misc import PSL2C, put_on_cylinder
 
+from network_plot import NetworkPlotBase
+from misc import put_on_cylinder, split_with_overlap
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
         self,
         spectral_network,
-        z_range_limits=None,
+        branch_points,
+        punctures=None, 
+        plot_range=None, 
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
         C=[[1, 0], [0, 1]],
+        g_data=None
     ):
+        
         labels = {'branch_points': [], 'joints': [], 'walls': []}
-        if z_range_limits is None:
+        if plot_range is None:
             if plot_on_cylinder is True:
-                z_range_limits = [-pi, pi, -5, 5]
-            else:
-                z_range_limits = [-5, 5, -5, 5]
-        x_min, x_max, y_min, y_max = z_range_limits
+                plot_range = [[-pi, pi], [-5, 5]]
 
-        branch_points = []
-        for i, rp in enumerate(spectral_network.ramification_points):
+        branch_points_z = []
+        for i, bp in enumerate(branch_points):
             if plot_on_cylinder is True:
-                rp_z = put_on_cylinder(rp.z, C)
+                bp_z = put_on_cylinder(bp.z, C)
             else:
-                rp_z = rp.z
-            branch_points.append([rp_z.real, rp_z.imag])
-            labels['branch_points'].append(rp.label)
-
+                bp_z = bp.z
+            branch_points_z.append([bp_z.real, bp_z.imag])
+            labels['branch_points'].append(bp.label)
+   
         joints = []
         for i, jp in enumerate(spectral_network.joints):
             if plot_on_cylinder is True:
@@ -53,6 +54,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             labels['joints'].append(jp.label)
 
         walls = []
+        walls_roots = []
         for i, s_wall in enumerate(spectral_network.s_walls):
             segments = []
             seg_labels = []
@@ -68,22 +70,42 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                         split_at.append(j)
                 z_segs = numpy.split(zs_on_cylinder, split_at)
             else:
-                z_segs = [s_wall.z]
+                z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
+                
+            seg_labels = [s_wall.label + '\n' + lab
+                          for lab in map(str, s_wall.local_roots)]
 
             for z_seg in z_segs:
                 segments.append([z_seg.real, z_seg.imag])
-                seg_labels.append(s_wall.label)
 
             walls.append(segments)
+            walls_roots.append(s_wall.local_roots)
+            walls_colors = [
+                [g_data.root_color(root) for root in w_roots]
+                for w_roots in walls_roots
+            ]
             labels['walls'].append(seg_labels)
+
+
+        print('------------------------\n'
+              'phase : {}\n'.format(spectral_network.phase) +
+              '------------------------\n')
+        print_legend(g_data)
+
+        print_spectral_network_data(
+                spectral_network.s_walls, 
+                branch_points,
+                g_data
+        )
 
         super(SpectralNetworkPlotBase, self).draw(
             phase=spectral_network.phase,
-            branch_points=branch_points,
+            branch_points=branch_points_z,
             joints=joints,
             walls=walls,
+            walls_colors=walls_colors,
             labels=labels,
-            plot_range=[x_min, x_max, y_min, y_max],
+            plot_range=plot_range,
             plot_joints=plot_joints,
             plot_data_points=plot_data_points,
         )
@@ -193,14 +215,18 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         )
 
         if master is None:
-            master = tk.Tk()
-            master.withdraw()
+            root = tk.Tk()
+            root.withdraw()
+            self.root = root
+        else:
+            self.root = master
         self.master = master
 
         # Create a Toplevel widget, which is a child of GUILoom
         # and contains plots,
-        self.toplevel = tk.Toplevel(master)
+        self.toplevel = tk.Toplevel(self.root)
         self.toplevel.wm_title(title)
+        self.toplevel.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.plot_idx_scale = None
 
@@ -219,6 +245,13 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         toolbar = NavigationToolbar(self.canvas, self.toplevel)
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+   
+
+
+    def on_closing(self):
+        self.toplevel.destroy()
+        if self.master is None:
+            self.root.destroy()
 
 
     def scale_action(self, scale_value):
@@ -305,120 +338,77 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
                 side=tk.LEFT,
             )
 
-def plot_s_walls(
-    s_walls,
-    ramification_points=[],
-    joints=[],
-    plot_range=[-5, 5, -5, 5],
-    plot_data_points=False,
-    marked_points=[],
-    colors=['b', 'g', 'r', 'c', 'm', 'y'],
-):
-    x_min, x_max, y_min, y_max = plot_range
 
-    pyplot.figure(1)
-    pyplot.title('S-walls')
-
-    # z-plane
-    zax = pyplot.subplot(
-        121,
-        label='z-plane',
-        xlim=(x_min, x_max),
-        ylim=(y_min, y_max),
-        aspect='equal',
-    )
-    # Plot branch points
-    for rp in ramification_points:
-        zax.plot(rp.z.real, rp.z.imag, 'x', markeredgewidth=2, markersize=8,
-                 color='k', label=rp.label,)
-    for jp in joints:
-        zax.plot(jp.z.real, jp.z.imag, '+', markeredgewidth=2, markersize=8,
-                 color='k', label=jp.label,)
-    for p in marked_points:
-        zax.plot(p[0].real, p[0].imag, 'o', markeredgewidth=2,
-                 markersize=4, color='k')
-
-    # x-plane
-    xax = pyplot.subplot(
-        122,
-        label='x-plane',
-        xlim=(x_min, x_max),
-        ylim=(y_min, y_max),
-        aspect='equal',
-    )
-    for rp in ramification_points:
-        xax.plot(rp.x.real, rp.x.imag, 'x', markeredgewidth=2, markersize=8,
-                 color='k', label=rp.label,)
-    for jp in joints:
-        for j, x_j in enumerate(jp.x):
-            xax.plot(
-                x_j.real, x_j.imag,
-                '+', markeredgewidth=2, markersize=8, color='k',
-                label=(jp.label + ', {}'.format(j)),
+def make_root_dictionary(g_data):
+    g_roots = list(g_data.roots)
+    root_dictionary = (
+                {'alpha_' + str(i) : rt for i, rt in enumerate(g_roots)}
             )
-    for p in marked_points:
-        xax.plot(p[1].real, p[1].imag, 'o', markeredgewidth=2,
-                 markersize=4, color='k')
+    return root_dictionary
 
-    for i, s_wall in enumerate(s_walls):
-        s_wall_color = colors[i % len(colors)]
-        # z-plane
-        zrs = s_wall.z.real
-        zis = s_wall.z.imag
-        zax.plot(zrs, zis, '-', color=s_wall_color,
-                 label=s_wall.label)
-        if(plot_data_points == True):
-            zax.plot(zrs, zis, 'o', color=s_wall_color, label=s_wall.label)
-
-        # x-plane
-        xs = s_wall.x.T
-        for j, x_j in enumerate(xs):
-            xrs = x_j.real
-            xis = x_j.imag
-            xax.plot(
-                xrs, xis, '-', color=s_wall_color,
-                label=(s_wall.label + ',{}'.format(j))
+def make_weight_dictionary(g_data):
+    g_weights = list(g_data.weights)
+    weight_dictionary = (
+                {'mu_' + str(i) : w for i, w in enumerate(g_weights)}
             )
-            if(plot_data_points == True):
-                xax.plot(
-                    xrs, xis, 'o', color=s_wall_color,
-                    label=(s_wall.label + ',{}'.format(j))
-                )
+    return weight_dictionary
 
-    mpldatacursor.datacursor(
-        formatter='{label}'.format,
-        #tolerance=2,
-        #hover=True,
-        display='multiple',
-    )
 
-    pyplot.show()
+def print_spectral_network_data(s_walls, branch_points, g_data):
+    root_dictionary = make_root_dictionary(g_data)
 
-def plot_segments(
-    segments,
-    marked_points=[],
-    plot_range=[-5, 5, -5, 5],
-    plot_data_points=False
-):
-    """
-    Plot the given segments for debugging.
-    """
-    x_min, x_max, y_min, y_max = plot_range
+    print('\t--- The S-Wall Data ---\n')
+    for s in s_walls:
+        rt_labels = [get_label(rt, root_dictionary) for rt in s.local_roots]
+        wt_labels = [
+            [
+                ['mu_' + str(pair[0]), 'mu_' + str(pair[1])] 
+                for pair in loc_wts
+            ] for loc_wts in s.local_weight_pairs
+        ]
+        print(
+            s.label + 
+            '\troot types : {}\n'.format(rt_labels) +
+            '\t\tsheet pairs : {}\n'.format(wt_labels)
+        )
 
-    # Plot setting.
-    pyplot.xlim(x_min, x_max)
-    pyplot.ylim(y_min, y_max)
-    pyplot.axes().set_aspect('equal')
+    print('\t--- The Branch Points ---\n')
+    for bp in branch_points:
+        rt_labels = [get_label(rt, root_dictionary)
+                     for rt in bp.positive_roots]
+        print(
+            bp.label + 
+            '\tposition : {}\n'.format(bp.z) +
+            '\t\troot type : {}\n'.format(rt_labels)
+        )
 
-    for segment in segments:
-        xs, ys = segment
-        pyplot.plot(xs, ys, '-')
-        if(plot_data_points == True):
-            pyplot.plot(xs, ys, 'o', color='b')
 
-    for p in marked_points:
-        pyplot.plot(p[0], p[1], 'x', markeredgewidth=2, markersize=8,
-                    color='k')
+def get_label(value, dictionary):
+    return [k for k, v in dictionary.iteritems() 
+            if numpy.array_equal(v, value)][0]
 
-    pyplot.show()
 
+def print_legend(g_data):
+    root_dictionary = make_root_dictionary(g_data)
+    weight_dictionary = make_weight_dictionary(g_data)
+    root_labels = root_dictionary.keys()
+    roots = root_dictionary.values()
+    weight_pairs=[
+        [str('(mu_'+str(p[0])+', mu_'+str(p[1])+')') 
+         for p in g_data.ordered_weight_pairs(rt)]
+        for rt in roots
+    ]
+    weight_labels = weight_dictionary.keys()
+    weights = weight_dictionary.values()
+
+    print('\t--- The Root System ---\n')
+    for i in range(len(roots)):
+        print(
+            root_labels[i] + ' : {}\n'.format(list(roots[i])) +
+            'ordered weight pairs : {}\n'.format(weight_pairs[i])
+        )
+
+    print('\t--- The Weight System ---\n')
+    for i in range(len(weights)):
+        print(weight_labels[i] + ' : {}\n'.format(list(weights[i])))
+    

@@ -1,12 +1,10 @@
 import numpy
-import scipy
 import sympy
 import logging
-import pdb
 
 from fractions import Fraction
 from sympy import limit, oo
-from cmath import exp, log
+from cmath import log
 
 
 class LocalDiffError(Exception):
@@ -95,7 +93,7 @@ def n_nearest(a_list, value, n):
     by comparing the euclidean norms.
     """
     compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
-    return sorted(a_list, compare)[:n]
+    return sorted(a_list, cmp=compare)[:n]
 
 
 def n_nearest_indices(a_list, value, n):
@@ -105,8 +103,7 @@ def n_nearest_indices(a_list, value, n):
     """
     compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
     key = lambda k: a_list[k]
-    sorted_indices = sorted(range(len(a_list)), compare, key)
-
+    sorted_indices = sorted(range(len(a_list)), cmp=compare, key=key)
     return sorted_indices[:n]
 
 
@@ -130,22 +127,6 @@ def unravel(k, row_size, column_size=None):
         raise UnravelError(k)
 
     return (i, j)
-
-
-def find_xs_at_z_0(f_z_x, z_0, x_0=None, num_x=1):
-    """
-    solve f(x, z_0) = 0 and return num_x x's nearest to x_0.
-    """
-    x, z = sympy.symbols('x z')
-
-    f_x_at_z_0 = f_z_x.subs(z, z_0)
-    f_x_at_z_0_coeffs = map(complex, sympy.Poly(f_x_at_z_0, x).all_coeffs())
-    xs_at_z_0 = numpy.roots(f_x_at_z_0_coeffs)
-    if x_0 is None:
-        return xs_at_z_0
-    else:
-        return sorted(xs_at_z_0,
-                      lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
 
 
 def PSL2C(C, z, inverse=False, numerical=False):
@@ -188,32 +169,90 @@ def put_on_cylinder(z, mt_params=None):
     return log(PSL2C(mt_params, z, inverse=True, numerical=True))/1.0j
 
 
-def get_ode(sw, phase, accuracy):
-    x, z = sympy.symbols('x z')
-    ode_absolute_tolerance = accuracy
+### chan: TODO: use numba?
+def delete_duplicates(l):
+    seen = set()
+    uniq = []
+    for x in l:
+        if not isinstance(x, (int, bool, str, unicode)):
+            logging.warning('delete_duplicates(): testing the membership'
+                            'of an element of an unsupported type.')
+        if x not in seen:
+            uniq.append(x)
+            seen.add(x)
+    return uniq
 
-    f = sw.curve.num_eq
-    df_dz = f.diff(z)
-    df_dx = f.diff(x)
-    # F = -(\partial f/\partial z)/(\partial f/\partial x)
-    F = sympy.lambdify((z, x), -df_dz/df_dx)
-    v = sympy.lambdify((z, x), sw.diff.num_v)
 
-    def ode_f(t, zx1x2M):
-        z_i = zx1x2M[0]
-        x1_i = zx1x2M[1]
-        x2_i = zx1x2M[2]
-        dz_i_dt = exp(phase*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
-        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
-        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-        dM_dt = 1
-        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+def n_unique(a, accuracy):
+    """
+    Get an array and return its unique elements
+    within a given accuracy.
+    """
+    if len(a) == 0:
+        return a
+    a_sorted = numpy.sort(numpy.array(a))
+    a_diff = numpy.diff(a_sorted)
+    a_unique = [a_sorted[0]]
+    for i, d in enumerate(a_diff):
+        if abs(d) > accuracy:
+            a_unique.append(a_sorted[i+1])
+    return a_unique
 
-    ode = scipy.integrate.ode(ode_f)
-    ode.set_integrator(
-        'zvode',
-        #method='adams',
-        atol=ode_absolute_tolerance,
-    )
+def clock(direction):
+    if direction == 'left':
+        return 'ccw'
+    elif direction == 'right':
+        return 'cw'
+    else:
+        logging.info('\nCannot read direction!\n')
 
-    return ode
+
+def left_right(l, point):
+    """
+    given the list 
+    l = [..., z, ...]
+    and a point in the list (specified by the corresponding integer),
+    determines whether x increases or decreases at that point, 
+    returning repsectively 'left' or 'right'
+    """
+    if point > len(l)-1:
+        logging.info('Cant determine direction, point doesnt belong to list!')
+    elif point > 0:
+        if l[point-1].real < l[point].real:
+            return 'right'
+        else:
+            return 'left'
+    elif point == 0:
+        if l[point].real < l[point+1].real:
+            return 'right'
+        else:
+            return 'left'
+
+
+def split_with_overlap(np_1d_array, splittings):
+    """
+    Return a list of splitted numpy 1d array with an overlapping element.
+    """
+    a = np_1d_array
+    ss = splittings
+    n_segs = len(ss) + 1
+
+    if n_segs == 1:
+        return [a]
+
+    # start with initial piece
+    segs = [a[:ss[0]+1]]
+    for i in range(len(ss)-1):
+        s_0 = ss[i]
+        s_1 = ss[i+1] + 1
+        if s_0 < 0 or s_1 < 0:
+            raise ValueError("split_with_overlap(): overlap is too large.")
+        segs.append(a[s_0:s_1])
+    # add the last piece
+    s_f = ss[-1]
+    if s_f < 0:
+        raise ValueError("split_with_overlap(): overlap is too large.")
+    segs.append(a[s_f:])
+
+    return segs
+ 

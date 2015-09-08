@@ -10,11 +10,12 @@ class NetworkPlotBase(object):
         self.current_plot_idx = None
 
         self.figure = matplotlib_figure
-
-
+        if self.figure is not None:
+            self.figure.clf()
+    
     def draw(self, phase=None, branch_points=None, joints=None, walls=None,
-             labels=None, plot_range=[-5, 5, -5, 5], plot_joints=False,
-             plot_data_points=False,):
+            walls_colors=None, labels=None, plot_range=None, 
+            plot_joints=False, plot_data_points=False,):
         """
         branch_points = [[bpx, bpy], ...]
         joints = [[jpx, jpy], ...]
@@ -23,17 +24,20 @@ class NetworkPlotBase(object):
                   'joints': [jp1_label, ...],
                   'walls': [wall1_label, ...]}
         """
-        x_min, x_max, y_min, y_max = plot_range
         rect = [.1, 0.15, .8, .8]
-        #rect = [0.125, 0.125, .8, 0.8]
 
         axes = self.figure.add_axes(
             rect,
             label="Network #{}".format(len(self.plots)),
-            xlim=(x_min, x_max),
-            ylim=(y_min, y_max),
             aspect='equal',
         )
+
+        if plot_range is not None:
+            [[x_min, x_max], [y_min, y_max]] = plot_range
+            axes.set_xlim(x_min, x_max)
+            axes.set_ylim(y_min, y_max)
+        else:
+            axes.autoscale(enable=True, axis='both', tight=None)
 
         axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
 
@@ -43,18 +47,32 @@ class NetworkPlotBase(object):
                 seg_xs, seg_ys = segment
 
                 if plot_data_points is True:
-                    axes.plot(xs, ys, 'o', color='k')
+                    axes.plot(seg_xs, seg_ys, 'o', color='k')
 
+                seg_color = walls_colors[i][j]
                 axes.plot(seg_xs, seg_ys, '-',
-                          #color='b',
+                          color=seg_color,
                           label=labels['walls'][i][j],)
 
         # Plot branch points.
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8,
-                      color='k', label=labels['branch_points'][i],)
+            axes.plot(
+                        bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
+                        color='k', 
+                        label=labels['branch_points'][i],
+                    )
 
+        # Plot branch cuts, vertically.
+        for i, bp in enumerate(branch_points):
+            bpx, bpy = bp
+            axes.plot(
+                    [bpx, bpx], [bpy, axes.get_ylim()[1]], ':', 
+                    color='k', 
+                    label='Cut of '+labels['branch_points'][i],
+                )
+
+   
         # Plot joints.
         if plot_joints is True:
             for i, jp in enumerate(joints):
@@ -66,6 +84,29 @@ class NetworkPlotBase(object):
         self.plots.append(axes)
 
 
+    def autoscale(self):
+        min_x_min = None
+        max_x_max = None
+        min_y_min = None
+        max_y_max = None
+
+        for axes in self.plots:
+            x_min, x_max = axes.get_xlim()
+            if min_x_min is None or min_x_min > x_min:
+                min_x_min = x_min
+            if max_x_max is None or max_x_max < x_max:
+                max_x_max = x_max
+
+            y_min, y_max = axes.get_ylim()
+            if min_y_min is None or min_y_min > y_min:
+                min_y_min = y_min
+            if max_y_max is None or max_y_max < y_max:
+                max_y_max = y_max
+
+        for axes in self.plots:
+            axes.set_xlim(min_x_min, max_x_max)
+            axes.set_ylim(min_y_min, max_y_max)
+
     def set_data_cursor(self):
         if self.current_plot_idx is None:
             return None
@@ -76,10 +117,10 @@ class NetworkPlotBase(object):
             axes=self.plots[self.current_plot_idx],
             formatter='{label}'.format,
             tolerance=4,
-            hover=True,
+            #hover=True,
             #display='single',
-            #display='multiple',
-            #draggable=True,
+            display='multiple',
+            draggable=True,
         )
 
 
@@ -91,7 +132,8 @@ class NetworkPlotBase(object):
         elif new_plot_idx > len(self.plots) - 1:
             new_plot_idx = len(self.plots) - 1
 
-        self.plots[self.current_plot_idx].set_visible(False)
+        if self.current_plot_idx is not None:
+            self.plots[self.current_plot_idx].set_visible(False)
         self.plots[new_plot_idx].set_visible(True)
         # Update the index variable for the currently displayed plot.
         self.current_plot_idx = new_plot_idx

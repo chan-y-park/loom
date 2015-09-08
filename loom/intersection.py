@@ -7,12 +7,11 @@ on a real 2-dim plane.
 import logging
 import numpy
 from scipy.interpolate import interp1d
-from scipy.interpolate import BarycentricInterpolator
-from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq, newton
-from sympy import Interval, Intersection
+from sympy import Interval
 from itertools import combinations
 
+import pdb
 
 class NoIntersection(Exception):
     """
@@ -81,7 +80,7 @@ def find_curve_range_intersection(curve_1, curve_2, cut_at_inflection=False):
     return (x_range, y_range)
 
 
-def find_intersection_of_segments(segment_1, segment_2, accuracy=None,
+def find_intersection_of_segments(segment_1, segment_2, accuracy=1e-1,
                                   bin_center=None, bin_size=None,
                                   newton_maxiter=5):
     """
@@ -102,7 +101,7 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=None,
         due to many cases when there is no intersection but
         the module keeps trying to find one.
     """
-    # First check if the two segments share any x- and y-range.
+    ### First check if the two segments share any x- and y-range.
     x_range, y_range = find_curve_range_intersection(
         segment_1, segment_2, cut_at_inflection=True
     )
@@ -118,8 +117,8 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=None,
 
     if (x_range.is_EmptySet or y_range.is_EmptySet or x_range.is_FiniteSet or
             y_range.is_FiniteSet):
-        # The segments and the bin do not share a domain and therefore
-        # there is no intersection.
+        ### The segments and the bin do not share a domain and therefore
+        ### there is no intersection.
         raise NoIntersection()
 
     f1 = interp1d(*segment_1)
@@ -130,38 +129,8 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=None,
         logging.debug('try brentq.')
         intersection_x = brentq(delta_f12, x_range.start, x_range.end)
         intersection_y = f1(intersection_x)
+
     except ValueError:
-        """
-        (f1 - f2) has the same sign at x_range.start & x_range.end
-        use Newton's method instead, and for that purpose interpolate
-        curves using polynomial interpolation.
-        """
-        # TODO: maybe spline interpolation is better because it can
-        # provide derivatives of interpolatioin functions, but couldn't make
-        # it work yet.
-        """
-        # NOTE: cubic spline interpolation requires more than 3 points.
-        if len(segment_1) <= 3 or len(segment_2) <= 3:
-            # not enough data; stop finding an intersection
-            raise NoIntersection
-        # UnivariateSpline requires x to be an increasing array.
-        segment_1.sort(0)
-        segment_2.sort(0)
-        f1 = UnivariateSpline(*zip(*segment_1))
-        f1_prime = f1.derivative()
-        f2 = UnivariateSpline(*zip(*segment_2))
-        f2_prime = f2.derivative()
-        x0 = 0.5*(x_range.start + x_range.end)
-
-        delta_f12 = lambda x: f1(x) - f2(x)
-        delta_f12_prime = lambda x: f1_prime(x) - f2_prime(x)
-
-        intersection_x = newton(delta_f12, x0, delta_f12_prime(x0))
-        """
-        logging.debug('try BarycentricInterpolator.')
-        f1 = BarycentricInterpolator(*segment_1)
-        f2 = BarycentricInterpolator(*segment_2)
-        delta_f12 = lambda x: f1(x) - f2(x)
 
         x0 = 0.5*(x_range.start + x_range.end)
 
@@ -169,15 +138,20 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=None,
             logging.debug('try newton with x0 = %.8f.', x0)
             intersection_x = newton(delta_f12, x0, maxiter=newton_maxiter)
             logging.debug('intersection_x = %.8f.', intersection_x)
-        except RuntimeError:
-            # Newton's method fails to converge; declare no intersection
+        except ValueError:
+            ### newton() searches for x outside the interpolation domain.
+            ### Declare no intersection.
             raise NoIntersection()
-        #except RuntimeWarning:
-        #    pdb.set_trace()
-        #    pass
+        except RuntimeError:
+            ### Newton's method fails to converge; declare no intersection
+            raise NoIntersection()
 
-        # Check if the intersection is within the curve range.
-        # If not, the intersecion is not valid.
+        ### Verify the solution returned by newton().
+        if abs(delta_f12(intersection_x)) > accuracy:
+            raise NoIntersection()
+
+        ### Check if the intersection is within the curve range.
+        ### If not, the intersecion is not valid.
         if intersection_x not in x_range:
             raise NoIntersection()
         intersection_y = f1(intersection_x)

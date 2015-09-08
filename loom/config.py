@@ -34,7 +34,6 @@ class LoomConfig:
     """
     def __init__(self):
         self.data = {}
-        #self.data['sw_parameters'] = {}
         self.parser = None
 
 
@@ -66,13 +65,12 @@ class LoomConfig:
         with open(config_file, 'r') as fp:
             config_parser.readfp(fp)
 
-        # Initialize sw_parameters
+        ### Initialize sw_parameters
         self['sw_parameters'] = {}
 
         for section in config_parser.sections():
             for option in config_parser.options(section):
-                if (section == 'directories'
-                    or section == 'symbolic expressions'):
+                if (section == 'Seiberg-Witten data'):
                     self[option] = config_parser.getstr(section, option)
                 elif section == 'Seiberg-Witten parameters':
                     self['sw_parameters'][option] = config_parser.get(

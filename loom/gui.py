@@ -1,16 +1,13 @@
 import os
-import time
-import glob
 import logging
 import Tkinter as tk
 import tkFileDialog
 import pdb
 
-from math import pi
-from config import LoomConfig
 from api import (generate_spectral_network, load_config, load_spectral_network,
-                 save_config, save_spectral_network,
-                 make_spectral_network_plot,)
+                 save_config, save_spectral_network, 
+                 make_spectral_network_plot, SpectralNetworkData,)
+from trivialization import SWDataWithTrivialization
 
 class GUILoom:
     def __init__(self, config=None, spectral_networks=[],):
@@ -28,6 +25,7 @@ class GUILoom:
         self.entry_var = {}
         self.mb = None
         self.check = {}
+        self.sw_data = None
         self.spectral_networks = spectral_networks
 
 
@@ -73,26 +71,15 @@ class GUILoom:
             textvariable=self.entry_phase
         )
 
-        # Entry & Label layout
+        ### Entry & Label layout
         grid_row += 1
         grid_col = 0
         tk.Label(self.root,
-                 text='sw_curve').grid(row=grid_row, column=grid_col)
+                 text='diffenrentials').grid(row=grid_row, column=grid_col)
         grid_col += 1
-        self.entry['sw_curve'].grid(
+        self.entry['differentials'].grid(
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW
         )
-
-        grid_row += 1
-        grid_col = 0
-        tk.Label(self.root,
-                 text='sw_diff').grid(row=grid_row, column=grid_col)
-        grid_col += 1
-        self.entry['sw_diff_v'].config(justify=tk.RIGHT)
-        self.entry['sw_diff_v'].grid(row=grid_row, column=grid_col)
-        grid_col += 1
-        tk.Label(self.root,
-                 text='dz').grid(row=grid_row, column=grid_col, sticky=tk.W)
 
         grid_row += 1
         grid_col = 0
@@ -142,7 +129,7 @@ class GUILoom:
         grid_col += 1
         self.entry['phase'].grid(row=grid_row, column=grid_col)
 
-        # Check plot_on_cylinder
+        ### Check plot_on_cylinder
         grid_row += 1
         grid_col = 0
         self.check['plot_on_cylinder'] = tk.IntVar()
@@ -152,11 +139,11 @@ class GUILoom:
             variable=self.check['plot_on_cylinder']
         ).grid(row=grid_row, column=grid_col)
 
-        # Set default parameters.
+        ### Set default parameters.
         for option in self.entry_var:
             self.entry_var[option].set(self.config[option])
 
-        # 'Generate' button
+        ### 'Generate' button
         grid_row += 1
         grid_col = 0
         self.button_generate = tk.Button(
@@ -167,7 +154,7 @@ class GUILoom:
         grid_col += 1
         self.button_generate.grid(row=grid_row, column=grid_col, sticky=tk.E)
 
-        # 'Plot' button
+        ### 'Plot' button
         grid_col += 1
         self.button_plot = tk.Button(
             self.root,
@@ -176,6 +163,23 @@ class GUILoom:
         )
         grid_col += 1
         self.button_plot.grid(row=grid_row, column=grid_col, sticky=tk.E)
+
+
+    def button_print_config_action(self):
+        self.update_config_from_entries()
+        print("config in parser:")
+        for section in self.config.parser.sections():
+            print("section: {}".format(section))
+            for option in self.config.parser.options(section):
+                print(
+                    "{} = {}".format(
+                        option, self.config.parser.getstr(section, option)
+                    )
+                )
+
+        print("config :")
+        for option, value in self.config.iteritems():
+            print("{} = {}".format(option, value))
 
 
     def check_plot_on_cylinder(self):
@@ -207,8 +211,14 @@ class GUILoom:
 
 
     def menu_load_data_action(self):
-        self.config, self.spectral_networks = load_spectral_network()
-        return None
+        config, spectral_network_data = load_spectral_network()
+        if config is None:
+            return None
+        self.config = config 
+        self.spectral_networks = spectral_network_data.spectral_networks
+        self.sw_data = spectral_network_data.sw_data
+        logging.info('Finished loading spectral network data.')
+
 
     def menu_save_data_action(self):
         dir_opts = {
@@ -223,20 +233,19 @@ class GUILoom:
         else:
             self.update_config_from_entries()
             save_spectral_network(
-                self.config, self.spectral_networks, data_dir,
+                self.config, 
+                SpectralNetworkData(self.sw_data, self.spectral_networks,),
+                data_dir,
                 make_zipped_file=False,
             )
         return None
 
 
     def update_config_from_entries(self):
-        # Read config options from Entries.
+        ### Read config options from Entries.
         for section in self.config.parser.sections():
-            # Reset the given section of config.parser
-            if (section == 'directories'):
-                continue
-            elif (section == 'Seiberg-Witten parameters'):
-                # Reset the given section of config.parser
+            if (section == 'Seiberg-Witten parameters'):
+                ### Reset the given section of config.parser
                 for option in self.config.parser.options(section):
                     self.config.parser.remove_option(section, option)
 
@@ -244,32 +253,34 @@ class GUILoom:
                 self.config['sw_parameters'] = params_input
                 for var, val in params_input.iteritems():
                     self.config.parser.set(section, var, str(val))
-                continue
-            for option in self.config.parser.options(section):
-                value = self.entry_var[option].get()
-                if (section == 'symbolic expressions'):
-                    self.config[option] = value
-                elif (section == 'numerical parameters'):
-                    self.config[option] = eval(value)
-                self.config.parser.set(section, option, value)
+            else:
+                for option in self.config.parser.options(section):
+                    value = self.entry_var[option].get()
+                    if (section == 'numerical parameters'):
+                        self.config[option] = eval(value)
+                    else:
+                        self.config[option] = value
+                    self.config.parser.set(section, option, value)
 
 
     def button_generate_action(self):
         self.update_config_from_entries()
 
-        self.spectral_networks = generate_spectral_network(
+        spectral_network_data = generate_spectral_network(
             self.config,
             phase=eval(self.entry_phase.get()),
         )
+        self.sw_data = spectral_network_data.sw_data
+        self.spectral_networks = spectral_network_data.spectral_networks
 
         return None
 
     def button_plot_action(self):
-        # Plot spectral networks.
+        ### Plot spectral networks.
         if (len(self.spectral_networks) > 0):
-            spectral_network_plot = make_spectral_network_plot(
-                self.config,
-                self.spectral_networks,
+            snd = SpectralNetworkData(self.sw_data, self.spectral_networks)
+            make_spectral_network_plot(
+                snd,
                 master=self.root,
                 plot_on_cylinder=self.check_plot_on_cylinder,
             )
@@ -283,6 +294,10 @@ def open_gui(config, spectral_networks,):
 
     gui_loom = GUILoom(config, spectral_networks=spectral_networks)
     gui_loom.create_widgets()
+    gui_loom.root.protocol("WM_DELETE_WINDOW", lambda: quit_gui(gui_loom),)
     gui_loom.root.mainloop()
 
-    return None
+    return None 
+
+def quit_gui(gui_loom):
+    gui_loom.root.destroy()

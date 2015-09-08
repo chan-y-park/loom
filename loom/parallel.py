@@ -1,4 +1,3 @@
-import os
 import signal
 import multiprocessing
 import logging
@@ -16,7 +15,6 @@ def init_process():
 def a_child_process(
     sw,
     phase,
-    ramification_points,
     config,
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks
@@ -29,23 +27,22 @@ def a_child_process(
                  .format(job_id, theta_n, phase)
     )
 
-    spectral_network = SpectralNetwork(phase, ramification_points, config)
+    spectral_network = SpectralNetwork(
+        phase=phase, 
+    ) 
 
-    spectral_network.grow(sw, config)
+    spectral_network.grow(config, sw)
 
     shared_n_finished_spectral_networks.value += 1
     logging.info('Finished generating spectral network #{}/{}.'
                  .format(shared_n_finished_spectral_networks.value, theta_n)
     )
 
-    #spectral_network_data = spectral_network.get_data()
-
     return spectral_network
 
 
 def parallel_get_spectral_network(
-    sw,
-    ramification_points,
+    sw, 
     config,
 ):
     spectral_network_list = []
@@ -61,10 +58,10 @@ def parallel_get_spectral_network(
 
     n_cpu = multiprocessing.cpu_count()
     if (n_processes == 0):
-        # Use all the CPUs.
+        ### Use all the CPUs.
         n_processes = n_cpu
     elif (n_processes < 0):
-        # Leave |n_processes| CPUs.
+        ### Leave |n_processes| CPUs.
         if(n_cpu > -n_processes):
             n_processes = n_cpu - (-n_processes)
         else:
@@ -78,7 +75,7 @@ def parallel_get_spectral_network(
             logging.warning('Set n_processes to {}.'.format(n_cpu))
             n_processes = n_cpu
 
-    # Use n_processes CPUs.
+    ### Use n_processes CPUs.
     multiprocessing.freeze_support()
     pool =  multiprocessing.Pool(n_processes, init_process)
     logging.info('Number of processes in the pool: {}'.format(n_processes))
@@ -90,7 +87,6 @@ def parallel_get_spectral_network(
                 args=(
                     sw,
                     phase,
-                    ramification_points,
                     config,
                     shared_n_started_spectral_networks,
                     shared_n_finished_spectral_networks,
