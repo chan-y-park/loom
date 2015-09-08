@@ -7,10 +7,7 @@ on a real 2-dim plane.
 import logging
 import numpy
 from scipy.interpolate import interp1d
-#from scipy.interpolate import BarycentricInterpolator
-#from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq, newton
-#from sympy import Interval, Intersection
 from sympy import Interval
 from itertools import combinations
 
@@ -132,38 +129,8 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=1e-1,
         logging.debug('try brentq.')
         intersection_x = brentq(delta_f12, x_range.start, x_range.end)
         intersection_y = f1(intersection_x)
+
     except ValueError:
-        """
-        (f1 - f2) has the same sign at x_range.start & x_range.end
-        use Newton's method instead, and for that purpose interpolate
-        curves using polynomial interpolation.
-        """
-        # TODO: maybe spline interpolation is better because it can
-        # provide derivatives of interpolatioin functions, but couldn't make
-        # it work yet.
-        """
-        # NOTE: cubic spline interpolation requires more than 3 points.
-        if len(segment_1) <= 3 or len(segment_2) <= 3:
-            # not enough data; stop finding an intersection
-            raise NoIntersection
-        # UnivariateSpline requires x to be an increasing array.
-        segment_1.sort(0)
-        segment_2.sort(0)
-        f1 = UnivariateSpline(*zip(*segment_1))
-        f1_prime = f1.derivative()
-        f2 = UnivariateSpline(*zip(*segment_2))
-        f2_prime = f2.derivative()
-        x0 = 0.5*(x_range.start + x_range.end)
-
-        delta_f12 = lambda x: f1(x) - f2(x)
-        delta_f12_prime = lambda x: f1_prime(x) - f2_prime(x)
-
-        intersection_x = newton(delta_f12, x0, delta_f12_prime(x0))
-        """
-        #logging.debug('try BarycentricInterpolator.')
-        #f1 = BarycentricInterpolator(*segment_1)
-        #f2 = BarycentricInterpolator(*segment_2)
-        #delta_f12 = lambda x: f1(x) - f2(x)
 
         x0 = 0.5*(x_range.start + x_range.end)
 

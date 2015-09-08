@@ -1,12 +1,9 @@
 import numpy
-#import scipy
 import sympy
 import logging
-#import pdb
 
 from fractions import Fraction
 from sympy import limit, oo
-#from cmath import exp, log
 from cmath import log
 
 

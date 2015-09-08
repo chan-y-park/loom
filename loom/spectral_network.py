@@ -5,29 +5,19 @@ import scipy
 import sympy
 import ctypes
 import logging
-#import signal
-#import multiprocessing
-#import subprocess
 import json
 
 import pdb
 
-#from math import floor
 from cmath import exp
-#from itertools import combinations
 
-#from geometry import RamificationPoint, find_xs_at_z_0
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
 from misc import (
-    #n_nearest, 
     n_nearest_indices, 
-    #left_right, clock, delete_duplicates
 )
 from intersection import (
     NoIntersection, find_intersection_of_segments,
-    #find_curve_range_intersection
 )
-#from scipy import interpolate
 
 
 class SpectralNetwork:
@@ -91,7 +81,6 @@ class SpectralNetwork:
                 s_i = self.s_walls[i]
                 logging.info('Growing S-wall #{}...'.format(i))
                 s_i.grow(ode, bpzs, ppzs, config)
-                #self.determine_root_types(self.s_walls[i], sw_data)
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
                 s_i.determine_root_types(sw_data)
@@ -137,31 +126,6 @@ class SpectralNetwork:
             iteration += 1
 
             logging.info('Iteration #{} finished.'.format(iteration))
-#
-#        ### Decorate S-walls with trivialization.
-#        for k, s_wall in enumerate(self.s_walls):
-#            logging.info('Adding trivialization info to S-wall #{}'
-#                         .format(k))
-#            ### Find weights corresponding to the x's of the endpoint
-#            ### of the S-wall.
-#            final_z = s_wall.z[-1]
-#            sheet_xs = sw.get_sheet_xs_at_z(final_z)
-#            sheets = []
-#            ### Identify S-wall's x's with sheet #'s. 
-#            s_wall_xs = s_wall.x[-1]
-#            for x in s_wall_xs:
-#                difference = numpy.fromiter(
-#                    (abs(x - sheet_x) for sheet_x in sheet_xs),
-#                    dtype=float,
-#                )
-#                i = difference.argsort()[0]
-#                sheets.append(i)
-#            ### Now sheets = [i_0, i_1], where s_wall.x[0][i_0] corresponds
-#            ### to g_data.weights[i_0] and similarly for i_1.
-#            s_wall.label += '\nweights = ('
-#            for i in sheets:
-#                s_wall.label += '{},'.format(sw.g_data.weights[i])
-#            s_wall.label += ')'
 
 
     def save_json_data(self, file_object, **kwargs):
@@ -274,32 +238,6 @@ class SpectralNetwork:
 
             if prev_s_wall.label in new_s_wall.parents:
                 continue
-                    
-            # # Check if the two S-walls have a common x-range.  
-            # have_common_x_range = False
-            # for x_a, x_b in (
-            #     (x_a, x_b) for x_a in new_s_wall.x.T 
-            #     for x_b in prev_s_wall.x.T
-            # ):
-            #     x_r_range, x_i_range = (
-            #         find_curve_range_intersection(
-            #             (x_a.real, x_a.imag),
-            #             (x_b.real, x_b.imag),
-            #             cut_at_inflection=False,
-            #         )
-            #     )
-            #     if ((x_r_range.is_EmptySet is True) or 
-            #         (x_r_range.is_EmptySet is True) or 
-            #         x_i_range.is_FiniteSet or
-            #         x_i_range.is_FiniteSet):
-            #         continue
-            #     else:
-            #         have_common_x_range = True
-            #         break
-            # if have_common_x_range is False:
-            #     # No common x range, therefore no joint.
-            #     continue
-
             # Find an intersection on the z-plane.
             try:
                 buffer_size = 10
@@ -307,10 +245,7 @@ class SpectralNetwork:
                 while not intersection_search_finished:
                     intersections = numpy.empty((buffer_size, 2), 
                                                 dtype=numpy.float64)
-                    #from plotting import plot_s_walls
-                    #plot_s_walls([new_s_wall, prev_s_wall])
                     num_of_intersections = cgal_find_intersections_of_curves(
-                        #new_s_wall.z.view(numpy.dtype((numpy.float64,2))),
                         new_s_wall.z,
                         ctypes.c_long(len(new_s_wall.z)), 
                         prev_s_wall.z, 
@@ -334,11 +269,9 @@ class SpectralNetwork:
 
                     # t_n: index of new_s_wall.z nearest to ip_z
                     t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
-                    #M_n = new_s_wall.M[t_n]
 
                     # t_p: index of z_seg_p nearest to ip_z
                     t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
-                    #M_p = prev_s_wall.M[t_p]
 
                     # TODO: need to put the joint into the parent
                     # S-walls?
@@ -386,46 +319,17 @@ class SpectralNetwork:
         new_s_wall = self.s_walls[new_s_wall_index]
         new_tps = new_s_wall.get_turning_points()
         new_z_segs = numpy.split(new_s_wall.z, new_tps, axis=0,)
-        # new_x_segs = numpy.split(new_s_wall.x, new_tps, axis=0,)
 
         # NOTE: Here we find only a single joint between two S-walls.
         # Use CGAL to find multiple z-intersections.
         for prev_s_wall in self.s_walls[:new_s_wall_index]:
             prev_tps = prev_s_wall.get_turning_points()
             prev_z_segs = numpy.split(prev_s_wall.z, prev_tps, axis=0,)
-            # prev_x_segs = numpy.split(prev_s_wall.x, prev_tps, axis=0,)
 
             for i_n in range(len(new_tps)+1):
                 z_seg_n = new_z_segs[i_n]
                 for i_p in range(len(prev_tps)+1):
                     z_seg_p = prev_z_segs[i_p]
-
-                    # # Check if the two segments have a common x-range.
-                    # have_common_x_range = False
-                    # for x_a, x_b in (
-                    #     (x_a, x_b) for x_a in new_x_segs[i_n].T
-                    #     for x_b in prev_x_segs[i_p].T
-                    # ):
-                    #     x_r_range, x_i_range = (
-                    #         find_curve_range_intersection(
-                    #             (x_a.real, x_a.imag),
-                    #             (x_b.real, x_b.imag),
-                    #             cut_at_inflection=False,
-                    #         )
-                    #     )
-                    #     if ((x_r_range.is_EmptySet is True) or
-                    #         (x_r_range.is_EmptySet is True) or
-                    #         x_i_range.is_FiniteSet or
-                    #         x_i_range.is_FiniteSet):
-                    #         continue
-                    #     else:
-                    #         have_common_x_range = True
-                    #         break
-                    # if have_common_x_range is False:
-                    #     # No common x range, therefore no joint.
-                    #     continue
-
-                    
                     # Find an intersection on the z-plane.
                     try:
                         ip_x, ip_y = find_intersection_of_segments(
@@ -436,14 +340,10 @@ class SpectralNetwork:
                         ip_z = ip_x + 1j*ip_y
 
                         # t_n: index of z_seg_n nearest to ip_z
-                        # t_n = n_nearest_indices(z_seg_n, ip_z, 1)[0]
-                        # x_n = new_x_segs[i_n][t_n]
                         t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
 
 
                         # t_p: index of z_seg_p nearest to ip_z
-                        # t_p = n_nearest_indices(z_seg_p, ip_z, 1)[0]
-                        # x_p = prev_x_segs[i_p][t_p]
                         t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
 
                         # TODO: need to put the joint into the parent
@@ -452,8 +352,6 @@ class SpectralNetwork:
                         # find mass of parent S-walls: this is approximate,
                         # since we don't interpolate precisely to the joint
                         # TODO: improve by doing precise interpolation
-                        #M_n = new_s_wall.M[t_n]
-                        #M_p = prev_s_wall.M[t_p]
                         a_joint = get_joint(
                             ip_z, 
                             prev_s_wall,
@@ -473,118 +371,6 @@ class SpectralNetwork:
         return new_joints
 
 
-# NOTE: chan: Moved to SWall.
-#    def determine_root_types(self, s_wall, sw_data):
-#        """
-#        Determine at which points the wall crosses a cut, 
-#        for instance [55, 107, 231] would mean that 
-#        it changes root-type 3 times. 
-#        Hence, s_wall.splittings would have length 3, 
-#        while s_wall.local_roots would have length 4.
-#        """
-#        # Determine the initial root-type
-#        z_0 = s_wall.z[0]
-#        x_0 = s_wall.x[0]
-#        # ffr_x_0 = s_wall.ffr_x[0]
-#        initial_root = get_s_wall_root(z_0, x_0, sw_data,)
-#        # A list of ordered pairs [...[i, j]...]
-#        # such that weights[j] - weights[i] = root
-#        initial_weight_pairs = (
-#                    sw_data.g_data.ordered_weight_pairs(initial_root,)
-#                    )
-#        
-#        s_wall.local_roots = [initial_root]
-#        s_wall.local_weight_pairs = [initial_weight_pairs]
-#
-#        # If the length of the S-wall's coordinates
-#        # is 3 or less, do not check cuts.
-#        # Otherwise, the interpolation methood would
-#        # raise an error.
-#        if len(s_wall.z) <= 3:
-#            return None
-#
-#        branch_points = sw_data.branch_points
-#        bpzs_r = [bp.z.real for bp in branch_points]
-#        
-#        # parametrizing the z-coordinate of the k-wall's coordinates
-#        # as a function of proper time
-#        traj_t = numpy.array(range(len(s_wall.z)))
-#        traj_x = numpy.array([w.real for w in s_wall.z])
-#        
-#        # Scan over branch cuts, see if path ever crosses one 
-#        # based on x-coordinates only
-#        for b_pt_num, x_0 in list(enumerate(bpzs_r)):
-#            g = interpolate.splrep(traj_t, traj_x - x_0, s=0)
-#            # now produce a list of integers corresponding to points in the 
-#            # S-wall's coordinate list that seem to cross branch-cuts
-#            # based on the z-coordinate's real part.
-#            # Now get the list of intersection points as integer values 
-#            # of the proper time, approximated by the floor function
-#            intersections = map(int, map(floor, interpolate.sproot(g)))
-#            
-#            # removing duplicates
-#            intersections = delete_duplicates(intersections)
-#            # enforcing imaginary-part of z-coordinate intersection criterion:
-#            # branch cuts extend vertically
-#            y_0 = branch_points[b_pt_num].z.imag
-#            intersections = (
-#                    [i for i in intersections if s_wall.z[i].imag > y_0 ]
-#                    )
-#            # adding the branch-point identifier to each intersection
-#            intersections = (
-#                [[branch_points[b_pt_num], i] for i in intersections]
-#                )
-#            # dropping intersections of a primary S-wall with the 
-#            # branch cut emanating from its parent branch-point
-#            # if such intersections happens at t=0 or t=1
-#            intersections = (
-#                    [[bp, i] for bp, i in intersections if (
-#                    not (bp.label == s_wall.parents[0] and (
-#                    i == 0 or i==1)
-#                    ))]
-#                )
-#            # add the direction to the intersection data: either 'cw' or 'ccw'
-#            intersections = ([
-#                        [bp, i, clock(left_right(s_wall.z, i))] 
-#                        for bp, i in intersections
-#                    ])
-#
-#            s_wall.cuts_intersections += intersections
-#        # Might be worth implementing an algorithm for handling 
-#        # overlapping branch cuts: e.g. the one with a lower starting point 
-#        # will be taken to be on the left, or a similar criterion.
-#        # Still, there will be other sorts of problems, it is necessary
-#        # to just rotate the z-plane and avoid such situations.
-#
-#        # now sort intersections according to where they happen in proper 
-#        # time; recall that the elements of cuts_intersections are organized 
-#        # as      [..., [branch_point, t, 'ccw'] ,...]
-#        # where 't' is the integer of proper time at the intersection.
-#        s_wall.cuts_intersections = sorted(
-#                                    s_wall.cuts_intersections, 
-#                                    cmp = lambda k1,k2: cmp(k1[1],k2[1])
-#                                    )
-#        logging.debug(
-#            '\nS-wall {}\nintersects the following'
-#            'cuts at the points\n{}\n'.format(s_wall.label, intersections))
-#
-#        if len(s_wall.cuts_intersections) > 0:
-#            # Add the actual intersection point to the S-wall
-#            # then update the attribute SWall.cuts_intersections accordingly
-#            s_wall.enhance_at_cuts()
-#            
-#            for k in range(len(s_wall.cuts_intersections)):
-#                branch_point = s_wall.cuts_intersections[k][0]   # branch-point
-#                # t = s_wall.cuts_intersections[k][1]           # proper time
-#                direction = s_wall.cuts_intersections[k][2]     # 'ccw' or 'cw'
-#                current_root = s_wall.local_roots[-1]
-#                new_root = sw_data.g_data.weyl_monodromy(
-#                                        current_root, branch_point, direction)
-#                new_weight_pairs = sw_data.g_data.ordered_weight_pairs(new_root)
-#                s_wall.local_roots.append(new_root)
-#                s_wall.local_weight_pairs.append(new_weight_pairs)
-
-
 def get_ode(sw, phase, accuracy):
     x, z = sympy.symbols('x z')
     ode_absolute_tolerance = accuracy
@@ -595,7 +381,7 @@ def get_ode(sw, phase, accuracy):
     f = sw.ffr_curve.num_eq
     df_dz = f.diff(z)
     df_dx = f.diff(x)
-    # F = -(\partial f/\partial z)/(\partial f/\partial x)
+    # F = -(\partial f/\partial z)/(\partial f/\partial x).
     F = sympy.lambdify((z, x), -df_dz/df_dx)
     v = sympy.lambdify((z, x), sw.diff.num_v)
 

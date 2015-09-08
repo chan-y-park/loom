@@ -3,7 +3,6 @@ import numpy
 import pdb
 import logging
 import Tkinter as tk
-#import mpldatacursor
 
 import matplotlib
 from matplotlib.backends.backend_tkagg import (
@@ -15,9 +14,7 @@ from matplotlib import pyplot
 from math import pi
 
 from network_plot import NetworkPlotBase
-#from misc import PSL2C, put_on_cylinder, split_with_overlap
 from misc import put_on_cylinder, split_with_overlap
-#from bokeh_plot import create_root_color_map, root_color
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
@@ -80,11 +77,9 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
 
             for z_seg in z_segs:
                 segments.append([z_seg.real, z_seg.imag])
-                # seg_labels.append(s_wall.label)
 
             walls.append(segments)
             walls_roots.append(s_wall.local_roots)
-            #root_color_map = create_root_color_map(g_data)
             walls_colors = [
                 [g_data.root_color(root) for root in w_roots]
                 for w_roots in walls_roots
@@ -216,11 +211,9 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         title=None,
     ):
         super(NetworkPlotTk, self).__init__(
-            #matplotlib_figure=pyplot.figure(title),
             matplotlib_figure=matplotlib.figure.Figure(),
         )
 
-        #self.root = None
         if master is None:
             root = tk.Tk()
             root.withdraw()
@@ -363,7 +356,6 @@ def make_weight_dictionary(g_data):
 
 def print_spectral_network_data(s_walls, branch_points, g_data):
     root_dictionary = make_root_dictionary(g_data)
-    #weight_dictionary = make_weight_dictionary(g_data)
 
     print('\t--- The S-Wall Data ---\n')
     for s in s_walls:
@@ -420,152 +412,3 @@ def print_legend(g_data):
     for i in range(len(weights)):
         print(weight_labels[i] + ' : {}\n'.format(list(weights[i])))
     
-# def plot_s_walls(
-#     s_walls,
-#     ramification_points=[],
-#     joints=[],
-#     plot_range=[[-5, 5], [-5, 5]],
-#     plot_data_points=False,
-#     marked_points=[],
-#     colors=['b', 'g', 'r', 'c', 'm', 'y'], 
-# ):
-#     [x_min, x_max], [y_min, y_max] = plot_range
-
-#     pyplot.figure(1)
-#     pyplot.title('S-walls')
-
-#     # z-plane
-#     zax = pyplot.subplot(
-#         121,
-#         label='z-plane',
-#         xlim=(x_min, x_max),
-#         ylim=(y_min, y_max),
-#         aspect='equal',
-#     )
-#     # Plot branch points
-#     for rp in ramification_points:
-#         zax.plot(rp.z.real, rp.z.imag, 'x', markeredgewidth=2, markersize=8, 
-#                  color='k', label=rp.label,)
-#     for jp in joints:
-#         zax.plot(jp.z.real, jp.z.imag, '+', markeredgewidth=2, markersize=8, 
-#                  color='k', label=jp.label,)
-#     for p in marked_points:
-#         zax.plot(p[0].real, p[0].imag, 'o', markeredgewidth=2,
-#                  markersize=4, color='k')
-
-#     # x-plane
-#     xax = pyplot.subplot(
-#         122,
-#         label='x-plane',
-#         xlim=(x_min, x_max),
-#         ylim=(y_min, y_max),
-#         aspect='equal',
-#     )
-#     for rp in ramification_points:
-#         xax.plot(rp.x.real, rp.x.imag, 'x', markeredgewidth=2, markersize=8, 
-#                  color='k', label=rp.label,)
-#     for jp in joints:
-#         for j, x_j in enumerate(jp.x):
-#             xax.plot(
-#                 x_j.real, x_j.imag,
-#                 '+', markeredgewidth=2, markersize=8, color='k', 
-#                 label=(jp.label + ', {}'.format(j)),
-#             )
-#     for p in marked_points:
-#         xax.plot(p[1].real, p[1].imag, 'o', markeredgewidth=2,
-#                  markersize=4, color='k')
-
-#     for i, s_wall in enumerate(s_walls):
-#         s_wall_color = colors[i % len(colors)]
-#         # z-plane
-#         zrs = s_wall.z.real
-#         zis = s_wall.z.imag
-#         zax.plot(zrs, zis, '-', color=s_wall_color, 
-#                  label=s_wall.label)
-#         if(plot_data_points == True):
-#             zax.plot(zrs, zis, 'o', color=s_wall_color, label=s_wall.label)
-
-#         # x-plane
-#         xs = s_wall.x.T
-#         for j, x_j in enumerate(xs):
-#             xrs = x_j.real
-#             xis = x_j.imag
-#             xax.plot(
-#                 xrs, xis, '-', color=s_wall_color, 
-#                 label=(s_wall.label + ',{}'.format(j))
-#             )
-#             if(plot_data_points == True):
-#                 xax.plot(
-#                     xrs, xis, 'o', color=s_wall_color, 
-#                     label=(s_wall.label + ',{}'.format(j))
-#                 )
-            
-#     mpldatacursor.datacursor(
-#         formatter='{label}'.format,
-#         #tolerance=2,
-#         #hover=True,
-#         display='multiple',
-#     )
-
-#     pyplot.show()
-
-# def plot_segments(
-#     segments, 
-#     marked_points=[],
-#     plot_range=[-5, 5, -5, 5],
-#     plot_data_points=False
-# ):
-#     """
-#     Plot the given segments for debugging.
-#     """
-#     [x_min, x_max], [y_min, y_max] = plot_range
-
-#     # Plot setting.
-#     pyplot.xlim(x_min, x_max)
-#     pyplot.ylim(y_min, y_max)
-#     pyplot.axes().set_aspect('equal')
-
-#     for segment in segments:
-#         xs, ys = segment
-#         pyplot.plot(xs, ys, '-')
-#         if(plot_data_points == True):
-#             pyplot.plot(xs, ys, 'o', color='b')
-
-#     for p in marked_points:
-#         pyplot.plot(p[0], p[1], 'x', markeredgewidth=2, markersize=8,
-#                     color='k')
-
-#     pyplot.show()
-
-
-# def plot_s_walls(s_walls, plot_range=None, plot_data_points=False,):
-#     """
-#     Plot S-walls for debugging purpose.
-#     """
-#     pyplot.figure()
-#     pyplot.axes().set_aspect('equal')
-
-#     for s_wall in s_walls:
-#         xs = s_wall.z.real 
-#         ys = s_wall.z.imag 
-#         pyplot.plot(xs, ys, '-', label=s_wall.label)
-
-#         if(plot_data_points == True):
-#             pyplot.plot(xs, ys, 'o', color='k', markersize=4)
-
-#     if plot_range is None:
-#         pyplot.autoscale(enable=True, axis='both', tight=None)
-#     else:
-#         [[x_min, x_max], [y_min, y_max]] = plot_range
-#         pyplot.xlim(x_min, x_max)
-#         pyplot.ylim(y_min, y_max)
-
-#     mpldatacursor.datacursor(
-#         formatter='{label}'.format,
-#         hover=True,
-#     )
-
-#     pyplot.show()
-
-
-

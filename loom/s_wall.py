@@ -176,11 +176,8 @@ class SWall(object):
         self.parents = parents
         self.label = label
 
-        # cuts_intersections = [[b_pt_num, i, '(c)cw'], ...]
+        # cuts_intersections = [[b_pt_idx, i, '(c)cw'], ...]
         self.cuts_intersections = []
-        # splittings is a list of integers.
-        # NOTE: chan: splitting is redundant when we have cuts_intersections?
-        #self.splittings = []
         self.local_roots = []
         # local_weight_pairs is a list of pair of intgers.
         self.local_weight_pairs = []        
@@ -222,7 +219,6 @@ class SWall(object):
             ).tolist(),
             'parents': [parent for parent in self.parents],
             'label': self.label,
-            #'splittings': self.splittings,
             'cuts_intersections': self.cuts_intersections,
             'local_roots': [root.tolist() for root in self.local_roots],
             'local_weight_pairs': self.local_weight_pairs,
@@ -238,7 +234,6 @@ class SWall(object):
         )
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
-        #self.splittings = json_data['splittings']
         self.cuts_intersections = json_data['cuts_intersections']
         self.local_roots = numpy.array(json_data['local_roots'])
         self.local_weight_pairs = json_data['local_weight_pairs']
@@ -733,48 +728,4 @@ def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data=None, label=None):
         return Joint(z, s_wall_1, s_wall_2, t_1, t_2, label, sw_data)
     else:
         return None
-
-
-# def get_joint(z, x1_i, x2_i, x1_j, x2_j, M1, M2, parent_i, parent_j,
-#               accuracy=None, xs_at_z=None, g_data=None, label=None):
-#     """
-#     Return a joint if formed, otherwise return None.
-#     """
-#
-#     if (abs(x1_i - x2_j) < accuracy and abs(x1_j - x2_i) < accuracy):
-#         return None
-#     elif (abs(x2_i - x1_j) < accuracy):
-#         if differ_by_root(
-#             x1_i, x2_j, accuracy=accuracy, xs=xs_at_z, g_data=g_data,
-#         ):
-#             return Joint(z, [x1_i, x2_j], M1+M2, [parent_i, parent_j], label)
-#         else:
-#             return None
-#     elif (abs(x2_j - x1_i) < accuracy):
-#         if differ_by_root(
-#             x1_j, x2_i, accuracy=accuracy, xs=xs_at_z, g_data=g_data,
-#         ):
-#             return Joint(z, [x1_j, x2_i], M1+M2, [parent_j, parent_i], label)
-#         else:
-#             return None
-#
-#
-#def differ_by_root(x1, x2, accuracy=None, xs=None, g_data=None):
-#    root_system = g_data.root_system
-#    k = g_data.fundamental_representation_index
-#    # NOTE: A shortcut. Use this after checking this function
-#    # works correctly.
-#    if root_system[0] == 'A':
-#        if k == 1:
-#            return True
-#    elif root_system[0] == 'D' and k == 1:
-#        if abs(x1-(-x2)) < accuracy:
-#            return False
-#        else:
-#            return True
-#    else:
-#        # TODO
-#        raise NotImplementedError
-        
-    
 

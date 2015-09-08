@@ -1,19 +1,11 @@
 """
 Entry point of 'main.py' and 'gmain.py'.
-
-Requires the following libraries:
-NumPy 1.8.2
-SciPy 0.15.1
-SymPy 0.7.6
 """
 import sys
-#import logging
 import os
 import getopt
-#import time
 import pdb
 
-#from config import LoomConfig
 from gui import open_gui
 from api import (
     set_logging, load_config, load_spectral_network, generate_spectral_network,

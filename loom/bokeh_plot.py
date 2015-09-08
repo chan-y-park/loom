@@ -296,23 +296,3 @@ def g_data_tables(spectral_network_data):
     show(vform(weight_data_table(weight_dictionary))) 
     show(vform(root_data_table(root_dictionary, sw_data)))
     show(vform(branch_point_data_table(sw_data)))
-
-
-
-#def create_root_color_map(g_data):
-#    g_roots = list(g_data.roots)
-#    n_rts = len(g_roots)
-#    x = numpy.random.random(size=n_rts) * 200
-#    y = numpy.random.random(size=n_rts) * 200
-#    z = numpy.random.random(size=n_rts) * 200
-#    colors = [
-#        "#%02x%02x%02x" % (r, g, b) 
-#        for r, g, b in zip(numpy.floor(x), numpy.floor(y), numpy.floor(z))
-#    ]
-#    return {colors[i] : rt for i, rt in enumerate(g_roots)}
-#
-#def root_color(root, root_color_map):
-#    return (
-#        [k for k, v in root_color_map.iteritems()
-#         if numpy.array_equal(v, root)][0]
-#    )

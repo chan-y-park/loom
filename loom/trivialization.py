@@ -1,18 +1,13 @@
-#import sympy
-#import matplotlib.pyplot as plt
-#import cmath
 import numpy as np
 import logging
 import pdb
 
-#from sympy import Poly
 from cmath import exp, pi, phase
 from numpy.linalg import matrix_rank
 from itertools import combinations
 from pprint import pprint
 
 from geometry import SWDataBase
-#from misc import delete_duplicates, n_unique
 from misc import n_unique
 
 ### number of steps used to track the sheets along a leg 
@@ -110,9 +105,6 @@ class BranchPoint:
         self.positive_roots = None 
         self.order = None
 
-        #self.path_to_z = None
-        #self.path_around_z = None
-        #self.sheets_around_z = None
         self.monodromy = None
         self.ffr_ramification_points = None
         self.label = None
@@ -137,9 +129,6 @@ class IrregularSingularity:
     def __init__(self, z=None):
         self.z = z
         
-        #self.path_to_z = None
-        #self.path_around_z = None
-        #self.sheets_around_z = None
         self.monodromy = None
         
     def print_info(self):
@@ -213,13 +202,11 @@ class SWDataWithTrivialization(SWDataBase):
         self.irregular_singularities = []
 
         # z-coords of branch points.
-        #bpzs = delete_duplicates(
         bpzs = n_unique(
             [r.z for r in self.ffr_ramification_points if not r.is_puncture],
             self.accuracy,
         )
         # z-coords of irregular singularities.
-        #iszs = delete_duplicates(
         iszs = n_unique(
             [r.z for r in self.ffr_ramification_points if r.is_puncture],
             self.accuracy,
@@ -252,10 +239,6 @@ class SWDataWithTrivialization(SWDataBase):
         self.reference_ffr_xs, self.reference_xs = self.get_aligned_xs(
             self.base_point,
         )
-        #self.reference_sheets = {i: x for i, x in enumerate(self.reference_xs)}
-        
-        ### XXX: sheet_weight_dictionary -> sw.g_data.weights
-        #self.sheet_weight_dictionary = self.build_dictionary()
 
         ### Construct the list of branch points
         for i, z_bp in enumerate(bpzs):
@@ -263,14 +246,12 @@ class SWDataWithTrivialization(SWDataBase):
             bp.label = 'Branch point #{}'.format(i)
             self.analyze_branch_point(bp)
             self.branch_points.append(bp)
-            # bp.print_info()
 
         ### Construct the list of irregular singularities
         for z_irr_sing in iszs:
             irr_sing = IrregularSingularity(z=z_irr_sing)
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
-            # irr_sing.print_info()
 
         
     # TODO: Need to implement tracking without using aligned x's?
@@ -421,9 +402,7 @@ class SWDataWithTrivialization(SWDataBase):
             "Analyzing a branch point at z = {}."
             .format(bp.z)
         )
-        #g_data = self.g_data
         path_to_bp = get_path_to(bp.z, self)
-        #bp.path_to_z = path_to_bp
         sheets_along_path = self.get_sheets_along_path(
             path_to_bp, is_path_to_bp=True
         )
@@ -453,8 +432,6 @@ class SWDataWithTrivialization(SWDataBase):
 
         path_around_bp = get_path_around(bp.z, self.base_point,
                                          self.min_distance)
-        #bp.path_around_z = path_around_bp
-        #bp.sheets_around_z = self.get_sheets_along_path(path_around_bp)
         bp.monodromy = self.get_sheet_monodromy(path_around_bp)
 
         bp.ffr_ramification_points = [rp 
@@ -468,8 +445,6 @@ class SWDataWithTrivialization(SWDataBase):
             .format(irr_sing.z)
         )
         path_around_z = get_path_around(irr_sing.z)
-        #irr_sing.path_around_z = path_around_z
-        #irr_sing.sheets_around_z = self.get_sheets_along_path(path_around_z)
         self.monodromy = (
             self.get_sheet_monodromy(path_around_z)
         )
@@ -540,12 +515,6 @@ def get_path_to(z_pt, sw_data):
         path_segment_4 = [z_3 + ((z_4 - z_3) / steps) * i
                           for i in range(steps + 1)]
         
-        # print "RUNNING CLOSE TO A BRANCH POINT: here is the path"
-        # print "FROM {} \nTO {}".format(base_pt, z_pt)
-        # print "THROUGH \n{}\n{}\n{}\n{}\n{}\n\n".format(z_0, z_1, z_2, z_3, z_4)
-        # print (path_segment_1 + path_segment_2 
-        #         + path_segment_3 + path_segment_4)
-
         return (path_segment_1 + path_segment_2 
                 + path_segment_3 + path_segment_4)
     

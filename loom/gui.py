@@ -1,13 +1,9 @@
 import os
-#import time
-#import glob
 import logging
 import Tkinter as tk
 import tkFileDialog
 import pdb
 
-#from math import pi
-#from config import LoomConfig
 from api import (generate_spectral_network, load_config, load_spectral_network,
                  save_config, save_spectral_network, 
                  make_spectral_network_plot, SpectralNetworkData,)
@@ -167,16 +163,6 @@ class GUILoom:
         )
         grid_col += 1
         self.button_plot.grid(row=grid_row, column=grid_col, sticky=tk.E)
-
-        ### chan: FIXME: for debugging
-#        grid_col += 1
-#        self.button_plot = tk.Button(
-#            self.root,
-#            text='Print config',
-#            command=self.button_print_config_action,
-#        )
-#        grid_col += 1
-#        self.button_plot.grid(row=grid_row, column=grid_col, sticky=tk.E)
 
 
     def button_print_config_action(self):

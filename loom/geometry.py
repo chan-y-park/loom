@@ -278,7 +278,7 @@ class SWCurve:
 
         fx = self.num_eq.subs(z, z_0)
         #xs = sympy.solve(fx, x)
-        # The following may fail when the curve is not a polynomial.
+        # FIXME: The following may fail when the curve is not a polynomial.
         sym_poly = sympy.Poly(fx, x, domain='CC')
         coeff_list = map(complex, sym_poly.all_coeffs())
         return numpy.roots(coeff_list)
@@ -295,7 +295,6 @@ class SWDiff:
         self.num_v = self.sym_v.subs(parameters)
 
 
-#class SWData(object):
 class SWDataBase(object):
     """
     A class containing a Seiberg-Witten curve in the first
@@ -566,7 +565,6 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
     """
     sorted_sheets = [None for w in weights]
     x_0 = sheets[0]
-    #mu_0 = weights[0]
 
     n_w_triples = null_weight_triples(weights)
     n_s_triples = null_sheet_triples(sheets)
