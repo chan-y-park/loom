@@ -97,6 +97,7 @@ class GData:
         )
         self.root_color_map = self.create_root_color_map()
 
+
     def ordered_weight_pairs(self, root, ffr=False):
         """
         Return list of pairs of weight indices.
@@ -116,6 +117,7 @@ class GData:
                     pairs.append([i, j])
 
         return pairs
+
 
     def weyl_monodromy(self, root, bp, direction):
         """
@@ -199,16 +201,13 @@ class PuncturePoint:
 
 
 class SWCurve:
-    def __init__(self, differentials=None, Cz=None, parameters=None,
-                 ffr_weights=None,):
-        if ffr_weights is not None:
+    def __init__(self, casimir_differentials=None, g_data=None, Cz=None,
+                 parameters=None, ffr=False):
+        if ffr is True:
             # Build a cover in the first fundamental representation.
-            N = len(ffr_weights)
-            ffr_eq_str = 'x^{} '.format(N)
-            for k, u_k in differentials.iteritems():
-                ffr_eq_str += '+ ({}) '.format(u_k)
-                if k != N:
-                    ffr_eq_str += '* x^{}'.format(N-k)
+            ffr_eq_str = get_ffr_curve_string(
+                casimir_differentials, g_data.type, g_data.rank
+            )
 
             self.sym_eq = sympy.simplify(
                 sympy.sympify(ffr_eq_str).subs(z, Cz)
@@ -297,29 +296,35 @@ class SWDiff:
 
 class SWDataBase(object):
     """
-    A class containing a Seiberg-Witten curve in the first
-    fundamental representation,
-        \lambda^N + \sum_{k=2}^N \phi_k \lambda^{N-k}, 
+    A class containing the geometric data of a Seiberg-Witten curve
+    in the first fundamental representation,
+        \lambda^N + \sum_{k=2}^N a_k(z) dz^k \lambda^{N-k}, 
     where \lambda is the Seiberg-Witten differential of the form 
-        \lambda = x dz
-    and \phi_k = u_k(z) dz^k, and another curve in the representation
-    given in the configuration.
+        \lambda = x dz.
+
+    This class also includes ramification points of the curve, and 
+    another curve in the representation given in the configuration.
+
+    This is the base class of SWDataWithTrivialization, where 
+    the trivialization data of the curve is contained.
     """
     def __init__(self, config):
         self.punctures = None
-        self.parameters = config['sw_parameters']
-        self.differentials = eval(config['differentials'])
         self.g_data = GData(config['root_system'], config['representation'])
+
+        parameters = config['sw_parameters']
+        casimir_differentials = eval(config['casimir_differentials'])
 
         # PSL2C-transformed z & dz
         Cz = PSL2C(config['mt_params'], z, inverse=True) 
         dCz = Cz.diff(z)
 
         self.ffr_curve = SWCurve(
-            differentials=self.differentials, 
+            casimir_differentials=casimir_differentials, 
+            g_data=self.g_data,
             Cz=Cz,
-            parameters=self.parameters,
-            ffr_weights=self.g_data.ffr_weights,
+            parameters=parameters,
+            ffr=True,
         )
         logging.info('Seiberg-Witten curve in the 1st fundamental '
                      'representation: {} = 0'
@@ -332,6 +337,7 @@ class SWDataBase(object):
                 'Seiberg-Witten curve in a general representation '
                 'is not implemented yet.'
             )
+            self.curve = None
 
 
         # Seiberg-Witten differential
@@ -465,6 +471,83 @@ class SWDataBase(object):
 
         return xs
 
+# E_6 curve strings
+tau_str = 't + 1/t + {u_6}'
+q_1_str = (
+'270*x^(15) + 342*({u_1})*x^(13) + 162*({u_1})^2*x^(11) - 252*({u_2})*x^(10)'  
+'+ (26*({u_1})^3 + 18*({u_3}))*x^9 - 162*({u_1})*({u_2})*x^8' 
+'+ (6*({u_1})*({u_3}) - 27*({u_4}))*x^7' 
+'- (30*({u_1})^2*({u_2}) - 36*({u_5}))*x^6' 
+'+ (27*({u_2})^2 - 9*({u_1})*({u_4}))*x^5' 
+'- (3*({u_2})*({u_3}) - 6*({u_1})*({u_5}))*x^4' 
+'- 3*({u_1})*({u_2})^2*x^3 - 3*({u_2})*({u_5})*x - ({u_2})^3'
+)
+q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
+p_1_str = (
+'78*x^10 + 60*({u_1})*x^8 + 14*({u_1})^2*x^6 - 33*({u_2})*x^5 + 2*({u_3})*x^4' 
+'- 5*({u_1})*({u_2})*x^3 - ({u_4})*x^2 - ({u_5})*x - ({u_2})^2'
+)
+p_2_str = (
+'12*x^10 + 12*({u_1})*x^8 + 4*({u_1})^2*x^6 - 12*({u_2})*x^5 + ({u_3})*x^4' 
+'- 4*({u_1})*({u_2})*x^3 - 2*({u_4})*x^2 + 4*({u_5})*x  + ({u_2})^2'
+)
+
+def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
+    """
+    Construct a Seiberg-Witten curve in the 1st fundamental representation
+    using Casimir differentials.
+    """
+    cs = []
+    if g_type == 'A':
+        N = g_rank + 1
+        for k, phi_k in casimir_differentials.iteritems():
+            cs.append([k, phi_k])
+
+    elif g_type == 'D':
+        N = 2 * g_rank
+        for k, phi_k in casimir_differentials.iteritems():
+            if k % 2 != 0:
+                raise ValueError(
+                    'phi_{} = {} dz^k'.format(k, phi_k) + 
+                    'is an incorrect casimir differential '
+                    'for a D-type curve.' 
+                )
+            else:
+                cs.append([k, phi_k])
+
+    elif g_type == 'E':
+        phi = casimir_differentials
+        # u_(1, 2, 3, 4, 5) = phi[2, 5, 6, 8, 9, 12]
+        if g_rank == 6:
+            tau = tau_str.format(u_6=phi[12])
+            q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+                                 u_4=phi[8], u_5=phi[9])
+            p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+                                 u_4=phi[8], u_5=phi[9])
+            p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+                                 u_4=phi[8], u_5=phi[9])
+            q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
+            curve_str = (
+                '(1/2)*x^3*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
+                .format(tau=tau, q_1=q_1, q_2=q_2)
+            )
+            return curve_str
+
+    else:
+        raise NotImplemented(
+            'get_ffr_curve_string(): construction of a Seiberg-Witten curve '
+            'of g = {}_{} is not implemented.'.format(g_type, g_rank)
+        )
+
+    # g_type == 'A' or g_type == 'D':
+    curve_str = 'x^{} '.format(N)
+    for k, c_k in cs:
+        curve_str += '+ ({}) '.format(c_k)
+        if k != N:
+            curve_str += '* x^{}'.format(N-k)
+
+    return curve_str
+        
 
 def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     """
