@@ -75,9 +75,10 @@ class GUILoom:
         grid_row += 1
         grid_col = 0
         tk.Label(self.root,
-                 text='diffenrentials').grid(row=grid_row, column=grid_col)
+                 text='casimir_diffenrentials').grid(row=grid_row, 
+                                                     column=grid_col)
         grid_col += 1
-        self.entry['differentials'].grid(
+        self.entry['casimir_differentials'].grid(
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW
         )
 

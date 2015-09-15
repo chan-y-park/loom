@@ -1,14 +1,19 @@
 import sympy
 import numpy
 import logging
+import copy
 import pdb
+import sympy.mpmath as mpmath
+
+from sympy.mpmath import mp
+from sympy.mpmath.libmp.libhyper import NoConvergence
 from warnings import warn
 from pprint import pformat
 from itertools import combinations
 
 import sage_subprocess
 from misc import (ctor2, r2toc, get_root_multiplicity, PSL2C,
-                  delete_duplicates)
+                  delete_duplicates, gather)
 
 x, z = sympy.symbols('x z')
 
@@ -17,6 +22,11 @@ N_NULL_QUARTETS = 1008
 NULL_TRIPLES_INDIVIDUAL = 5
 NULL_QUARTETS_INDIVIDUAL = 72
 SHEET_NULL_TOLERANCE = 0.001
+
+ROOT_FINDING_MAX_STEPS = 50
+ROOT_FINDING_PRECISION = 20
+
+mp.dps = ROOT_FINDING_PRECISION
 
 class GData:
     """
@@ -213,6 +223,7 @@ class SWCurve:
                 sympy.sympify(ffr_eq_str).subs(z, Cz)
             )
             self.num_eq = self.sym_eq.subs(parameters)
+            self.parameters = parameters
         else:
             # TODO: Need to build a cover in a general representation
             # from the differentials, using symmetric polynomials.
@@ -225,46 +236,86 @@ class SWCurve:
 
 
     def get_ramification_points(self, accuracy, punctures=None):
-        f = self.num_eq
+        f = self.sym_eq
         if f is None:
             raise NotImplementedError
 
+        subs_dict = copy.deepcopy(self.parameters)
         ramification_points = []
 
-        # NOTE: solve_poly_system vs. solve
-        #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
-        #sols = sympy.solve([f, f.diff(x)], z, x)
-        #if sols is None:
-        #    # Use Sage instead
-        #    sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
-        sols = sage_subprocess.solve_poly_system([f, f.diff(x)])
-        for z_0, x_0 in sols:
-            if (len(punctures) > 0 and
-                (min([abs(z_0 - p) for p in punctures]) < accuracy)
-            ):
-                continue
-            fx_at_z_0 = f.subs(z, z_0)
-            fx_at_z_0_coeffs = map(
-                complex, sympy.Poly(fx_at_z_0, x).all_coeffs()
-            )
-            mx = get_root_multiplicity(
-                fx_at_z_0_coeffs, complex(x_0), accuracy
-            )
-            if mx > 1:
-                fz_at_x_0 = f.subs(x, x_0)
-                fz_at_x_0_coeffs = map(complex, 
-                                       sympy.Poly(fz_at_x_0, z).all_coeffs())
-                
-                mz = get_root_multiplicity(fz_at_x_0_coeffs, complex(z_0),
-                                           accuracy)
-                if mz > 1:
+        # Find the roots of D(z), the discriminant of f(x, z)
+        # as a polynomial of x. 
+        D_z_sym = sympy.poly(sympy.discriminant(f, x), z)
+        cs = [
+            c_sym.evalf(
+                subs=subs_dict, n=ROOT_FINDING_PRECISION
+            ).as_real_imag()
+            for c_sym in D_z_sym.all_coeffs()
+        ]
+        D_z_coeffs = [mpmath.mpc(*c) for c in cs]
+        # Increase maxsteps & extraprec when root-finding fails.
+        D_z_roots = None
+        polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
+        polyroots_extra_precision = ROOT_FINDING_PRECISION
+        while D_z_roots is None:
+            try:
+                D_z_roots = mpmath.polyroots(
+                    D_z_coeffs, 
+                    maxsteps=polyroots_maxsteps,
+                    extraprec=polyroots_extra_precision,
+                )
+            except NoConvergence:
+                logging.warning(
+                    'mpmath.polyroots failed; increase maxsteps & extraprec '
+                    'by 10.'
+                )
+                polyroots_maxsteps += 10
+                polyroots_extra_precision += 10
+
+        is_same_root = lambda a, b: abs(a - b) < accuracy
+        gathered_D_z_roots = gather(D_z_roots, is_same_root)  
+
+        # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
+        for z_i, m_z in gathered_D_z_roots:
+            if m_z > 1:
+                logging.warning('Collision of branch points at z = {}'
+                                .format(z_i))
+            subs_dict[z] = z_i
+            f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
+                      for c in sympy.poly(f, x).all_coeffs()]
+            f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
+            f_x_roots = None
+            while f_x_roots is None:
+                try:
+                    f_x_roots = mpmath.polyroots(
+                        f_x_coeffs,
+                        maxsteps=polyroots_maxsteps,
+                        extraprec=polyroots_extra_precision
+                    )
+                except NoConvergence:
+                    logging.warning(
+                        'mpmath.polyroots failed; increase maxsteps & '
+                        'extraprec by 10.'
+                    )
+                    polyroots_maxsteps += 10
+                    polyroots_extra_precision += 10
+
+            gathered_f_x_roots = gather(f_x_roots, is_same_root)
+            for x_j, m_x in gathered_f_x_roots:
+                if m_x == 1:
                     continue
+                if m_z > 1:
+                    raise NotImplemented(
+                        'The given curve is singular at '
+                        'x = {}, z = {}'.format(x_j, z_i)
+                    )
                 label = ('ramification point #{}'
                          .format(len(ramification_points)))
-                rp = RamificationPoint(complex(z_0), complex(x_0), mx, label)
+                rp = RamificationPoint(complex(z_i), complex(x_j), m_x, label)
                 logging.info("{}: z = {}, x = {}, i = {}."
                              .format(label, rp.z, rp.x, rp.i))
                 ramification_points.append(rp)
+
         return ramification_points
 
 
@@ -312,7 +363,7 @@ class SWDataBase(object):
         self.punctures = None
         self.g_data = GData(config['root_system'], config['representation'])
 
-        parameters = config['sw_parameters']
+        sw_parameters = config['sw_parameters']
         casimir_differentials = eval(config['casimir_differentials'])
 
         # PSL2C-transformed z & dz
@@ -323,7 +374,7 @@ class SWDataBase(object):
             casimir_differentials=casimir_differentials, 
             g_data=self.g_data,
             Cz=Cz,
-            parameters=parameters,
+            parameters=sw_parameters,
             ffr=True,
         )
         logging.info('Seiberg-Witten curve in the 1st fundamental '
@@ -346,7 +397,7 @@ class SWDataBase(object):
             g_data=self.g_data,
             Cz=Cz,
             dCz=dCz,
-            parameters=self.parameters,
+            parameters=sw_parameters,
         )
 
         logging.info('\nSeiberg-Witten differential: %s dz\n',
