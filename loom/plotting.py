@@ -22,7 +22,6 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         spectral_network,
         branch_points,
         punctures=None, 
-        plot_range=None, 
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
@@ -31,9 +30,9 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
     ):
         
         labels = {'branch_points': [], 'joints': [], 'walls': []}
-        if plot_range is None:
+        if self.plot_range is None:
             if plot_on_cylinder is True:
-                plot_range = [[-pi, pi], [-5, 5]]
+                self.plot_range = [[-pi, pi], [-5, 5]]
 
         branch_points_z = []
         for i, bp in enumerate(branch_points):
@@ -105,7 +104,6 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             walls=walls,
             walls_colors=walls_colors,
             labels=labels,
-            plot_range=plot_range,
             plot_joints=plot_joints,
             plot_data_points=plot_data_points,
         )
@@ -125,9 +123,11 @@ class NetworkPlot(SpectralNetworkPlotBase):
     def __init__(
         self,
         title=None,
+        plot_range=None,
     ):
         super(NetworkPlot, self).__init__(
             matplotlib_figure=pyplot.figure(title),
+            plot_range=plot_range,
         )
 
         self.axes_button_prev = None
@@ -209,9 +209,11 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
     def __init__(self,
         master=None,
         title=None,
+        plot_range=None,
     ):
         super(NetworkPlotTk, self).__init__(
             matplotlib_figure=matplotlib.figure.Figure(),
+            plot_range=plot_range,
         )
 
         if master is None:

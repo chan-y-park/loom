@@ -218,17 +218,19 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
 
 
 def make_spectral_network_plot(spectral_network_data, master=None,
-                               show_plot=True, **kwargs):
+                               show_plot=True, plot_range=None, **kwargs):
     spectral_network_plot_title = 'Spectral Network'
 
     if matplotlib.rcParams['backend'] == 'TkAgg':
         spectral_network_plot = NetworkPlotTk(
             master=master,
-            title=spectral_network_plot_title
+            title=spectral_network_plot_title,
+            plot_range=plot_range,
         )
     else:
         spectral_network_plot = NetworkPlot(
-            title=spectral_network_plot_title
+            title=spectral_network_plot_title,
+            plot_range=plot_range,
         )
 
     for spectral_network in spectral_network_data.spectral_networks:

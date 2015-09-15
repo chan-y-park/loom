@@ -103,7 +103,7 @@ class GUILoom:
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW,
         )
 
-        for option in ['mt_params', 'punctures', 'z_range_limits',
+        for option in ['mt_params', 'punctures', 'plot_range',
                        'num_of_steps', 'num_of_iterations',
                        'size_of_small_step', 'size_of_large_step',
                        'size_of_neighborhood', 'size_of_puncture_cutoff',
@@ -277,13 +277,15 @@ class GUILoom:
         return None
 
     def button_plot_action(self):
-        ### Plot spectral networks.
+        self.update_config_from_entries()
+
         if (len(self.spectral_networks) > 0):
             snd = SpectralNetworkData(self.sw_data, self.spectral_networks)
             make_spectral_network_plot(
                 snd,
                 master=self.root,
                 plot_on_cylinder=self.check_plot_on_cylinder,
+                plot_range=self.config['plot_range'],
             )
             return None
         else:

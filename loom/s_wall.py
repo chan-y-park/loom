@@ -277,7 +277,7 @@ class SWall(object):
     ):
         rpzs = ramification_point_zs
         ppzs = puncture_point_zs
-        z_range_limits = config['z_range_limits']
+        #z_range_limits = config['z_range_limits']
         num_of_steps = config['num_of_steps']
         size_of_small_step = config['size_of_small_step']
         size_of_large_step = config['size_of_large_step']
@@ -292,8 +292,8 @@ class SWall(object):
         y_i = self[0]
         ode.set_initial_value(y_i)
 
-        if z_range_limits is not None:
-            [z_real_min, z_real_max], [z_imag_min, z_imag_max] = z_range_limits
+        #if z_range_limits is not None:
+        #    [z_real_min, z_real_max], [z_imag_min, z_imag_max] = z_range_limits
 
         while ode.successful() and step < num_of_steps:
             step += 1
@@ -305,13 +305,13 @@ class SWall(object):
                     break
 
             # Stop if z is ouside the range limit.
-            if z_range_limits is not None:
-                if (z_i.real < z_real_min or
-                    z_i.real > z_real_max or
-                    z_i.imag < z_imag_min or
-                    z_i.imag > z_imag_max):
-                    self.resize(step)
-                    break
+            #if z_range_limits is not None:
+            #    if (z_i.real < z_real_min or
+            #        z_i.real > z_real_max or
+            #        z_i.imag < z_imag_min or
+            #        z_i.imag > z_imag_max):
+            #        self.resize(step)
+            #        break
 
             # Stop if M exceeds mass limit.
             if mass_limit is not None:
