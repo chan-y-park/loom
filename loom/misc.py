@@ -256,3 +256,17 @@ def split_with_overlap(np_1d_array, splittings):
 
     return segs
  
+
+def parse_sym_dict_str(string):
+    """
+    Get a string of the form
+        {k_str: v_str, ...}
+    and return a list of
+        [(k_str, v_str), ...]
+    """
+    result = []
+    for k_v_str in string.lstrip('{').rstrip('}').split(','):
+        k_str, v_str = k_v_str.split(':')
+        result.append((k_str.strip(), v_str.strip()))
+    return result
+

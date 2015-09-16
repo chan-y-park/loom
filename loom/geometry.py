@@ -5,6 +5,7 @@ import copy
 import pdb
 import sympy.mpmath as mpmath
 
+from sympy import oo
 from sympy.mpmath import mp
 from sympy.mpmath.libmp.libhyper import NoConvergence
 from warnings import warn
@@ -13,7 +14,7 @@ from itertools import combinations
 
 import sage_subprocess
 from misc import (ctor2, r2toc, get_root_multiplicity, PSL2C,
-                  delete_duplicates, gather)
+                  delete_duplicates, gather, parse_sym_dict_str)
 
 x, z = sympy.symbols('x z')
 
@@ -200,18 +201,18 @@ class RamificationPoint:
         self.is_puncture = json_data['is_puncture']
 
 
-class PuncturePoint:
-    def __init__(self, z, cutoff, label):
-        self.z = z
-        self.cutoff = cutoff
-        self.label = label
-
-    def __eq__(self, other):
-        return self.label == other.label
+#class PuncturePoint:
+#    def __init__(self, z, cutoff, label):
+#        self.z = z
+#        self.cutoff = cutoff
+#        self.label = label
+#
+#    def __eq__(self, other):
+#        return self.label == other.label
 
 
 class SWCurve:
-    def __init__(self, casimir_differentials=None, g_data=None, Cz=None,
+    def __init__(self, casimir_differentials=None, g_data=None, #Cz=None,
                  parameters=None, ffr=False):
         if ffr is True:
             # Build a cover in the first fundamental representation.
@@ -219,10 +220,14 @@ class SWCurve:
                 casimir_differentials, g_data.type, g_data.rank
             )
 
-            self.sym_eq = sympy.simplify(
-                sympy.sympify(ffr_eq_str).subs(z, Cz)
-            )
-            self.num_eq = self.sym_eq.subs(parameters)
+            #self.sym_eq = sympy.simplify(
+            #    sympy.sympify(ffr_eq_str).subs(z, Cz)
+            #)
+            try:
+                self.sym_eq = sympy.sympify(ffr_eq_str)
+            except:
+                raise ValueError('syntax error in the Casimir differentials.')
+            self.num_eq = self.sym_eq.subs(parameters).evalf()
             self.parameters = parameters
         else:
             # TODO: Need to build a cover in a general representation
@@ -239,13 +244,16 @@ class SWCurve:
         f = self.sym_eq
         if f is None:
             raise NotImplementedError
+        # Make f into the form of rf = f_n/f_d
+        rf = sympy.cancel(f)
+        f_n, f_d = rf.as_numer_denom()
 
         subs_dict = copy.deepcopy(self.parameters)
         ramification_points = []
 
         # Find the roots of D(z), the discriminant of f(x, z)
         # as a polynomial of x. 
-        D_z_sym = sympy.poly(sympy.discriminant(f, x), z)
+        D_z_sym = sympy.poly(sympy.discriminant(f_n, x), z)
         cs = [
             c_sym.evalf(
                 subs=subs_dict, n=ROOT_FINDING_PRECISION
@@ -277,6 +285,14 @@ class SWCurve:
 
         # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
         for z_i, m_z in gathered_D_z_roots:
+            # Check if z_i is one of the punctures.
+            is_puncture = False
+            for p in punctures:
+                if abs(z_i - p) < accuracy:
+                    is_puncture = True
+            if is_puncture:
+                continue
+                    
             if m_z > 1:
                 logging.warning('Collision of branch points at z = {}'
                                 .format(z_i))
@@ -305,7 +321,7 @@ class SWCurve:
                 if m_x == 1:
                     continue
                 if m_z > 1:
-                    raise NotImplemented(
+                    raise NotImplementedError(
                         'The given curve is singular at '
                         'x = {}, z = {}'.format(x_j, z_i)
                     )
@@ -335,14 +351,16 @@ class SWCurve:
 
 
 class SWDiff:
-    def __init__(self, v_str, g_data=None, Cz=None, dCz=None, parameters=None):
+    def __init__(self, v_str, g_data=None, #Cz=None, dCz=None, 
+                 parameters=None):
         # sym_v is a SymPy expression. 
-        self.sym_v = sympy.simplify(
-            sympy.sympify(v_str).subs(z, Cz) * dCz
-        )
+        #self.sym_v = sympy.simplify(
+        #    sympy.sympify(v_str).subs(z, Cz) * dCz
+        #)
+        self.sym_v = sympy.sympify(v_str)
         # num_v is from sym_v with its parameters 
         # substituted with numerical values.
-        self.num_v = self.sym_v.subs(parameters)
+        self.num_v = self.sym_v.subs(parameters).evalf()
 
 
 class SWDataBase(object):
@@ -360,21 +378,38 @@ class SWDataBase(object):
     the trivialization data of the curve is contained.
     """
     def __init__(self, config):
-        self.punctures = None
+        self.g_data = None
+        self.punctures = []
+        self.ffr_curve = None
+        self.curve = None
+        self.diff = None
+
+        casimir_differentials = {}
+        for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
+            casimir_differentials[eval(k)] = phi_k
+
         self.g_data = GData(config['root_system'], config['representation'])
 
-        sw_parameters = config['sw_parameters']
-        casimir_differentials = eval(config['casimir_differentials'])
+        parameters = {}
+        for var, val in parse_sym_dict_str(config['differential_parameters']):
+            parameters[var] = sympy.sympify(val)
+
+        if config['punctures'] is not None:
+            punctures_string = config['punctures'].lstrip('[').rstrip(']')
+            for p in punctures_string.split(','):
+                self.punctures.append(
+                    sympy.sympify(p.strip()).subs(parameters)
+                )
 
         # PSL2C-transformed z & dz
-        Cz = PSL2C(config['mt_params'], z, inverse=True) 
-        dCz = Cz.diff(z)
+        #Cz = PSL2C(config['mt_params'], z, inverse=True) 
+        #dCz = Cz.diff(z)
 
         self.ffr_curve = SWCurve(
             casimir_differentials=casimir_differentials, 
             g_data=self.g_data,
-            Cz=Cz,
-            parameters=sw_parameters,
+            #Cz=Cz,
+            parameters=parameters,
             ffr=True,
         )
         logging.info('Seiberg-Witten curve in the 1st fundamental '
@@ -395,21 +430,13 @@ class SWDataBase(object):
         self.diff = SWDiff(
             'x',
             g_data=self.g_data,
-            Cz=Cz,
-            dCz=dCz,
-            parameters=sw_parameters,
+            #Cz=Cz,
+            #dCz=dCz,
+            parameters=parameters,
         )
 
         logging.info('\nSeiberg-Witten differential: %s dz\n',
                      sympy.latex(self.diff.num_v))
-
-        if config['punctures'] is None:
-            self.punctures = []
-        else:
-            self.punctures = [
-                PSL2C(config['mt_params'], p, numerical=True)
-                for p in config['punctures']
-            ]
 
         logging.info(
             "Calculating ramification points of the Seiberg-Witten curve "

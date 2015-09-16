@@ -96,10 +96,10 @@ class GUILoom:
 
         grid_row += 1
         grid_col = 0
-        tk.Label(self.root,
-                 text='sw_parameters').grid(row=grid_row, column=grid_col)
+        (tk.Label(self.root, text='differential_parameters')
+         .grid(row=grid_row, column=grid_col))
         grid_col += 1
-        self.entry['sw_parameters'].grid(
+        self.entry['differential_parameters'].grid(
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW,
         )
 
@@ -245,23 +245,13 @@ class GUILoom:
     def update_config_from_entries(self):
         ### Read config options from Entries.
         for section in self.config.parser.sections():
-            if (section == 'Seiberg-Witten parameters'):
-                ### Reset the given section of config.parser
-                for option in self.config.parser.options(section):
-                    self.config.parser.remove_option(section, option)
-
-                params_input = eval(self.entry_var['sw_parameters'].get())
-                self.config['sw_parameters'] = params_input
-                for var, val in params_input.iteritems():
-                    self.config.parser.set(section, var, str(val))
-            else:
-                for option in self.config.parser.options(section):
-                    value = self.entry_var[option].get()
-                    if (section == 'numerical parameters'):
-                        self.config[option] = eval(value)
-                    else:
-                        self.config[option] = value
-                    self.config.parser.set(section, option, value)
+            for option in self.config.parser.options(section):
+                value = self.entry_var[option].get()
+                if (section == 'numerical parameters'):
+                    self.config[option] = eval(value)
+                else:
+                    self.config[option] = value
+                self.config.parser.set(section, option, value)
 
 
     def button_generate_action(self):
