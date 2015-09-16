@@ -65,7 +65,7 @@ class SpectralNetwork:
         ode = get_ode(sw_data, self.phase, accuracy)
 
         logging.info('Start growing a new spectral network...')
-        ppzs = sw_data.punctures
+        ppzs = [p.z for p in sw_data.punctures]
 
         bpzs = [bp.z for bp in sw_data.branch_points]
         

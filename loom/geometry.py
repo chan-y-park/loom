@@ -170,12 +170,17 @@ class GData:
 
 
 class RamificationPoint:
-    def __init__(self, z=None, x=None, i=None, label=None, is_puncture=False):
+    #def __init__(self, z=None, x=None, i=None, label=None, is_puncture=False):
+    def __init__(self, z=None, Ciz=None, x=None, i=None, label=None):
+        # z is the numerical value of the PSL2C-transformed z-coordinate.
         self.z = z
+        # Ciz is the value of the z-coordinate 
+        # before the PSL2C transformation.
+        self.Ciz = Ciz
         self.x = x
         self.i = i
         self.label = label
-        self.is_puncture = is_puncture
+        #self.is_puncture = is_puncture
 
     def __str__(self):
         return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
@@ -186,49 +191,67 @@ class RamificationPoint:
     def get_json_data(self):
         json_data = {
             'z': ctor2(self.z),
+            'Ciz': ctor2(self.Ciz),
             'x': ctor2(self.x),
             'i': ctor2(self.i),
             'label': self.label,
-            'is_puncture': self.is_puncture
+            #'is_puncture': self.is_puncture
         }
         return json_data
 
     def set_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
+        self.Ciz = r2toc(json_data['Ciz'])
         self.x = r2toc(json_data['x'])
         self.i = r2toc(json_data['i'])
         self.label = json_data['label']
-        self.is_puncture = json_data['is_puncture']
+        #self.is_puncture = json_data['is_puncture']
 
 
-#class PuncturePoint:
-#    def __init__(self, z, cutoff, label):
-#        self.z = z
-#        self.cutoff = cutoff
-#        self.label = label
-#
-#    def __eq__(self, other):
-#        return self.label == other.label
+class Puncture:
+    def __init__(self, z=None, Ciz=None, cutoff=None, label=None):
+        # z is the numerical value of the PSL2C-transformed z-coordinate.
+        self.z = z
+        # Ciz is the value of the z-coordinate 
+        # before the PSL2C transformation.
+        self.Ciz = Ciz
+        self.label = label
+
+    def __eq__(self, other):
+        return self.label == other.label
 
 
 class SWCurve:
-    def __init__(self, casimir_differentials=None, g_data=None, #Cz=None,
-                 parameters=None, ffr=False):
+    """
+    SWCurve.sym_eq is the same curve as defined in the configuration,
+    without the PSL2C transformation for the simplicity of its anlysis.
+
+    SWCurve.num_eq is the curve with numerical coefficients &
+    after the PSL2C transformation. This is the curve that is used
+    in the numerical evolution of S-walls.
+    """
+    def __init__(self, casimir_differentials=None, g_data=None, 
+                 diff_params=None, mt_params=None, ffr=False):
+        self.sym_eq = None
+        self.num_eq = None
+
         if ffr is True:
             # Build a cover in the first fundamental representation.
             ffr_eq_str = get_ffr_curve_string(
                 casimir_differentials, g_data.type, g_data.rank
             )
-
-            #self.sym_eq = sympy.simplify(
-            #    sympy.sympify(ffr_eq_str).subs(z, Cz)
-            #)
             try:
+                #self.sym_eq = sympy.simplify(
+                #    sympy.sympify(ffr_eq_str).subs(z, Cz)
+                #)
                 self.sym_eq = sympy.sympify(ffr_eq_str)
             except:
                 raise ValueError('syntax error in the Casimir differentials.')
-            self.num_eq = self.sym_eq.subs(parameters).evalf()
-            self.parameters = parameters
+            # NOTE: We apply PSL2C only to the numerical curve
+            # for the simplicity of analysis.
+            #self.num_eq = self.sym_eq.subs(parameters).evalf()
+            Ciz = PSL2C(mt_params, z, inverse=True) 
+            self.num_eq = self.sym_eq.subs(z, Ciz).subs(diff_params).evalf()
         else:
             # TODO: Need to build a cover in a general representation
             # from the differentials, using symmetric polynomials.
@@ -236,103 +259,7 @@ class SWCurve:
                 'class SWCurve with a general representation '
                 'is not implemented yet.'
             )
-            self.sym_eq = None 
-            self.num_eq = None
 
-
-    def get_ramification_points(self, accuracy, punctures=None):
-        f = self.sym_eq
-        if f is None:
-            raise NotImplementedError
-        # Make f into the form of rf = f_n/f_d
-        rf = sympy.cancel(f)
-        f_n, f_d = rf.as_numer_denom()
-
-        subs_dict = copy.deepcopy(self.parameters)
-        ramification_points = []
-
-        # Find the roots of D(z), the discriminant of f(x, z)
-        # as a polynomial of x. 
-        D_z_sym = sympy.poly(sympy.discriminant(f_n, x), z)
-        cs = [
-            c_sym.evalf(
-                subs=subs_dict, n=ROOT_FINDING_PRECISION
-            ).as_real_imag()
-            for c_sym in D_z_sym.all_coeffs()
-        ]
-        D_z_coeffs = [mpmath.mpc(*c) for c in cs]
-        # Increase maxsteps & extraprec when root-finding fails.
-        D_z_roots = None
-        polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
-        polyroots_extra_precision = ROOT_FINDING_PRECISION
-        while D_z_roots is None:
-            try:
-                D_z_roots = mpmath.polyroots(
-                    D_z_coeffs, 
-                    maxsteps=polyroots_maxsteps,
-                    extraprec=polyroots_extra_precision,
-                )
-            except NoConvergence:
-                logging.warning(
-                    'mpmath.polyroots failed; increase maxsteps & extraprec '
-                    'by 10.'
-                )
-                polyroots_maxsteps += 10
-                polyroots_extra_precision += 10
-
-        is_same_root = lambda a, b: abs(a - b) < accuracy
-        gathered_D_z_roots = gather(D_z_roots, is_same_root)  
-
-        # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
-        for z_i, m_z in gathered_D_z_roots:
-            # Check if z_i is one of the punctures.
-            is_puncture = False
-            for p in punctures:
-                if abs(z_i - p) < accuracy:
-                    is_puncture = True
-            if is_puncture:
-                continue
-                    
-            if m_z > 1:
-                logging.warning('Collision of branch points at z = {}'
-                                .format(z_i))
-            subs_dict[z] = z_i
-            f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
-                      for c in sympy.poly(f, x).all_coeffs()]
-            f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
-            f_x_roots = None
-            while f_x_roots is None:
-                try:
-                    f_x_roots = mpmath.polyroots(
-                        f_x_coeffs,
-                        maxsteps=polyroots_maxsteps,
-                        extraprec=polyroots_extra_precision
-                    )
-                except NoConvergence:
-                    logging.warning(
-                        'mpmath.polyroots failed; increase maxsteps & '
-                        'extraprec by 10.'
-                    )
-                    polyroots_maxsteps += 10
-                    polyroots_extra_precision += 10
-
-            gathered_f_x_roots = gather(f_x_roots, is_same_root)
-            for x_j, m_x in gathered_f_x_roots:
-                if m_x == 1:
-                    continue
-                if m_z > 1:
-                    raise NotImplementedError(
-                        'The given curve is singular at '
-                        'x = {}, z = {}'.format(x_j, z_i)
-                    )
-                label = ('ramification point #{}'
-                         .format(len(ramification_points)))
-                rp = RamificationPoint(complex(z_i), complex(x_j), m_x, label)
-                logging.info("{}: z = {}, x = {}, i = {}."
-                             .format(label, rp.z, rp.x, rp.i))
-                ramification_points.append(rp)
-
-        return ramification_points
 
 
     def get_xs(self, z_0):
@@ -351,16 +278,21 @@ class SWCurve:
 
 
 class SWDiff:
-    def __init__(self, v_str, g_data=None, #Cz=None, dCz=None, 
-                 parameters=None):
+    def __init__(self, v_str, g_data=None, diff_params=None, mt_params=None):
         # sym_v is a SymPy expression. 
         #self.sym_v = sympy.simplify(
-        #    sympy.sympify(v_str).subs(z, Cz) * dCz
+        #    sympy.sympify(v_str).subs(z, Ciz) * dCiz
         #)
         self.sym_v = sympy.sympify(v_str)
         # num_v is from sym_v with its parameters 
         # substituted with numerical values.
-        self.num_v = self.sym_v.subs(parameters).evalf()
+        # NOTE: We apply PSL2C only to the numerical curve
+        # for the simplicity of analysis.
+        #self.num_v = self.sym_v.subs(parameters).evalf()
+        Ciz = PSL2C(mt_params, z, inverse=True) 
+        dCiz = Ciz.diff(z)
+        self.num_v = (self.sym_v.subs(z, Ciz)
+                      * dCiz).subs(diff_params).evalf()
 
 
 class SWDataBase(object):
@@ -390,31 +322,50 @@ class SWDataBase(object):
 
         self.g_data = GData(config['root_system'], config['representation'])
 
-        parameters = {}
+        diff_params = {}
         for var, val in parse_sym_dict_str(config['differential_parameters']):
-            parameters[var] = sympy.sympify(val)
+            diff_params[var] = sympy.sympify(val)
+
+
+        if config['mt_params'] is not None:
+            mt_params = sympy.sympify(config['mt_params'])
+        else:
+            mt_params = None
+
+        # PSL2C-transformed z & dz
+        #Ciz = PSL2C(mt_params, z, inverse=True) 
+        #dCiz = Ciz.diff(z)
 
         if config['punctures'] is not None:
             punctures_string = config['punctures'].lstrip('[').rstrip(']')
-            for p in punctures_string.split(','):
+            for p_str in punctures_string.split(','):
+                Cipz = sympy.sympify(p_str.strip()).subs(diff_params)
+                pz = PSL2C(mt_params, Cipz)
+                if pz == oo:
+                    npz = oo
+                else:
+                    npz = complex(pz)
                 self.punctures.append(
-                    sympy.sympify(p.strip()).subs(parameters)
+                    Puncture(
+                        z=npz, Ciz=Cipz,
+                        cutoff=config['size_of_puncture_cutoff'],
+                        label='puncture #{}'.format(len(self.punctures))
+                    )
                 )
-
-        # PSL2C-transformed z & dz
-        #Cz = PSL2C(config['mt_params'], z, inverse=True) 
-        #dCz = Cz.diff(z)
 
         self.ffr_curve = SWCurve(
             casimir_differentials=casimir_differentials, 
             g_data=self.g_data,
-            #Cz=Cz,
-            parameters=parameters,
+            diff_params=diff_params,
+            mt_params=mt_params,
             ffr=True,
         )
-        logging.info('Seiberg-Witten curve in the 1st fundamental '
-                     'representation: {} = 0'
-                     .format(sympy.latex(self.ffr_curve.num_eq)))
+        logging.info(
+            'Seiberg-Witten curve in the 1st fundamental '
+            'representation: {} = 0.\n(numerically {}=0.)'
+            .format(sympy.latex(self.ffr_curve.sym_eq),
+                    sympy.latex(self.ffr_curve.num_eq))
+        )
         # TODO: SWCurve in a general representation.
         if self.g_data.fundamental_representation_index == 1:
             self.curve = self.ffr_curve
@@ -430,9 +381,8 @@ class SWDataBase(object):
         self.diff = SWDiff(
             'x',
             g_data=self.g_data,
-            #Cz=Cz,
-            #dCz=dCz,
-            parameters=parameters,
+            diff_params=diff_params,
+            mt_params=mt_params,
         )
 
         logging.info('\nSeiberg-Witten differential: %s dz\n',
@@ -442,8 +392,12 @@ class SWDataBase(object):
             "Calculating ramification points of the Seiberg-Witten curve "
             "in the first fundamental rep."
         )
-        self.ffr_ramification_points = self.ffr_curve.get_ramification_points(
-            config['accuracy'], punctures=self.punctures,
+        self.ffr_ramification_points = get_ramification_points(
+            curve=self.ffr_curve, 
+            diff_params=diff_params,
+            mt_params=mt_params,
+            accuracy=config['accuracy'], 
+            punctures=self.punctures,
         )
 
 
@@ -626,6 +580,118 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
 
     return curve_str
         
+
+def get_ramification_points(
+    curve=None, 
+    diff_params=None, 
+    mt_params=None,
+    accuracy=None, 
+    punctures=None,
+):
+    f = curve.sym_eq
+    if f is None:
+        raise NotImplementedError
+    # Make f into the form of rf = f_n/f_d
+    rf = sympy.cancel(f)
+    f_n, f_d = rf.as_numer_denom()
+
+    subs_dict = copy.deepcopy(diff_params)
+    ramification_points = []
+
+    # Find the roots of D(z), the discriminant of f(x, z)
+    # as a polynomial of x. 
+    D_z = sympy.discriminant(f_n, x)
+    D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
+    D_z_n_P = sympy.Poly(D_z_n, z)
+    cs = [
+        c_sym.evalf(
+            subs=subs_dict, n=ROOT_FINDING_PRECISION
+        ).as_real_imag()
+        for c_sym in D_z_n_P.all_coeffs()
+    ]
+    D_z_n_P_coeffs = [mpmath.mpc(*c) for c in cs]
+    # Increase maxsteps & extraprec when root-finding fails.
+    D_z_roots = None
+    polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
+    polyroots_extra_precision = ROOT_FINDING_PRECISION
+    while D_z_roots is None:
+        try:
+            D_z_roots = mpmath.polyroots(
+                D_z_n_P_coeffs, 
+                maxsteps=polyroots_maxsteps,
+                extraprec=polyroots_extra_precision,
+            )
+        except NoConvergence:
+            logging.warning(
+                'mpmath.polyroots failed; increase maxsteps & extraprec '
+                'by 10.'
+            )
+            polyroots_maxsteps += 10
+            polyroots_extra_precision += 10
+
+    is_same_root = lambda a, b: abs(a - b) < accuracy
+    gathered_D_z_roots = gather(D_z_roots, is_same_root)  
+
+    # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
+    for z_i, zs in gathered_D_z_roots.iteritems():
+        m_z = len(zs)
+        # Check if z_i is one of the punctures.
+        is_puncture = False
+        for p in punctures:
+            if abs(z_i - p.Ciz) < accuracy:
+                is_puncture = True
+        if is_puncture:
+            continue
+                
+        if m_z > 1:
+            logging.warning('Collision of branch points at z = {}'
+                            .format(z_i))
+        subs_dict[z] = z_i
+        f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
+                  for c in sympy.Poly(f, x).all_coeffs()]
+        f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
+        f_x_roots = None
+        while f_x_roots is None:
+            try:
+                f_x_roots = mpmath.polyroots(
+                    f_x_coeffs,
+                    maxsteps=polyroots_maxsteps,
+                    extraprec=polyroots_extra_precision
+                )
+            except NoConvergence:
+                logging.warning(
+                    'mpmath.polyroots failed; increase maxsteps & '
+                    'extraprec by 10.'
+                )
+                polyroots_maxsteps += 10
+                polyroots_extra_precision += 10
+
+        gathered_f_x_roots = gather(f_x_roots, is_same_root)
+        for x_j, xs in gathered_f_x_roots.iteritems():
+            m_x = len(xs)
+            if m_x == 1:
+                continue
+            if m_z > 1:
+                raise NotImplementedError(
+                    'The given curve is singular at '
+                    'x = {}, z = {}'.format(x_j, z_i)
+                )
+            label = ('ramification point #{}'
+                     .format(len(ramification_points)))
+            rp = RamificationPoint(
+                z = PSL2C(mt_params, z_i, numerical=True),
+                Ciz=complex(z_i), 
+                x=complex(x_j), 
+                i=m_x, 
+                label=('ramification point #{}'
+                       .format(len(ramification_points)))
+            )
+            logging.info("{}: z = {}, x = {}, i = {}."
+                         .format(label, rp.z, rp.x, rp.i))
+            ramification_points.append(rp)
+
+    return ramification_points
+
 
 def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     """

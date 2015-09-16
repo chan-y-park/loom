@@ -62,29 +62,62 @@ def cpow(base, exponent_numerator, exponent_denominator=1):
                                            exponent_denominator))
 
 
-def gather(a_list, compare, result=None):
-    if result is None:
-        result = []
+#def gather(a_list, compare, result=None):
+#    if result is None:
+#        result = []
+#    e_0 = a_list[0]
+#    result.append([e_0, 0])
+#    next_list = []
+#    pop_list = []
+#    for i in range(len(a_list)):
+#        if compare(e_0, a_list[i]) is True:
+#            pop_list.append(i)
+#    for i, e_i in enumerate(a_list):
+#        if i in pop_list:
+#            result[-1][1] += 1
+#        else:
+#            next_list.append(e_i)
+#    if len(next_list) == 0:
+#        return result
+#    else:
+#        return gather(next_list, compare, result)
+
+def gather(a_list, compare):
+    """
+    Gather elements of the given list
+        [a_0, b_0, a_1, c_0, b_1]
+    into a dict
+        {a_0: [a_0, a_1], b_0: [b_0, b_1], c_0: [c_0]},
+    where compare(a_0, a_1) == True, compare(a_0, b_0) == False, etc.
+    """
+    group = {}
     e_0 = a_list[0]
-    result.append([e_0, 0])
-    next_list = []
-    pop_list = []
-    for i in range(len(a_list)):
-        if compare(e_0, a_list[i]) is True:
-            pop_list.append(i)
-    for i, e_i in enumerate(a_list):
-        if i in pop_list:
-            result[-1][1] += 1
+    group[e_0] = [e_0]
+    for e in a_list[1:]:
+        for key in group.keys():
+            if compare(key, e) is True:
+                group[key].append(e)
+                break
         else:
-            next_list.append(e_i)
-    if len(next_list) == 0:
-        return result
-    else:
-        return gather(next_list, compare, result)
+            group[e] = [e]
+    return group
+
+
+def gather_to_list(a_list, compare):
+    group = gather_to_dict(a_list, compare)
+    result = []
+    for key, value in group.iteritems():
+        result.append([key, len(value)])
+    return result
 
 
 def remove_duplicate(a_list, compare):
-    return [e[0] for e in gather(a_list, compare)]
+    return gather(a_list, compare).keys()
+
+
+def n_remove_duplicate(a_list, accuracy):
+    compare = lambda a, b: abs(a - b) < accuracy
+    return gather(a_list, compare).keys()
 
 
 def n_nearest(a_list, value, n):
@@ -183,20 +216,21 @@ def delete_duplicates(l):
     return uniq
 
 
-def n_unique(a, accuracy):
-    """
-    Get an array and return its unique elements
-    within a given accuracy.
-    """
-    if len(a) == 0:
-        return a
-    a_sorted = numpy.sort(numpy.array(a))
-    a_diff = numpy.diff(a_sorted)
-    a_unique = [a_sorted[0]]
-    for i, d in enumerate(a_diff):
-        if abs(d) > accuracy:
-            a_unique.append(a_sorted[i+1])
-    return a_unique
+#def n_unique(a, accuracy):
+#    """
+#    Get an array and return its unique elements
+#    within a given accuracy.
+#    """
+#    if len(a) == 0:
+#        return a
+#    a_sorted = numpy.sort(numpy.array(a))
+#    a_diff = numpy.diff(a_sorted)
+#    a_unique = [a_sorted[0]]
+#    for i, d in enumerate(a_diff):
+#        if abs(d) > accuracy:
+#            a_unique.append(a_sorted[i+1])
+#    return a_unique
+    
 
 def clock(direction):
     if direction == 'left':

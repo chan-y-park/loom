@@ -668,15 +668,15 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                       'diff_e  = {}'.format(rp.z, rp.x, diff_e))
         raise GetSWallSeedsError(diff_e)
 
-    cs = gather(cs, lambda c1, c2: abs(c1 - c2) < delta)
-    logging.debug('list of c = %s, # = %d', cs, len(cs))
+    gathered_cs = gather(cs, lambda c1, c2: abs(c1 - c2) < delta)
+    logging.debug('list of c = %s, # = %d', gathered_cs, len(gathered_cs))
 
     # 2. Now calculate \Delta z_i for each S-wall and
     # find the two points on the curve that are projected onto it.
     seeds = []
-    for c in cs:
-        cv = c[0]   # value of c
-        cm = c[1]   # multiplicity of c
+    for cv, cs in gathered_cs.iteritems():
+        # cv is the value of c, cm is its multiplicity.
+        cm = len(cs)
         # resize to the size of the small step
         Delta_z = cv/abs(cv)*delta
         z_0 = rp.z + Delta_z

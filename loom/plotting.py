@@ -29,7 +29,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         g_data=None
     ):
         
-        labels = {'branch_points': [], 'joints': [], 'walls': []}
+        labels = {'branch_points': [], 'joints': [], 'punctures': [],
+                  'walls': []}
         if self.plot_range is None:
             if plot_on_cylinder is True:
                 self.plot_range = [[-pi, pi], [-5, 5]]
@@ -51,6 +52,15 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                 jp_z = jp.z
             joints.append([jp_z.real, jp_z.imag])
             labels['joints'].append(jp.label)
+
+        punctures_z = []
+        for i, p in enumerate(punctures):
+            if plot_on_cylinder is True:
+                p_z = put_on_cylinder(p.z, C)
+            else:
+                p_z = p.z
+            punctures_z.append([p_z.real, p_z.imag])
+            labels['punctures'].append(p.label)
 
         walls = []
         walls_roots = []
@@ -101,6 +111,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             phase=spectral_network.phase,
             branch_points=branch_points_z,
             joints=joints,
+            punctures=punctures_z,
             walls=walls,
             walls_colors=walls_colors,
             labels=labels,

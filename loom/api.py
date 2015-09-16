@@ -219,6 +219,8 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
 
 def make_spectral_network_plot(spectral_network_data, master=None,
                                show_plot=True, plot_range=None, **kwargs):
+    sw_data = spectral_network_data.sw_data
+    spectral_networks = spectral_network_data.spectral_networks
     spectral_network_plot_title = 'Spectral Network'
 
     if matplotlib.rcParams['backend'] == 'TkAgg':
@@ -233,12 +235,13 @@ def make_spectral_network_plot(spectral_network_data, master=None,
             plot_range=plot_range,
         )
 
-    for spectral_network in spectral_network_data.spectral_networks:
+    for spectral_network in spectral_networks:
         logging.info('Generating the plot of a spectral network '
                      '@ theta = {}...'.format(spectral_network.phase))
         spectral_network_plot.draw(
             spectral_network, 
-            spectral_network_data.sw_data.branch_points,
+            sw_data.branch_points,
+            punctures=sw_data.punctures,
             g_data=spectral_network_data.sw_data.g_data,
             **kwargs
         )

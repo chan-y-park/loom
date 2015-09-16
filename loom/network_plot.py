@@ -14,12 +14,15 @@ class NetworkPlotBase(object):
         if self.figure is not None:
             self.figure.clf()
     
-    def draw(self, phase=None, branch_points=None, joints=None, walls=None,
-            walls_colors=None, labels=None, plot_joints=False,
-            plot_data_points=False,):
+    def draw(
+        self, phase=None, branch_points=None, joints=None, punctures=None,
+        walls=None, walls_colors=None, labels=None, 
+        plot_joints=False, plot_data_points=False,
+    ):
         """
         branch_points = [[bpx, bpy], ...]
         joints = [[jpx, jpy], ...]
+        punctures = [[px, py], ...]
         walls = [[wall.get_xs(), wall.get_ys(), ...]
         labels = {'branch_points': [bp1_label, ...],
                   'joints': [jp1_label, ...],
@@ -83,6 +86,15 @@ class NetworkPlotBase(object):
                 jpx, jpy = jp
                 axes.plot(jpx, jpy, '+', markeredgewidth=2,
                           markersize=8, color='k', label=labels['joints'][i],)
+
+        # Plot puncturess.
+        for i, p in enumerate(punctures):
+            px, py = p
+            axes.plot(px, py, 'o', markeredgewidth=2, markersize=8, 
+                        color='k', markerfacecolor='none', 
+                        label=labels['punctures'][i],
+                    )
+
 
         axes.set_visible(False)
         self.plots.append(axes)

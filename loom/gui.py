@@ -103,13 +103,12 @@ class GUILoom:
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW,
         )
 
-        for option in ['mt_params', 'punctures', 'plot_range',
+        for option in ['punctures', 'mt_params', 'plot_range',
                        'num_of_steps', 'num_of_iterations',
                        'size_of_small_step', 'size_of_large_step',
                        'size_of_neighborhood', 'size_of_puncture_cutoff',
                        'size_of_ramification_pt_cutoff',
-                       'size_of_bin', 'accuracy', 'n_processes',
-                       'mass_limit']:
+                       'accuracy', 'n_processes', 'mass_limit',]:
             grid_row += 1
             grid_col = 0
             tk.Label(self.root,
