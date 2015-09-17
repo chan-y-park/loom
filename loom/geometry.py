@@ -634,6 +634,7 @@ def get_ramification_points(
 
     # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
     for z_i, zs in gathered_D_z_roots.iteritems():
+        # m_z is the multiplicity of z_i.
         m_z = len(zs)
         # Check if z_i is one of the punctures.
         is_puncture = False
@@ -643,9 +644,6 @@ def get_ramification_points(
         if is_puncture:
             continue
                 
-        if m_z > 1:
-            logging.warning('Collision of branch points at z = {}'
-                            .format(z_i))
         subs_dict[z] = z_i
         f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
                   for c in sympy.Poly(f, x).all_coeffs()]
@@ -668,14 +666,10 @@ def get_ramification_points(
 
         gathered_f_x_roots = gather(f_x_roots, is_same_root)
         for x_j, xs in gathered_f_x_roots.iteritems():
+            # m_x is the multiplicity of x_j.
             m_x = len(xs)
             if m_x == 1:
                 continue
-            if m_z > 1:
-                raise NotImplementedError(
-                    'The given curve is singular at '
-                    'x = {}, z = {}'.format(x_j, z_i)
-                )
             label = ('ramification point #{}'
                      .format(len(ramification_points)))
             rp = RamificationPoint(

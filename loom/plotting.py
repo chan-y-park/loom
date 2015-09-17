@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.widgets import Button
 from matplotlib import pyplot
 from math import pi
+from sympy import oo
 
 from network_plot import NetworkPlotBase
 from misc import put_on_cylinder, split_with_overlap
@@ -55,6 +56,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
 
         punctures_z = []
         for i, p in enumerate(punctures):
+            if p.z == oo:
+                continue
             if plot_on_cylinder is True:
                 p_z = put_on_cylinder(p.z, C)
             else:

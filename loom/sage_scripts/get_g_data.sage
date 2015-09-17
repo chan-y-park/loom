@@ -97,7 +97,10 @@ def main(root_system, highest_weight):
 
     if algebra_type == 'A' or algebra_type == 'D':
         ### omega_1 is the 1st fundamental weight
-        omega_1 = A.fundamental_weight(1)   
+        if root_system == 'D2':
+            omega_1 = A.fundamental_weight(1) + A.fundamental_weight(2)
+        else:
+            omega_1 = A.fundamental_weight(1)   
 
     elif algebra_type == 'E':
         if algebra_rank == 6:

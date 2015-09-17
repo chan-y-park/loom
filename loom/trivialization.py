@@ -206,10 +206,16 @@ class SWDataWithTrivialization(SWDataBase):
         self.irregular_singularities = []
 
         # z-coords of branch points.
-        bpzs = [r.z for r in self.ffr_ramification_points if r.z != oo]
+        bpzs = n_remove_duplicate(
+            [r.z for r in self.ffr_ramification_points if r.z != oo],
+            self.accuracy,
+        )
 
         # z-coords of irregular singularities.
-        iszs = [p.z for p in self.punctures if p.z != oo]
+        iszs = n_remove_duplicate(
+            [p.z for p in self.punctures if p.z != oo],
+            self.accuracy,
+        )
         
         # Automatically choose a basepoint, based on the positions of
         # both branch points and irregular singularities

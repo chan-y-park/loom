@@ -90,6 +90,8 @@ def gather(a_list, compare):
         {a_0: [a_0, a_1], b_0: [b_0, b_1], c_0: [c_0]},
     where compare(a_0, a_1) == True, compare(a_0, b_0) == False, etc.
     """
+    if len(a_list) == 0:
+        return {}
     group = {}
     e_0 = a_list[0]
     group[e_0] = [e_0]
