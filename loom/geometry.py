@@ -629,8 +629,8 @@ def get_ramification_points(
             polyroots_maxsteps += 10
             polyroots_extra_precision += 10
 
-    is_same_root = lambda a, b: abs(a - b) < accuracy
-    gathered_D_z_roots = gather(D_z_roots, is_same_root)  
+    is_same_z = lambda a, b: abs(a - b) < accuracy
+    gathered_D_z_roots = gather(D_z_roots, is_same_z)  
 
     # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
     for z_i, zs in gathered_D_z_roots.iteritems():
@@ -664,7 +664,9 @@ def get_ramification_points(
                 polyroots_maxsteps += 10
                 polyroots_extra_precision += 10
 
-        gathered_f_x_roots = gather(f_x_roots, is_same_root)
+        # In general x-roots have worse errors.
+        is_same_x = lambda a, b: abs(a - b) < accuracy/1e-2
+        gathered_f_x_roots = gather(f_x_roots, is_same_x)
         for x_j, xs in gathered_f_x_roots.iteritems():
             # m_x is the multiplicity of x_j.
             m_x = len(xs)
