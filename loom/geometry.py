@@ -398,6 +398,7 @@ class SWDataBase(object):
             mt_params=mt_params,
             accuracy=config['accuracy'], 
             punctures=self.punctures,
+            method=config['ramification_point_finding_method'],
         )
 
 
@@ -579,7 +580,7 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
             curve_str += '* x^{}'.format(N-k)
 
     return curve_str
-        
+
 
 def get_ramification_points(
     curve=None, 
@@ -587,16 +588,132 @@ def get_ramification_points(
     mt_params=None,
     accuracy=None, 
     punctures=None,
+    method=None,
 ):
-    f = curve.sym_eq
-    if f is None:
+    if curve.sym_eq is None:
         raise NotImplementedError
+
+    if method == 'discriminant':
+        sols = get_ramification_points_using_discriminant(
+            curve=curve, 
+            diff_params=diff_params, 
+            mt_params=mt_params,
+            accuracy=accuracy, 
+            punctures=punctures,
+        )
+    elif method == 'system_of_eqs':
+        sols = get_ramification_points_using_system_of_eqs(
+            curve=curve, 
+            diff_params=diff_params, 
+            mt_params=mt_params,
+            accuracy=accuracy, 
+            punctures=punctures,
+        )
+    else:
+        raise ValueError(
+            'Unknown or no method set to find ramification points.\n'
+            'Set ramification_point_finding_method = '
+            '[discriminant|system_of_eqs] in the configuration.'
+        )
+
+    ramification_points = []
+
+    for z_i, (x_j, m_x) in sols:
+        label = ('ramification point #{}'
+                 .format(len(ramification_points)))
+        rp = RamificationPoint(
+            z = PSL2C(mt_params, z_i, numerical=True),
+            Ciz=complex(z_i), 
+            x=complex(x_j), 
+            i=m_x, 
+            label=('ramification point #{}'
+                   .format(len(ramification_points)))
+        )
+        logging.info("{}: z = {}, x = {}, i = {}."
+                     .format(label, rp.z, rp.x, rp.i))
+        ramification_points.append(rp)
+
+    return ramification_points
+
+
+def get_ramification_points_using_system_of_eqs(
+    curve=None, 
+    diff_params=None, 
+    mt_params=None,
+    accuracy=None, 
+    punctures=None,
+):
+    sols = []
+    f = curve.sym_eq
+    # Make f into the form of f_n/f_d
+    f_n, f_d = sympy.cancel(f).as_numer_denom()
+
+    d_x_f_n, d_x_f_d = sympy.cancel(f.diff(x)).as_numer_denom()
+
+    subs_dict = copy.deepcopy(diff_params)
+    
+    # NOTE: solve_poly_system vs. solve
+    #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
+    #sols = sympy.solve([f, f.diff(x)], z, x)
+    z_x_s = sage_subprocess.solve_system_of_eqs(
+        [f_n.subs(subs_dict), d_x_f_n.subs(subs_dict)],
+        precision = ROOT_FINDING_PRECISION,
+    )
+    for z_i, x_i in z_x_s:
+        # Check if z_i is one of the punctures.
+        is_puncture = False
+        for p in punctures:
+            if abs(z_i - p.Ciz) < accuracy:
+                is_puncture = True
+        if is_puncture:
+            continue
+
+        subs_dict[z] = z_i
+        f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
+                  for c in sympy.Poly(f, x).all_coeffs()]
+        f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
+        f_x_roots = None
+        polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
+        polyroots_extra_precision = ROOT_FINDING_PRECISION
+        while f_x_roots is None:
+            try:
+                f_x_roots = mpmath.polyroots(
+                    f_x_coeffs,
+                    maxsteps=polyroots_maxsteps,
+                    extraprec=polyroots_extra_precision
+                )
+            except NoConvergence:
+                logging.warning(
+                    'mpmath.polyroots failed; increase maxsteps & '
+                    'extraprec by 10.'
+                )
+                polyroots_maxsteps += 10
+                polyroots_extra_precision += 10
+
+        m_x = 0
+        for x_j in f_x_roots:
+            if abs(x_i - x_j) < accuracy:
+                m_x += 1
+
+        sols.append([z_i, (x_i, m_x)])
+
+    return sols
+            
+
+
+def get_ramification_points_using_discriminant(
+    curve=None, 
+    diff_params=None, 
+    mt_params=None,
+    accuracy=None, 
+    punctures=None,
+):
+    sols = []
+    f = curve.sym_eq
     # Make f into the form of rf = f_n/f_d
     rf = sympy.cancel(f)
     f_n, f_d = rf.as_numer_denom()
-
     subs_dict = copy.deepcopy(diff_params)
-    ramification_points = []
 
     # Find the roots of D(z), the discriminant of f(x, z)
     # as a polynomial of x. 
@@ -672,21 +789,10 @@ def get_ramification_points(
             m_x = len(xs)
             if m_x == 1:
                 continue
-            label = ('ramification point #{}'
-                     .format(len(ramification_points)))
-            rp = RamificationPoint(
-                z = PSL2C(mt_params, z_i, numerical=True),
-                Ciz=complex(z_i), 
-                x=complex(x_j), 
-                i=m_x, 
-                label=('ramification point #{}'
-                       .format(len(ramification_points)))
-            )
-            logging.info("{}: z = {}, x = {}, i = {}."
-                         .format(label, rp.z, rp.x, rp.i))
-            ramification_points.append(rp)
 
-    return ramification_points
+            sols.append([z_i, (x_j, m_x)])
+
+    return sols
 
 
 def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):

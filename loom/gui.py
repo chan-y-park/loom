@@ -103,8 +103,9 @@ class GUILoom:
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW,
         )
 
-        for option in ['punctures', 'mt_params', 'plot_range',
-                       'num_of_steps', 'num_of_iterations',
+        for option in ['punctures', 'mt_params', 
+                       'ramification_point_finding_method',
+                       'plot_range', 'num_of_steps', 'num_of_iterations',
                        'size_of_small_step', 'size_of_large_step',
                        'size_of_neighborhood', 'size_of_puncture_cutoff',
                        'size_of_ramification_pt_cutoff',
