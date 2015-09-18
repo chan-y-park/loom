@@ -14,7 +14,7 @@ from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
 
-LOGGING_FILE_NAME = 'logs/log.mose.txt'
+LOGGING_FILE_NAME = 'logs/log.loom.txt'
 
 class SpectralNetworkData:
     """

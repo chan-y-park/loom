@@ -370,6 +370,7 @@ class SWall(object):
         
         # Scan over branch cuts, see if path ever crosses one 
         # based on x-coordinates only
+        _cuts_intersections = []
         for b_pt_idx, x_0 in list(enumerate(bpzs_r)):
             g = interpolate.splrep(traj_t, traj_z_r - x_0, s=0)
             # now produce a list of integers corresponding to points in the 
@@ -402,7 +403,7 @@ class SWall(object):
                 intersections.append(
                     [b_pt_idx, t, clock(left_right(self.z, t))]
                 )
-            self.cuts_intersections += intersections
+            _cuts_intersections += intersections
 
         # TODO: Might be worth implementing an algorithm for handling 
         # overlapping branch cuts: e.g. the one with a lower starting point 
@@ -415,7 +416,7 @@ class SWall(object):
         # as      [..., [branch_point_idx, t, 'ccw'] ,...]
         # where 't' is the integer of proper time at the intersection.
         self.cuts_intersections = sorted(
-            self.cuts_intersections, 
+            _cuts_intersections, 
             cmp = lambda k1, k2: cmp(k1[1], k2[1])
         )
         logging.debug(
@@ -583,6 +584,7 @@ def get_intermediate_z_point(z_1, z_2, bp_z_med):
     get the intermediate point between z_1 and z_2
     in correspondence of the real part of z_med
     """
+    # FIXME: division by zero may happend when x_1 and x_2 are too close.
     x_1 = z_1.real
     y_1 = z_1.imag
     x_2 = z_2.real
@@ -599,6 +601,7 @@ def get_intermediate_value(v_1, v_2, z_1, z_2, z_med):
     Along an S-wall, get the intermediate value between v_1 and v_2
     in correspondence of z_med
     """
+    # FIXME: division by zero may happend when z_1 and z_2 are too close.
     slope = (v_2 - v_1) / (z_2 - z_1)
     v_med = v_1 + slope * (z_med - z_1)
     return v_med

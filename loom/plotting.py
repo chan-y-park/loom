@@ -98,7 +98,6 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             ]
             labels['walls'].append(seg_labels)
 
-
         print('------------------------\n'
               'phase : {}\n'.format(spectral_network.phase) +
               '------------------------\n')
