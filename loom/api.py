@@ -14,7 +14,7 @@ from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
 
-LOGGING_FILE_NAME = 'logs/log.mose.txt'
+LOGGING_FILE_NAME = 'logs/log.loom.txt'
 
 class SpectralNetworkData:
     """
@@ -218,25 +218,30 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
 
 
 def make_spectral_network_plot(spectral_network_data, master=None,
-                               show_plot=True, **kwargs):
+                               show_plot=True, plot_range=None, **kwargs):
+    sw_data = spectral_network_data.sw_data
+    spectral_networks = spectral_network_data.spectral_networks
     spectral_network_plot_title = 'Spectral Network'
 
     if matplotlib.rcParams['backend'] == 'TkAgg':
         spectral_network_plot = NetworkPlotTk(
             master=master,
-            title=spectral_network_plot_title
+            title=spectral_network_plot_title,
+            plot_range=plot_range,
         )
     else:
         spectral_network_plot = NetworkPlot(
-            title=spectral_network_plot_title
+            title=spectral_network_plot_title,
+            plot_range=plot_range,
         )
 
-    for spectral_network in spectral_network_data.spectral_networks:
+    for spectral_network in spectral_networks:
         logging.info('Generating the plot of a spectral network '
                      '@ theta = {}...'.format(spectral_network.phase))
         spectral_network_plot.draw(
             spectral_network, 
-            spectral_network_data.sw_data.branch_points,
+            sw_data.branch_points,
+            punctures=sw_data.punctures,
             g_data=spectral_network_data.sw_data.g_data,
             **kwargs
         )

@@ -40,6 +40,7 @@ class SpectralNetwork:
         if the depth of the joint is too deep.
         """
         accuracy = config['accuracy']
+        num_of_iterations = config['num_of_iterations']
         n_steps=config['num_of_steps']
         logging.info('Start growing a new spectral network...')
 
@@ -64,16 +65,16 @@ class SpectralNetwork:
         logging.debug('Setup the ODE integrator...')
         ode = get_ode(sw_data, self.phase, accuracy)
 
-        logging.info('Start growing a new spectral network...')
-        ppzs = sw_data.punctures
+        ppzs = [p.z for p in sw_data.punctures]
 
         bpzs = [bp.z for bp in sw_data.branch_points]
         
         n_finished_s_walls = 0 
-        iteration = 0
-        while(iteration < config['num_of_iterations']):
+        iteration = 1
+        while(iteration <= num_of_iterations):
             """
-            Iterate until there is no new joint.
+            Iterate until there is no new joint
+            or for a specified number of iterations.
             Each S-wall is grown only once.
             """
             new_joints = []     # number of new joints found in each iteration
@@ -91,6 +92,10 @@ class SpectralNetwork:
                 logging.info('No additional joint found: '
                              'Stop growing this spectral network '
                              'at iteration #{}.'.format(iteration))
+                break
+            elif iteration == num_of_iterations:
+                # Last iteration finished. Do not form new joints,
+                # and do not seed additional S-walls, either.
                 break
             else:
                 logging.info('Growing S-walls in iteration #{} finished.'
@@ -123,9 +128,8 @@ class SpectralNetwork:
                             n_steps=n_steps,
                         )
                     )
-            iteration += 1
-
             logging.info('Iteration #{} finished.'.format(iteration))
+            iteration += 1
 
 
     def save_json_data(self, file_object, **kwargs):

@@ -75,9 +75,10 @@ class GUILoom:
         grid_row += 1
         grid_col = 0
         tk.Label(self.root,
-                 text='diffenrentials').grid(row=grid_row, column=grid_col)
+                 text='casimir_diffenrentials').grid(row=grid_row, 
+                                                     column=grid_col)
         grid_col += 1
-        self.entry['differentials'].grid(
+        self.entry['casimir_differentials'].grid(
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW
         )
 
@@ -95,20 +96,20 @@ class GUILoom:
 
         grid_row += 1
         grid_col = 0
-        tk.Label(self.root,
-                 text='sw_parameters').grid(row=grid_row, column=grid_col)
+        (tk.Label(self.root, text='differential_parameters')
+         .grid(row=grid_row, column=grid_col))
         grid_col += 1
-        self.entry['sw_parameters'].grid(
+        self.entry['differential_parameters'].grid(
             row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW,
         )
 
-        for option in ['mt_params', 'punctures', 'z_range_limits',
-                       'num_of_steps', 'num_of_iterations',
+        for option in ['punctures', 'mt_params', 
+                       'ramification_point_finding_method',
+                       'plot_range', 'num_of_steps', 'num_of_iterations',
                        'size_of_small_step', 'size_of_large_step',
                        'size_of_neighborhood', 'size_of_puncture_cutoff',
                        'size_of_ramification_pt_cutoff',
-                       'size_of_bin', 'accuracy', 'n_processes',
-                       'mass_limit']:
+                       'accuracy', 'n_processes', 'mass_limit',]:
             grid_row += 1
             grid_col = 0
             tk.Label(self.root,
@@ -244,23 +245,13 @@ class GUILoom:
     def update_config_from_entries(self):
         ### Read config options from Entries.
         for section in self.config.parser.sections():
-            if (section == 'Seiberg-Witten parameters'):
-                ### Reset the given section of config.parser
-                for option in self.config.parser.options(section):
-                    self.config.parser.remove_option(section, option)
-
-                params_input = eval(self.entry_var['sw_parameters'].get())
-                self.config['sw_parameters'] = params_input
-                for var, val in params_input.iteritems():
-                    self.config.parser.set(section, var, str(val))
-            else:
-                for option in self.config.parser.options(section):
-                    value = self.entry_var[option].get()
-                    if (section == 'numerical parameters'):
-                        self.config[option] = eval(value)
-                    else:
-                        self.config[option] = value
-                    self.config.parser.set(section, option, value)
+            for option in self.config.parser.options(section):
+                value = self.entry_var[option].get()
+                if (section == 'numerical parameters'):
+                    self.config[option] = eval(value)
+                else:
+                    self.config[option] = value
+                self.config.parser.set(section, option, value)
 
 
     def button_generate_action(self):
@@ -276,13 +267,15 @@ class GUILoom:
         return None
 
     def button_plot_action(self):
-        ### Plot spectral networks.
+        self.update_config_from_entries()
+
         if (len(self.spectral_networks) > 0):
             snd = SpectralNetworkData(self.sw_data, self.spectral_networks)
             make_spectral_network_plot(
                 snd,
                 master=self.root,
                 plot_on_cylinder=self.check_plot_on_cylinder,
+                plot_range=self.config['plot_range'],
             )
             return None
         else:

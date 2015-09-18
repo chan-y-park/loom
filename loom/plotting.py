@@ -12,6 +12,7 @@ from matplotlib.backends.backend_tkagg import (
 from matplotlib.widgets import Button
 from matplotlib import pyplot
 from math import pi
+from sympy import oo
 
 from network_plot import NetworkPlotBase
 from misc import put_on_cylinder, split_with_overlap
@@ -22,7 +23,6 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         spectral_network,
         branch_points,
         punctures=None, 
-        plot_range=None, 
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
@@ -30,10 +30,11 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         g_data=None
     ):
         
-        labels = {'branch_points': [], 'joints': [], 'walls': []}
-        if plot_range is None:
+        labels = {'branch_points': [], 'joints': [], 'punctures': [],
+                  'walls': []}
+        if self.plot_range is None:
             if plot_on_cylinder is True:
-                plot_range = [[-pi, pi], [-5, 5]]
+                self.plot_range = [[-pi, pi], [-5, 5]]
 
         branch_points_z = []
         for i, bp in enumerate(branch_points):
@@ -52,6 +53,17 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                 jp_z = jp.z
             joints.append([jp_z.real, jp_z.imag])
             labels['joints'].append(jp.label)
+
+        punctures_z = []
+        for i, p in enumerate(punctures):
+            if p.z == oo:
+                continue
+            if plot_on_cylinder is True:
+                p_z = put_on_cylinder(p.z, C)
+            else:
+                p_z = p.z
+            punctures_z.append([p_z.real, p_z.imag])
+            labels['punctures'].append(p.label)
 
         walls = []
         walls_roots = []
@@ -86,7 +98,6 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             ]
             labels['walls'].append(seg_labels)
 
-
         print('------------------------\n'
               'phase : {}\n'.format(spectral_network.phase) +
               '------------------------\n')
@@ -102,10 +113,10 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             phase=spectral_network.phase,
             branch_points=branch_points_z,
             joints=joints,
+            punctures=punctures_z,
             walls=walls,
             walls_colors=walls_colors,
             labels=labels,
-            plot_range=plot_range,
             plot_joints=plot_joints,
             plot_data_points=plot_data_points,
         )
@@ -125,9 +136,11 @@ class NetworkPlot(SpectralNetworkPlotBase):
     def __init__(
         self,
         title=None,
+        plot_range=None,
     ):
         super(NetworkPlot, self).__init__(
             matplotlib_figure=pyplot.figure(title),
+            plot_range=plot_range,
         )
 
         self.axes_button_prev = None
@@ -209,9 +222,11 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
     def __init__(self,
         master=None,
         title=None,
+        plot_range=None,
     ):
         super(NetworkPlotTk, self).__init__(
             matplotlib_figure=matplotlib.figure.Figure(),
+            plot_range=plot_range,
         )
 
         if master is None:

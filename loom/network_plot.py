@@ -4,21 +4,25 @@ import mpldatacursor
 from math import pi
 
 class NetworkPlotBase(object):
-    def __init__(self, matplotlib_figure=None,):
+    def __init__(self, matplotlib_figure=None, plot_range=None,):
         self.plots = []
         self.data_cursor = None
         self.current_plot_idx = None
+        self.plot_range = plot_range
 
         self.figure = matplotlib_figure
         if self.figure is not None:
             self.figure.clf()
     
-    def draw(self, phase=None, branch_points=None, joints=None, walls=None,
-            walls_colors=None, labels=None, plot_range=None, 
-            plot_joints=False, plot_data_points=False,):
+    def draw(
+        self, phase=None, branch_points=None, joints=None, punctures=None,
+        walls=None, walls_colors=None, labels=None, 
+        plot_joints=False, plot_data_points=False,
+    ):
         """
         branch_points = [[bpx, bpy], ...]
         joints = [[jpx, jpy], ...]
+        punctures = [[px, py], ...]
         walls = [[wall.get_xs(), wall.get_ys(), ...]
         labels = {'branch_points': [bp1_label, ...],
                   'joints': [jp1_label, ...],
@@ -32,12 +36,15 @@ class NetworkPlotBase(object):
             aspect='equal',
         )
 
-        if plot_range is not None:
-            [[x_min, x_max], [y_min, y_max]] = plot_range
+        if self.plot_range is not None:
+            [[x_min, x_max], [y_min, y_max]] = self.plot_range
             axes.set_xlim(x_min, x_max)
             axes.set_ylim(y_min, y_max)
         else:
             axes.autoscale(enable=True, axis='both', tight=None)
+            x_min, x_max = axes.get_xlim()
+            y_min, y_may = ayes.get_ylim()
+            self.plot_range = [[x_min, x_max], [y_min, y_max]]
 
         axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
 
@@ -79,6 +86,15 @@ class NetworkPlotBase(object):
                 jpx, jpy = jp
                 axes.plot(jpx, jpy, '+', markeredgewidth=2,
                           markersize=8, color='k', label=labels['joints'][i],)
+
+        # Plot puncturess.
+        for i, p in enumerate(punctures):
+            px, py = p
+            axes.plot(px, py, 'o', markeredgewidth=2, markersize=8, 
+                        color='k', markerfacecolor='none', 
+                        label=labels['punctures'][i],
+                    )
+
 
         axes.set_visible(False)
         self.plots.append(axes)

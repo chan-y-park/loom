@@ -1,14 +1,16 @@
-import numpy as np
+import numpy
 import logging
 import pdb
 
 from cmath import exp, pi, phase
+from sympy import oo
 from numpy.linalg import matrix_rank
 from itertools import combinations
 from pprint import pprint
 
 from geometry import SWDataBase
-from misc import n_unique
+#from misc import n_unique
+from misc import n_remove_duplicate
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
@@ -199,16 +201,19 @@ class SWDataWithTrivialization(SWDataBase):
         super(SWDataWithTrivialization, self).__init__(config)
         self.accuracy = config['accuracy']
         self.branch_points = []
+        # FIXME: Mark each puncture in the config.ini as being (ir)regular,
+        # or analyze all punctures to determine the irregularity.
         self.irregular_singularities = []
 
         # z-coords of branch points.
-        bpzs = n_unique(
-            [r.z for r in self.ffr_ramification_points if not r.is_puncture],
+        bpzs = n_remove_duplicate(
+            [r.z for r in self.ffr_ramification_points if r.z != oo],
             self.accuracy,
         )
+
         # z-coords of irregular singularities.
-        iszs = n_unique(
-            [r.z for r in self.ffr_ramification_points if r.is_puncture],
+        iszs = n_remove_duplicate(
+            [p.z for p in self.punctures if p.z != oo],
             self.accuracy,
         )
         
@@ -284,7 +289,7 @@ class SWDataWithTrivialization(SWDataBase):
             if is_path_to_bp == False:
                 sorted_ffr_xs = get_sorted_xs(
                     ffr_xs_0, ffr_xs_1, accuracy=self.accuracy,
-                    check_tracking=True, index=1,
+                    check_tracking=True, index=i,
                     z_0=z_path[i-1], z_1=z_path[i],
                 )
             else:
@@ -385,14 +390,14 @@ class SWDataWithTrivialization(SWDataBase):
         
         ### NOTE: in the following basis vectors, i = 0 , ... , n-1
         def basis_e(i):
-            return np.array([kr_delta(j, i) for j in range(n_sheets)])
+            return numpy.array([kr_delta(j, i) for j in range(n_sheets)])
 
         perm_list = []
         for i in range(n_sheets):
             new_sheet_index = sorted_sheets[i][0]
             perm_list.append(basis_e(new_sheet_index))
 
-        perm_matrix = np.matrix(perm_list).transpose()
+        perm_matrix = numpy.matrix(perm_list).transpose()
 
         return perm_matrix
 
@@ -444,7 +449,8 @@ class SWDataWithTrivialization(SWDataBase):
             "Analyzing an irregular singularity at z = {}."
             .format(irr_sing.z)
         )
-        path_around_z = get_path_around(irr_sing.z)
+        path_around_z = get_path_around(irr_sing.z, self.base_point,
+                                        self.min_distance)
         self.monodromy = (
             self.get_sheet_monodromy(path_around_z)
         )
@@ -562,7 +568,7 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
     
     if check_tracking == True:
         ### Now we check that sheet tracking is not making a mistake.
-        unique_sorted_xs = n_unique(sorted_xs, accuracy)
+        unique_sorted_xs = n_remove_duplicate(sorted_xs, accuracy)
         if len(unique_sorted_xs) < len(sorted_xs):
             print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
             print "old xs" 
@@ -615,10 +621,10 @@ def get_positive_roots_of_branch_point(bp, g_data):
         for s_1, s_2 in combinations(g, 2):
             v_1 = weights[s_1]
             v_2 = weights[s_2]
-            if any(np.allclose(v_1 - v_2, x) for x in positive_roots):
+            if any(numpy.allclose(v_1 - v_2, x) for x in positive_roots):
                 vanishing_positive_roots.append(v_1 - v_2)
 
-            elif any(np.allclose(v_2 - v_1, x) for x in positive_roots):
+            elif any(numpy.allclose(v_2 - v_1, x) for x in positive_roots):
                 vanishing_positive_roots.append(v_2 - v_1)
 
             else:
@@ -666,11 +672,11 @@ def keep_linearly_independent_vectors(vector_list):
     independent_list = [first_vector]
 
     m_rank = 1
-    m = np.matrix([first_vector])
+    m = numpy.matrix([first_vector])
     for v in vector_list:
         ### add the vector as a row to the matrix, 
         ### then compute the rank
-        new_m = np.vstack([m,v])
+        new_m = numpy.vstack([m,v])
         new_m_rank = matrix_rank(new_m)
         if new_m_rank > m_rank:
             m = new_m
