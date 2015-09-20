@@ -128,9 +128,9 @@ class IrregularSingularity:
     Just a container of information.
     Strictly related to the first fundamental representation cover.
     """
-    def __init__(self, z=None):
+    def __init__(self, z=None, label=None):
         self.z = z
-        
+        self.label=label
         self.monodromy = None
         
     def print_info(self):
@@ -232,7 +232,7 @@ class SWDataWithTrivialization(SWDataBase):
                               if abs(x) > self.accuracy]
         self.min_distance = min(non_zero_distances)
 
-        # Fix reference x's at the basepoints.
+        # Fix reference x's at the basepoint.
         # These sheets are aligned in the order of
         # sw.g_data.weights, i.e. reference_sheets[i]
         # is the value of x corresponding to 
@@ -253,8 +253,10 @@ class SWDataWithTrivialization(SWDataBase):
             self.branch_points.append(bp)
 
         ### Construct the list of irregular singularities
-        for z_irr_sing in iszs:
-            irr_sing = IrregularSingularity(z=z_irr_sing)
+        for j, z_irr_sing in enumerate(iszs):
+            irr_sing = IrregularSingularity(
+                                z=z_irr_sing, label='Irr.Sing. #{}'.format(j)
+                                )
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
 
@@ -451,7 +453,7 @@ class SWDataWithTrivialization(SWDataBase):
         )
         path_around_z = get_path_around(irr_sing.z, self.base_point,
                                         self.min_distance)
-        self.monodromy = (
+        irr_sing.monodromy = (
             self.get_sheet_monodromy(path_around_z)
         )
         

@@ -22,7 +22,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         self,
         spectral_network,
         branch_points,
-        punctures=None, 
+        punctures=None,
+        irregular_singularities=None, 
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
@@ -31,7 +32,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
     ):
         
         labels = {'branch_points': [], 'joints': [], 'punctures': [],
-                  'walls': []}
+                  'walls': [], 'irregular_singularities': []}
         if self.plot_range is None:
             if plot_on_cylinder is True:
                 self.plot_range = [[-pi, pi], [-5, 5]]
@@ -45,13 +46,13 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             branch_points_z.append([bp_z.real, bp_z.imag])
             labels['branch_points'].append(bp.label)
    
-        joints = []
+        joints_z = []
         for i, jp in enumerate(spectral_network.joints):
             if plot_on_cylinder is True:
                 jp_z = put_on_cylinder(jp.z, C)
             else:
                 jp_z = jp.z
-            joints.append([jp_z.real, jp_z.imag])
+            joints_z.append([jp_z.real, jp_z.imag])
             labels['joints'].append(jp.label)
 
         punctures_z = []
@@ -64,6 +65,17 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                 p_z = p.z
             punctures_z.append([p_z.real, p_z.imag])
             labels['punctures'].append(p.label)
+
+        irregular_singularities_z = []
+        for i, irs in enumerate(irregular_singularities):
+            if irs.z == oo:
+                continue
+            if plot_on_cylinder is True:
+                irs_z = put_on_cylinder(irs.z, C)
+            else:
+                irs_z = irs.z
+            irregular_singularities_z.append([irs_z.real, irs_z.imag])
+            labels['irregular_singularities'].append(irs.label)        
 
         walls = []
         walls_roots = []
@@ -106,14 +118,16 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         print_spectral_network_data(
                 spectral_network.s_walls, 
                 branch_points,
+                irregular_singularities,
                 g_data
         )
 
         super(SpectralNetworkPlotBase, self).draw(
             phase=spectral_network.phase,
             branch_points=branch_points_z,
-            joints=joints,
+            joints=joints_z,
             punctures=punctures_z,
+            irregular_singularities=irregular_singularities_z,
             walls=walls,
             walls_colors=walls_colors,
             labels=labels,
@@ -369,7 +383,9 @@ def make_weight_dictionary(g_data):
     return weight_dictionary
 
 
-def print_spectral_network_data(s_walls, branch_points, g_data):
+def print_spectral_network_data(
+                    s_walls, branch_points, irregular_singularities, g_data
+                    ):
     root_dictionary = make_root_dictionary(g_data)
 
     print('\t--- The S-Wall Data ---\n')
@@ -395,6 +411,14 @@ def print_spectral_network_data(s_walls, branch_points, g_data):
             bp.label + 
             '\tposition : {}\n'.format(bp.z) +
             '\t\troot type : {}\n'.format(rt_labels)
+        )
+
+    print('\t--- The Irregular Singularities ---\n')
+    for irs in irregular_singularities:
+        print(
+            irs.label + 
+            '\tposition : {}\n'.format(irs.z) + 
+            '\tmonodomry matrix : {}\n'.format(irs.monodromy)
         )
 
 

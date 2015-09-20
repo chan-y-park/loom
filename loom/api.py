@@ -242,6 +242,7 @@ def make_spectral_network_plot(spectral_network_data, master=None,
             spectral_network, 
             sw_data.branch_points,
             punctures=sw_data.punctures,
+            irregular_singularities=sw_data.irregular_singularities,
             g_data=spectral_network_data.sw_data.g_data,
             **kwargs
         )

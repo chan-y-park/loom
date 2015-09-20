@@ -16,8 +16,8 @@ class NetworkPlotBase(object):
     
     def draw(
         self, phase=None, branch_points=None, joints=None, punctures=None,
-        walls=None, walls_colors=None, labels=None, 
-        plot_joints=False, plot_data_points=False,
+        irregular_singularities=None, walls=None, walls_colors=None, 
+        labels=None, plot_joints=False, plot_data_points=False,
     ):
         """
         branch_points = [[bpx, bpy], ...]
@@ -77,6 +77,14 @@ class NetworkPlotBase(object):
                     [bpx, bpx], [bpy, axes.get_ylim()[1]], ':', 
                     color='k', 
                     label='Cut of '+labels['branch_points'][i],
+                )
+
+        for i, irr_sing in enumerate(irregular_singularities):
+            isx, isy = irr_sing
+            axes.plot(
+                    [isx, isx], [isy, axes.get_ylim()[1]], ':', 
+                    color='k', 
+                    label='Cut of '+labels['irregular_singularities'][i],
                 )
 
    
