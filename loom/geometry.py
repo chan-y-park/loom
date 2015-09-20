@@ -384,7 +384,8 @@ class SWDataBase(object):
                         )
             
             while (rotate_z_plane is True) and rotation_n < max_rotations:
-                logging.info(('The z-plane has been rotated {} times.\n'+
+                if max_rotations != 0:
+                    logging.info(('The z-plane has been rotated {} times.\n'+
                         'Current rotation phase of the z-plane: {}\n').format(
                                                 rotation_n, z_plane_rotation))
 
