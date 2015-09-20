@@ -190,8 +190,9 @@ class SWDataWithTrivialization(SWDataBase):
         The output looks like this
         {0 : x_0, ... , i : x_i, ...}
     """
-    # NOTE: I am assuming that branch points do not overlap vertically
-    # this should be guaranteed by introducing an automatic rotation of 
+    # NOTE: I am assuming that branch points NOR irregular singularities 
+    # overlap vertically.
+    # This should be guaranteed by introducing an automatic rotation of 
     # the z-plane before calling this class.
     # NOTE: I am restricting to square-root type branch points.
     # Although I am not printing any explicit warning/error message 
