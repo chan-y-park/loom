@@ -407,7 +407,7 @@ class SWall(object):
                 #  the direction (either 'cw' or 'ccw')]
                 # to each intersection.
                 intersections.append(
-                    [br_loc_idx, t, clock(left_right(self.z, t))]
+                    [branch_locus, t, clock(left_right(self.z, t))]
                 )
             _cuts_intersections += intersections
 
@@ -433,11 +433,10 @@ class SWall(object):
         if len(self.cuts_intersections) > 0:
             # Add the actual intersection point to the S-wall
             # then update the attribute SWall.cuts_intersections accordingly
-            self.enhance_at_cuts(branching_loci)
+            self.enhance_at_cuts()
             
             for k in range(len(self.cuts_intersections)):
-                bp_idx, t, direction = self.cuts_intersections[k]
-                branch_locus = branching_loci[br_loc_idx]
+                branch_locus, t, direction = self.cuts_intersections[k]
 
                 current_root = self.local_roots[-1]
                 new_root = g_data.weyl_monodromy(
@@ -499,7 +498,7 @@ class SWall(object):
         return [[xs_at_z[w_p[0]], xs_at_z[w_p[1]]] for w_p in weight_pairs]
 
 
-    def enhance_at_cuts(self, branching_loci):
+    def enhance_at_cuts(self):
         # Add the intersection points of Swalls and branch cuts
         # also update the intersection data accordingly
         wall_pieces_z = []
@@ -510,8 +509,7 @@ class SWall(object):
         # piece add the corresponding intersection point
         t_0 = 0
         for int_data in self.cuts_intersections:
-            br_loc_idx, t, chi = int_data
-            br_loc = branching_loci[br_loc_idx]
+            br_loc, t, chi = int_data
 
             z_1 = self.z[t]
             z_2 = self.z[t+1]

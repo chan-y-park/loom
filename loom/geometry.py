@@ -142,7 +142,7 @@ class GData:
         # of SQUARE-ROOT type. Need to update this 
         # for more general cases.
         if br_loc.__class__.__name__ == 'BranchPoint':
-            bp_root = bp.positive_roots[0]
+            bp_root = br_loc.positive_roots[0]
 
             new_root = root - (2 * bp_root * (numpy.dot(root, bp_root))
                                 / numpy.dot(bp_root,bp_root))
@@ -362,14 +362,26 @@ class SWDataBase(object):
         max_pi_fraction = 10
         rotate_z_plane = True
 
-        for max_rotations in range(2, max_pi_fraction+1):
-            z_rotation_phase = cmath.exp(1j * cmath.pi / max_rotations)
-            rotation_n = 1
+        for max_rotations in range(max_pi_fraction+1):
+            if max_rotations == 0:
+                # we study the case of no rotations at all
+                z_rotation_phase = 1.0
+                rotation_n = -1
+            elif max_rotations == 1:
+                # there are no nontrivial rotations when this is 1
+                continue
+            else: 
+                z_rotation_phase = cmath.exp(1j * cmath.pi / max_rotations)
+                rotation_n = 1
+            
             z_plane_rotation = z_rotation_phase
 
-            logging.info('Will try rotating z-plane in increments'
-                        ' of pi / {}\n'.format(max_rotations)
-                )
+            if max_rotations == 0:
+                logging.info('The z-plane has not been rotated yet.')
+            else:
+                logging.info('Will try rotating z-plane in increments'
+                            ' of pi / {}\n'.format(max_rotations)
+                        )
             
             while (rotate_z_plane is True) and rotation_n < max_rotations:
                 logging.info(('The z-plane has been rotated {} times.\n'+
@@ -391,14 +403,14 @@ class SWDataBase(object):
                         if pz == oo:
                             npz = oo
                         else:
-                            npz = complex(pz)
+                            # Note: if we substitute z' = c z in F(x,z)=0,
+                            # where c is a phase, the position of punctures 
+                            # and branch points will rotate contravariantly
+                            # z_pt -> c^{-1} z_pt
+                            npz = (1.0 / z_plane_rotation) * complex(pz)
                         punctures.append(
                             Puncture(
-                                # Note: if we substitute z' = c z in F(x,z)=0,
-                                # where c is a phase, the position of punctures 
-                                # and branch points will rotate contravariantly
-                                # z_pt -> c^{-1} z_pt
-                                z= (1.0/z_plane_rotation)*npz, Ciz=Cipz,
+                                z= npz, Ciz=Cipz,
                                 cutoff=config['size_of_puncture_cutoff'],
                                 label='puncture #{}'.format(len(self.punctures))
                             )
