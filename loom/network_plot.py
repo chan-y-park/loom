@@ -43,7 +43,7 @@ class NetworkPlotBase(object):
         else:
             axes.autoscale(enable=True, axis='both', tight=None)
             x_min, x_max = axes.get_xlim()
-            y_min, y_may = ayes.get_ylim()
+            y_min, y_max = axes.get_ylim()
             self.plot_range = [[x_min, x_max], [y_min, y_max]]
 
         axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
