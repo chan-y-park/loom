@@ -44,7 +44,7 @@ class SpectralNetwork:
         n_steps=config['num_of_steps']
         logging.info('Start growing a new spectral network...')
 
-        logging.info('Seed S-walls at ramification points...')
+        logging.info('Seed S-walls at branch points...')
         
         for bp in sw_data.branch_points:
             s_wall_seeds = get_s_wall_seeds(sw_data, self.phase, 

@@ -394,7 +394,7 @@ class SWall(object):
                 # Drop intersections of a primary S-wall with the 
                 # branch cut emanating from its parent branch-point
                 # if such intersections happens at t=0 or t=1.
-                if bp.label == self.parents[0] or t == 0 or t == 1:
+                if bp.label == self.parents[0] and (t == 0 or t == 1):
                     continue
                 # Add 
                 # [the branch-point identifier(index), t,
