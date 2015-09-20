@@ -28,11 +28,7 @@ class NetworkPlotBase(object):
                   'joints': [jp1_label, ...],
                   'walls': [wall1_label, ...]}
         """
-        # FIXME : Currently, punctures and irregular singularities
-        # are not well-distinguished, and thus plotted twice.
-        # Must decide at the level of SW data how to divide
-        # punctures (regular ones) from irregular singularities,
-        # and keep the two sets as disjoint.
+        
         rect = [.1, 0.15, .8, .8]
 
         axes = self.figure.add_axes(

@@ -2,6 +2,7 @@ import sympy
 import numpy
 import logging
 import copy
+import cmath
 import pdb
 import sympy.mpmath as mpmath
 
@@ -14,7 +15,8 @@ from itertools import combinations
 
 import sage_subprocess
 from misc import (ctor2, r2toc, get_root_multiplicity, PSL2C,
-                  delete_duplicates, gather, parse_sym_dict_str)
+                  delete_duplicates, gather, parse_sym_dict_str,
+                  n_remove_duplicate)
 
 x, z = sympy.symbols('x z')
 
@@ -241,7 +243,8 @@ class SWCurve:
     in the numerical evolution of S-walls.
     """
     def __init__(self, casimir_differentials=None, g_data=None, 
-                 diff_params=None, mt_params=None, ffr=False):
+                 diff_params=None, mt_params=None, 
+                 z_rotation = None, ffr=False):
         self.sym_eq = None
         self.num_eq = None
 
@@ -260,8 +263,9 @@ class SWCurve:
             # NOTE: We apply PSL2C only to the numerical curve
             # for the simplicity of analysis.
             #self.num_eq = self.sym_eq.subs(parameters).evalf()
-            Ciz = PSL2C(mt_params, z, inverse=True) 
-            self.num_eq = self.sym_eq.subs(z, Ciz).subs(diff_params).evalf()
+            Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
+            self.num_eq = sympy.simplify(
+                    self.sym_eq.subs(z, Ciz).subs(diff_params).evalf())
         else:
             # TODO: Need to build a cover in a general representation
             # from the differentials, using symmetric polynomials.
@@ -288,7 +292,8 @@ class SWCurve:
 
 
 class SWDiff:
-    def __init__(self, v_str, g_data=None, diff_params=None, mt_params=None):
+    def __init__(self, v_str, g_data=None, diff_params=None, mt_params=None,
+                z_rotation=None):
         # sym_v is a SymPy expression. 
         #self.sym_v = sympy.simplify(
         #    sympy.sympify(v_str).subs(z, Ciz) * dCiz
@@ -299,10 +304,10 @@ class SWDiff:
         # NOTE: We apply PSL2C only to the numerical curve
         # for the simplicity of analysis.
         #self.num_v = self.sym_v.subs(parameters).evalf()
-        Ciz = PSL2C(mt_params, z, inverse=True) 
+        Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
         dCiz = Ciz.diff(z)
-        self.num_v = (self.sym_v.subs(z, Ciz)
-                      * dCiz).subs(diff_params).evalf()
+        self.num_v = sympy.simplify((self.sym_v.subs(z, Ciz)
+                      * dCiz).subs(diff_params).evalf())
 
 
 class SWDataBase(object):
@@ -325,6 +330,7 @@ class SWDataBase(object):
         self.ffr_curve = None
         self.curve = None
         self.diff = None
+        self.accuracy = config['accuracy']
 
         casimir_differentials = {}
         for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
@@ -342,9 +348,24 @@ class SWDataBase(object):
         else:
             mt_params = None
 
+        
+
+
+
         # PSL2C-transformed z & dz
         #Ciz = PSL2C(mt_params, z, inverse=True) 
         #dCiz = Ciz.diff(z)
+
+
+        # Introduce a clockwise rotation of the z-plane,
+        # after the PSL2C transformation, by the following phase.
+        z_rotation_phase = cmath.exp(1j * cmath.pi / 4.0)
+
+        # TODO: the code should be able to analyze differentials,
+        # and determine where are singularities, instead of giving 
+        # them by hand. (However, we'll need to supply monodromy 
+        # parameters such as masses, and stokes data for irregular 
+        # singularities.)
 
         if config['punctures'] is not None:
             punctures_string = config['punctures'].lstrip('[').rstrip(']')
@@ -357,7 +378,11 @@ class SWDataBase(object):
                     npz = complex(pz)
                 self.punctures.append(
                     Puncture(
-                        z=npz, Ciz=Cipz,
+                        # Note: if we substitute z' = c z in F(x,z)=0,
+                        # where c is a phase, the position of punctures 
+                        # and branch points will rotate contravariantly
+                        # z_pt -> c^{-1} z_pt
+                        z= (1.0/z_rotation_phase)*npz, Ciz=Cipz,
                         cutoff=config['size_of_puncture_cutoff'],
                         label='puncture #{}'.format(len(self.punctures))
                     )
@@ -368,11 +393,12 @@ class SWDataBase(object):
             g_data=self.g_data,
             diff_params=diff_params,
             mt_params=mt_params,
+            z_rotation = z_rotation_phase,
             ffr=True,
         )
         logging.info(
             'Seiberg-Witten curve in the 1st fundamental '
-            'representation: {} = 0.\n(numerically {}=0.)'
+            'representation:\n{} = 0\n(numerically\n{}=0\n)'
             .format(sympy.latex(self.ffr_curve.sym_eq),
                     sympy.latex(self.ffr_curve.num_eq))
         )
@@ -393,23 +419,44 @@ class SWDataBase(object):
             g_data=self.g_data,
             diff_params=diff_params,
             mt_params=mt_params,
+            z_rotation = z_rotation_phase,
         )
 
-        logging.info('\nSeiberg-Witten differential: %s dz\n',
-                     sympy.latex(self.diff.num_v))
+        logging.info('\nSeiberg-Witten differential:\n{} dz\n'.format(
+                     sympy.latex(self.diff.num_v)))
 
         logging.info(
             "Calculating ramification points of the Seiberg-Witten curve "
             "in the first fundamental rep."
         )
+    
         self.ffr_ramification_points = get_ramification_points(
             curve=self.ffr_curve, 
             diff_params=diff_params,
             mt_params=mt_params,
+            z_rotation=z_rotation_phase,
             accuracy=config['accuracy'], 
             punctures=self.punctures,
             method=config['ramification_point_finding_method'],
         )
+
+        # Now check if the z-plane needs to be rotated
+
+        # z-coords of branch points.
+        bpzs = n_remove_duplicate(
+            [r.z for r in self.ffr_ramification_points if r.z != oo],
+            self.accuracy,
+        )
+
+        # z-coords of punctures.
+        iszs = n_remove_duplicate(
+            [p.z for p in self.punctures if p.z != oo],
+            self.accuracy,
+        )
+
+
+
+
 
 
     def get_aligned_xs(self, z_0):
@@ -596,10 +643,16 @@ def get_ramification_points(
     curve=None, 
     diff_params=None, 
     mt_params=None,
+    z_rotation=None,
     accuracy=None, 
     punctures=None,
     method=None,
 ):
+    #FIXME: Why are we computing the ramification points
+    # in the non-PLS2C rotated curve?
+    # All the numerics of the Spectral Network happens
+    # after we do PLS2C, and we should probably study the 
+    # fibrartion in those coordinates too.
     if curve.sym_eq is None:
         raise NotImplementedError
 
@@ -632,7 +685,11 @@ def get_ramification_points(
         label = ('ramification point #{}'
                  .format(len(ramification_points)))
         rp = RamificationPoint(
-            z = PSL2C(mt_params, z_i, numerical=True),
+            # Note: if we substitute z' = c z in F(x,z)=0,
+            # where c is a phase, the position of punctures 
+            # and branch points will rotate contravariantly
+            # z_pt -> c^{-1} z_pt
+            z = (1.0/z_rotation)*PSL2C(mt_params, z_i, numerical=True),
             Ciz=complex(z_i), 
             x=complex(x_j), 
             i=m_x, 

@@ -204,6 +204,11 @@ class SWDataWithTrivialization(SWDataBase):
         self.branch_points = []
         # FIXME: Mark each puncture in the config.ini as being (ir)regular,
         # or analyze all punctures to determine the irregularity.
+        # Very important: once we do this, we must make sure that the
+        # algorithm of automatic z-rotation checks BOTH irregulars and regulars,
+        # because we don't want either of them to be aligned 
+        # vertically with a branch point or with each other, for 
+        # trivialization purposes (even if regulars don't emanate cuts).
         self.irregular_singularities = []
 
         # z-coords of branch points.
