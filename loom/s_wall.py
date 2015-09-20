@@ -341,6 +341,7 @@ class SWall(object):
         """
         g_data = sw_data.g_data
         branch_points = sw_data.branch_points
+        irregular_singularities = sw_data.irregular_singularities
 
         # Determine the initial root-type
         z_0 = self.z[0]
@@ -361,6 +362,9 @@ class SWall(object):
         # raise an error.
         if len(self.z) <= 3:
             return None
+
+        branching_loci = sort(branch_points + irregular_singularities,)
+
         bpzs_r = [bp.z.real for bp in branch_points]
         
         # parametrizing the z-coordinate of the k-wall's coordinates
