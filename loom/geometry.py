@@ -130,18 +130,28 @@ class GData:
         return pairs
 
 
-    def weyl_monodromy(self, root, bp, direction):
+    def weyl_monodromy(self, root, br_loc, direction):
         """
         Returns a new root of the segment of an S-wall
-        when it crossed a branch cut from bp.
+        when it crossed a branch cut from a brancing locus
+        which could be a branch point or an irregular singularity.
         """
         # TODO: For now, we ASSUME that branch points are 
         # of SQUARE-ROOT type. Need to update this 
         # for more general cases.
-        bp_root = bp.positive_roots[0]
+        if br_loc.__class__.__name__ == 'BranchPoint':
+            bp_root = bp.positive_roots[0]
 
-        new_root = root - (2 * bp_root * (numpy.dot(root, bp_root))
-                           / numpy.dot(bp_root,bp_root))
+            new_root = root - (2 * bp_root * (numpy.dot(root, bp_root))
+                                / numpy.dot(bp_root,bp_root))
+        
+        elif br_loc.__class__.__name__ == 'IrregularSingularity':
+            if direction == 'ccw':
+                monodromy_matrix = br_loc.monodromy
+            elif direction == 'cw':
+                monodromy_matrix = (
+                        numpy.linalg.inv(br_loc.monodromy).astype(int))
+            new_root = monodromy_matrix.dot(root)
 
         return new_root
 

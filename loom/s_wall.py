@@ -363,19 +363,19 @@ class SWall(object):
         if len(self.z) <= 3:
             return None
 
-        branching_loci = sort(branch_points + irregular_singularities,)
-
-        bpzs_r = [bp.z.real for bp in branch_points]
+        # branching will occur at branch points or irregular singularities
+        branching_loci = branch_points + irregular_singularities
+        br_loc_zs_r = [bl.z.real for bl in branching_loci]
         
         # parametrizing the z-coordinate of the k-wall's coordinates
         # as a function of proper time
         traj_t = numpy.array(range(len(self.z)))
         traj_z_r = numpy.array([z.real for z in self.z])
         
-        # Scan over branch cuts, see if path ever crosses one 
+        # Scan over branching loci cuts, see if path ever crosses one 
         # based on x-coordinates only
         _cuts_intersections = []
-        for b_pt_idx, x_0 in list(enumerate(bpzs_r)):
+        for br_loc_idx, x_0 in list(enumerate(br_loc_zs_r)):
             g = interpolate.splrep(traj_t, traj_z_r - x_0, s=0)
             # now produce a list of integers corresponding to points in the 
             # S-wall's coordinate list that seem to cross branch-cuts
@@ -388,24 +388,26 @@ class SWall(object):
             _intersection_ts = delete_duplicates(__intersection_ts)
             # Enforce imaginary-part of z-coordinate intersection criterion:
             # branch cuts extend vertically.
-            y_0 = branch_points[b_pt_idx].z.imag
+            y_0 = branching_loci[br_loc_idx].z.imag
             intersection_ts = [t for t in _intersection_ts
                                if self.z[t].imag > y_0]
             
             intersections = []
             for t in intersection_ts:
-                bp = branch_points[b_pt_idx]
-                # Drop intersections of a primary S-wall with the 
-                # branch cut emanating from its parent branch-point
-                # if such intersections happens at t=0 or t=1.
-                if bp.label == self.parents[0] and (t == 0 or t == 1):
-                    continue
+                branch_locus = branching_loci[br_loc_idx]
+                if branch_locus.__class__.__name__ == 'BranchPoint':
+                    # Drop intersections of a primary S-wall with the 
+                    # branch cut emanating from its parent branch-point
+                    # if such intersections happens at t=0 or t=1.
+                    if (branch_locus.label == self.parents[0] 
+                                                and (t == 0 or t == 1)):
+                        continue
                 # Add 
                 # [the branch-point identifier(index), t,
                 #  the direction (either 'cw' or 'ccw')]
                 # to each intersection.
                 intersections.append(
-                    [b_pt_idx, t, clock(left_right(self.z, t))]
+                    [br_loc_idx, t, clock(left_right(self.z, t))]
                 )
             _cuts_intersections += intersections
 
@@ -431,15 +433,15 @@ class SWall(object):
         if len(self.cuts_intersections) > 0:
             # Add the actual intersection point to the S-wall
             # then update the attribute SWall.cuts_intersections accordingly
-            self.enhance_at_cuts(branch_points)
+            self.enhance_at_cuts(branching_loci)
             
             for k in range(len(self.cuts_intersections)):
                 bp_idx, t, direction = self.cuts_intersections[k]
-                branch_point = branch_points[bp_idx]
+                branch_locus = branching_loci[br_loc_idx]
 
                 current_root = self.local_roots[-1]
                 new_root = g_data.weyl_monodromy(
-                    current_root, branch_point, direction
+                    current_root, branch_locus, direction
                 )
                 new_weight_pairs = g_data.ordered_weight_pairs(new_root)
 
@@ -497,23 +499,23 @@ class SWall(object):
         return [[xs_at_z[w_p[0]], xs_at_z[w_p[1]]] for w_p in weight_pairs]
 
 
-    def enhance_at_cuts(self, branch_points):
+    def enhance_at_cuts(self, branching_loci):
         # Add the intersection points of Swalls and branch cuts
         # also update the intersection data accordingly
         wall_pieces_z = []
         wall_pieces_x = []
         wall_pieces_M = []
 
-        # split the wall into piececs, at the end of each 
+        # split the wall into pieces, at the end of each 
         # piece add the corresponding intersection point
         t_0 = 0
         for int_data in self.cuts_intersections:
-            bp_idx, t, chi = int_data
-            bp = branch_points[bp_idx]
+            br_loc_idx, t, chi = int_data
+            br_loc = branching_loci[br_loc_idx]
 
             z_1 = self.z[t]
             z_2 = self.z[t+1]
-            z_to_add = get_intermediate_z_point(z_1, z_2, bp.z)
+            z_to_add = get_intermediate_z_point(z_1, z_2, br_loc.z)
 
             xs_1 = self.x[t]
             xs_2 = self.x[t+1]
@@ -552,9 +554,9 @@ class SWall(object):
         # Update the intersection data.
         new_cuts_intersections = []
         for i, int_data in enumerate(self.cuts_intersections):
-            bp, t_old, chi = int_data
+            br_loc, t_old, chi = int_data
             t_new = t_old + i + 1
-            new_cuts_intersections.append([bp, t_new, chi])
+            new_cuts_intersections.append([br_loc, t_new, chi])
         
         self.cuts_intersections = new_cuts_intersections
 

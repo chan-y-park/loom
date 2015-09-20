@@ -399,7 +399,7 @@ class SWDataWithTrivialization(SWDataBase):
             new_sheet_index = sorted_sheets[i][0]
             perm_list.append(basis_e(new_sheet_index))
 
-        perm_matrix = numpy.matrix(perm_list).transpose()
+        perm_matrix = numpy.array(perm_list).transpose()
 
         return perm_matrix
 
