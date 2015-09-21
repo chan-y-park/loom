@@ -18,8 +18,8 @@ N_PATH_TO_PT = 100
 
 ### number of steps for each SEGMENT of the path around a 
 ### branching point (either branch-point, or irregular singularity)
-#N_PATH_AROUND_PT = 30
-N_PATH_AROUND_PT = 100
+N_PATH_AROUND_PT = 30
+#N_PATH_AROUND_PT = 100
 
 ### Tolerance for recognizing colliding sheets at a branch-point
 BP_PROXIMITY_THRESHOLD = 0.05
