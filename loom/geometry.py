@@ -138,36 +138,25 @@ class GData:
         when it crossed a branch cut from a brancing locus
         which could be a branch point or an irregular singularity.
         """
-        # TODO: For now, we ASSUME that branch points are 
-        # of SQUARE-ROOT type. Need to update this 
-        # for more general cases.
-        if br_loc.__class__.__name__ == 'BranchPoint':
-            bp_root = br_loc.positive_roots[0]
-
-            new_root = root - (2 * bp_root * (numpy.dot(root, bp_root))
-                                / numpy.dot(bp_root,bp_root))
-        
-        elif br_loc.__class__.__name__ == 'IrregularSingularity':
-            if direction == 'ccw':
-                monodromy_matrix = br_loc.monodromy
-            elif direction == 'cw':
-                monodromy_matrix = (
-                        numpy.linalg.inv(br_loc.monodromy).astype(int))
-            pair_0 = self.ordered_weight_pairs(root)[0]
-            v_i_ind = pair_0[0]
-            v_j_ind = pair_0[1]
-            ordered_weights = self.weights
-            new_v_i = sum(
+        if direction == 'ccw':
+            monodromy_matrix = br_loc.monodromy
+        elif direction == 'cw':
+            monodromy_matrix = (
+                    numpy.linalg.inv(br_loc.monodromy).astype(int))
+        pair_0 = self.ordered_weight_pairs(root)[0]
+        v_i_ind = pair_0[0]
+        v_j_ind = pair_0[1]
+        ordered_weights = self.weights
+        new_v_i = sum(
                         [monodromy_matrix[k][v_i_ind] * v 
                         for k, v in enumerate(ordered_weights)]
                     )
-            new_v_j = sum(
+        new_v_j = sum(
                         [monodromy_matrix[k][v_j_ind] * v 
                         for k, v in enumerate(ordered_weights)]
                     ) 
 
-            new_root = new_v_j - new_v_i
-
+        new_root = new_v_j - new_v_i
         return new_root
 
 

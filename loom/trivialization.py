@@ -195,10 +195,6 @@ class SWDataWithTrivialization(SWDataBase):
     # overlap vertically.
     # This should be guaranteed by introducing an automatic rotation of 
     # the z-plane before calling this class.
-    # NOTE: I am restricting to square-root type branch points.
-    # Although I am not printing any explicit warning/error message 
-    # and the computation will go through for higher-type, but give a 
-    # wrong answer!
     def __init__(self, config,):
         super(SWDataWithTrivialization, self).__init__(config)
         self.accuracy = config['accuracy']
@@ -227,10 +223,11 @@ class SWDataWithTrivialization(SWDataBase):
         # Automatically choose a basepoint, based on the positions of
         # both branch points and irregular singularities
         all_points_z = bpzs + iszs
+        n_critical_loci = len(all_points_z)
         all_distances = [abs(x - y) for x in all_points_z
                          for y in all_points_z]
         max_distance = max(all_distances)
-        center = sum([z_pt for z_pt in all_points_z]) / len(all_points_z)
+        center = sum([z_pt for z_pt in all_points_z]) / n_critical_loci
         self.base_point = center - 1j * max_distance
         
         # Minimun mutual distance among all the
@@ -258,7 +255,7 @@ class SWDataWithTrivialization(SWDataBase):
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
             bp.label = 'Branch point #{}'.format(i)
-            self.analyze_branch_point(bp)
+            self.analyze_branch_point(bp, n_critical_loci)
             self.branch_points.append(bp)
 
         ### Construct the list of irregular singularities
@@ -266,7 +263,7 @@ class SWDataWithTrivialization(SWDataBase):
             irr_sing = IrregularSingularity(
                                 z=z_irr_sing, label='Irr.Sing. #{}'.format(j)
                                 )
-            self.analyze_irregular_singularity(irr_sing)
+            self.analyze_irregular_singularity(irr_sing, n_critical_loci)
             self.irregular_singularities.append(irr_sing)
 
         
@@ -413,12 +410,12 @@ class SWDataWithTrivialization(SWDataBase):
         return perm_matrix
 
 
-    def analyze_branch_point(self, bp):
+    def analyze_branch_point(self, bp, n_loci):
         logging.info(
             "Analyzing a branch point at z = {}."
             .format(bp.z)
         )
-        path_to_bp = get_path_to(bp.z, self)
+        path_to_bp = get_path_to(bp.z, self, n_loci=n_loci)
         sheets_along_path = self.get_sheets_along_path(
             path_to_bp, is_path_to_bp=True
         )
@@ -455,7 +452,7 @@ class SWDataWithTrivialization(SWDataBase):
                     if rp.z == bp.z]
 
 
-    def analyze_irregular_singularity(self, irr_sing):
+    def analyze_irregular_singularity(self, irr_sing, n_loci):
         logging.info(
             "Analyzing an irregular singularity at z = {}."
             .format(irr_sing.z)
@@ -467,16 +464,17 @@ class SWDataWithTrivialization(SWDataBase):
         )
         
 
-def get_path_to(z_pt, sw_data):
+def get_path_to(z_pt, sw_data, n_loci=None):
     """
     Return a rectangular path from the base point to z_pt.
     If the path has to pass too close to a branch point, 
     we avoid the latter by drawing an arc around it.
     """
-    
+    if n_loci==None:
+        n_loci = len(sw_data.branch_points + sw_data.irregular_singularities)
     base_pt = sw_data.base_point
     closest_bp = None
-    radius = sw_data.min_distance / 10.0
+    radius = sw_data.min_distance / n_loci
 
     logging.debug("Constructing a path [{}, {}]".format(base_pt, z_pt))
 
