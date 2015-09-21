@@ -389,7 +389,7 @@ class SWDataBase(object):
                     punctures_string = (
                         config['punctures'].lstrip('[').rstrip(']')
                     )
-                    for p_str in punctures_string.split(','):
+                    for p_n, p_str in enumerate(punctures_string.split(',')):
                         Cipz = sympy.sympify(p_str.strip()).subs(diff_params)
                         pz = PSL2C(mt_params, Cipz)
                         if pz == oo:
@@ -408,7 +408,7 @@ class SWDataBase(object):
                                 z=npz, Ciz=Cipz,
                                 cutoff=config['size_of_puncture_cutoff'],
                                 label=('puncture #{}'
-                                       .format(len(self.punctures)))
+                                       .format(p_n))
                             )
                         )
                 self.punctures = punctures
@@ -465,7 +465,10 @@ class SWDataBase(object):
                     punctures=self.punctures,
                     method=config['ramification_point_finding_method'],
                 )
-
+                
+                logging.info('These are the punctures:')
+                for pct in self.punctures:
+                    logging.info('Puncture {} at z={}'.format(pct.label, pct.z))
                 # Now check if the z-plane needs to be rotated
 
                 # z-coords of branch points.
@@ -478,15 +481,20 @@ class SWDataBase(object):
                     [p.z for p in self.punctures if p.z != oo],
                     self.accuracy,
                 )
+                z_list = bpzs + pctzs
                 z_r_list = map(float, [z.real for z in (bpzs + pctzs)])
                 min_x_distance =  min(
                     [abs(x - y) for i, x in enumerate(z_r_list) 
                      for y in z_r_list[i+1:]]
                 )
+                min_abs_distance =  min(
+                    [abs(x - y) for i, x in enumerate(z_list)
+                     for y in z_list[i+1:]]
+                )
 
-                if min_x_distance > 2 * self.accuracy:
+                if min_x_distance > min_abs_distance / 2.0:
                     logging.info('All branch points and punctures '
-                                'are sufficiently separated vertically.\n'
+                                'are sufficiently separated horizontally.\n'
                                 'Will not rotate z-plane any more.\n')
                     rotate_z_plane = False
                 else:
