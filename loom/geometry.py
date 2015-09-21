@@ -385,9 +385,11 @@ class SWDataBase(object):
             
             while (rotate_z_plane is True) and rotation_n < max_rotations:
                 if max_rotations != 0:
-                    logging.info(('The z-plane has been rotated {} times.\n'+
-                        'Current rotation phase of the z-plane: {}\n').format(
-                                                rotation_n, z_plane_rotation))
+                    logging.info(
+                        'The z-plane has been rotated {} times.\n'
+                        'Current rotation phase of the z-plane: {}\n'
+                        .format(rotation_n, z_plane_rotation)
+                    )
 
                 # TODO: the code should be able to analyze differentials,
                 # and determine where are singularities, instead of giving 
@@ -397,7 +399,9 @@ class SWDataBase(object):
                 
                 punctures = []
                 if config['punctures'] is not None:
-                    punctures_string = config['punctures'].lstrip('[').rstrip(']')
+                    punctures_string = (
+                        config['punctures'].lstrip('[').rstrip(']')
+                    )
                     for p_str in punctures_string.split(','):
                         Cipz = sympy.sympify(p_str.strip()).subs(diff_params)
                         pz = PSL2C(mt_params, Cipz)
@@ -413,7 +417,8 @@ class SWDataBase(object):
                             Puncture(
                                 z= npz, Ciz=Cipz,
                                 cutoff=config['size_of_puncture_cutoff'],
-                                label='puncture #{}'.format(len(self.punctures))
+                                label=('puncture #{}'
+                                       .format(len(self.punctures)))
                             )
                         )
                 self.punctures = punctures
@@ -456,8 +461,9 @@ class SWDataBase(object):
                              sympy.latex(self.diff.num_v)))
 
                 logging.info(
-                    "Calculating ramification points of the Seiberg-Witten curve "
-                    "in the first fundamental rep."
+                    'Calculating ramification points of '
+                    'the Seiberg-Witten curve '
+                    'in the first fundamental rep.'
                 )
             
                 self.ffr_ramification_points = get_ramification_points(
@@ -485,10 +491,10 @@ class SWDataBase(object):
                 )
 
                 z_r_list = map(float, [z.real for z in (bpzs + pctzs)])
-                min_x_distance =  min([
-                    abs(x - y) for i, x in enumerate(z_r_list) 
-                    for y in z_r_list[i+1:]
-                    ])
+                min_x_distance =  min(
+                    [abs(x - y) for i, x in enumerate(z_r_list) 
+                     for y in z_r_list[i+1:]]
+                )
 
                 if min_x_distance > 2 * self.accuracy:
                     logging.info('All branch points and punctures '
@@ -509,12 +515,6 @@ class SWDataBase(object):
             raise ValueError(
                     'Could not find a suitable rotation for the z-plane.'
                 )
-
-
-
-
-
-
 
 
     def get_aligned_xs(self, z_0):
@@ -722,7 +722,8 @@ def get_ramification_points(
             accuracy=accuracy, 
             punctures=punctures,
         )
-    elif method == 'system_of_eqs':
+    #elif method == 'system_of_eqs':
+    else:
         sols = get_ramification_points_using_system_of_eqs(
             curve=curve, 
             diff_params=diff_params, 
@@ -730,12 +731,12 @@ def get_ramification_points(
             accuracy=accuracy, 
             punctures=punctures,
         )
-    else:
-        raise ValueError(
-            'Unknown or no method set to find ramification points.\n'
-            'Set ramification_point_finding_method = '
-            '[discriminant|system_of_eqs] in the configuration.'
-        )
+    #else:
+    #    raise ValueError(
+    #        'Unknown or no method set to find ramification points.\n'
+    #        'Set ramification_point_finding_method = '
+    #        '[discriminant|system_of_eqs] in the configuration.'
+    #    )
 
     ramification_points = []
 
@@ -775,15 +776,16 @@ def get_ramification_points_using_system_of_eqs(
 
     d_x_f_n, d_x_f_d = sympy.cancel(f.diff(x)).as_numer_denom()
 
-    subs_dict = copy.deepcopy(diff_params)
-    
     # NOTE: solve_poly_system vs. solve
     #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
     #sols = sympy.solve([f, f.diff(x)], z, x)
     z_x_s = sage_subprocess.solve_system_of_eqs(
-        [f_n.subs(subs_dict), d_x_f_n.subs(subs_dict)],
+        [f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION),
+         d_x_f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION)],
         precision = ROOT_FINDING_PRECISION,
     )
+    # TODO: Consider calculating the discriminant D(z)
+    # and double-check if all the z_i's are found.
     for z_i, x_i in z_x_s:
         # Check if z_i is one of the punctures.
         is_puncture = False
@@ -793,32 +795,39 @@ def get_ramification_points_using_system_of_eqs(
         if is_puncture:
             continue
 
-        subs_dict[z] = z_i
-        f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
-                  for c in sympy.Poly(f, x).all_coeffs()]
-        f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
-        f_x_roots = None
-        polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
-        polyroots_extra_precision = ROOT_FINDING_PRECISION
-        while f_x_roots is None:
-            try:
-                f_x_roots = mpmath.polyroots(
-                    f_x_coeffs,
-                    maxsteps=polyroots_maxsteps,
-                    extraprec=polyroots_extra_precision
-                )
-            except NoConvergence:
-                logging.warning(
-                    'mpmath.polyroots failed; increase maxsteps & '
-                    'extraprec by 10.'
-                )
-                polyroots_maxsteps += 10
-                polyroots_extra_precision += 10
+        # Calculate the multiplicity of x_i 
+        # by finding the maximum k that satisfies
+        # (d_x)^k f_n(x, z_i)|_{x = x_i} = 0.
+        f_n_i = f_n.subs(diff_params).subs(z, z_i)
+        m_x = 1
+        while (abs(f_n_i.diff(x, m_x).subs(x, x_i)) < accuracy):
+            m_x += 1
 
-        m_x = 0
-        for x_j in f_x_roots:
-            if abs(x_i - x_j) < accuracy:
-                m_x += 1
+#        f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
+#                  for c in sympy.Poly(f, x).all_coeffs()]
+#        f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
+#        f_x_roots = None
+#        polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
+#        polyroots_extra_precision = ROOT_FINDING_PRECISION
+#        while f_x_roots is None:
+#            try:
+#                f_x_roots = mpmath.polyroots(
+#                    f_x_coeffs,
+#                    maxsteps=polyroots_maxsteps,
+#                    extraprec=polyroots_extra_precision
+#                )
+#            except NoConvergence:
+#                logging.warning(
+#                    'mpmath.polyroots failed; increase maxsteps & '
+#                    'extraprec by 10.'
+#                )
+#                polyroots_maxsteps += 10
+#                polyroots_extra_precision += 10
+#
+#        m_x = 0
+#        for x_j in f_x_roots:
+#            if abs(x_i - x_j) < accuracy:
+#                m_x += 1
 
         sols.append([z_i, (x_i, m_x)])
 
