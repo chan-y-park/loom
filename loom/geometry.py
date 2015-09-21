@@ -153,7 +153,20 @@ class GData:
             elif direction == 'cw':
                 monodromy_matrix = (
                         numpy.linalg.inv(br_loc.monodromy).astype(int))
-            new_root = monodromy_matrix.dot(root)
+            pair_0 = self.ordered_weight_pairs(root)[0]
+            v_i_ind = pair_0[0]
+            v_j_ind = pair_0[1]
+            ordered_weights = self.weights
+            new_v_i = sum(
+                        [monodromy_matrix[k][v_i_ind] * v 
+                        for k, v in enumerate(ordered_weights)]
+                    )
+            new_v_j = sum(
+                        [monodromy_matrix[k][v_j_ind] * v 
+                        for k, v in enumerate(ordered_weights)]
+                    ) 
+
+            new_root = new_v_j - new_v_i
 
         return new_root
 
@@ -492,7 +505,7 @@ class SWDataBase(object):
                      for y in z_list[i+1:]]
                 )
 
-                if min_x_distance > min_abs_distance / 2.0:
+                if min_x_distance > min_abs_distance / len(z_list):
                     logging.info('All branch points and punctures '
                                 'are sufficiently separated horizontally.\n'
                                 'Will not rotate z-plane any more.\n')
