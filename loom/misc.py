@@ -183,7 +183,9 @@ def PSL2C(C, z, inverse=False, numerical=False):
         d = C[1][1]
 
     if numerical is True:
-        return (complex(a) * z + complex(b))/(complex(c) * z + complex(d))
+        numer = complex(a) * complex(z) + complex(b)
+        denom = complex(c) * complex(z) + complex(d)
+        return numer/denom
     else:
         u = sympy.symbols('u')
         Cu = (a*u+b)/(c*u+d)

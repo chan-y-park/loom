@@ -18,7 +18,8 @@ N_PATH_TO_PT = 100
 
 ### number of steps for each SEGMENT of the path around a 
 ### branching point (either branch-point, or irregular singularity)
-N_PATH_AROUND_PT = 30
+#N_PATH_AROUND_PT = 30
+N_PATH_AROUND_PT = 100
 
 ### Tolerance for recognizing colliding sheets at a branch-point
 BP_PROXIMITY_THRESHOLD = 0.05
@@ -579,10 +580,14 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
         unique_sorted_xs = n_remove_duplicate(sorted_xs, accuracy)
         if len(unique_sorted_xs) < len(sorted_xs):
             print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
-            print "old xs" 
+            print "ref_xs:" 
             print ref_xs
-            print "new xs"
+            print "new xs:"
             print new_xs
+            print "sorted_xs:" 
+            print sorted_xs
+            print "unique_sorted_xs:" 
+            print unique_sorted_xs
             raise ValueError(
                 '\nCannot track the sheets!\n'
                 'Probably passing too close to a branch point.'
