@@ -18,7 +18,8 @@ N_PATH_TO_PT = 100
 
 ### number of steps for each SEGMENT of the path around a 
 ### branching point (either branch-point, or irregular singularity)
-N_PATH_AROUND_PT = 30
+N_PATH_AROUND_PT = 60
+#N_PATH_AROUND_PT = 100
 
 ### Tolerance for recognizing colliding sheets at a branch-point
 BP_PROXIMITY_THRESHOLD = 0.05
@@ -232,12 +233,14 @@ class SWDataWithTrivialization(SWDataBase):
         center = sum([z_pt for z_pt in all_points_z]) / len(all_points_z)
         self.base_point = center - 1j * max_distance
         
-        # Minimun distance between the base point and 
+        # Minimun mutual distance among all the
         # branch points/punctures.
         non_zero_distances = [x for x in all_distances
                               if abs(x) > self.accuracy]
         self.min_distance = min(non_zero_distances)
-
+        #print 'all points {}'.format(all_points_z)
+        #print 'all distances: {}'.format(non_zero_distances)
+        #print self.min_distance
         # Fix reference x's at the basepoint.
         # These sheets are aligned in the order of
         # sw.g_data.weights, i.e. reference_sheets[i]
@@ -551,7 +554,6 @@ def get_path_around(z_pt, base_pt, min_distance):
                       for i in range(steps +1)]
     path_segment_4 = path_segment_2[::-1]
     path_segment_5 = path_segment_1[::-1]
-
     return (path_segment_1 + path_segment_2 + path_segment_3 +
             path_segment_4 + path_segment_5)
 
@@ -579,10 +581,14 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
         unique_sorted_xs = n_remove_duplicate(sorted_xs, accuracy)
         if len(unique_sorted_xs) < len(sorted_xs):
             print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
-            print "old xs" 
+            print "ref_xs:" 
             print ref_xs
-            print "new xs"
+            print "new_xs:"
             print new_xs
+            print "sorted_xs:" 
+            print sorted_xs
+            print "unique_sorted_xs:" 
+            print unique_sorted_xs
             raise ValueError(
                 '\nCannot track the sheets!\n'
                 'Probably passing too close to a branch point.'

@@ -153,7 +153,20 @@ class GData:
             elif direction == 'cw':
                 monodromy_matrix = (
                         numpy.linalg.inv(br_loc.monodromy).astype(int))
-            new_root = monodromy_matrix.dot(root)
+            pair_0 = self.ordered_weight_pairs(root)[0]
+            v_i_ind = pair_0[0]
+            v_j_ind = pair_0[1]
+            ordered_weights = self.weights
+            new_v_i = sum(
+                        [monodromy_matrix[k][v_i_ind] * v 
+                        for k, v in enumerate(ordered_weights)]
+                    )
+            new_v_j = sum(
+                        [monodromy_matrix[k][v_j_ind] * v 
+                        for k, v in enumerate(ordered_weights)]
+                    ) 
+
+            new_root = new_v_j - new_v_i
 
         return new_root
 
@@ -254,17 +267,16 @@ class SWCurve:
                 casimir_differentials, g_data.type, g_data.rank
             )
             try:
-                #self.sym_eq = sympy.simplify(
-                #    sympy.sympify(ffr_eq_str).subs(z, Cz)
-                #)
                 self.sym_eq = sympy.sympify(ffr_eq_str)
             except:
                 raise ValueError('syntax error in the Casimir differentials.')
             # NOTE: We apply PSL2C only to the numerical curve
             # for the simplicity of analysis.
-            #self.num_eq = self.sym_eq.subs(parameters).evalf()
-            Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
-            self.num_eq = self.sym_eq.subs(z, Ciz).subs(diff_params).evalf()
+            Ciz = PSL2C(mt_params, z_rotation*z, inverse=True) 
+            self.num_eq = (
+                self.sym_eq.subs(z, Ciz).subs(diff_params)
+                .evalf(n=ROOT_FINDING_PRECISION, chop=True)
+            )
         else:
             # TODO: Need to build a cover in a general representation
             # from the differentials, using symmetric polynomials.
@@ -283,8 +295,6 @@ class SWCurve:
             raise NotImplementedError
 
         fx = self.num_eq.subs(z, z_0)
-        #xs = sympy.solve(fx, x)
-        # FIXME: The following may fail when the curve is not a polynomial.
         sym_poly = sympy.Poly(fx, x, domain='CC')
         coeff_list = map(complex, sym_poly.all_coeffs())
         return numpy.roots(coeff_list)
@@ -294,18 +304,17 @@ class SWDiff:
     def __init__(self, v_str, g_data=None, diff_params=None, mt_params=None,
                 z_rotation=None):
         # sym_v is a SymPy expression. 
-        #self.sym_v = sympy.simplify(
-        #    sympy.sympify(v_str).subs(z, Ciz) * dCiz
-        #)
         self.sym_v = sympy.sympify(v_str)
         # num_v is from sym_v with its parameters 
         # substituted with numerical values.
         # NOTE: We apply PSL2C only to the numerical curve
         # for the simplicity of analysis.
-        #self.num_v = self.sym_v.subs(parameters).evalf()
-        Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
+        Ciz = PSL2C(mt_params, z_rotation*z, inverse=True) 
         dCiz = Ciz.diff(z)
-        self.num_v = (self.sym_v.subs(z, Ciz)*dCiz).subs(diff_params).evalf()
+        self.num_v = (
+            (self.sym_v.subs(z, Ciz)*dCiz).subs(diff_params)
+            .evalf(n=ROOT_FINDING_PRECISION, chop=True)
+        )
 
 
 class SWDataBase(object):
@@ -347,47 +356,40 @@ class SWDataBase(object):
         else:
             mt_params = None
 
-        
-
-
-
-        # PSL2C-transformed z & dz
-        #Ciz = PSL2C(mt_params, z, inverse=True) 
-        #dCiz = Ciz.diff(z)
-
-
         # Introduce a clockwise rotation of the z-plane,
         # after the PSL2C transformation, by the following phase.
-        # Try rotating by different increments, up to pi/max_pi_fraction 
-        max_pi_fraction = 10
-        rotate_z_plane = True
+        # Try rotating by different increments, up to pi/max_pi_div 
 
-        for max_rotations in range(max_pi_fraction+1):
-            if max_rotations == 0:
-                # we study the case of no rotations at all
-                z_rotation_phase = 1.0
-                rotation_n = -1
-            elif max_rotations == 1:
-                # there are no nontrivial rotations when this is 1
+        max_pi_div = 10
+        rotate_z_plane = True
+        pi_div = 0
+
+        for pi_div in range(max_pi_div+1):
+            if pi_div == 0:
+                # we study the case of no rotations at all.
+                z_r = sympy.sympify('1') 
+                n_r = -1
+                logging.info('The z-plane has not been rotated.')
+            elif pi_div == 1:
+                # there are no nontrivial rotations when this is 1.
                 continue
             else: 
-                z_rotation_phase = cmath.exp(1j * cmath.pi / max_rotations)
-                rotation_n = 1
+                z_r = sympy.sympify('exp(pi* I / {})'.format(pi_div))
+                n_r = 1
+                logging.info(
+                    'Will try rotating z-plane in increments'
+                    ' of pi/{}'.format(pi_div)
+                )
             
-            z_plane_rotation = z_rotation_phase
+            z_plane_rotation = z_r
 
-            if max_rotations == 0:
-                logging.info('The z-plane has not been rotated yet.')
-            else:
-                logging.info('Will try rotating z-plane in increments'
-                            ' of pi / {}\n'.format(max_rotations)
-                        )
-            
-            while (rotate_z_plane is True) and rotation_n < max_rotations:
-                if max_rotations != 0:
-                    logging.info(('The z-plane has been rotated {} times.\n'+
-                        'Current rotation phase of the z-plane: {}\n').format(
-                                                rotation_n, z_plane_rotation))
+            while (rotate_z_plane is True) and n_r < pi_div:
+                if pi_div != 0:
+                    logging.info(
+                        'The z-plane has been rotated {} times.\n'
+                        'Current rotation of the z-plane: {}\n'
+                        .format(n_r, z_plane_rotation)
+                    )
 
                 # TODO: the code should be able to analyze differentials,
                 # and determine where are singularities, instead of giving 
@@ -397,8 +399,10 @@ class SWDataBase(object):
                 
                 punctures = []
                 if config['punctures'] is not None:
-                    punctures_string = config['punctures'].lstrip('[').rstrip(']')
-                    for p_str in punctures_string.split(','):
+                    punctures_string = (
+                        config['punctures'].lstrip('[').rstrip(']')
+                    )
+                    for p_n, p_str in enumerate(punctures_string.split(',')):
                         Cipz = sympy.sympify(p_str.strip()).subs(diff_params)
                         pz = PSL2C(mt_params, Cipz)
                         if pz == oo:
@@ -408,12 +412,16 @@ class SWDataBase(object):
                             # where c is a phase, the position of punctures 
                             # and branch points will rotate contravariantly
                             # z_pt -> c^{-1} z_pt
-                            npz = (1.0 / z_plane_rotation) * complex(pz)
+                            npz = complex(
+                                (pz/z_plane_rotation)
+                                .evalf(n=ROOT_FINDING_PRECISION, chop=True)
+                            )
                         punctures.append(
                             Puncture(
-                                z= npz, Ciz=Cipz,
+                                z=npz, Ciz=Cipz,
                                 cutoff=config['size_of_puncture_cutoff'],
-                                label='puncture #{}'.format(len(self.punctures))
+                                label=('puncture #{}'
+                                       .format(p_n))
                             )
                         )
                 self.punctures = punctures
@@ -456,20 +464,24 @@ class SWDataBase(object):
                              sympy.latex(self.diff.num_v)))
 
                 logging.info(
-                    "Calculating ramification points of the Seiberg-Witten curve "
-                    "in the first fundamental rep."
+                    'Calculating ramification points of '
+                    'the Seiberg-Witten curve '
+                    'in the first fundamental rep.'
                 )
             
                 self.ffr_ramification_points = get_ramification_points(
                     curve=self.ffr_curve, 
                     diff_params=diff_params,
                     mt_params=mt_params,
-                    z_rotation=z_plane_rotation,
+                    z_rotation = z_plane_rotation,
                     accuracy=config['accuracy'], 
                     punctures=self.punctures,
                     method=config['ramification_point_finding_method'],
                 )
-
+                
+                logging.info('These are the punctures:')
+                for pct in self.punctures:
+                    logging.info('Puncture {} at z={}'.format(pct.label, pct.z))
                 # Now check if the z-plane needs to be rotated
 
                 # z-coords of branch points.
@@ -477,44 +489,41 @@ class SWDataBase(object):
                     [r.z for r in self.ffr_ramification_points if r.z != oo],
                     self.accuracy,
                 )
-
                 # z-coords of punctures.
                 pctzs = n_remove_duplicate(
                     [p.z for p in self.punctures if p.z != oo],
                     self.accuracy,
                 )
-
+                z_list = bpzs + pctzs
                 z_r_list = map(float, [z.real for z in (bpzs + pctzs)])
-                min_x_distance =  min([
-                    abs(x - y) for i, x in enumerate(z_r_list) 
-                    for y in z_r_list[i+1:]
-                    ])
+                min_x_distance =  min(
+                    [abs(x - y) for i, x in enumerate(z_r_list) 
+                     for y in z_r_list[i+1:]]
+                )
+                min_abs_distance =  min(
+                    [abs(x - y) for i, x in enumerate(z_list)
+                     for y in z_list[i+1:]]
+                )
 
-                if min_x_distance > 2 * self.accuracy:
+                if min_x_distance > min_abs_distance / len(z_list):
                     logging.info('All branch points and punctures '
-                                'are sufficiently separated vertically.\n'
+                                'are sufficiently separated horizontally.\n'
                                 'Will not rotate z-plane any more.\n')
                     rotate_z_plane = False
                 else:
                     logging.info('Some branch points or punctures '
                                 'are vertically aligned.\n'
-                                'Will need rotate the z-plane once.\n')
-                    rotation_n += 1
-                    z_plane_rotation *= z_rotation_phase
+                                'Need to rotate the z-plane.\n')
+                    n_r += 1
+                    z_plane_rotation *= z_r
             
             if rotate_z_plane is False:
                 break
-        
-        if rotation_n == max_rotations == max_pi_fraction:
+
+        if n_r == pi_div == max_pi_div:
             raise ValueError(
                     'Could not find a suitable rotation for the z-plane.'
                 )
-
-
-
-
-
-
 
 
     def get_aligned_xs(self, z_0):
@@ -722,7 +731,8 @@ def get_ramification_points(
             accuracy=accuracy, 
             punctures=punctures,
         )
-    elif method == 'system_of_eqs':
+    #elif method == 'system_of_eqs':
+    else:
         sols = get_ramification_points_using_system_of_eqs(
             curve=curve, 
             diff_params=diff_params, 
@@ -730,12 +740,12 @@ def get_ramification_points(
             accuracy=accuracy, 
             punctures=punctures,
         )
-    else:
-        raise ValueError(
-            'Unknown or no method set to find ramification points.\n'
-            'Set ramification_point_finding_method = '
-            '[discriminant|system_of_eqs] in the configuration.'
-        )
+    #else:
+    #    raise ValueError(
+    #        'Unknown or no method set to find ramification points.\n'
+    #        'Set ramification_point_finding_method = '
+    #        '[discriminant|system_of_eqs] in the configuration.'
+    #    )
 
     ramification_points = []
 
@@ -747,9 +757,9 @@ def get_ramification_points(
             # where c is a phase, the position of punctures 
             # and branch points will rotate contravariantly
             # z_pt -> c^{-1} z_pt
-            z = (1.0/z_rotation)*PSL2C(mt_params, z_i, numerical=True),
-            Ciz=complex(z_i), 
-            x=complex(x_j), 
+            z = PSL2C(mt_params, z_i, numerical=True)/complex(z_rotation),
+            Ciz=z_i, 
+            x=x_j, 
             i=m_x, 
             label=('ramification point #{}'
                    .format(len(ramification_points)))
@@ -772,18 +782,20 @@ def get_ramification_points_using_system_of_eqs(
     f = curve.sym_eq
     # Make f into the form of f_n/f_d
     f_n, f_d = sympy.cancel(f).as_numer_denom()
+    eq_1 = f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True)
 
     d_x_f_n, d_x_f_d = sympy.cancel(f.diff(x)).as_numer_denom()
+    eq_2 = d_x_f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True) 
 
-    subs_dict = copy.deepcopy(diff_params)
-    
     # NOTE: solve_poly_system vs. solve
     #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
     #sols = sympy.solve([f, f.diff(x)], z, x)
     z_x_s = sage_subprocess.solve_system_of_eqs(
-        [f_n.subs(subs_dict), d_x_f_n.subs(subs_dict)],
+        [eq_1, eq_2],
         precision = ROOT_FINDING_PRECISION,
     )
+    # TODO: Consider calculating the discriminant D(z)
+    # and double-check if all the z_i's are found.
     for z_i, x_i in z_x_s:
         # Check if z_i is one of the punctures.
         is_puncture = False
@@ -793,34 +805,21 @@ def get_ramification_points_using_system_of_eqs(
         if is_puncture:
             continue
 
-        subs_dict[z] = z_i
-        f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
-                  for c in sympy.Poly(f, x).all_coeffs()]
-        f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
-        f_x_roots = None
-        polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
-        polyroots_extra_precision = ROOT_FINDING_PRECISION
-        while f_x_roots is None:
-            try:
-                f_x_roots = mpmath.polyroots(
-                    f_x_coeffs,
-                    maxsteps=polyroots_maxsteps,
-                    extraprec=polyroots_extra_precision
-                )
-            except NoConvergence:
-                logging.warning(
-                    'mpmath.polyroots failed; increase maxsteps & '
-                    'extraprec by 10.'
-                )
-                polyroots_maxsteps += 10
-                polyroots_extra_precision += 10
+        # Calculate the multiplicity of x_i 
+        # by finding the maximum k that satisfies
+        # (d_x)^k f_n(x, z_i)|_{x = x_i} = 0.
+        f_n_i = f_n.subs(diff_params).subs(z, z_i)
+        m_x = 1
+        while (
+            abs(f_n_i.diff(x, m_x).subs(x, x_i)
+                .evalf(n=ROOT_FINDING_PRECISION)) < accuracy
+        ):
+            m_x += 1
 
-        m_x = 0
-        for x_j in f_x_roots:
-            if abs(x_i - x_j) < accuracy:
-                m_x += 1
-
-        sols.append([z_i, (x_i, m_x)])
+        sols.append(
+            [complex(mpmath.chop(z_i)), 
+             (complex(mpmath.chop(x_i)), m_x)]
+        )
 
     return sols
             
