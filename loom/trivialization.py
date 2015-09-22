@@ -18,7 +18,7 @@ N_PATH_TO_PT = 100
 
 ### number of steps for each SEGMENT of the path around a 
 ### branching point (either branch-point, or irregular singularity)
-N_PATH_AROUND_PT = 60
+N_PATH_AROUND_PT = 30
 #N_PATH_AROUND_PT = 100
 
 ### Tolerance for recognizing colliding sheets at a branch-point
@@ -302,16 +302,21 @@ class SWDataWithTrivialization(SWDataBase):
                     ffr_xs_0, ffr_xs_1, accuracy=self.accuracy,
                     check_tracking=True, index=i,
                     z_0=z_path[i-1], z_1=z_path[i],
+                    g_data=g_data,
                 )
             else:
                 sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1,
                                               accuracy=self.accuracy,
-                                              check_tracking=False,)
+                                              check_tracking=False,
+                                              g_data=g_data,
+                                              )
             if g_data.fundamental_representation_index == 1:
                 sorted_xs = sorted_ffr_xs
+                #print 'sorted_ffr_xs = {}'.format(sorted_ffr_xs)
             else:
                 sorted_xs = self.get_xs_of_weights_from_ffr_xs(sorted_ffr_xs)                
             for j, s_j in enumerate(sheets_along_path):
+                # print 'sorted xs = {}'.format(sorted_xs)
                 s_j.append(sorted_xs[j])
             for j, s_j in enumerate(ffr_sheets_along_path):
                 s_j.append(sorted_ffr_xs[j])
@@ -383,10 +388,62 @@ class SWDataWithTrivialization(SWDataBase):
                 uniq.append(s[1])
                 seen.add(s[1])
         if len(uniq) < len(sorted_sheets):
-            raise ValueError(
-                '\nError in determination of monodromy!\n' +
-                'Cannot match uniquely the initial sheets to the final ones.'
-            )
+            # print 'uniq: {}\nsorted sheets = {}'.format( uniq, sorted_sheets)
+            # When studying D-type covers there may be situations
+            # where two sheets collide at x=0 everywhere
+            # Do not raise an error in this case.
+            # print min(map(abs, [s[1] for s in sorted_sheets]))==0.0
+            # print self.g_data.type=='D' 
+            # print len(sorted_sheets)-len(uniq)==1
+            if (
+                self.g_data.type=='D' 
+                and min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
+                and len(sorted_sheets)-len(uniq)==1
+                ):
+                # If two sheets are equal (and both zero) then the integer
+                # labels they got assigned in sorting above may be the same,
+                # this would lead to a singular permutation matrix
+                # and must be corrected, as follows.
+                int_labels = [s[0] for s in sorted_sheets]
+                uniq_labels = list(set(int_labels))
+                labels_multiplicities = [
+                            len([i for i, x in enumerate(int_labels) if x == u]) 
+                            for u in uniq_labels
+                            ]
+                multiple_labels = []
+                for i, u in enumerate(uniq_labels):
+                    if labels_multiplicities[i] > 1:
+                        if labels_multiplicities[i] == 2:
+                            multiple_labels.append(u)
+                        else:
+                            print 'int labels = {}'.format(int_labels)
+                            print 'multiple labels = {}'.format(multiple_labels)
+                            raise Exception('Too many degenerate sheets')
+                if len(multiple_labels)!=1:
+                    raise Exception('Cannot determine which sheets are'+
+                                    'degenerate, tracking will fail.')
+
+                missing_label = [i for i in range(len(int_labels)) if 
+                                    (i not in int_labels)][0]
+                double_sheets = [i for i, s in enumerate(sorted_sheets) 
+                                    if s[0]==multiple_labels[0]]
+
+                corrected_sheets = sorted_sheets 
+                corrected_sheets[double_sheets[0]] = initial_sheets[double_sheets[0]]
+                corrected_sheets[double_sheets[1]] = initial_sheets[double_sheets[1]]
+                # print ('these are the sorted sheets: {}\n' + 
+                #         'this is the double label: {}\n' + 
+                #         'these are the corrected sheets: {}\n').format(
+                #         sorted_sheets, multiple_labels[0], corrected_sheets
+                #         )
+                sorted_sheets = corrected_sheets
+                pass
+            else:
+                raise ValueError(
+                    '\nError in determination of monodromy!\n' +
+                    'Cannot match uniquely the initial sheets' + 
+                    ' to the final ones.'
+                    )
         else:
             pass
 
@@ -398,6 +455,8 @@ class SWDataWithTrivialization(SWDataBase):
         ### to 0 -> i_0, 1 -> i_1, etc.
 
         n_sheets = len(initial_sheets)
+
+        print '\n sorted sheets around locus {}'.format(sorted_sheets)
         
         ### NOTE: in the following basis vectors, i = 0 , ... , n-1
         def basis_e(i):
@@ -409,6 +468,8 @@ class SWDataWithTrivialization(SWDataBase):
             perm_list.append(basis_e(new_sheet_index))
 
         perm_matrix = numpy.array(perm_list).transpose()
+
+        print '\n perm matrix {}'.format(perm_matrix)
 
         return perm_matrix
 
@@ -560,7 +621,7 @@ def get_path_around(z_pt, base_pt, min_distance):
 
 ### TODO: Try using numba.
 def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True, 
-                  index=None, z_0=None, z_1=None):
+                  index=None, z_0=None, z_1=None, g_data=None):
     """
     Returns a sorted version of 'new_xs'
     based on matching the closest points with 
@@ -580,19 +641,26 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
         ### Now we check that sheet tracking is not making a mistake.
         unique_sorted_xs = n_remove_duplicate(sorted_xs, accuracy)
         if len(unique_sorted_xs) < len(sorted_xs):
-            print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
-            print "ref_xs:" 
-            print ref_xs
-            print "new_xs:"
-            print new_xs
-            print "sorted_xs:" 
-            print sorted_xs
-            print "unique_sorted_xs:" 
-            print unique_sorted_xs
-            raise ValueError(
-                '\nCannot track the sheets!\n'
-                'Probably passing too close to a branch point.'
-            )
+            # When studying D-type covers there may be situations
+            # where two sheets collide at x=0 everywhere
+            # Do not raise an error in this case.
+            if (g_data.type=='D' and min(map(abs, sorted_xs)) < accuracy
+                and len(sorted_xs)-len(unique_sorted_xs)==1):
+                return sorted_xs
+            else:
+                print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
+                print "ref_xs:" 
+                print ref_xs
+                print "new_xs:"
+                print new_xs
+                print "sorted_xs:" 
+                print sorted_xs
+                print "unique_sorted_xs:" 
+                print unique_sorted_xs
+                raise ValueError(
+                    '\nCannot track the sheets!\n'
+                    'Probably passing too close to a branch point.'
+                )
         else:
             return sorted_xs
     else:
@@ -632,6 +700,8 @@ def get_positive_roots_of_branch_point(bp, g_data):
         ### consider all possible pairs, and compute 
         ### the corresponding difference.
         ### Then add it to the vanishing positive roots.
+        # print 'groups = {}'.format(g)
+        # print 'weights = {}'.format(weights)
         for s_1, s_2 in combinations(g, 2):
             v_1 = weights[s_1]
             v_2 = weights[s_2]
@@ -642,8 +712,10 @@ def get_positive_roots_of_branch_point(bp, g_data):
                 vanishing_positive_roots.append(v_2 - v_1)
 
             else:
-                raise ValueError("Branch point doesn't correspond "
-                                 "to a positive root.")
+                continue
+    if vanishing_positive_roots == []:
+        raise ValueError("Branch point doesn't correspond "
+                                        "to a positive root.")
 
     ### Finally, cleanup the duplicates, 
     ### as well as the roots which are not linearly independent

@@ -477,6 +477,7 @@ class SWDataBase(object):
                     accuracy=config['accuracy'], 
                     punctures=self.punctures,
                     method=config['ramification_point_finding_method'],
+                    g_data=self.g_data,
                 )
                 
                 logging.info('These are the punctures:')
@@ -714,6 +715,7 @@ def get_ramification_points(
     accuracy=None, 
     punctures=None,
     method=None,
+    g_data=None
 ):
     #FIXME: Why are we computing the ramification points
     # in the non-PLS2C rotated curve?
@@ -730,6 +732,7 @@ def get_ramification_points(
             mt_params=mt_params,
             accuracy=accuracy, 
             punctures=punctures,
+            g_data=g_data,
         )
     #elif method == 'system_of_eqs':
     else:
@@ -825,12 +828,111 @@ def get_ramification_points_using_system_of_eqs(
             
 
 
+# def get_ramification_points_using_discriminant(
+#     curve=None, 
+#     diff_params=None, 
+#     mt_params=None,
+#     accuracy=None, 
+#     punctures=None,
+# ):
+#     sols = []
+#     f = curve.sym_eq
+#     # Make f into the form of rf = f_n/f_d
+#     rf = sympy.cancel(f)
+#     f_n, f_d = rf.as_numer_denom()
+#     subs_dict = copy.deepcopy(diff_params)
+
+#     # Find the roots of D(z), the discriminant of f(x, z)
+#     # as a polynomial of x. 
+#     D_z = sympy.discriminant(f_n, x)
+#     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
+#     D_z_n_P = sympy.Poly(D_z_n, z)
+#     cs = [
+#         c_sym.evalf(
+#             subs=subs_dict, n=ROOT_FINDING_PRECISION
+#         ).as_real_imag()
+#         for c_sym in D_z_n_P.all_coeffs()
+#     ]
+#     D_z_n_P_coeffs = [mpmath.mpc(*c) for c in cs]
+#     # Increase maxsteps & extraprec when root-finding fails.
+#     D_z_roots = None
+#     polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
+#     polyroots_extra_precision = ROOT_FINDING_PRECISION
+#     while D_z_roots is None:
+#         try:
+#             D_z_roots = mpmath.polyroots(
+#                 D_z_n_P_coeffs, 
+#                 maxsteps=polyroots_maxsteps,
+#                 extraprec=polyroots_extra_precision,
+#             )
+#         except NoConvergence:
+#             logging.warning(
+#                 'mpmath.polyroots failed; increase maxsteps & extraprec '
+#                 'by 10.'
+#             )
+#             polyroots_maxsteps += 10
+#             polyroots_extra_precision += 10
+
+#     is_same_z = lambda a, b: abs(a - b) < accuracy
+#     gathered_D_z_roots = gather(D_z_roots, is_same_z)  
+
+#     # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
+#     for z_i, zs in gathered_D_z_roots.iteritems():
+#         # m_z is the multiplicity of z_i.
+#         m_z = len(zs)
+#         # Check if z_i is one of the punctures.
+#         is_puncture = False
+#         for p in punctures:
+#             if abs(z_i - p.Ciz) < accuracy:
+#                 is_puncture = True
+#         if is_puncture:
+#             continue
+                
+#         subs_dict[z] = z_i
+#         f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
+#                   for c in sympy.Poly(f, x).all_coeffs()]
+#         f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
+#         f_x_roots = None
+#         while f_x_roots is None:
+#             try:
+#                 f_x_roots = mpmath.polyroots(
+#                     f_x_coeffs,
+#                     maxsteps=polyroots_maxsteps,
+#                     extraprec=polyroots_extra_precision
+#                 )
+#             except NoConvergence:
+#                 logging.warning(
+#                     'mpmath.polyroots failed; increase maxsteps & '
+#                     'extraprec by 10.'
+#                 )
+#                 polyroots_maxsteps += 10
+#                 polyroots_extra_precision += 10
+
+#         # In general x-roots have worse errors.
+#         is_same_x = lambda a, b: abs(a - b) < accuracy/1e-2
+#         gathered_f_x_roots = gather(f_x_roots, is_same_x)
+#         for x_j, xs in gathered_f_x_roots.iteritems():
+#             # m_x is the multiplicity of x_j.
+#             m_x = len(xs)
+#             if m_x == 1:
+#                 continue
+
+#             sols.append([z_i, (x_j, m_x)])
+
+#     return sols
+
+#FIXME Needs thorough review, I just introduced 
+#some numerical substitution which makes
+# things faster.
+# Another crucial addiiton is the square-root 
+# for computing determinants in D-type
 def get_ramification_points_using_discriminant(
     curve=None, 
     diff_params=None, 
     mt_params=None,
     accuracy=None, 
     punctures=None,
+    g_data=None,
 ):
     sols = []
     f = curve.sym_eq
@@ -838,10 +940,19 @@ def get_ramification_points_using_discriminant(
     rf = sympy.cancel(f)
     f_n, f_d = rf.as_numer_denom()
     subs_dict = copy.deepcopy(diff_params)
-
+    subs_k = subs_dict.keys()
+    subs_v = subs_dict.values()
+    f_num = f
+    for i in range(len(subs_k)):
+        f_num = f_num.subs(subs_k[i], subs_v[i])
+    print 'f = {}'.format(f_num)
+    if g_data.type=='D':
+        f_num = f_num.subs(x, sympy.sqrt(x))
+    print 'f = {}'.format(f_num)
     # Find the roots of D(z), the discriminant of f(x, z)
     # as a polynomial of x. 
-    D_z = sympy.discriminant(f_n, x)
+    D_z = sympy.discriminant(f_num, x)
+    print 'D_z = {}'.format(D_z)
     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
     D_z_n_P = sympy.Poly(D_z_n, z)
     cs = [
@@ -949,15 +1060,35 @@ def get_local_sw_diff(sw, ramification_point, ffr=None):
         .series(Dx, 0, rp.i+1).removeO()
         .series(Dz, 0, 2).removeO()
     )
+    print 'local curve = {}'.format(local_curve)
+    # # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
+    # a = local_curve.n().coeff(Dz).coeff(Dx, 0)
+    # b = local_curve.n().coeff(Dx**rp.i).coeff(Dz, 0)
     # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
-    a = local_curve.n().coeff(Dz).coeff(Dx, 0)
-    b = local_curve.n().coeff(Dx**rp.i).coeff(Dz, 0)
-    # Dx = Dx(Dz)
-    Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
+    
+    # Handle the case of fully degenerate D-type curves 
+    # i.e. branch points where all roots go to zero.
+    # The curve in certain cases can take the form
+    # x^2 P(x,z)=0
+    if (sw.g_data.type=='D' and 2*sw.g_data.rank==rp.i
+        and abs(local_curve.n().subs(Dx, 0).coeff(Dz))<sw.accuracy):
+        a = local_curve.n().coeff(Dz).coeff(Dx, 2)
+        b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
+        # Dx = Dx(Dz)
+        Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i-2)
+    else:
+        a = local_curve.n().subs(Dx, 0).coeff(Dz)
+        b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
+        # Dx = Dx(Dz)
+        Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
+    print 'a = {}\nb = {}'.format(a, b)
+    
+    print 'DX_DZ = {}'.format(Dx_Dz)
     local_diff = (
         num_v.subs(x, rp.x+Dx_Dz).subs(z, rp.z+Dz)
         .series(Dz, 0, 1).removeO()
     )
+    print 'local_diff = {}'.format(local_diff)
     # get the coefficient and the exponent of the leading term
     (diff_c, diff_e) = local_diff.leadterm(Dz)
     if diff_e == 0:

@@ -331,6 +331,8 @@ class SWall(object):
             M_i = y_i[NUM_ODE_XS_OVER_Z+1]
             self[step] = y_i
 
+        print 'this is the trajectory\n{}'.format(self.z[0:10])
+
 
     def determine_root_types(self, sw_data):
 
@@ -611,6 +613,112 @@ def get_intermediate_value(v_1, v_2, z_1, z_2, z_med):
     return v_med
 
 
+
+# def get_s_wall_seeds(sw, theta, branch_point, config,):
+#     ### S-walls are seeded from branch points.
+#     ### Each branch point has a number of ramification 
+#     ### points lying above it.
+#     ### Regardless of the representation, it is sufficient
+#     ### to consider one of these ramification points
+#     ### to extract the seed data.
+#     ### We thus stick to (any)one ramification point of the 
+#     ### fundamental representation to get the seeds.
+#     rp = branch_point.ffr_ramification_points[0]
+#     delta = config['accuracy']
+#     dt = config['size_of_small_step']
+
+#     ###
+    # 1. Find the first-order approximations of the starting points
+    # of S-walls around a given branch point, which is of the form
+    # \Delta z_i = c_i / (\lambda_0)^(rp.i/(rp.i+1))
+    # at a branch point from a ramification point, and
+    # \Delta z_i = c_i / (\lambda_0)^(rp.i) exp(rp.i theta I)
+    # at a branch point from a massless regular puncture
+    ###
+
+    # 1.1 find the coefficient and the exponent of the leading term
+    # of the SW differential at the ramification point.
+    # lambda_0, diff_e = get_local_sw_diff(sw, rp, ffr=True)
+
+    # 1.2 find c_i, a phase factor for each S-wall.
+    # omega_1 = exp(2*pi*1j/rp.i)
+    # omega = [omega_1**k for k in range(rp.i)]
+
+    # beta_1 = exp(rp.i*2*pi*1j/(rp.i+1))
+    # beta = [beta_1**k for k in range(rp.i+1)]
+
+    # cs = []
+    # if diff_e == sympy.Rational(1, rp.i):
+    #     # the branch point is a ramification point
+    #     # go over pairs of omegas that differ by \omega_1^i
+    #     for i in range(1, rp.i):
+    #         new_locs = []
+    #         # and go over all the omegas
+    #         for j in range(rp.i):
+    #             if j+i < rp.i:
+    #                 new_loc = 1/(omega[j]-omega[j+i])
+    #             else:
+    #                 new_loc = 1/(omega[j]-omega[j+i-rp.i])
+    #             new_loc = cpow(new_loc, rp.i, rp.i+1)
+    #             new_locs += [new_loc*beta_i for beta_i in beta]
+    #         new_locs = remove_duplicate(new_locs,
+    #                                     lambda l1, l2: abs(l1 - l2) < delta)
+    #         cs += [(c*exp(theta*1j*sympy.Rational(rp.i, rp.i+1)) /
+    #                 cpow(lambda_0, rp.i, rp.i+1)) for c in new_locs]
+    # elif diff_e == -1 + sympy.Rational(1, rp.i):
+    #     # the branch point is a massless regular puncture
+    #     # go over pairs of omegas that differ by \omega_1^i
+    #     for i in range(1, rp.i):
+    #         cs.append(exp(rp.i*theta*1j) /
+    #                   cpow(((omega[0]-omega[i])*lambda_0), rp.i))
+
+    # else:
+    #     logging.error('unknown form of sw.diff at rp ({}, {}): '
+    #                   'diff_e  = {}'.format(rp.z, rp.x, diff_e))
+    #     raise GetSWallSeedsError(diff_e)
+
+    # gathered_cs = gather(cs, lambda c1, c2: abs(c1 - c2) < delta)
+    # logging.debug('list of c = %s, # = %d', gathered_cs, len(gathered_cs))
+
+    # # 2. Now calculate \Delta z_i for each S-wall and
+    # # find the two points on the curve that are projected onto it.
+    # seeds = []
+    # for cv, cs in gathered_cs.iteritems():
+    #     # cv is the value of c, cm is its multiplicity.
+    #     cm = len(cs)
+    #     # resize to the size of the small step
+    #     Delta_z = cv/abs(cv)*delta
+    #     z_0 = rp.z + Delta_z
+    #     xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i, ffr=True)
+    #     dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
+    #     for i in range(len(xs_at_z_0)):
+    #         diffx = sw.diff.num_v.subs(z, z_0)
+    #         v_i = complex(diffx.subs(x, xs_at_z_0[i]))
+    #         v_j = complex(diffx.subs(x, xs_at_z_0[j]))
+    #         # print 'v_i = {}, v_j = {}'.format(v_i, v_j)
+    #         for j in range(len(xs_at_z_0)):
+    #             if i == j:
+    #                 continue
+    #             elif v_i==v_j:
+    #                 logging.debug(
+    #                     'Warning: some of the seeds appear to be degenerate'
+    #                     )
+    #                 continue
+    #             else:
+    #                 delta_z = exp(1j*theta)/(v_i - v_j)*dt
+    #                 # flattened index
+    #                 fij = i*len(xs_at_z_0) + j
+    #                 dev_phases[fij] = phase((delta_z/Delta_z))
+    #     min_dev_indices = n_nearest_indices(dev_phases, 0.0, cm)
+    #     for k in min_dev_indices:
+    #         i, j = unravel(k, len(xs_at_z_0))
+    #         M_0 = 0
+    #         seeds.append(
+    #             [z_0, [xs_at_z_0[i], xs_at_z_0[j]], M_0]
+    #         )
+
+    # return seeds
+
 def get_s_wall_seeds(sw, theta, branch_point, config,):
     ### S-walls are seeded from branch points.
     ### Each branch point has a number of ramification 
@@ -623,6 +731,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     rp = branch_point.ffr_ramification_points[0]
     delta = config['accuracy']
     dt = config['size_of_small_step']
+
+    is_degenerate_branch_point = False
 
     ###
     # 1. Find the first-order approximations of the starting points
@@ -663,6 +773,44 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             cs += [(c*exp(theta*1j*sympy.Rational(rp.i, rp.i+1)) /
                     cpow(lambda_0, rp.i, rp.i+1)) for c in new_locs]
 
+    # Account for possible D_n-type curves of the form
+    # F(x, z) = x^2 P(x, z) = 0
+    # In those cases the branching goes like 
+    # x^2 (b x^(2n-2) + a z) = 0
+    # This is not an exhaustive classification of degenerate cases
+    # But it covers strong coupling of ADE SYM
+    elif diff_e==sympy.Rational(1, rp.i-2) and 2*sw.g_data.rank==rp.i:
+        # print '\n\n Dealing with a maximally degenerate branch point\n\n'
+        is_degenerate_branch_point = True
+        g_n = sw.g_data.rank
+
+        eta = [(exp(2*pi*1j/(g_n-1)))**j for j in range(g_n-1)] + [0]
+        phi = [[eta[j] - eta[i] for j in range(g_n)] for i in range(g_n)]
+        psi = [
+                [numpy.sign(i-j) * (eta[j] + eta[i]) for j in range(g_n)] 
+                for i in range(g_n)
+            ]
+        # print 'eta = {}'.format(eta)
+        # print 'phi = {}'.format(phi)
+        # print 'psi = {}'.format(psi)
+
+        phases = []
+
+        for i in range(g_n):
+            for j in range(g_n):
+                if i!=j:
+                    phases.append((phi[i][j])**(sympy.Rational(g_n-1, g_n)))
+                    phases.append((psi[i][j])**(sympy.Rational(g_n-1, g_n)))
+        phases = remove_duplicate(phases, lambda p1, p2: abs(p1 - p2) < delta)
+
+        cs = [(
+                p * exp(theta * 1j * sympy.Rational(g_n - 1, g_n)) * 
+                cpow(lambda_0, -1, g_n)) * 
+                exp(2 * pi * 1j * sympy.Rational(g_n - 1, g_n))
+                for p in phases
+            ]
+
+
     elif diff_e == -1 + sympy.Rational(1, rp.i):
         # the branch point is a massless regular puncture
         # go over pairs of omegas that differ by \omega_1^i
@@ -675,40 +823,93 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                       'diff_e  = {}'.format(rp.z, rp.x, diff_e))
         raise GetSWallSeedsError(diff_e)
 
+    cs = map(complex, cs)
     gathered_cs = gather(cs, lambda c1, c2: abs(c1 - c2) < delta)
     logging.debug('list of c = %s, # = %d', gathered_cs, len(gathered_cs))
+
+    print '\n\ngathered_cs = {}\n\n'.format(gathered_cs)
 
     # 2. Now calculate \Delta z_i for each S-wall and
     # find the two points on the curve that are projected onto it.
     seeds = []
-    for cv, cs in gathered_cs.iteritems():
-        # cv is the value of c, cm is its multiplicity.
-        cm = len(cs)
-        # resize to the size of the small step
-        Delta_z = cv/abs(cv)*delta
-        z_0 = rp.z + Delta_z
-        xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i, ffr=True)
-        dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
-        for i in range(len(xs_at_z_0)):
-            diffx = sw.diff.num_v.subs(z, z_0)
-            v_i = complex(diffx.subs(x, xs_at_z_0[i]))
-            for j in range(len(xs_at_z_0)):
-                if i == j:
-                    continue
-                else:
+    
+    if is_degenerate_branch_point is False:
+        for cv, cs in gathered_cs.iteritems():
+            # cv is the value of c, cm is its multiplicity.
+            cm = len(cs)
+            # resize to the size of the small step
+            Delta_z = cv/abs(cv)*delta
+            z_0 = complex(rp.z + Delta_z)
+            xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i, ffr=True)
+            dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
+            for i in range(len(xs_at_z_0)):
+                diffx = sw.diff.num_v.subs(z, z_0)
+                v_i = complex(diffx.subs(x, xs_at_z_0[i]))
+                
+                # print 'v_i = {}, v_j = {}'.format(v_i, v_j)
+                for j in range(len(xs_at_z_0)):
                     v_j = complex(diffx.subs(x, xs_at_z_0[j]))
-                    delta_z = exp(1j*theta)/(v_i - v_j)*dt
-                    # flattened index
-                    fij = i*len(xs_at_z_0) + j
-                    dev_phases[fij] = phase((delta_z/Delta_z))
-        min_dev_indices = n_nearest_indices(dev_phases, 0.0, cm)
-        for k in min_dev_indices:
-            i, j = unravel(k, len(xs_at_z_0))
+                    if i == j:
+                        continue
+                    elif v_i==v_j:
+                        logging.debug(
+                            'Warning: some of the seeds appear to be degenerate'
+                            )
+                        continue
+                    else:
+                        delta_z = exp(1j*theta)/(v_i - v_j)*dt
+                        # flattened index
+                        fij = i*len(xs_at_z_0) + j
+                        dev_phases[fij] = phase((delta_z/Delta_z))
+            min_dev_indices = n_nearest_indices(dev_phases, 0.0, cm)
+            for k in min_dev_indices:
+                i, j = unravel(k, len(xs_at_z_0))
+                M_0 = 0
+                seeds.append(
+                    [z_0, [xs_at_z_0[i], xs_at_z_0[j]], M_0]
+                )
+    elif is_degenerate_branch_point is True:
+        for cv, cs in gathered_cs.iteritems():
+            # cv is the value of c, cm is its multiplicity.
+            cm = len(cs)
+            # resize to the size of the small step
+            Delta_z = cv/abs(cv)*delta
+            z_0 = complex(rp.z + Delta_z)
+            xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i, ffr=True)
+            reference_phase = cv/abs(cv)
+
+            diffx = sw.diff.num_v.subs(z, z_0)
+            all_ij_phases = []
+            for i in range(len(xs_at_z_0)):
+                v_i = complex(diffx.subs(x, xs_at_z_0[i]))
+                # print 'v_i = {}, v_j = {}'.format(v_i, v_j)
+                for j in range(len(xs_at_z_0)):
+                    v_j = complex(diffx.subs(x, xs_at_z_0[j]))
+                    if i == j:
+                        continue
+                    elif v_i==v_j:
+                        logging.debug(
+                            'Warning: some of the seeds appear to be degenerate'
+                            )
+                        continue
+                    else:
+                        ij_phase = exp(1j*numpy.angle(exp(1j*theta)/(v_i-v_j)))
+                        all_ij_phases.append([[i,j], ij_phase])
+            # Now find the ij pair that gives the closest phase
+            closest_pair = sorted(
+                                all_ij_phases, 
+                                key=lambda p: abs(p[1] - reference_phase)
+                            )[0]
+            # x_i = complex(diffx.subs(x, xs_at_z_0[closest_pair[0][0]]))
+            # x_j = complex(diffx.subs(x, xs_at_z_0[closest_pair[0][1]]))
             M_0 = 0
             seeds.append(
-                [z_0, [xs_at_z_0[i], xs_at_z_0[j]], M_0]
-            )
+                    [z_0, [xs_at_z_0[closest_pair[0][0]], 
+                    xs_at_z_0[closest_pair[0][1]]], M_0]
+                )
 
+
+    print 'these are the seeds {}\n'.format(seeds)
     return seeds
 
 
@@ -727,7 +928,7 @@ def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data=None, label=None):
     """
     Return a joint if formed, otherwise return None.
     """
-
+    print 'evaluating possible joint at z = {}'.format(z)
     alpha_1 = s_wall_1.get_root_at_t(t_1)
     alpha_2 = s_wall_2.get_root_at_t(t_2)
 
