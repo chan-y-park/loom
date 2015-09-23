@@ -499,6 +499,7 @@ class SWDataBase(object):
                     logging.info('All branch points and punctures '
                                 'are sufficiently separated horizontally.\n'
                                 'Will not rotate z-plane any more.\n')
+                    rotate_z_plane = False
                     break
 
                 elif len(z_r_list) == 0:
@@ -510,6 +511,7 @@ class SWDataBase(object):
                                 'are sufficiently separated horizontally.\n'
                                 'Will not rotate z-plane any more.\n')
                     rotate_z_plane = False
+                    break
                 else:
                     logging.info('Some branch points or punctures '
                                 'are vertically aligned.\n'

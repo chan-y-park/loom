@@ -193,8 +193,8 @@ class SWDataWithTrivialization(SWDataBase):
     """
     # NOTE: I am assuming that branch points NOR irregular singularities 
     # overlap vertically.
-    # This should be guaranteed by introducing an automatic rotation of 
-    # the z-plane before calling this class.
+    # This should be guaranteed by the automatic rotation of 
+    # the z-plane which is performed before calling this class.
     def __init__(self, config,):
         super(SWDataWithTrivialization, self).__init__(config)
         self.accuracy = config['accuracy']
@@ -224,17 +224,30 @@ class SWDataWithTrivialization(SWDataBase):
         # both branch points and irregular singularities
         all_points_z = bpzs + iszs
         n_critical_loci = len(all_points_z)
-        all_distances = [abs(x - y) for x in all_points_z
-                         for y in all_points_z]
-        max_distance = max(all_distances)
+        
+        if n_critical_loci > 1:
+            all_distances = [abs(x - y) for x in all_points_z
+                                                for y in all_points_z]
+            max_distance = max(all_distances)
+            # Minimun mutual distance among all the
+            # branch points/punctures.
+            non_zero_distances = [x for x in all_distances
+                                  if abs(x) > self.accuracy]
+            self.min_distance = min(non_zero_distances)
+            
+        else:
+            # If there is only one branching locus, we still
+            # need to set distance scales, as these will be used to 
+            # circumvent the branch locus when constructing paths 
+            # to trivializae the cover, as well as to fix a basepoint
+            # for the trivialization
+            max_distance = 1.0
+            self.min_distance = 1.0
+
+        
         center = sum([z_pt for z_pt in all_points_z]) / n_critical_loci
         self.base_point = center - 1j * max_distance
-        
-        # Minimun mutual distance among all the
-        # branch points/punctures.
-        non_zero_distances = [x for x in all_distances
-                              if abs(x) > self.accuracy]
-        self.min_distance = min(non_zero_distances)
+
         #print 'all points {}'.format(all_points_z)
         #print 'all distances: {}'.format(non_zero_distances)
         #print self.min_distance
