@@ -847,7 +847,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         z_1 = z_0 + dt * zeta
         if rp_type == 'type_I':
             x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
-            print '\n\nat z_1={} the sheets phases are {}'.format(z_1, [phase(x) for x in x_s])
+            print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
             # a list of the type
             # [... [phase, [x_i, x_j]] ...]
             x_i_x_j_phases = [
