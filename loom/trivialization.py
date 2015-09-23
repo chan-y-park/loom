@@ -267,6 +267,7 @@ class SWDataWithTrivialization(SWDataBase):
         self.reference_ffr_xs, self.reference_xs = self.get_aligned_xs(
             self.base_point,
         )
+        print self.reference_ffr_xs
 
         ### Construct the list of branch points
         for i, z_bp in enumerate(bpzs):
@@ -698,6 +699,8 @@ def get_path_around(z_pt, base_pt, min_distance):
 
 
 ### TODO: Try using numba.
+### TODO: Make smarter checks based on the types
+### of ramification points above the branch point.
 def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True, 
                   index=None, z_0=None, z_1=None, g_data=None):
     """

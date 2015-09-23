@@ -1045,8 +1045,12 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     Get x's above z_0 and return the num_x of them 
     which are nearest to x_0.
     """
-    
-    xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=ffr).values()
+    if ffr is True:
+        xs_at_z_0 = sw_data.ffr_curve.get_xs(z_0) 
+    else:
+        raise NotImplementedError
+
+    #xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=ffr).values()
     if x_0 is None:
         return xs_at_z_0
     else:

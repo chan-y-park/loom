@@ -745,6 +745,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     r_i = rp.i
     rp_type = rp.ramification_type
     rp_coeff = rp.sw_diff_coeff
+    print ('-a/b = {}'.format(rp_coeff) )
 
     # Construct the seeding points for the branch point
     # by studying the type of ramification structure of the r.p.
@@ -843,15 +844,32 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     seeds = []
 
     for zeta in zetas:
-        z_1 = z_0 + delta * zeta
-        x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
-        # a list of the type
-        # [... [phase, [x_i, x_j]] ...]
-        x_i_x_j_phases = [
-                        [exp(1j * phase(-1.0 * exp(1j*theta)/(x_s[j]-x_s[i]))),
-                        [x_s[i], x_s[j]]]
-                        for i in range(r_i) for j in range(r_i) if i!=j
-                    ]
+        z_1 = z_0 + dt * zeta
+        if rp_type == 'type_I':
+            x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
+            print '\n\nat z_1={} the sheets phases are {}'.format(z_1, [phase(x) for x in x_s])
+            # a list of the type
+            # [... [phase, [x_i, x_j]] ...]
+            x_i_x_j_phases = [
+                            [exp(1j * phase(-1.0 * exp(1j*theta)/(x_j-x_i))),
+                            [x_i, x_j]]
+                            for i, x_i in enumerate(x_s) 
+                            for j, x_j in enumerate(x_s) if i!=j
+                        ]
+        elif rp_type == 'type_II' or rp_type == 'type_III':
+            # for case two, we assume that the ramification index is maximal
+            # therefore we ask for all the sheets at z_1
+            x_s = find_xs_at_z_0(sw, z_1, ffr=True)
+            # a list of the type
+            # [... [phase, [x_i, x_j]] ...]
+            x_i_x_j_phases = [
+                            [exp(1j * phase(-1.0 * exp(1j*theta)/(x_j-x_i))),
+                            [x_i, x_j]]
+                            for i, x_i in enumerate(x_s) 
+                            for j, x_j in enumerate(x_s) 
+                            if abs(x_j-x_i) > delta
+                        ]
+
         closest_pair = sorted(
                     x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
                 )[0][1]
