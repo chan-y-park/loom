@@ -756,7 +756,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         t = (
                 exp(1j * theta * float(r_i)/float(r_i+1)) *
                 (rp_coeff ** (-1.0 / (r_i + 1))) * 
-                ((-1.0)**(-float(r_i)/float(r_i+1)))
+                (complex(-1.0)**(-float(r_i)/float(r_i+1)))
             )
         dz_phases = [
                     (t * ((phi[i][j])**(-float(r_i)/float(r_i+1))) * 
@@ -769,183 +769,101 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         # with respect to the branch point:
         zetas = remove_duplicate(norm_dz_phases,
                                         lambda p1, p2: abs(p1 - p2) < delta)
-        print 'zetas = {}'.format(zetas)
 
-
-
-    ###
-    # 1. Find the first-order approximations of the starting points
-    # of S-walls around a given branch point, which is of the form
-    # \Delta z_i = c_i / (\lambda_0)^(rp.i/(rp.i+1))
-    # at a branch point from a ramification point, and
-    # \Delta z_i = c_i / (\lambda_0)^(rp.i) exp(rp.i theta I)
-    # at a branch point from a massless regular puncture
-    ###
-
-    # 1.1 find the coefficient and the exponent of the leading term
-    # of the SW differential at the ramification point.
-    lambda_0, diff_e = get_local_ramification_structure(sw, rp, ffr=True)
-
-    # 1.2 find c_i, a phase factor for each S-wall.
-    omega_1 = exp(2*pi*1j/rp.i)
-    omega = [omega_1**k for k in range(rp.i)]
-
-    beta_1 = exp(rp.i*2*pi*1j/(rp.i+1))
-    beta = [beta_1**k for k in range(rp.i+1)]
-
-    cs = []
-    if diff_e == sympy.Rational(1, rp.i):
-        # the branch point is a ramification point
-        # go over pairs of omegas that differ by \omega_1^i
-        for i in range(1, rp.i):
-            new_locs = []
-            # and go over all the omegas
-            for j in range(rp.i):
-                if j+i < rp.i:
-                    new_loc = 1/(omega[j]-omega[j+i])
-                else:
-                    new_loc = 1/(omega[j]-omega[j+i-rp.i])
-                new_loc = cpow(new_loc, rp.i, rp.i+1)
-                new_locs += [new_loc*beta_i for beta_i in beta]
-            new_locs = remove_duplicate(new_locs,
-                                        lambda l1, l2: abs(l1 - l2) < delta)
-            cs += [(c*exp(theta*1j*sympy.Rational(rp.i, rp.i+1)) /
-                    cpow(lambda_0, rp.i, rp.i+1)) for c in new_locs]
-
-    # Account for possible D_n-type curves of the form
-    # F(x, z) = x^2 P(x, z) = 0
-    # In those cases the branching goes like 
-    # x^2 (b x^(2n-2) + a z) = 0
-    # This is not an exhaustive classification of degenerate cases
-    # But it covers strong coupling of ADE SYM
-    elif diff_e==sympy.Rational(1, rp.i-2) and 2*sw.g_data.rank==rp.i:
-        # print '\n\n Dealing with a maximally degenerate branch point\n\n'
-        is_degenerate_branch_point = True
-        g_n = sw.g_data.rank
-
-        eta = [(exp(2*pi*1j/(g_n-1)))**j for j in range(g_n-1)] + [0]
-        phi = [[eta[j] - eta[i] for j in range(g_n)] for i in range(g_n)]
+    elif rp_type == 'type_II':
+        phases = [exp(2*pi*1j*float(i)/(2.0*r_i)) for i in range(r_i)]
+        phi = [[p1 - p2 for p1 in phases] for p2 in phases]
         psi = [
-                [numpy.sign(i-j) * (eta[j] + eta[i]) for j in range(g_n)] 
-                for i in range(g_n)
-            ]
-        # print 'eta = {}'.format(eta)
+            [(phases[i] + phases[j])*numpy.sign(i-j) for i in range(r_i)] 
+            for j in range(r_i)
+        ]
         # print 'phi = {}'.format(phi)
-        # print 'psi = {}'.format(psi)
+        t = (
+                exp(1j * theta * (2.0*r_i)/(2.0*r_i+1.0)) *
+                (rp_coeff ** (-1.0 / (2.0*r_i + 1.0))) * 
+                (complex(-1.0)**(-2.0*r_i/(2.0*r_i+1.0)))
+            )
+        dz_phases = ([
+                    (t * ((phi[i][j])**(-2.0*r_i/(2.0*r_i+1.0))) * 
+                    exp(2*pi*1j*s*(2.0*r_i)/(2.0*r_i+1.0)))
+                    for i in range(r_i) for j in range(r_i) 
+                    for s in range(2*r_i + 1) if i!=j
+                ] + 
+                [
+                    (t * ((psi[i][j])**(-2.0*r_i/(2.0*r_i+1.0))) * 
+                    exp(2*pi*1j*s*(2.0*r_i)/(2.0*r_i+1.0)))
+                    for i in range(r_i) for j in range(r_i) 
+                    for s in range(2*r_i + 1) if i!=j
+                ])
+        norm_dz_phases = [d/abs(d) for d in dz_phases]
+        # these are the normalized phases of the seeds
+        # with respect to the branch point:
+        zetas = remove_duplicate(norm_dz_phases,
+                                        lambda p1, p2: abs(p1 - p2) < delta)
 
-        phases = []
-
-        for i in range(g_n):
-            for j in range(g_n):
-                if i!=j:
-                    phases.append((phi[i][j])**(sympy.Rational(g_n-1, g_n)))
-                    phases.append((psi[i][j])**(sympy.Rational(g_n-1, g_n)))
-        phases = remove_duplicate(phases, lambda p1, p2: abs(p1 - p2) < delta)
-
-        cs = [(
-                p * exp(theta * 1j * sympy.Rational(g_n - 1, g_n)) * 
-                cpow(lambda_0, -1, g_n)) * 
-                exp(2 * pi * 1j * sympy.Rational(g_n - 1, g_n))
-                for p in phases
-            ]
-
-
-    elif diff_e == -1 + sympy.Rational(1, rp.i):
-        # the branch point is a massless regular puncture
-        # go over pairs of omegas that differ by \omega_1^i
-        for i in range(1, rp.i):
-            cs.append(exp(rp.i*theta*1j) /
-                      cpow(((omega[0]-omega[i])*lambda_0), rp.i))
-
-    else:
-        logging.error('unknown form of sw.diff at rp ({}, {}): '
-                      'diff_e  = {}'.format(rp.z, rp.x, diff_e))
-        raise GetSWallSeedsError(diff_e)
-
-    cs = map(complex, cs)
-    gathered_cs = gather(cs, lambda c1, c2: abs(c1 - c2) < delta)
-    logging.debug('list of c = %s, # = %d', gathered_cs, len(gathered_cs))
-
-    print '\n\ngathered_cs = {}\n\n'.format(gathered_cs)
-
-    # 2. Now calculate \Delta z_i for each S-wall and
-    # find the two points on the curve that are projected onto it.
-    seeds = []
+    elif rp_type == 'type_III':
+        phases = [
+                exp(2*pi*1j*float(i)/(2.0*(r_i-1))) for i in range(r_i-1)
+            ] + [0.0]
+        phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+        psi = [
+            [(phases[i] + phases[j])*numpy.sign(i-j) for i in range(r_i)] 
+            for j in range(r_i)
+        ]
+        # print 'phi = {}'.format(phi)
+        t = (
+                exp(1j * theta * (2.0*r_i-2.0)/(2.0*r_i-1.0)) *
+                (rp_coeff ** (-1.0 / (2.0*r_i - 1.0))) * 
+                (complex(-1.0)**(-(2.0*r_i-2.0)/(2.0*r_i-1.0)))
+            )
+        dz_phases = ([
+                    (t * ((phi[i][j])**(-(2.0*r_i-2.0)/(2.0*r_i-1.0))) * 
+                    exp(2*pi*1j*s*(2.0*r_i-2.0)/(2.0*r_i-1.0)))
+                    for i in range(r_i) for j in range(r_i) 
+                    for s in range(2*r_i - 1) if i!=j
+                ] + 
+                [
+                    (t * ((psi[i][j])**(-(2.0*r_i-2.0)/(2.0*r_i-1.0))) * 
+                    exp(2*pi*1j*s*(2.0*r_i-2.0)/(2.0*r_i-1.0)))
+                    for i in range(r_i) for j in range(r_i) 
+                    for s in range(2*r_i - 1) if i!=j
+                ])
+        norm_dz_phases = [d/abs(d) for d in dz_phases]
+        # these are the normalized phases of the seeds
+        # with respect to the branch point:
+        zetas = remove_duplicate(norm_dz_phases,
+                                        lambda p1, p2: abs(p1 - p2) < delta)
     
-    if is_degenerate_branch_point is False:
-        for cv, cs in gathered_cs.iteritems():
-            # cv is the value of c, cm is its multiplicity.
-            cm = len(cs)
-            # resize to the size of the small step
-            Delta_z = cv/abs(cv)*delta
-            z_0 = complex(rp.z + Delta_z)
-            xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i, ffr=True)
-            dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
-            for i in range(len(xs_at_z_0)):
-                diffx = sw.diff.num_v.subs(z, z_0)
-                v_i = complex(diffx.subs(x, xs_at_z_0[i]))
-                
-                # print 'v_i = {}, v_j = {}'.format(v_i, v_j)
-                for j in range(len(xs_at_z_0)):
-                    v_j = complex(diffx.subs(x, xs_at_z_0[j]))
-                    if i == j:
-                        continue
-                    elif v_i==v_j:
-                        logging.debug(
-                            'Warning: some of the seeds appear to be degenerate'
-                            )
-                        continue
-                    else:
-                        delta_z = exp(1j*theta)/(v_i - v_j)*dt
-                        # flattened index
-                        fij = i*len(xs_at_z_0) + j
-                        dev_phases[fij] = phase((delta_z/Delta_z))
-            min_dev_indices = n_nearest_indices(dev_phases, 0.0, cm)
-            for k in min_dev_indices:
-                i, j = unravel(k, len(xs_at_z_0))
-                M_0 = 0
-                seeds.append(
-                    [z_0, [xs_at_z_0[i], xs_at_z_0[j]], M_0]
-                )
-    elif is_degenerate_branch_point is True:
-        for cv, cs in gathered_cs.iteritems():
-            # cv is the value of c, cm is its multiplicity.
-            cm = len(cs)
-            # resize to the size of the small step
-            Delta_z = cv/abs(cv)*delta
-            z_0 = complex(rp.z + Delta_z)
-            xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i, ffr=True)
-            reference_phase = cv/abs(cv)
+    print 'zetas = {}'.format(zetas)
+    print 'number = {}'.format(len(zetas))
 
-            diffx = sw.diff.num_v.subs(z, z_0)
-            all_ij_phases = []
-            for i in range(len(xs_at_z_0)):
-                v_i = complex(diffx.subs(x, xs_at_z_0[i]))
-                # print 'v_i = {}, v_j = {}'.format(v_i, v_j)
-                for j in range(len(xs_at_z_0)):
-                    v_j = complex(diffx.subs(x, xs_at_z_0[j]))
-                    if i == j:
-                        continue
-                    elif v_i==v_j:
-                        logging.debug(
-                            'Warning: some of the seeds appear to be degenerate'
-                            )
-                        continue
-                    else:
-                        ij_phase = exp(1j*numpy.angle(exp(1j*theta)/(v_i-v_j)))
-                        all_ij_phases.append([[i,j], ij_phase])
-            # Now find the ij pair that gives the closest phase
-            closest_pair = sorted(
-                                all_ij_phases, 
-                                key=lambda p: abs(p[1] - reference_phase)
-                            )[0]
-            # x_i = complex(diffx.subs(x, xs_at_z_0[closest_pair[0][0]]))
-            # x_j = complex(diffx.subs(x, xs_at_z_0[closest_pair[0][1]]))
-            M_0 = 0
-            seeds.append(
-                    [z_0, [xs_at_z_0[closest_pair[0][0]], 
-                    xs_at_z_0[closest_pair[0][1]]], M_0]
-                )
+    # Now for each seeding point z_1 we identify two sheets
+    # of the cover which match the phase of the displacement z_1-z_0
+
+    seeds = []
+
+    for zeta in zetas:
+        z_1 = z_0 + delta * zeta
+        x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
+        # a list of the type
+        # [... [phase, [x_i, x_j]] ...]
+        x_i_x_j_phases = [
+                        [exp(1j * phase(-1.0 * exp(1j*theta)/(x_s[j]-x_s[i]))),
+                        [x_s[i], x_s[j]]]
+                        for i in range(r_i) for j in range(r_i) if i!=j
+                    ]
+        closest_pair = sorted(
+                    x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
+                )[0][1]
+        print 'this is how close the phase is matching: {}'.format(
+            abs(sorted(
+                    x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
+                )[0][0]-zeta))
+        M_0 = 0
+        seeds.append(
+                [z_1, closest_pair, M_0]
+            )
+    
 
 
     print 'these are the seeds {}\n'.format(seeds)

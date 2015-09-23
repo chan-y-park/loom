@@ -570,20 +570,24 @@ class SWDataWithTrivialization(SWDataBase):
         # More cases may be added in the future, in particular 
         # for degenerations of E_6 or E_7 curves.
 
-        if abs(rp.x) > self.accuracy:
+        zero_threshold = self.accuracy * 100
+        if (self.g_data.type=='A' or 
+            ((self.g_data.type=='D' or self.g_data.type=='E') and 
+                abs(rp.x) > zero_threshold)):
             rp_type = 'type_I'
-        elif (self.g_data.type=='D' and abs(rp.x) < accuracy
+        elif (self.g_data.type=='D' and abs(rp.x) < zero_threshold
             and 2*self.g_data.rank==rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > self.accuracy):
+            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > zero_threshold):
             rp_type = 'type_II'
         elif (self.g_data.type=='D' and 2*self.g_data.rank==rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz))<self.accuracy):
+            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold):
             rp_type = 'type_III'
         else:
             rp_type = 'type_IV'
-            raise Exception('Cannot handle this type of ramification point'.format(
-                            local_curve
-                            ))
+            raise Exception(
+                    'Cannot handle this type of ramification point'.format(
+                    local_curve)
+                )
 
         if rp_type == 'type_I' or rp_type == 'type_II':
             a = local_curve.n().subs(Dx, 0).coeff(Dz)
@@ -597,7 +601,7 @@ class SWDataWithTrivialization(SWDataBase):
         print 'a = {}\nb = {}'.format(a, b)
 
         rp.ramification_type = rp_type
-        rp.self_diff_coeff = complex(-1 * a / b)
+        rp.sw_diff_coeff = complex(-1 * a / b)
         
 
 
