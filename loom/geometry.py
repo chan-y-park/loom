@@ -497,14 +497,24 @@ class SWDataBase(object):
                 )
                 z_list = bpzs + pctzs
                 z_r_list = map(float, [z.real for z in (bpzs + pctzs)])
-                min_x_distance =  min(
-                    [abs(x - y) for i, x in enumerate(z_r_list) 
-                     for y in z_r_list[i+1:]]
-                )
-                min_abs_distance =  min(
-                    [abs(x - y) for i, x in enumerate(z_list)
-                     for y in z_list[i+1:]]
-                )
+                if len(z_r_list) > 1:
+                    min_x_distance =  min(
+                        [abs(x - y) for i, x in enumerate(z_r_list) 
+                         for y in z_r_list[i+1:]]
+                    )
+                    min_abs_distance =  min(
+                        [abs(x - y) for i, x in enumerate(z_list)
+                         for y in z_list[i+1:]]
+                    )
+                elif len(z_r_list) == 1:
+                    logging.info('All branch points and punctures '
+                                'are sufficiently separated horizontally.\n'
+                                'Will not rotate z-plane any more.\n')
+                    break
+
+                elif len(z_r_list) == 0:
+                    raise Exception('Could not find any punctures' + 
+                                    ' or branch points')
 
                 if min_x_distance > min_abs_distance / len(z_list):
                     logging.info('All branch points and punctures '
@@ -656,6 +666,10 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     using Casimir differentials.
     """
     cs = []
+    # FIXME: make checks for the casimirs given by the user
+    # For example, I was able to insert the 0th Casimir with no complaint
+    # Moreover I didn get the curve I wanted because below we add +1 to phi_0
+    # We should prevent the wrong casimirs from being inserted at all.
     if g_type == 'A':
         N = g_rank + 1
         for k, phi_k in casimir_differentials.iteritems():
