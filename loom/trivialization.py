@@ -1,6 +1,7 @@
 import numpy
 import logging
 import pdb
+import sympy
 
 from cmath import exp, pi, phase
 from sympy import oo
@@ -11,6 +12,9 @@ from pprint import pprint
 from geometry import SWDataBase
 #from misc import n_unique
 from misc import n_remove_duplicate
+
+x, z = sympy.symbols('x z')
+
 
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
@@ -280,7 +284,7 @@ class SWDataWithTrivialization(SWDataBase):
             self.irregular_singularities.append(irr_sing)
 
         ### Analyze ramification points
-        for bp in enumerate(self.branch_points):
+        for bp in self.branch_points:
             for rp in bp.ffr_ramification_points:
                 self.analyze_ffr_ramification_point(rp)
 
@@ -544,7 +548,7 @@ class SWDataWithTrivialization(SWDataBase):
     
     def analyze_ffr_ramification_point(self, rp):
         rp_type = None
-        num_eq = sw.ffr_curve.num_eq
+        num_eq = self.ffr_curve.num_eq
 
         # use Dz = z - rp.z & Dx = x - rp.x
         Dz, Dx = sympy.symbols('Dz, Dx')
@@ -566,42 +570,34 @@ class SWDataWithTrivialization(SWDataBase):
         # More cases may be added in the future, in particular 
         # for degenerations of E_6 or E_7 curves.
 
-        if abs(rp.x) > sw.accuracy:
+        if abs(rp.x) > self.accuracy:
             rp_type = 'type_I'
-            a = local_curve.n().subs(Dx, 0).coeff(Dz)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
-            # Dx = Dx(Dz)
-            Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
-
-        elif (sw.g_data.type=='D' and abs(rp.x) < accuracy
-            and 2*sw.g_data.rank==rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > sw.accuracy):
+        elif (self.g_data.type=='D' and abs(rp.x) < accuracy
+            and 2*self.g_data.rank==rp.i
+            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > self.accuracy):
             rp_type = 'type_II'
-            a = local_curve.n().subs(Dx, 0).coeff(Dz)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
-            # Dx = Dx(Dz)
-            Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
-
-        elif (sw.g_data.type=='D' and 2*sw.g_data.rank==rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz))<sw.accuracy):
+        elif (self.g_data.type=='D' and 2*self.g_data.rank==rp.i
+            and abs(local_curve.n().subs(Dx, 0).coeff(Dz))<self.accuracy):
             rp_type = 'type_III'
-            a = local_curve.n().coeff(Dz).coeff(Dx, 2)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
-            # Dx = Dx(Dz)
-            Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i-2)
-
         else:
             rp_type = 'type_IV'
             raise Exception('Cannot handle this type of ramification point'.format(
                             local_curve
                             ))
+
+        if rp_type == 'type_I' or rp_type == 'type_II':
+            a = local_curve.n().subs(Dx, 0).coeff(Dz)
+            b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
+
+        elif rp_type == 'type_III':
+            a = local_curve.n().coeff(Dz).coeff(Dx, 2)
+            b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
         
         print 'The type of ramification point is {}'.format(rp_type)
         print 'a = {}\nb = {}'.format(a, b)
-        print 'DX_DZ = {}'.format(Dx_Dz)
 
-        rp.type = rp_type
-        rp.sw_diff_coefficient = complex(-1 * a / b)
+        rp.ramification_type = rp_type
+        rp.self_diff_coeff = complex(-1 * a / b)
         
 
 

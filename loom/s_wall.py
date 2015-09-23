@@ -7,7 +7,7 @@ from cmath import exp, pi, phase
 from math import floor
 from scipy import interpolate
 
-from geometry import get_local_ramification_structure, find_xs_at_z_0
+from geometry import find_xs_at_z_0
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
                   GetSWallSeedsError, n_nearest_indices, delete_duplicates,
                   clock, left_right,)
@@ -736,31 +736,41 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     ### Indeed we should scan over all ramification points, 
     ### and eventually keep only walls which are not redundant.
 
-    ### FIXME: instead of calling the analysis of 
-    ### ramification point now, should do it at the beginning
-    ### when we study branch points and punctures.
-    ### Moreover, should attach this data to the ramification point class.
-    
     rp = branch_point.ffr_ramification_points[0]
     delta = config['accuracy']
     dt = config['size_of_small_step']
 
-    g_type = sw.g_data.type
-    g_rank = sw.g_data.rank
     z_0 = rp.z
     x_0 = rp.x
+    r_i = rp.i
+    rp_type = rp.ramification_type
+    rp_coeff = rp.sw_diff_coeff
 
-    ramification_type = None
+    # Construct the seeding points for the branch point
+    # by studying the type of ramification structure of the r.p.
 
-    # 1) Classify which type of ramification point
-    # type_I: ADE type with x_0 != 0
-    # type_II: D-type with x_0 = 0, but nonedgenerate
-    #   i.e. F ~ a z + b x^2r
-    # type_III: D-type with x_0 = 0, degenerate
-    #   i.e. F ~ x^2 (a z + b x^(2r-2))
-    # type IV: Other case.
+    if rp_type == 'type_I':
+        phases = [exp(2*pi*1j*float(i)/r_i) for i in range(r_i)]
+        phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+        print 'phi = {}'.format(phi)
+        t = (
+                exp(1j * theta * float(r_i)/float(r_i+1)) *
+                (rp_coeff ** (-1.0 / (r_i + 1))) * 
+                ((-1.0)**(-float(r_i)/float(r_i+1)))
+            )
+        dz_phases = [
+                    (t * ((phi[i][j])**(-float(r_i)/float(r_i+1))) * 
+                    exp(2*pi*1j*s*float(r_i)/(r_i+1)))
+                    for i in range(r_i) for j in range(r_i) 
+                    for s in range(r_i + 1) if i!=j
+                ]
+        norm_dz_phases = [d/abs(d) for d in dz_phases]
+        # these are the normalized phases of the seeds
+        # with respect to the branch point:
+        zetas = remove_duplicate(norm_dz_phases,
+                                        lambda p1, p2: abs(p1 - p2) < delta)
+        print 'zetas = {}'.format(zetas)
 
-    
 
 
     ###

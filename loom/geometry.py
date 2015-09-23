@@ -198,7 +198,7 @@ class RamificationPoint:
         # see the function which analyzes ramification points
         # in the trivializatio module.
         self.ramification_type = None
-        self.sw_diff_coefficient = None
+        self.sw_diff_coeff = None
         #self.is_puncture = is_puncture
 
     def __str__(self):
