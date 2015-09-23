@@ -7,7 +7,7 @@ from cmath import exp, pi, phase
 from math import floor
 from scipy import interpolate
 
-from geometry import get_local_sw_diff, find_xs_at_z_0
+from geometry import get_local_ramification_structure, find_xs_at_z_0
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
                   GetSWallSeedsError, n_nearest_indices, delete_duplicates,
                   clock, left_right,)
@@ -728,11 +728,40 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     ### to extract the seed data.
     ### We thus stick to (any)one ramification point of the 
     ### fundamental representation to get the seeds.
+
+    ### FIXME: This is not the correct approach, because we
+    ### may have two ramification points of different root types
+    ### abov the same branch point, especially if the two 
+    ### roots are orthogonal they will be distinct points!
+    ### Indeed we should scan over all ramification points, 
+    ### and eventually keep only walls which are not redundant.
+
+    ### FIXME: instead of calling the analysis of 
+    ### ramification point now, should do it at the beginning
+    ### when we study branch points and punctures.
+    ### Moreover, should attach this data to the ramification point class.
+    
     rp = branch_point.ffr_ramification_points[0]
     delta = config['accuracy']
     dt = config['size_of_small_step']
 
-    is_degenerate_branch_point = False
+    g_type = sw.g_data.type
+    g_rank = sw.g_data.rank
+    z_0 = rp.z
+    x_0 = rp.x
+
+    ramification_type = None
+
+    # 1) Classify which type of ramification point
+    # type_I: ADE type with x_0 != 0
+    # type_II: D-type with x_0 = 0, but nonedgenerate
+    #   i.e. F ~ a z + b x^2r
+    # type_III: D-type with x_0 = 0, degenerate
+    #   i.e. F ~ x^2 (a z + b x^(2r-2))
+    # type IV: Other case.
+
+    
+
 
     ###
     # 1. Find the first-order approximations of the starting points
@@ -745,7 +774,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
 
     # 1.1 find the coefficient and the exponent of the leading term
     # of the SW differential at the ramification point.
-    lambda_0, diff_e = get_local_sw_diff(sw, rp, ffr=True)
+    lambda_0, diff_e = get_local_ramification_structure(sw, rp, ffr=True)
 
     # 1.2 find c_i, a phase factor for each S-wall.
     omega_1 = exp(2*pi*1j/rp.i)

@@ -194,6 +194,11 @@ class RamificationPoint:
         self.x = x
         self.i = i
         self.label = label
+        # For explanations on the following two attributes, 
+        # see the function which analyzes ramification points
+        # in the trivializatio module.
+        self.ramification_type = None
+        self.sw_diff_coefficient = None
         #self.is_puncture = is_puncture
 
     def __str__(self):
@@ -1048,60 +1053,6 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
         return sorted(xs_at_z_0,
                       lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
    
-
-def get_local_sw_diff(sw, ramification_point, ffr=None):
-    rp = ramification_point
-    if ffr is None or ffr is False:
-        num_eq = sw.curve.num_eq
-        num_v = sw.diff.num_v
-    elif ffr is True:
-        num_eq = sw.ffr_curve.num_eq
-        num_v = sw.diff.num_v
-
-    # use Dz = z - rp.z & Dx = x - rp.x
-    Dz, Dx = sympy.symbols('Dz, Dx')
-    local_curve = (
-        num_eq.subs(x, rp.x+Dx).subs(z, rp.z+Dz)
-        .series(Dx, 0, rp.i+1).removeO()
-        .series(Dz, 0, 2).removeO()
-    )
-    print 'local curve = {}'.format(local_curve)
-    # # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
-    # a = local_curve.n().coeff(Dz).coeff(Dx, 0)
-    # b = local_curve.n().coeff(Dx**rp.i).coeff(Dz, 0)
-    # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
-    
-    # Handle the case of fully degenerate D-type curves 
-    # i.e. branch points where all roots go to zero.
-    # The curve in certain cases can take the form
-    # x^2 P(x,z)=0
-    if (sw.g_data.type=='D' and 2*sw.g_data.rank==rp.i
-        and abs(local_curve.n().subs(Dx, 0).coeff(Dz))<sw.accuracy):
-        a = local_curve.n().coeff(Dz).coeff(Dx, 2)
-        b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
-        # Dx = Dx(Dz)
-        Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i-2)
-    else:
-        a = local_curve.n().subs(Dx, 0).coeff(Dz)
-        b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
-        # Dx = Dx(Dz)
-        Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
-    print 'a = {}\nb = {}'.format(a, b)
-    
-    print 'DX_DZ = {}'.format(Dx_Dz)
-    local_diff = (
-        num_v.subs(x, rp.x+Dx_Dz).subs(z, rp.z+Dz)
-        .series(Dz, 0, 1).removeO()
-    )
-    print 'local_diff = {}'.format(local_diff)
-    # get the coefficient and the exponent of the leading term
-    (diff_c, diff_e) = local_diff.leadterm(Dz)
-    if diff_e == 0:
-        # remove the constant term from the local_diff
-        local_diff -= local_diff.subs(Dz, 0)
-        (diff_c, diff_e) = local_diff.leadterm(Dz)
-
-    return (complex(diff_c.n()), diff_e)
 
 
 def null_weight_triples(weights):

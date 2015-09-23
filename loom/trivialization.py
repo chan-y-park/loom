@@ -279,6 +279,11 @@ class SWDataWithTrivialization(SWDataBase):
             self.analyze_irregular_singularity(irr_sing, n_critical_loci)
             self.irregular_singularities.append(irr_sing)
 
+        ### Analyze ramification points
+        for bp in enumerate(self.branch_points):
+            for rp in bp.ffr_ramification_points:
+                self.analyze_ffr_ramification_point(rp)
+
         
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
@@ -523,7 +528,7 @@ class SWDataWithTrivialization(SWDataBase):
 
         bp.ffr_ramification_points = [rp 
                     for rp in self.ffr_ramification_points
-                    if rp.z == bp.z]
+                    if abs(rp.z - bp.z) < self.accuracy]
 
 
     def analyze_irregular_singularity(self, irr_sing, n_loci):
@@ -536,7 +541,69 @@ class SWDataWithTrivialization(SWDataBase):
         irr_sing.monodromy = (
             self.get_sheet_monodromy(path_around_z)
         )
+    
+    def analyze_ffr_ramification_point(self, rp):
+        rp_type = None
+        num_eq = sw.ffr_curve.num_eq
+
+        # use Dz = z - rp.z & Dx = x - rp.x
+        Dz, Dx = sympy.symbols('Dz, Dx')
+        local_curve = (
+            num_eq.subs(x, rp.x+Dx).subs(z, rp.z+Dz)
+            .series(Dx, 0, rp.i+1).removeO()
+            .series(Dz, 0, 2).removeO()
+        )
+        print 'local curve = {}'.format(local_curve)
+            
+        # Classify which type of ramification point
+        # type_I: ADE type with x_0 != 0
+        #   #   i.e. F ~ a z + b x^k
+        # type_II: D-type with x_0 = 0, but nonedgenerate
+        #   i.e. F ~ a z + b x^2r   with r=rank(g)
+        # type_III: D-type with x_0 = 0, degenerate
+        #   i.e. F ~ x^2 (a z + b x^(2r-2))
+        # type IV: Other case.
+        # More cases may be added in the future, in particular 
+        # for degenerations of E_6 or E_7 curves.
+
+        if abs(rp.x) > sw.accuracy:
+            rp_type = 'type_I'
+            a = local_curve.n().subs(Dx, 0).coeff(Dz)
+            b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
+            # Dx = Dx(Dz)
+            Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
+
+        elif (sw.g_data.type=='D' and abs(rp.x) < accuracy
+            and 2*sw.g_data.rank==rp.i
+            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > sw.accuracy):
+            rp_type = 'type_II'
+            a = local_curve.n().subs(Dx, 0).coeff(Dz)
+            b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
+            # Dx = Dx(Dz)
+            Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
+
+        elif (sw.g_data.type=='D' and 2*sw.g_data.rank==rp.i
+            and abs(local_curve.n().subs(Dx, 0).coeff(Dz))<sw.accuracy):
+            rp_type = 'type_III'
+            a = local_curve.n().coeff(Dz).coeff(Dx, 2)
+            b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
+            # Dx = Dx(Dz)
+            Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i-2)
+
+        else:
+            rp_type = 'type_IV'
+            raise Exception('Cannot handle this type of ramification point'.format(
+                            local_curve
+                            ))
         
+        print 'The type of ramification point is {}'.format(rp_type)
+        print 'a = {}\nb = {}'.format(a, b)
+        print 'DX_DZ = {}'.format(Dx_Dz)
+
+        rp.type = rp_type
+        rp.sw_diff_coefficient = complex(-1 * a / b)
+        
+
 
 def get_path_to(z_pt, sw_data, n_loci=None):
     """
