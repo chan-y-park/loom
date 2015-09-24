@@ -735,7 +735,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     ### roots are orthogonal they will be distinct points!
     ### Indeed we should scan over all ramification points, 
     ### and eventually keep only walls which are not redundant.
-
+    # FIXME: reintroduce the handling of massless punctures
+    # see previous versions of this on master.
     rp = branch_point.ffr_ramification_points[0]
     delta = config['accuracy']
     dt = config['size_of_small_step']
@@ -873,7 +874,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         closest_pair = sorted(
                     x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
                 )[0][1]
-        print 'this is how close the phase is matching: {}'.format(
+        print 'this is how close the phase is matching: {}\n'.format(
             abs(sorted(
                     x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
                 )[0][0]-zeta))

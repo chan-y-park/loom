@@ -931,11 +931,7 @@ def get_ramification_points_using_system_of_eqs(
 
 #     return sols
 
-#FIXME Needs thorough review, I just introduced 
-#some numerical substitution which makes
-# things faster.
-# Another crucial addiiton is the square-root 
-# for computing determinants in D-type
+
 def get_ramification_points_using_discriminant(
     curve=None, 
     diff_params=None, 
@@ -950,19 +946,10 @@ def get_ramification_points_using_discriminant(
     rf = sympy.cancel(f)
     f_n, f_d = rf.as_numer_denom()
     subs_dict = copy.deepcopy(diff_params)
-    subs_k = subs_dict.keys()
-    subs_v = subs_dict.values()
-    f_num = f
-    for i in range(len(subs_k)):
-        f_num = f_num.subs(subs_k[i], subs_v[i])
-    print 'f = {}'.format(f_num)
-    if g_data.type=='D':
-        f_num = f_num.subs(x, sympy.sqrt(x))
-    print 'f = {}'.format(f_num)
+
     # Find the roots of D(z), the discriminant of f(x, z)
     # as a polynomial of x. 
-    D_z = sympy.discriminant(f_num, x)
-    print 'D_z = {}'.format(D_z)
+    D_z = sympy.discriminant(f_n, x)
     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
     D_z_n_P = sympy.Poly(D_z_n, z)
     cs = [
