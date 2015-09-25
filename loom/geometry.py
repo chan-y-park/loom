@@ -471,6 +471,7 @@ class SWDataBase(object):
                     accuracy=config['accuracy'], 
                     punctures=self.punctures,
                     method=config['ramification_point_finding_method'],
+                    g_data=self.g_data
                 )
                 
                 logging.info('These are the punctures:')
@@ -724,6 +725,7 @@ def get_ramification_points(
     accuracy=None, 
     punctures=None,
     method=None,
+    g_data=None
 ):
     #FIXME: Why are we computing the ramification points
     # in the non-PLS2C rotated curve?
@@ -740,6 +742,7 @@ def get_ramification_points(
             mt_params=mt_params,
             accuracy=accuracy, 
             punctures=punctures,
+            g_data=g_data,
         )
     #elif method == 'system_of_eqs':
     else:
@@ -935,6 +938,7 @@ def get_ramification_points_using_discriminant(
     mt_params=None,
     accuracy=None, 
     punctures=None,
+    g_data=None,
 ):
     sols = []
     f = curve.sym_eq
@@ -945,82 +949,97 @@ def get_ramification_points_using_discriminant(
 
     # Find the roots of D(z), the discriminant of f(x, z)
     # as a polynomial of x. 
-    D_z = sympy.discriminant(f_n, x)
+    D_z = sympy.discriminant(f_n.subs(subs_dict), x)
+    print D_z
+    if D_z == 0:
+        logging.info('The discriminant of F(x,z) is identically zero')
+        if g_data.type == 'A':
+            D_z = sympy.discriminant(f_n.subs(subs_dict) / x, x)
+        if g_data.type == 'D':
+            D_z = sympy.discriminant(f_n.subs(subs_dict) / (x**2), x)
+        logging.info(
+            'Will work with the effective discriminant instead: {}'.format(D_z)
+        )
+
     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
-    D_z_n_P = sympy.Poly(D_z_n, z)
-    cs = [
-        c_sym.evalf(
-            subs=subs_dict, n=ROOT_FINDING_PRECISION
-        ).as_real_imag()
-        for c_sym in D_z_n_P.all_coeffs()
-    ]
-    D_z_n_P_coeffs = [mpmath.mpc(*c) for c in cs]
-    # Increase maxsteps & extraprec when root-finding fails.
-    D_z_roots = None
-    polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
-    polyroots_extra_precision = ROOT_FINDING_PRECISION
-    while D_z_roots is None:
-        try:
-            D_z_roots = mpmath.polyroots(
-                D_z_n_P_coeffs, 
-                maxsteps=polyroots_maxsteps,
-                extraprec=polyroots_extra_precision,
-            )
-        except NoConvergence:
-            logging.warning(
-                'mpmath.polyroots failed; increase maxsteps & extraprec '
-                'by 10.'
-            )
-            polyroots_maxsteps += 10
-            polyroots_extra_precision += 10
-
-    is_same_z = lambda a, b: abs(a - b) < accuracy
-    gathered_D_z_roots = gather(D_z_roots, is_same_z)  
-
-    print 'roots of discriminant : {}'.format(gathered_D_z_roots)
-
-    # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
-    for z_i, zs in gathered_D_z_roots.iteritems():
-        # m_z is the multiplicity of z_i.
-        m_z = len(zs)
-        # Check if z_i is one of the punctures.
-        is_puncture = False
-        for p in punctures:
-            if abs(z_i - p.Ciz) < accuracy:
-                is_puncture = True
-        if is_puncture:
-            continue
-                
-        subs_dict[z] = z_i
-        f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
-                  for c in sympy.Poly(f, x).all_coeffs()]
-        f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
-        f_x_roots = None
-        while f_x_roots is None:
+    factors = sympy.factor_list(sympy.expand(sympy.Poly(D_z_n, z)))[1]
+    for fact in factors:
+        print 'styding roots of factor {}'.format(fact)
+        # separate the factor itself and the multiplicity
+        f_P = sympy.Poly(fact[0], z)
+        f_m = fact[1]
+        cs = [
+            c_sym.evalf(
+                subs=subs_dict, n=ROOT_FINDING_PRECISION
+            ).as_real_imag()
+            for c_sym in f_P.all_coeffs()
+        ]
+        f_P_coeffs = [mpmath.mpc(*c) for c in cs]
+        # Increase maxsteps & extraprec when root-finding fails.
+        f_roots = None
+        polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
+        polyroots_extra_precision = ROOT_FINDING_PRECISION
+        while f_roots is None:
             try:
-                f_x_roots = mpmath.polyroots(
-                    f_x_coeffs,
+                f_roots = mpmath.polyroots(
+                    f_P_coeffs, 
                     maxsteps=polyroots_maxsteps,
-                    extraprec=polyroots_extra_precision
+                    extraprec=polyroots_extra_precision,
                 )
             except NoConvergence:
                 logging.warning(
-                    'mpmath.polyroots failed; increase maxsteps & '
-                    'extraprec by 10.'
+                    'mpmath.polyroots failed; increase maxsteps & extraprec '
+                    'by 10.'
                 )
                 polyroots_maxsteps += 10
                 polyroots_extra_precision += 10
 
-        # In general x-roots have worse errors.
-        is_same_x = lambda a, b: abs(a - b) < accuracy/1e-2
-        gathered_f_x_roots = gather(f_x_roots, is_same_x)
-        for x_j, xs in gathered_f_x_roots.iteritems():
-            # m_x is the multiplicity of x_j.
-            m_x = len(xs)
-            if m_x == 1:
-                continue
+        is_same_z = lambda a, b: abs(a - b) < accuracy
+        gathered_f_roots = gather(f_roots, is_same_z)  
+        print 'its roots are {}'.format(gathered_f_roots)
 
-            sols.append([z_i, (x_j, m_x)])
+        # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
+        for z_i, zs in gathered_f_roots.iteritems():
+            # m_z is the multiplicity of z_i.
+            m_z = len(zs)
+            # Check if z_i is one of the punctures.
+            is_puncture = False
+            for p in punctures:
+                if abs(z_i - p.Ciz) < accuracy:
+                    is_puncture = True
+            if is_puncture:
+                continue
+                    
+            subs_dict[z] = z_i
+            f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
+                      for c in sympy.Poly(f, x).all_coeffs()]
+            f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
+            f_x_roots = None
+            while f_x_roots is None:
+                try:
+                    f_x_roots = mpmath.polyroots(
+                        f_x_coeffs,
+                        maxsteps=polyroots_maxsteps,
+                        extraprec=polyroots_extra_precision
+                    )
+                except NoConvergence:
+                    logging.warning(
+                        'mpmath.polyroots failed; increase maxsteps & '
+                        'extraprec by 10.'
+                    )
+                    polyroots_maxsteps += 10
+                    polyroots_extra_precision += 10
+
+            # In general x-roots have worse errors.
+            is_same_x = lambda a, b: abs(a - b) < accuracy/1e-2
+            gathered_f_x_roots = gather(f_x_roots, is_same_x)
+            for x_j, xs in gathered_f_x_roots.iteritems():
+                # m_x is the multiplicity of x_j.
+                m_x = len(xs)
+                if m_x == 1:
+                    continue
+
+                sols.append([z_i, (x_j, m_x)])
     return sols
 
 

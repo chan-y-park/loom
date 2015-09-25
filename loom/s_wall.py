@@ -862,25 +862,35 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                 print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
                 # a list of the type
                 # [... [phase, [x_i, x_j]] ...]
-                x_i_x_j_phases = [
-                                [exp(1j * phase(-1.0 * exp(1j*theta)/(x_j-x_i))),
-                                [x_i, x_j]]
-                                for i, x_i in enumerate(x_s) 
-                                for j, x_j in enumerate(x_s) if i!=j
-                            ]
+                x_i_x_j_phases = []
+                for i, x_i in enumerate(x_s): 
+                    for j, x_j in enumerate(x_s):
+                        if i != j:
+                            ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
+                            x_i_x_j_phases.append(
+                                                [(ij_factor)/abs(ij_factor),
+                                                [x_i, x_j]]
+                                            )
+
             elif rp_type == 'type_II' or rp_type == 'type_III':
-                # for case two, we assume that the ramification index is maximal
-                # therefore we ask for all the sheets at z_1
+                # we assume that the ramification index is maximal
+                # therefore we ask for all the sheets at z_1.
                 x_s = find_xs_at_z_0(sw, z_1, ffr=True)
+
                 # a list of the type
                 # [... [phase, [x_i, x_j]] ...]
-                x_i_x_j_phases = [
-                                [exp(1j * phase(-1.0 * exp(1j*theta)/(x_j-x_i))),
-                                [x_i, x_j]]
-                                for i, x_i in enumerate(x_s) 
-                                for j, x_j in enumerate(x_s) 
-                                if abs(x_j-x_i) > delta
-                            ]
+                # where we eclude x_i=x_j and x_i=-x_j 
+                # since in D-type there are no roots 
+                # between a weight v and -v.
+                x_i_x_j_phases = []
+                for i, x_i in enumerate(x_s): 
+                    for j, x_j in enumerate(x_s):
+                        if abs(x_j-x_i) > delta and abs(x_j+x_i) > delta:
+                            ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
+                            x_i_x_j_phases.append(
+                                                [(ij_factor)/abs(ij_factor),
+                                                [x_i, x_j]]
+                                            )
 
             closest_pair = sorted(
                         x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
