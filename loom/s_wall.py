@@ -849,9 +849,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             zetas = remove_duplicate(norm_dz_phases,
                                             lambda p1, p2: abs(p1 - p2) < delta)
         
-        print '\nNumber of S-walls emanating = {}\n'.format(len(zetas))
-        print '\nPhases of outgoing walls = {}\n'.format(zetas)
-
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0
 
@@ -903,9 +900,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             seeds.append(
                     [z_1, closest_pair, M_0]
                 )
-    
 
-
+    seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=delta)
+    print '\nNumber of S-walls emanating = {}\n'.format(len(seeds))
     print 'these are the seeds {}\n'.format(seeds)
     return seeds
 
