@@ -471,7 +471,6 @@ class SWDataBase(object):
                     accuracy=config['accuracy'], 
                     punctures=self.punctures,
                     method=config['ramification_point_finding_method'],
-                    g_data=self.g_data,
                 )
                 
                 logging.info('These are the punctures:')
@@ -725,7 +724,6 @@ def get_ramification_points(
     accuracy=None, 
     punctures=None,
     method=None,
-    g_data=None
 ):
     #FIXME: Why are we computing the ramification points
     # in the non-PLS2C rotated curve?
@@ -742,7 +740,6 @@ def get_ramification_points(
             mt_params=mt_params,
             accuracy=accuracy, 
             punctures=punctures,
-            g_data=g_data,
         )
     #elif method == 'system_of_eqs':
     else:
@@ -938,7 +935,6 @@ def get_ramification_points_using_discriminant(
     mt_params=None,
     accuracy=None, 
     punctures=None,
-    g_data=None,
 ):
     sols = []
     f = curve.sym_eq
@@ -980,6 +976,8 @@ def get_ramification_points_using_discriminant(
 
     is_same_z = lambda a, b: abs(a - b) < accuracy
     gathered_D_z_roots = gather(D_z_roots, is_same_z)  
+
+    print 'roots of discriminant : {}'.format(gathered_D_z_roots)
 
     # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
     for z_i, zs in gathered_D_z_roots.iteritems():
@@ -1023,7 +1021,6 @@ def get_ramification_points_using_discriminant(
                 continue
 
             sols.append([z_i, (x_j, m_x)])
-
     return sols
 
 

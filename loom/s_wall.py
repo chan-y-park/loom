@@ -331,7 +331,7 @@ class SWall(object):
             M_i = y_i[NUM_ODE_XS_OVER_Z+1]
             self[step] = y_i
 
-        print 'this is the trajectory\n{}'.format(self.z[0:10])
+        # print 'this is the trajectory\n{}'.format(self.z[0:10])
 
 
     def determine_root_types(self, sw_data):
@@ -729,159 +729,170 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     ### We thus stick to (any)one ramification point of the 
     ### fundamental representation to get the seeds.
 
-    ### FIXME: This is not the correct approach, because we
-    ### may have two ramification points of different root types
-    ### abov the same branch point, especially if the two 
-    ### roots are orthogonal they will be distinct points!
-    ### Indeed we should scan over all ramification points, 
-    ### and eventually keep only walls which are not redundant.
     # FIXME: reintroduce the handling of massless punctures
     # see previous versions of this on master.
-    rp = branch_point.ffr_ramification_points[0]
+
+    
     delta = config['accuracy']
     dt = config['size_of_small_step']
-
-    z_0 = rp.z
-    x_0 = rp.x
-    r_i = rp.i
-    rp_type = rp.ramification_type
-    rp_coeff = rp.sw_diff_coeff
-    print ('-a/b = {}'.format(rp_coeff) )
-
-    # Construct the seeding points for the branch point
-    # by studying the type of ramification structure of the r.p.
-
-    if rp_type == 'type_I':
-        phases = [exp(2*pi*1j*float(i)/r_i) for i in range(r_i)]
-        phi = [[p1 - p2 for p1 in phases] for p2 in phases]
-        print 'phi = {}'.format(phi)
-        t = (
-                exp(1j * theta * float(r_i)/float(r_i+1)) *
-                (rp_coeff ** (-1.0 / (r_i + 1))) * 
-                (complex(-1.0)**(-float(r_i)/float(r_i+1)))
-            )
-        dz_phases = [
-                    (t * ((phi[i][j])**(-float(r_i)/float(r_i+1))) * 
-                    exp(2*pi*1j*s*float(r_i)/(r_i+1)))
-                    for i in range(r_i) for j in range(r_i) 
-                    for s in range(r_i + 1) if i!=j
-                ]
-        norm_dz_phases = [d/abs(d) for d in dz_phases]
-        # these are the normalized phases of the seeds
-        # with respect to the branch point:
-        zetas = remove_duplicate(norm_dz_phases,
-                                        lambda p1, p2: abs(p1 - p2) < delta)
-
-    elif rp_type == 'type_II':
-        phases = [exp(2*pi*1j*float(i)/(2.0*r_i)) for i in range(r_i)]
-        phi = [[p1 - p2 for p1 in phases] for p2 in phases]
-        psi = [
-            [(phases[i] + phases[j])*numpy.sign(i-j) for i in range(r_i)] 
-            for j in range(r_i)
-        ]
-        # print 'phi = {}'.format(phi)
-        t = (
-                exp(1j * theta * (2.0*r_i)/(2.0*r_i+1.0)) *
-                (rp_coeff ** (-1.0 / (2.0*r_i + 1.0))) * 
-                (complex(-1.0)**(-2.0*r_i/(2.0*r_i+1.0)))
-            )
-        dz_phases = ([
-                    (t * ((phi[i][j])**(-2.0*r_i/(2.0*r_i+1.0))) * 
-                    exp(2*pi*1j*s*(2.0*r_i)/(2.0*r_i+1.0)))
-                    for i in range(r_i) for j in range(r_i) 
-                    for s in range(2*r_i + 1) if i!=j
-                ] + 
-                [
-                    (t * ((psi[i][j])**(-2.0*r_i/(2.0*r_i+1.0))) * 
-                    exp(2*pi*1j*s*(2.0*r_i)/(2.0*r_i+1.0)))
-                    for i in range(r_i) for j in range(r_i) 
-                    for s in range(2*r_i + 1) if i!=j
-                ])
-        norm_dz_phases = [d/abs(d) for d in dz_phases]
-        # these are the normalized phases of the seeds
-        # with respect to the branch point:
-        zetas = remove_duplicate(norm_dz_phases,
-                                        lambda p1, p2: abs(p1 - p2) < delta)
-
-    elif rp_type == 'type_III':
-        phases = [
-                exp(2*pi*1j*float(i)/(2.0*(r_i-1))) for i in range(r_i-1)
-            ] + [0.0]
-        phi = [[p1 - p2 for p1 in phases] for p2 in phases]
-        psi = [
-            [(phases[i] + phases[j])*numpy.sign(i-j) for i in range(r_i)] 
-            for j in range(r_i)
-        ]
-        # print 'phi = {}'.format(phi)
-        t = (
-                exp(1j * theta * (2.0*r_i-2.0)/(2.0*r_i-1.0)) *
-                (rp_coeff ** (-1.0 / (2.0*r_i - 1.0))) * 
-                (complex(-1.0)**(-(2.0*r_i-2.0)/(2.0*r_i-1.0)))
-            )
-        dz_phases = ([
-                    (t * ((phi[i][j])**(-(2.0*r_i-2.0)/(2.0*r_i-1.0))) * 
-                    exp(2*pi*1j*s*(2.0*r_i-2.0)/(2.0*r_i-1.0)))
-                    for i in range(r_i) for j in range(r_i) 
-                    for s in range(2*r_i - 1) if i!=j
-                ] + 
-                [
-                    (t * ((psi[i][j])**(-(2.0*r_i-2.0)/(2.0*r_i-1.0))) * 
-                    exp(2*pi*1j*s*(2.0*r_i-2.0)/(2.0*r_i-1.0)))
-                    for i in range(r_i) for j in range(r_i) 
-                    for s in range(2*r_i - 1) if i!=j
-                ])
-        norm_dz_phases = [d/abs(d) for d in dz_phases]
-        # these are the normalized phases of the seeds
-        # with respect to the branch point:
-        zetas = remove_duplicate(norm_dz_phases,
-                                        lambda p1, p2: abs(p1 - p2) < delta)
-    
-    print 'zetas = {}'.format(zetas)
-    print 'number = {}'.format(len(zetas))
-
-    # Now for each seeding point z_1 we identify two sheets
-    # of the cover which match the phase of the displacement z_1-z_0
-
     seeds = []
 
-    for zeta in zetas:
-        z_1 = z_0 + dt * zeta
-        if rp_type == 'type_I':
-            x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
-            print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
-            # a list of the type
-            # [... [phase, [x_i, x_j]] ...]
-            x_i_x_j_phases = [
-                            [exp(1j * phase(-1.0 * exp(1j*theta)/(x_j-x_i))),
-                            [x_i, x_j]]
-                            for i, x_i in enumerate(x_s) 
-                            for j, x_j in enumerate(x_s) if i!=j
-                        ]
-        elif rp_type == 'type_II' or rp_type == 'type_III':
-            # for case two, we assume that the ramification index is maximal
-            # therefore we ask for all the sheets at z_1
-            x_s = find_xs_at_z_0(sw, z_1, ffr=True)
-            # a list of the type
-            # [... [phase, [x_i, x_j]] ...]
-            x_i_x_j_phases = [
-                            [exp(1j * phase(-1.0 * exp(1j*theta)/(x_j-x_i))),
-                            [x_i, x_j]]
-                            for i, x_i in enumerate(x_s) 
-                            for j, x_j in enumerate(x_s) 
-                            if abs(x_j-x_i) > delta
-                        ]
+    for rp in branch_point.ffr_ramification_points:
+        z_0 = rp.z
+        x_0 = rp.x
+        r_i = rp.i
+        rp_type = rp.ramification_type
+        rp_coeff = rp.sw_diff_coeff
+        print ('\nAnalyze ramification point (z,x)={}'.format([z_0,x_0]))
+        print ('Ramification index = {}'.format(r_i))
+        print ('Ramification type = {}'.format(rp_type))
+        print ('-a/b = {}\n'.format(rp_coeff) )
 
-        closest_pair = sorted(
-                    x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
-                )[0][1]
-        print 'this is how close the phase is matching: {}\n'.format(
-            abs(sorted(
-                    x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
-                )[0][0]-zeta))
-        M_0 = 0
-        seeds.append(
-                [z_1, closest_pair, M_0]
-            )
+        # Construct the seeding points for the branch point
+        # by studying the type of ramification structure of the r.p.
+
+        if rp_type == 'type_I':
+            phases = [exp(2*pi*1j*float(i)/r_i) for i in range(r_i)]
+            phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+            # print 'phi = {}'.format(phi)
+            t = (
+                    exp(1j * theta * float(r_i)/float(r_i+1)) *
+                    (rp_coeff ** (-1.0 / (r_i + 1))) * 
+                    (complex(-1.0)**(-float(r_i)/float(r_i+1)))
+                )
+            dz_phases = [
+                        (t * ((phi[i][j])**(-float(r_i)/float(r_i+1))) * 
+                        exp(2*pi*1j*s*float(r_i)/(r_i+1)))
+                        for i in range(r_i) for j in range(r_i) 
+                        for s in range(r_i + 1) if i!=j
+                    ]
+            norm_dz_phases = [d/abs(d) for d in dz_phases]
+            # these are the normalized phases of the seeds
+            # with respect to the branch point:
+            zetas = remove_duplicate(norm_dz_phases,
+                                            lambda p1, p2: abs(p1 - p2) < delta)
+
+        elif rp_type == 'type_II':
+            if r_i % 2 == 1:
+                raise Exception('Cannot have a type II ramification point' +
+                                'with odd ramification index.')
+            # defining this object just for enhanced readability of code 
+            # in comparing with notes on classification of ramifications
+            r_k = r_i / 2
+            phases = [exp(2*pi*1j*float(i)/(2.0*r_k)) for i in range(r_k)]
+            phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+            psi = [
+                [(phases[i] + phases[j])*numpy.sign(i-j) for i in range(r_k)] 
+                for j in range(r_k)
+            ]
+            # print 'phi = {}'.format(phi)
+            t = (
+                    exp(1j * theta * (2.0*r_k)/(2.0*r_k+1.0)) *
+                    (rp_coeff ** (-1.0 / (2.0*r_k + 1.0))) * 
+                    (complex(-1.0)**(-2.0*r_k/(2.0*r_k+1.0)))
+                )
+            dz_phases = ([
+                        (t * ((phi[i][j])**(-2.0*r_k/(2.0*r_k+1.0))) * 
+                        exp(2*pi*1j*s*(2.0*r_k)/(2.0*r_k+1.0)))
+                        for i in range(r_k/2) for j in range(r_k/2) 
+                        for s in range(2*r_k + 1) if i!=j
+                    ] + 
+                    [
+                        (t * ((psi[i][j])**(-2.0*r_k/(2.0*r_k+1.0))) * 
+                        exp(2*pi*1j*s*(2.0*r_k)/(2.0*r_k+1.0)))
+                        for i in range(r_k) for j in range(r_k) 
+                        for s in range(2*r_k + 1) if i!=j
+                    ])
+            norm_dz_phases = [d/abs(d) for d in dz_phases]
+            # these are the normalized phases of the seeds
+            # with respect to the branch point:
+            zetas = remove_duplicate(norm_dz_phases,
+                                            lambda p1, p2: abs(p1 - p2) < delta)
+
+        elif rp_type == 'type_III':
+            if r_i % 2 == 1:
+                raise Exception('Cannot have a type III ramification point' +
+                                'with odd ramification index.')
+            # defining this object just for enhanced readability of code 
+            # in comparing with notes on classification of ramifications
+            r_k = r_i / 2
+
+            phases = [
+                    exp(2*pi*1j*float(i)/(2.0*(r_k-1))) for i in range(r_k-1)
+                ] + [0.0]
+            phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+            psi = [
+                [(phases[i] + phases[j])*numpy.sign(i-j) for i in range(r_k)] 
+                for j in range(r_k)
+            ]
+            # print 'phi = {}'.format(phi)
+            t = (
+                    exp(1j * theta * (2.0*r_k-2.0)/(2.0*r_k-1.0)) *
+                    (rp_coeff ** (-1.0 / (2.0*r_k - 1.0))) * 
+                    (complex(-1.0)**(-(2.0*r_k-2.0)/(2.0*r_k-1.0)))
+                )
+            dz_phases = ([
+                        (t * ((phi[i][j])**(-(2.0*r_k-2.0)/(2.0*r_k-1.0))) * 
+                        exp(2*pi*1j*s*(2.0*r_k-2.0)/(2.0*r_k-1.0)))
+                        for i in range(r_k) for j in range(r_k) 
+                        for s in range(2*r_k - 1) if i!=j
+                    ] + 
+                    [
+                        (t * ((psi[i][j])**(-(2.0*r_k-2.0)/(2.0*r_k-1.0))) * 
+                        exp(2*pi*1j*s*(2.0*r_k-2.0)/(2.0*r_k-1.0)))
+                        for i in range(r_k) for j in range(r_k) 
+                        for s in range(2*r_k - 1) if i!=j
+                    ])
+            norm_dz_phases = [d/abs(d) for d in dz_phases]
+            # these are the normalized phases of the seeds
+            # with respect to the branch point:
+            zetas = remove_duplicate(norm_dz_phases,
+                                            lambda p1, p2: abs(p1 - p2) < delta)
+        
+        print '\nNumber of S-walls emanating = {}\n'.format(len(zetas))
+        print '\nPhases of outgoing walls = {}\n'.format(zetas)
+
+        # Now for each seeding point z_1 we identify two sheets
+        # of the cover which match the phase of the displacement z_1-z_0
+
+        for zeta in zetas:
+            z_1 = z_0 + dt * zeta
+            if rp_type == 'type_I':
+                x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
+                print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
+                # a list of the type
+                # [... [phase, [x_i, x_j]] ...]
+                x_i_x_j_phases = [
+                                [exp(1j * phase(-1.0 * exp(1j*theta)/(x_j-x_i))),
+                                [x_i, x_j]]
+                                for i, x_i in enumerate(x_s) 
+                                for j, x_j in enumerate(x_s) if i!=j
+                            ]
+            elif rp_type == 'type_II' or rp_type == 'type_III':
+                # for case two, we assume that the ramification index is maximal
+                # therefore we ask for all the sheets at z_1
+                x_s = find_xs_at_z_0(sw, z_1, ffr=True)
+                # a list of the type
+                # [... [phase, [x_i, x_j]] ...]
+                x_i_x_j_phases = [
+                                [exp(1j * phase(-1.0 * exp(1j*theta)/(x_j-x_i))),
+                                [x_i, x_j]]
+                                for i, x_i in enumerate(x_s) 
+                                for j, x_j in enumerate(x_s) 
+                                if abs(x_j-x_i) > delta
+                            ]
+
+            closest_pair = sorted(
+                        x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
+                    )[0][1]
+            print 'this is how close the phase is matching: {}\n'.format(
+                abs(sorted(
+                        x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
+                    )[0][0]-zeta))
+            M_0 = 0
+            seeds.append(
+                    [z_1, closest_pair, M_0]
+                )
     
 
 
