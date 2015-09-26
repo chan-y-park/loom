@@ -742,11 +742,11 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         x_0 = rp.x
         r_i = rp.i
         rp_type = rp.ramification_type
-        rp_coeff = rp.sw_diff_coeff
+        lambda_0 = rp.sw_diff_coeff
         print ('\nAnalyze ramification point (z,x)={}'.format([z_0,x_0]))
         print ('Ramification index = {}'.format(r_i))
         print ('Ramification type = {}'.format(rp_type))
-        print ('-a/b = {}\n'.format(rp_coeff) )
+        print ('lambda_0 = {}\n'.format(lambda_0) )
 
         # Construct the seeding points for the branch point
         # by studying the type of ramification structure of the r.p.
@@ -769,27 +769,28 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             #         ]
             omega = exp(2.0*pi*1j*float(r_i)/float(r_i+1))
             dz_phases = [
-                        ((
-                        (1.0 / rp_coeff) * 
-                        ((-1.0 * exp(1j * theta))**(float(r_i))) *
-                        ((1.0 / phi[i][j])**(float(r_i))) 
-                        ) ** (1.0/(r_i+1)))
-                        * (omega**float(s))
+                        # ((
+                        # (1.0 / lambda_0) * 
+                        # ((-1.0 * exp(1j * theta)) ** (float(r_i))) *
+                        # ((1.0 / phi[i][j]) ** (float(r_i))) 
+                        # ) ** (1.0/(r_i+1)))
+                        (1.0/cpow(lambda_0, r_i, r_i+1)) *
+                        exp(1j * theta * float(r_i)/(r_i+1)) *
+                        ((1.0 / phi[i][j]) ** (float(r_i)/(r_i+1))) * 
+                        (omega ** s)
                         for i in range(r_i) for j in range(r_i) 
                         for s in range(r_i + 1) if i!=j
                     ]
 
-            print '\n(phi**1/(k+1))*omega**s = {}'.format([[((1.0/p)**(1.0/(r_i+1)))*(omega**s) for s in range(r_i) for p in pl if p!=0.0] for pl in phi])
-            print 'rp_coeff = {}'.format(rp_coeff)
-            print '(1.0 / rp_coeff)**(1.0/(r_i+1))) = {}'.format((1.0 / rp_coeff)** (1.0/(r_i+1)))
-            print 'cpow(rp_coeff, 1.0, r_i+1) = {}'.format(cpow(rp_coeff, 1, r_i+1))
-            print '((-1.0 * exp(1j * theta))**(float(r_i)/(r_i+1)))  = {}'.format((-1.0*exp(1j * theta))**(float(r_i)/(r_i+1)) )
+            # print '\n(phi**(-k/(k+1)))*omega**s = {}'.format([[((1.0/p)**(float(r_i)/(r_i+1)))*(omega**s) for s in range(r_i) for p in pl if p!=0.0] for pl in phi])
+            # print 'cpow(lambda_0, r_i, r_i+1) = {}'.format(cpow(rp_coeff, r_i, r_i+1))
+            # print '((exp(1j * theta))**(float(r_i)/(r_i+1)))  = {}'.format((1.0*exp(1j * theta))**(float(r_i)/(r_i+1)) )
             norm_dz_phases = [d/abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(norm_dz_phases,
                                             lambda p1, p2: abs(p1 - p2) < delta)
-
+        ###!!!!!!!!!!!! REVIEW BELOW !!!!!!!!!!!!!!
         elif rp_type == 'type_II':
             if r_i % 2 == 1:
                 raise Exception('Cannot have a type II ramification point' +
@@ -871,7 +872,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         # of the cover which match the phase of the displacement z_1-z_0
 
         for zeta in zetas:
-            z_1 = z_0 + dt * zeta
+            z_1 = z_0 + delta * zeta
             if rp_type == 'type_I':
                 x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                 # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
@@ -881,7 +882,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                 for i, x_i in enumerate(x_s): 
                     for j, x_j in enumerate(x_s):
                         if i != j:
-                            ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
+                            ij_factor = 1.0 * exp(1j*theta)/(x_j - x_i)
                             x_i_x_j_phases.append(
                                                 [(ij_factor)/abs(ij_factor),
                                                 [x_i, x_j]]
@@ -916,7 +917,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                     )[0][0]-zeta))
             M_0 = 0
             seeds.append(
-                    [z_1, closest_pair, M_0]
+                    [z_1, [closest_pair[1], closest_pair[0]], M_0]
                 )
 
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=delta)

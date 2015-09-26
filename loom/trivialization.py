@@ -610,23 +610,25 @@ class SWDataWithTrivialization(SWDataBase):
         # print 'a = {}\nb = {}\n'.format(a, b)
         rp.ramification_type = rp_type
 
-        #num_v = self.diff.num_v
-        ## Dx = Dx(Dz)
-        #Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
-        #local_diff = (
-        #    num_v.subs(x, rp.x+Dx_Dz).subs(z, rp.z+Dz)
-        #    .series(Dz, 0, 1).removeO()
-        #)
-        ## get the coefficient and the exponent of the leading term
-        #(diff_c, diff_e) = local_diff.leadterm(Dz)
-        #if diff_e == 0:
-        #    # remove the constant term from the local_diff
-        #    local_diff -= local_diff.subs(Dz, 0)
-        #    (diff_c, diff_e) = local_diff.leadterm(Dz)
+        num_v = self.diff.num_v
+        # Dx = Dx(Dz)
+        Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
+        local_diff = (
+           num_v.subs(x, rp.x+Dx_Dz).subs(z, rp.z+Dz)
+           .series(Dz, 0, 1).removeO()
+        )
+        # get the coefficient and the exponent of the leading term
+        (diff_c, diff_e) = local_diff.leadterm(Dz)
+        if diff_e == 0:
+           # remove the constant term from the local_diff
+           local_diff -= local_diff.subs(Dz, 0)
+           (diff_c, diff_e) = local_diff.leadterm(Dz)
+
+        # rp.sw_diff_coeff = complex(-1 * a / b)
+        rp.sw_diff_coeff = complex(diff_c.n())
 
 
-        rp.sw_diff_coeff = complex(-1 * a / b)
-        #rp.sw_diff_coeff = complex(diff_c.n())
+
 
 
 def get_path_to(z_pt, sw_data, n_loci=None):
