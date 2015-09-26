@@ -234,7 +234,14 @@ class SWDataWithTrivialization(SWDataBase):
         # branch points/punctures.
         non_zero_distances = [x for x in all_distances
                               if abs(x) > self.accuracy]
-        self.min_distance = min(non_zero_distances)
+        if n_critical_loci == 1:
+            # hacky way of dealing with special case of just
+            # one branch point
+            self.min_distance = 0.1
+            self.base_point = center - 0.2j
+        else:
+            self.min_distance = min(non_zero_distances)
+
         #print 'all points {}'.format(all_points_z)
         #print 'all distances: {}'.format(non_zero_distances)
         #print self.min_distance

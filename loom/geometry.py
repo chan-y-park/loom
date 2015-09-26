@@ -485,26 +485,29 @@ class SWDataBase(object):
                 )
                 z_list = bpzs + pctzs
                 z_r_list = map(float, [z.real for z in (bpzs + pctzs)])
-                min_x_distance =  min(
-                    [abs(x - y) for i, x in enumerate(z_r_list) 
-                     for y in z_r_list[i+1:]]
-                )
-                min_abs_distance =  min(
-                    [abs(x - y) for i, x in enumerate(z_list)
-                     for y in z_list[i+1:]]
-                )
+                if len(z_r_list) > 1:
+                    min_x_distance =  min(
+                        [abs(x - y) for i, x in enumerate(z_r_list)
+                         for y in z_r_list[i+1:]]
+                    )
+                    min_abs_distance =  min(
+                        [abs(x - y) for i, x in enumerate(z_list)
+                         for y in z_list[i+1:]]
+                    )
 
-                if min_x_distance > min_abs_distance / len(z_list):
-                    logging.info('All branch points and punctures '
-                                'are sufficiently separated horizontally.\n'
-                                'Will not rotate z-plane any more.\n')
-                    rotate_z_plane = False
+                    if min_x_distance > min_abs_distance / len(z_list):
+                        logging.info('All branch points and punctures '
+                                    'are sufficiently separated horizontally.\n'
+                                    'Will not rotate z-plane any more.\n')
+                        rotate_z_plane = False
+                    else:
+                        logging.info('Some branch points or punctures '
+                                    'are vertically aligned.\n'
+                                    'Need to rotate the z-plane.\n')
+                        n_r += 1
+                        z_plane_rotation *= z_r
                 else:
-                    logging.info('Some branch points or punctures '
-                                'are vertically aligned.\n'
-                                'Need to rotate the z-plane.\n')
-                    n_r += 1
-                    z_plane_rotation *= z_r
+                    rotate_z_plane = False
             
             if rotate_z_plane is False:
                 break
