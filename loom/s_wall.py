@@ -754,6 +754,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         if rp_type == 'type_I':
             phases = [exp(2*pi*1j*float(i)/r_i) for i in range(r_i)]
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+            print 'phi = {}'.format([[1.0/p for p in pl if p!=0.0] for pl in phi])
             # print 'phi = {}'.format(phi)
             # t = (
             #         exp(1j * theta * float(r_i)/float(r_i+1)) *
