@@ -755,17 +755,28 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             phases = [exp(2*pi*1j*float(i)/r_i) for i in range(r_i)]
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
             # print 'phi = {}'.format(phi)
-            t = (
-                    exp(1j * theta * float(r_i)/float(r_i+1)) *
-                    (rp_coeff ** (-1.0 / (r_i + 1))) * 
-                    (complex(-1.0)**(-float(r_i)/float(r_i+1)))
-                )
+            # t = (
+            #         exp(1j * theta * float(r_i)/float(r_i+1)) *
+            #         (rp_coeff ** (-1.0 / (r_i + 1))) * 
+            #         (complex(-1.0)**(-float(r_i)/float(r_i+1)))
+            #     )
+            # dz_phases = [
+            #             (t * ((phi[i][j])**(-float(r_i)/float(r_i+1))) * 
+            #             exp(2*pi*1j*s*float(r_i)/(r_i+1)))
+            #             for i in range(r_i) for j in range(r_i) 
+            #             for s in range(r_i + 1) if i!=j
+            #         ]
+            omega = exp(2.0*pi*1j*float(r_i)/float(r_i+1))
             dz_phases = [
-                        (t * ((phi[i][j])**(-float(r_i)/float(r_i+1))) * 
-                        exp(2*pi*1j*s*float(r_i)/(r_i+1)))
+                        ((
+                        (1.0 / rp_coeff) * 
+                        ((-1.0 * exp(1j * theta) / phi[i][j])**(float(r_i))) 
+                        ) ** (1.0/(r_i+1)))
+                        * (omega**float(s))
                         for i in range(r_i) for j in range(r_i) 
                         for s in range(r_i + 1) if i!=j
                     ]
+            print '\nthis is theta {}\nomega = {}\nsw diff coeff = {}'.format(theta, omega, rp_coeff)
             norm_dz_phases = [d/abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
@@ -856,7 +867,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             z_1 = z_0 + dt * zeta
             if rp_type == 'type_I':
                 x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
-                print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
+                # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
                 # a list of the type
                 # [... [phase, [x_i, x_j]] ...]
                 x_i_x_j_phases = []
@@ -892,7 +903,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             closest_pair = sorted(
                         x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
                     )[0][1]
-            print 'this is how close the phase is matching: {}\n'.format(
+            print 'this is how close the phase is matching: {}'.format(
                 abs(sorted(
                         x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
                     )[0][0]-zeta))
@@ -903,6 +914,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
 
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=delta)
     logging.info('\nNumber of S-walls emanating = {}\n'.format(len(seeds)))
+    print '\n\n***phases of the seeds : {}\n\n'.format([phase(s[0]-branch_point.z) for s in seeds])
+    print 'these are the seeds {}\n'.format(seeds)
     logging.debug('these are the seeds {}\n'.format(seeds))
     return seeds
 
