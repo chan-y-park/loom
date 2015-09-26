@@ -902,8 +902,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                 )
 
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=delta)
-    print '\nNumber of S-walls emanating = {}\n'.format(len(seeds))
-    print 'these are the seeds {}\n'.format(seeds)
+    logging.info('\nNumber of S-walls emanating = {}\n'.format(len(seeds)))
+    logging.debug('these are the seeds {}\n'.format(seeds))
     return seeds
 
 
@@ -922,7 +922,7 @@ def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data=None, label=None):
     """
     Return a joint if formed, otherwise return None.
     """
-    print 'evaluating possible joint at z = {}'.format(z)
+    logging.debug('evaluating possible joint at z = {}'.format(z))
     alpha_1 = s_wall_1.get_root_at_t(t_1)
     alpha_2 = s_wall_2.get_root_at_t(t_2)
 

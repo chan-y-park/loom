@@ -482,7 +482,7 @@ class SWDataWithTrivialization(SWDataBase):
 
         n_sheets = len(initial_sheets)
 
-        print '\n sorted sheets around locus {}'.format(sorted_sheets)
+        logging.debug('Sorted sheets around locus {}'.format(sorted_sheets))
         
         ### NOTE: in the following basis vectors, i = 0 , ... , n-1
         def basis_e(i):
@@ -495,7 +495,7 @@ class SWDataWithTrivialization(SWDataBase):
 
         perm_matrix = numpy.array(perm_list).transpose()
 
-        print '\n perm matrix {}'.format(perm_matrix)
+        logging.debug('Permutation matrix {}'.format(perm_matrix))
 
         return perm_matrix
 
@@ -564,7 +564,7 @@ class SWDataWithTrivialization(SWDataBase):
             .series(Dx, 0, rp.i+1).removeO()
             .series(Dz, 0, 2).removeO()
         )
-        print '\nlocal curve = {}\n'.format(local_curve)
+        logging.debug('\nlocal curve = {}\n'.format(local_curve))
             
         # Classify which type of ramification point
         # type_I: ADE type with x_0 != 0
@@ -604,9 +604,10 @@ class SWDataWithTrivialization(SWDataBase):
             a = local_curve.n().coeff(Dz).coeff(Dx, 2)
             b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
         
-        print '\nThe type of ramification point is {}'.format(rp_type)
-        print 'a = {}\nb = {}\n'.format(a, b)
-
+        logging.info('\nThe ramification point at (z,x)={} is of {}'.format(
+                        [rp.z, rp.x], rp_type)
+                    )
+        # print 'a = {}\nb = {}\n'.format(a, b)
         rp.ramification_type = rp_type
 
         #num_v = self.diff.num_v
