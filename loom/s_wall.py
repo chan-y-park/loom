@@ -754,7 +754,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         if rp_type == 'type_I':
             phases = [exp(2*pi*1j*float(i)/r_i) for i in range(r_i)]
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
-            print 'phi = {}'.format([[1.0/p for p in pl if p!=0.0] for pl in phi])
+            
             # print 'phi = {}'.format(phi)
             # t = (
             #         exp(1j * theta * float(r_i)/float(r_i+1)) *
@@ -771,13 +771,19 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             dz_phases = [
                         ((
                         (1.0 / rp_coeff) * 
-                        ((-1.0 * exp(1j * theta) / phi[i][j])**(float(r_i))) 
+                        ((-1.0 * exp(1j * theta))**(float(r_i))) *
+                        ((1.0 / phi[i][j])**(float(r_i))) 
                         ) ** (1.0/(r_i+1)))
                         * (omega**float(s))
                         for i in range(r_i) for j in range(r_i) 
                         for s in range(r_i + 1) if i!=j
                     ]
-            print '\nthis is theta {}\nomega = {}\nsw diff coeff = {}'.format(theta, omega, rp_coeff)
+
+            print '\n(phi**1/(k+1))*omega**s = {}'.format([[((1.0/p)**(1.0/(r_i+1)))*(omega**s) for s in range(r_i) for p in pl if p!=0.0] for pl in phi])
+            print 'rp_coeff = {}'.format(rp_coeff)
+            print '(1.0 / rp_coeff)**(1.0/(r_i+1))) = {}'.format((1.0 / rp_coeff)** (1.0/(r_i+1)))
+            print 'cpow(rp_coeff, 1.0, r_i+1) = {}'.format(cpow(rp_coeff, 1, r_i+1))
+            print '((-1.0 * exp(1j * theta))**(float(r_i)/(r_i+1)))  = {}'.format((-1.0*exp(1j * theta))**(float(r_i)/(r_i+1)) )
             norm_dz_phases = [d/abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
