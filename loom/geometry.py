@@ -501,6 +501,19 @@ class SWDataBase(object):
                         [abs(x - y) for i, x in enumerate(z_list)
                          for y in z_list[i+1:]]
                     )
+                    ### Merging with hotfix by Andy
+                    # if min_x_distance > min_abs_distance / len(z_list):
+                    #     logging.info('All branch points and punctures '
+                    #                 'are sufficiently separated horizontally.\n'
+                    #                 'Will not rotate z-plane any more.\n')
+                    #     rotate_z_plane = False
+                    # else:
+                    #     logging.info('Some branch points or punctures '
+                    #                 'are vertically aligned.\n'
+                    #                 'Need to rotate the z-plane.\n')
+                    #     n_r += 1
+                    #     z_plane_rotation *= z_r
+                    ###
                 elif len(z_r_list) == 1:
                     logging.info('All branch points and punctures '
                                 'are sufficiently separated horizontally.\n'
@@ -519,11 +532,7 @@ class SWDataBase(object):
                     rotate_z_plane = False
                     break
                 else:
-                    logging.info('Some branch points or punctures '
-                                'are vertically aligned.\n'
-                                'Need to rotate the z-plane.\n')
-                    n_r += 1
-                    z_plane_rotation *= z_r
+                    rotate_z_plane = False
             
             if rotate_z_plane is False:
                 break
