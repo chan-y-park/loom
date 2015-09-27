@@ -633,7 +633,9 @@ class SWDataBase(object):
                     # Put the negative x at the same index
                     # as its positive pair.
                     negative_xs[j] = nx
-            aligned_ffr_xs = numpy.concatenate((positive_xs, negative_xs))
+            aligned_ffr_xs = list(
+                                numpy.concatenate((positive_xs, negative_xs))
+                            )
 
             if fund_rep_index == 1:
                 xs = aligned_ffr_xs
@@ -668,7 +670,7 @@ class SWDataBase(object):
         else:
             raise NotImplementedError
 
-        return xs
+        return list(xs)
 
 # E_6 curve strings
 tau_str = 't + 1/t + {u_6}'
