@@ -12,6 +12,7 @@ from sympy.mpmath.libmp.libhyper import NoConvergence
 from warnings import warn
 from pprint import pformat
 from itertools import combinations
+from cmath import phase
 
 import sage_subprocess
 from misc import (ctor2, r2toc, get_root_multiplicity, PSL2C,
@@ -194,6 +195,11 @@ class RamificationPoint:
         self.x = x
         self.i = i
         self.label = label
+        # For explanations on the following two attributes, 
+        # see the function which analyzes ramification points
+        # in the trivializatio module.
+        self.ramification_type = None
+        self.sw_diff_coeff = None
         #self.is_puncture = is_puncture
 
     def __str__(self):
@@ -466,11 +472,12 @@ class SWDataBase(object):
                     accuracy=config['accuracy'], 
                     punctures=self.punctures,
                     method=config['ramification_point_finding_method'],
+                    g_data=self.g_data
                 )
                 
                 logging.info('These are the punctures:')
                 for pct in self.punctures:
-                    logging.info('Puncture {} at z={}'.format(pct.label, pct.z))
+                    logging.info('{} at z={}'.format(pct.label, pct.z))
                 # Now check if the z-plane needs to be rotated
 
                 # z-coords of branch points.
@@ -487,25 +494,43 @@ class SWDataBase(object):
                 z_r_list = map(float, [z.real for z in (bpzs + pctzs)])
                 if len(z_r_list) > 1:
                     min_x_distance =  min(
-                        [abs(x - y) for i, x in enumerate(z_r_list)
+                        [abs(x - y) for i, x in enumerate(z_r_list) 
                          for y in z_r_list[i+1:]]
                     )
                     min_abs_distance =  min(
                         [abs(x - y) for i, x in enumerate(z_list)
                          for y in z_list[i+1:]]
                     )
+                    ### Merging with hotfix by Andy
+                    # if min_x_distance > min_abs_distance / len(z_list):
+                    #     logging.info('All branch points and punctures '
+                    #                 'are sufficiently separated horizontally.\n'
+                    #                 'Will not rotate z-plane any more.\n')
+                    #     rotate_z_plane = False
+                    # else:
+                    #     logging.info('Some branch points or punctures '
+                    #                 'are vertically aligned.\n'
+                    #                 'Need to rotate the z-plane.\n')
+                    #     n_r += 1
+                    #     z_plane_rotation *= z_r
+                    ###
+                elif len(z_r_list) == 1:
+                    logging.info('All branch points and punctures '
+                                'are sufficiently separated horizontally.\n'
+                                'Will not rotate z-plane any more.\n')
+                    rotate_z_plane = False
+                    break
 
-                    if min_x_distance > min_abs_distance / len(z_list):
-                        logging.info('All branch points and punctures '
-                                    'are sufficiently separated horizontally.\n'
-                                    'Will not rotate z-plane any more.\n')
-                        rotate_z_plane = False
-                    else:
-                        logging.info('Some branch points or punctures '
-                                    'are vertically aligned.\n'
-                                    'Need to rotate the z-plane.\n')
-                        n_r += 1
-                        z_plane_rotation *= z_r
+                elif len(z_r_list) == 0:
+                    raise Exception('Could not find any punctures' + 
+                                    ' or branch points')
+
+                if min_x_distance > min_abs_distance / len(z_list):
+                    logging.info('All branch points and punctures '
+                                'are sufficiently separated horizontally.\n'
+                                'Will not rotate z-plane any more.\n')
+                    rotate_z_plane = False
+                    break
                 else:
                     rotate_z_plane = False
             
@@ -518,7 +543,7 @@ class SWDataBase(object):
                 )
 
 
-    def get_aligned_xs(self, z_0):
+    def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
         """
         Returns (aligned_ffr_xs, aligned_xs), where each element is
         a numpy array of x-coordinates of the fibers over z.
@@ -559,16 +584,49 @@ class SWDataBase(object):
             #  (-1, 0, 0, 0, 0),
             #  ...
             #  (0, 0, 0, 0, -1)]      
-            sorted_ffr_xs = numpy.array(
-                sorted(ffr_xs, key=lambda z: (z.real, z.imag), reverse=True,)
-            )
-            # Pick x's corresponding to the positive weights.
-            # The order among the positive x's is arbitrary.
-            positive_xs = sorted_ffr_xs[:algebra_rank]
-            # Then pick an x corresponding to each negative weight
-            # aligned according to the positive x's.
-            negative_xs = numpy.zeros_like(positive_xs)
-            for nx in sorted_ffr_xs[algebra_rank:]:
+            
+
+            zero_xs = [x for x in ffr_xs if abs(x)<=self.accuracy]
+            non_zero_xs = [x for x in ffr_xs if abs(x)>self.accuracy]
+            n_zero_xs = len(zero_xs)
+
+            if n_zero_xs == 0:
+                sorted_ffr_xs = sorted(
+                            ffr_xs, key=lambda x: phase(x), 
+                            # reverse=True,
+                        )
+
+                # Pick x's corresponding to the positive weights.
+                # The order among the positive x's is arbitrary.
+                positive_xs = sorted_ffr_xs[:algebra_rank]
+                # Then pick an x corresponding to each negative weight
+                # aligned according to the positive x's.
+                unsorted_negative_xs = sorted_ffr_xs[algebra_rank:]
+                negative_xs = list(numpy.zeros_like(positive_xs))
+            
+            # Handle also degenerate cases, such as 
+            # when two sheets are identically zero
+            else:
+                if n_zero_xs != 2 and near_degenerate_branch_locus is False:
+                    logging.info(
+                        'At z ={} found the following sheets \n{}'.format(
+                            z_0, ffr_xs
+                        ))
+                    raise Exception('Zero sheets must be none or two.')
+                else:
+                    sorted_ffr_xs = sorted(
+                            non_zero_xs, key=lambda x: phase(x), 
+                            # reverse=True,
+                        )
+                    positive_xs = (
+                            sorted_ffr_xs[:(algebra_rank-1)] + [zero_xs[0]]
+                        )
+                    unsorted_negative_xs = (
+                            x for x in ffr_xs if x not in positive_xs
+                        )
+                    negative_xs = list(numpy.zeros_like(positive_xs))
+
+            for nx in unsorted_negative_xs:
                 difference = numpy.fromiter(
                     (abs(px - (-nx)) for px in positive_xs),
                     dtype=float,
@@ -577,13 +635,16 @@ class SWDataBase(object):
                 # Check the pairing of positive and negative x's.
                 px_j = positive_xs[j]
                 if numpy.isclose(px_j, -nx) is False:
-                    warn("get_ordered_xs(): No pairing of x's in the D-type, "
-                         "({}, {}) != (x, -x).".format(px_j, nx))
+                    warn(("get_ordered_xs(): No pairing of x's in the D-type, "
+                         "({}, {}) != (x, -x).").format(px_j, nx))
+                    logging.info('positive xs : {}'.format(positive_xs))
                 else:
                     # Put the negative x at the same index
                     # as its positive pair.
                     negative_xs[j] = nx
-            aligned_ffr_xs = numpy.concatenate((positive_xs, negative_xs))
+            aligned_ffr_xs = list(
+                                numpy.concatenate((positive_xs, negative_xs))
+                            )
 
             if fund_rep_index == 1:
                 xs = aligned_ffr_xs
@@ -618,7 +679,7 @@ class SWDataBase(object):
         else:
             raise NotImplementedError
 
-        return xs
+        return list(xs)
 
 # E_6 curve strings
 tau_str = 't + 1/t + {u_6}'
@@ -647,6 +708,10 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     using Casimir differentials.
     """
     cs = []
+    # FIXME: make checks for the casimirs given by the user
+    # For example, I was able to insert the 0th Casimir with no complaint
+    # Moreover I didn get the curve I wanted because below we add +1 to phi_0
+    # We should prevent the wrong casimirs from being inserted at all.
     if g_type == 'A':
         N = g_rank + 1
         for k, phi_k in casimir_differentials.iteritems():
@@ -706,6 +771,7 @@ def get_ramification_points(
     accuracy=None, 
     punctures=None,
     method=None,
+    g_data=None
 ):
     #FIXME: Why are we computing the ramification points
     # in the non-PLS2C rotated curve?
@@ -722,6 +788,7 @@ def get_ramification_points(
             mt_params=mt_params,
             accuracy=accuracy, 
             punctures=punctures,
+            g_data=g_data,
         )
     #elif method == 'system_of_eqs':
     else:
@@ -817,12 +884,107 @@ def get_ramification_points_using_system_of_eqs(
             
 
 
+# def get_ramification_points_using_discriminant(
+#     curve=None, 
+#     diff_params=None, 
+#     mt_params=None,
+#     accuracy=None, 
+#     punctures=None,
+# ):
+#     sols = []
+#     f = curve.sym_eq
+#     # Make f into the form of rf = f_n/f_d
+#     rf = sympy.cancel(f)
+#     f_n, f_d = rf.as_numer_denom()
+#     subs_dict = copy.deepcopy(diff_params)
+
+#     # Find the roots of D(z), the discriminant of f(x, z)
+#     # as a polynomial of x. 
+#     D_z = sympy.discriminant(f_n, x)
+#     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
+#     D_z_n_P = sympy.Poly(D_z_n, z)
+#     cs = [
+#         c_sym.evalf(
+#             subs=subs_dict, n=ROOT_FINDING_PRECISION
+#         ).as_real_imag()
+#         for c_sym in D_z_n_P.all_coeffs()
+#     ]
+#     D_z_n_P_coeffs = [mpmath.mpc(*c) for c in cs]
+#     # Increase maxsteps & extraprec when root-finding fails.
+#     D_z_roots = None
+#     polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
+#     polyroots_extra_precision = ROOT_FINDING_PRECISION
+#     while D_z_roots is None:
+#         try:
+#             D_z_roots = mpmath.polyroots(
+#                 D_z_n_P_coeffs, 
+#                 maxsteps=polyroots_maxsteps,
+#                 extraprec=polyroots_extra_precision,
+#             )
+#         except NoConvergence:
+#             logging.warning(
+#                 'mpmath.polyroots failed; increase maxsteps & extraprec '
+#                 'by 10.'
+#             )
+#             polyroots_maxsteps += 10
+#             polyroots_extra_precision += 10
+
+#     is_same_z = lambda a, b: abs(a - b) < accuracy
+#     gathered_D_z_roots = gather(D_z_roots, is_same_z)  
+
+#     # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
+#     for z_i, zs in gathered_D_z_roots.iteritems():
+#         # m_z is the multiplicity of z_i.
+#         m_z = len(zs)
+#         # Check if z_i is one of the punctures.
+#         is_puncture = False
+#         for p in punctures:
+#             if abs(z_i - p.Ciz) < accuracy:
+#                 is_puncture = True
+#         if is_puncture:
+#             continue
+                
+#         subs_dict[z] = z_i
+#         f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
+#                   for c in sympy.Poly(f, x).all_coeffs()]
+#         f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
+#         f_x_roots = None
+#         while f_x_roots is None:
+#             try:
+#                 f_x_roots = mpmath.polyroots(
+#                     f_x_coeffs,
+#                     maxsteps=polyroots_maxsteps,
+#                     extraprec=polyroots_extra_precision
+#                 )
+#             except NoConvergence:
+#                 logging.warning(
+#                     'mpmath.polyroots failed; increase maxsteps & '
+#                     'extraprec by 10.'
+#                 )
+#                 polyroots_maxsteps += 10
+#                 polyroots_extra_precision += 10
+
+#         # In general x-roots have worse errors.
+#         is_same_x = lambda a, b: abs(a - b) < accuracy/1e-2
+#         gathered_f_x_roots = gather(f_x_roots, is_same_x)
+#         for x_j, xs in gathered_f_x_roots.iteritems():
+#             # m_x is the multiplicity of x_j.
+#             m_x = len(xs)
+#             if m_x == 1:
+#                 continue
+
+#             sols.append([z_i, (x_j, m_x)])
+
+#     return sols
+
+
 def get_ramification_points_using_discriminant(
     curve=None, 
     diff_params=None, 
     mt_params=None,
     accuracy=None, 
     punctures=None,
+    g_data=None,
 ):
     sols = []
     f = curve.sym_eq
@@ -833,81 +995,95 @@ def get_ramification_points_using_discriminant(
 
     # Find the roots of D(z), the discriminant of f(x, z)
     # as a polynomial of x. 
-    D_z = sympy.discriminant(f_n, x)
+    D_z = sympy.discriminant(f_n.subs(subs_dict), x)
+    if D_z == 0:
+        logging.info('The discriminant of F(x,z) is identically zero')
+        if g_data.type == 'A':
+            D_z = sympy.discriminant(f_n.subs(subs_dict) / x, x)
+        if g_data.type == 'D':
+            D_z = sympy.discriminant(f_n.subs(subs_dict) / (x**2), x)
+        logging.info(
+            'Will work with the effective discriminant:\n{}'.format(D_z)
+        )
+
     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
-    D_z_n_P = sympy.Poly(D_z_n, z)
-    cs = [
-        c_sym.evalf(
-            subs=subs_dict, n=ROOT_FINDING_PRECISION
-        ).as_real_imag()
-        for c_sym in D_z_n_P.all_coeffs()
-    ]
-    D_z_n_P_coeffs = [mpmath.mpc(*c) for c in cs]
-    # Increase maxsteps & extraprec when root-finding fails.
-    D_z_roots = None
-    polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
-    polyroots_extra_precision = ROOT_FINDING_PRECISION
-    while D_z_roots is None:
-        try:
-            D_z_roots = mpmath.polyroots(
-                D_z_n_P_coeffs, 
-                maxsteps=polyroots_maxsteps,
-                extraprec=polyroots_extra_precision,
-            )
-        except NoConvergence:
-            logging.warning(
-                'mpmath.polyroots failed; increase maxsteps & extraprec '
-                'by 10.'
-            )
-            polyroots_maxsteps += 10
-            polyroots_extra_precision += 10
-
-    is_same_z = lambda a, b: abs(a - b) < accuracy
-    gathered_D_z_roots = gather(D_z_roots, is_same_z)  
-
-    # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
-    for z_i, zs in gathered_D_z_roots.iteritems():
-        # m_z is the multiplicity of z_i.
-        m_z = len(zs)
-        # Check if z_i is one of the punctures.
-        is_puncture = False
-        for p in punctures:
-            if abs(z_i - p.Ciz) < accuracy:
-                is_puncture = True
-        if is_puncture:
-            continue
-                
-        subs_dict[z] = z_i
-        f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
-                  for c in sympy.Poly(f, x).all_coeffs()]
-        f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
-        f_x_roots = None
-        while f_x_roots is None:
+    factors = sympy.factor_list(sympy.expand(sympy.Poly(D_z_n, z)))[1]
+    for fact in factors:
+        logging.debug('styding roots of factor {}'.format(fact))
+        # separate the factor itself and the multiplicity
+        f_P = sympy.Poly(fact[0], z)
+        f_m = fact[1]
+        cs = [
+            c_sym.evalf(
+                subs=subs_dict, n=ROOT_FINDING_PRECISION
+            ).as_real_imag()
+            for c_sym in f_P.all_coeffs()
+        ]
+        f_P_coeffs = [mpmath.mpc(*c) for c in cs]
+        # Increase maxsteps & extraprec when root-finding fails.
+        f_roots = None
+        polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
+        polyroots_extra_precision = ROOT_FINDING_PRECISION
+        while f_roots is None:
             try:
-                f_x_roots = mpmath.polyroots(
-                    f_x_coeffs,
+                f_roots = mpmath.polyroots(
+                    f_P_coeffs, 
                     maxsteps=polyroots_maxsteps,
-                    extraprec=polyroots_extra_precision
+                    extraprec=polyroots_extra_precision,
                 )
             except NoConvergence:
                 logging.warning(
-                    'mpmath.polyroots failed; increase maxsteps & '
-                    'extraprec by 10.'
+                    'mpmath.polyroots failed; increase maxsteps & extraprec '
+                    'by 10.'
                 )
                 polyroots_maxsteps += 10
                 polyroots_extra_precision += 10
 
-        # In general x-roots have worse errors.
-        is_same_x = lambda a, b: abs(a - b) < accuracy/1e-2
-        gathered_f_x_roots = gather(f_x_roots, is_same_x)
-        for x_j, xs in gathered_f_x_roots.iteritems():
-            # m_x is the multiplicity of x_j.
-            m_x = len(xs)
-            if m_x == 1:
+        is_same_z = lambda a, b: abs(a - b) < accuracy
+        gathered_f_roots = gather(f_roots, is_same_z)  
+
+        # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
+        for z_i, zs in gathered_f_roots.iteritems():
+            # m_z is the multiplicity of z_i.
+            m_z = len(zs)
+            # Check if z_i is one of the punctures.
+            is_puncture = False
+            for p in punctures:
+                if abs(z_i - p.Ciz) < accuracy:
+                    is_puncture = True
+            if is_puncture:
                 continue
+                    
+            subs_dict[z] = z_i
+            f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
+                      for c in sympy.Poly(f, x).all_coeffs()]
+            f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
+            f_x_roots = None
+            while f_x_roots is None:
+                try:
+                    f_x_roots = mpmath.polyroots(
+                        f_x_coeffs,
+                        maxsteps=polyroots_maxsteps,
+                        extraprec=polyroots_extra_precision
+                    )
+                except NoConvergence:
+                    logging.warning(
+                        'mpmath.polyroots failed; increase maxsteps & '
+                        'extraprec by 10.'
+                    )
+                    polyroots_maxsteps += 10
+                    polyroots_extra_precision += 10
 
-            sols.append([z_i, (x_j, m_x)])
+            # In general x-roots have worse errors.
+            is_same_x = lambda a, b: abs(a - b) < accuracy/1e-2
+            gathered_f_x_roots = gather(f_x_roots, is_same_x)
+            for x_j, xs in gathered_f_x_roots.iteritems():
+                # m_x is the multiplicity of x_j.
+                m_x = len(xs)
+                if m_x == 1:
+                    continue
 
+                sols.append([z_i, (x_j, m_x)])
     return sols
 
 
@@ -915,49 +1091,21 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     """
     Get x's above z_0 and return the num_x of them 
     which are nearest to x_0.
+    NOTE: these are NOT sorted according to the weight/sheet 
+    dictionary.
     """
-    
-    xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=ffr).values()
+    if ffr is True:
+        xs_at_z_0 = sw_data.ffr_curve.get_xs(z_0) 
+    else:
+        raise NotImplementedError
+
+    #xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=ffr).values()
     if x_0 is None:
         return xs_at_z_0
     else:
         return sorted(xs_at_z_0,
                       lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
    
-
-def get_local_sw_diff(sw, ramification_point, ffr=None):
-    rp = ramification_point
-    if ffr is None or ffr is False:
-        num_eq = sw.curve.num_eq
-        num_v = sw.diff.num_v
-    elif ffr is True:
-        num_eq = sw.ffr_curve.num_eq
-        num_v = sw.diff.num_v
-
-    # use Dz = z - rp.z & Dx = x - rp.x
-    Dz, Dx = sympy.symbols('Dz, Dx')
-    local_curve = (
-        num_eq.subs(x, rp.x+Dx).subs(z, rp.z+Dz)
-        .series(Dx, 0, rp.i+1).removeO()
-        .series(Dz, 0, 2).removeO()
-    )
-    # curve_at_rp = a(z - rp.z) + b(x - rp.x)^(rp.i)
-    a = local_curve.n().coeff(Dz).coeff(Dx, 0)
-    b = local_curve.n().coeff(Dx**rp.i).coeff(Dz, 0)
-    # Dx = Dx(Dz)
-    Dx_Dz = (-(a/b)*Dz)**sympy.Rational(1, rp.i)
-    local_diff = (
-        num_v.subs(x, rp.x+Dx_Dz).subs(z, rp.z+Dz)
-        .series(Dz, 0, 1).removeO()
-    )
-    # get the coefficient and the exponent of the leading term
-    (diff_c, diff_e) = local_diff.leadterm(Dz)
-    if diff_e == 0:
-        # remove the constant term from the local_diff
-        local_diff -= local_diff.subs(Dz, 0)
-        (diff_c, diff_e) = local_diff.leadterm(Dz)
-
-    return (complex(diff_c.n()), diff_e)
 
 
 def null_weight_triples(weights):

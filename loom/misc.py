@@ -207,16 +207,34 @@ def put_on_cylinder(z, mt_params=None):
 
 
 ### chan: TODO: use numba?
-def delete_duplicates(l):
+def delete_duplicates(l, key=None, accuracy=False):
     seen = set()
     uniq = []
-    for x in l:
-        if not isinstance(x, (int, bool, str, unicode)):
-            logging.warning('delete_duplicates(): testing the membership'
-                            'of an element of an unsupported type.')
-        if x not in seen:
-            uniq.append(x)
-            seen.add(x)
+    if key==None and accuracy==None:
+        for x in l:
+            if not isinstance(x, (int, bool, str, unicode)):
+                logging.warning('delete_duplicates(): testing the membership'
+                                'of an element of an unsupported type.')
+            if x not in seen:
+                uniq.append(x)
+                seen.add(x)
+    elif key==None and accuracy != None:
+        uniq = n_remove_duplicate(l, accuracy)
+
+    elif key!=None and accuracy == None:
+        for x in l:
+            if key(x) not in seen:
+                uniq.append(x)
+                seen.add(key(x))
+    else:
+        for x in l:
+            if (
+                len(n_remove_duplicate(list(seen) + [key(x)], accuracy)) 
+                > len(seen)
+            ):
+                uniq.append(x)
+                seen.add(key(x))
+            
     return uniq
 
 

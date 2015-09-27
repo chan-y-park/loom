@@ -7,7 +7,7 @@ from cmath import exp, pi, phase
 from math import floor
 from scipy import interpolate
 
-from geometry import get_local_sw_diff, find_xs_at_z_0
+from geometry import find_xs_at_z_0
 from misc import (gather, cpow, remove_duplicate, unravel, ctor2, r2toc,
                   GetSWallSeedsError, n_nearest_indices, delete_duplicates,
                   clock, left_right,)
@@ -56,7 +56,8 @@ class Joint:
 
         # FIXME: The following, including self.ode_xs, can be removed
         # once the seeding of an S-wall is done by using a root.
-        ffr_xs_at_z = find_xs_at_z_0(sw_data, z, ffr=True)
+        # ffr_xs_at_z = find_xs_at_z_0(sw_data, z, ffr=True)
+        ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
         ffr_new_wall_weight_pairs = (
             sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
         )
@@ -330,6 +331,8 @@ class SWall(object):
             z_i = y_i[0]
             M_i = y_i[NUM_ODE_XS_OVER_Z+1]
             self[step] = y_i
+
+        # print 'this is the trajectory\n{}'.format(self.z[0:10])
 
 
     def determine_root_types(self, sw_data):
@@ -611,20 +614,21 @@ def get_intermediate_value(v_1, v_2, z_1, z_2, z_med):
     return v_med
 
 
-def get_s_wall_seeds(sw, theta, branch_point, config,):
-    ### S-walls are seeded from branch points.
-    ### Each branch point has a number of ramification 
-    ### points lying above it.
-    ### Regardless of the representation, it is sufficient
-    ### to consider one of these ramification points
-    ### to extract the seed data.
-    ### We thus stick to (any)one ramification point of the 
-    ### fundamental representation to get the seeds.
-    rp = branch_point.ffr_ramification_points[0]
-    delta = config['accuracy']
-    dt = config['size_of_small_step']
 
-    ###
+# def get_s_wall_seeds(sw, theta, branch_point, config,):
+#     ### S-walls are seeded from branch points.
+#     ### Each branch point has a number of ramification 
+#     ### points lying above it.
+#     ### Regardless of the representation, it is sufficient
+#     ### to consider one of these ramification points
+#     ### to extract the seed data.
+#     ### We thus stick to (any)one ramification point of the 
+#     ### fundamental representation to get the seeds.
+#     rp = branch_point.ffr_ramification_points[0]
+#     delta = config['accuracy']
+#     dt = config['size_of_small_step']
+
+#     ###
     # 1. Find the first-order approximations of the starting points
     # of S-walls around a given branch point, which is of the form
     # \Delta z_i = c_i / (\lambda_0)^(rp.i/(rp.i+1))
@@ -635,80 +639,293 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
 
     # 1.1 find the coefficient and the exponent of the leading term
     # of the SW differential at the ramification point.
-    lambda_0, diff_e = get_local_sw_diff(sw, rp, ffr=True)
+    # lambda_0, diff_e = get_local_sw_diff(sw, rp, ffr=True)
 
     # 1.2 find c_i, a phase factor for each S-wall.
-    omega_1 = exp(2*pi*1j/rp.i)
-    omega = [omega_1**k for k in range(rp.i)]
+    # omega_1 = exp(2*pi*1j/rp.i)
+    # omega = [omega_1**k for k in range(rp.i)]
 
-    beta_1 = exp(rp.i*2*pi*1j/(rp.i+1))
-    beta = [beta_1**k for k in range(rp.i+1)]
+    # beta_1 = exp(rp.i*2*pi*1j/(rp.i+1))
+    # beta = [beta_1**k for k in range(rp.i+1)]
 
-    cs = []
-    if diff_e == sympy.Rational(1, rp.i):
-        # the branch point is a ramification point
-        # go over pairs of omegas that differ by \omega_1^i
-        for i in range(1, rp.i):
-            new_locs = []
-            # and go over all the omegas
-            for j in range(rp.i):
-                if j+i < rp.i:
-                    new_loc = 1/(omega[j]-omega[j+i])
-                else:
-                    new_loc = 1/(omega[j]-omega[j+i-rp.i])
-                new_loc = cpow(new_loc, rp.i, rp.i+1)
-                new_locs += [new_loc*beta_i for beta_i in beta]
-            new_locs = remove_duplicate(new_locs,
-                                        lambda l1, l2: abs(l1 - l2) < delta)
-            cs += [(c*exp(theta*1j*sympy.Rational(rp.i, rp.i+1)) /
-                    cpow(lambda_0, rp.i, rp.i+1)) for c in new_locs]
+    # cs = []
+    # if diff_e == sympy.Rational(1, rp.i):
+    #     # the branch point is a ramification point
+    #     # go over pairs of omegas that differ by \omega_1^i
+    #     for i in range(1, rp.i):
+    #         new_locs = []
+    #         # and go over all the omegas
+    #         for j in range(rp.i):
+    #             if j+i < rp.i:
+    #                 new_loc = 1/(omega[j]-omega[j+i])
+    #             else:
+    #                 new_loc = 1/(omega[j]-omega[j+i-rp.i])
+    #             new_loc = cpow(new_loc, rp.i, rp.i+1)
+    #             new_locs += [new_loc*beta_i for beta_i in beta]
+    #         new_locs = remove_duplicate(new_locs,
+    #                                     lambda l1, l2: abs(l1 - l2) < delta)
+    #         cs += [(c*exp(theta*1j*sympy.Rational(rp.i, rp.i+1)) /
+    #                 cpow(lambda_0, rp.i, rp.i+1)) for c in new_locs]
+    # elif diff_e == -1 + sympy.Rational(1, rp.i):
+    #     # the branch point is a massless regular puncture
+    #     # go over pairs of omegas that differ by \omega_1^i
+    #     for i in range(1, rp.i):
+    #         cs.append(exp(rp.i*theta*1j) /
+    #                   cpow(((omega[0]-omega[i])*lambda_0), rp.i))
 
-    elif diff_e == -1 + sympy.Rational(1, rp.i):
-        # the branch point is a massless regular puncture
-        # go over pairs of omegas that differ by \omega_1^i
-        for i in range(1, rp.i):
-            cs.append(exp(rp.i*theta*1j) /
-                      cpow(((omega[0]-omega[i])*lambda_0), rp.i))
+    # else:
+    #     logging.error('unknown form of sw.diff at rp ({}, {}): '
+    #                   'diff_e  = {}'.format(rp.z, rp.x, diff_e))
+    #     raise GetSWallSeedsError(diff_e)
 
-    else:
-        logging.error('unknown form of sw.diff at rp ({}, {}): '
-                      'diff_e  = {}'.format(rp.z, rp.x, diff_e))
-        raise GetSWallSeedsError(diff_e)
+    # gathered_cs = gather(cs, lambda c1, c2: abs(c1 - c2) < delta)
+    # logging.debug('list of c = %s, # = %d', gathered_cs, len(gathered_cs))
 
-    gathered_cs = gather(cs, lambda c1, c2: abs(c1 - c2) < delta)
-    logging.debug('list of c = %s, # = %d', gathered_cs, len(gathered_cs))
+    # # 2. Now calculate \Delta z_i for each S-wall and
+    # # find the two points on the curve that are projected onto it.
+    # seeds = []
+    # for cv, cs in gathered_cs.iteritems():
+    #     # cv is the value of c, cm is its multiplicity.
+    #     cm = len(cs)
+    #     # resize to the size of the small step
+    #     Delta_z = cv/abs(cv)*delta
+    #     z_0 = rp.z + Delta_z
+    #     xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i, ffr=True)
+    #     dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
+    #     for i in range(len(xs_at_z_0)):
+    #         diffx = sw.diff.num_v.subs(z, z_0)
+    #         v_i = complex(diffx.subs(x, xs_at_z_0[i]))
+    #         v_j = complex(diffx.subs(x, xs_at_z_0[j]))
+    #         # print 'v_i = {}, v_j = {}'.format(v_i, v_j)
+    #         for j in range(len(xs_at_z_0)):
+    #             if i == j:
+    #                 continue
+    #             elif v_i==v_j:
+    #                 logging.debug(
+    #                     'Warning: some of the seeds appear to be degenerate'
+    #                     )
+    #                 continue
+    #             else:
+    #                 delta_z = exp(1j*theta)/(v_i - v_j)*dt
+    #                 # flattened index
+    #                 fij = i*len(xs_at_z_0) + j
+    #                 dev_phases[fij] = phase((delta_z/Delta_z))
+    #     min_dev_indices = n_nearest_indices(dev_phases, 0.0, cm)
+    #     for k in min_dev_indices:
+    #         i, j = unravel(k, len(xs_at_z_0))
+    #         M_0 = 0
+    #         seeds.append(
+    #             [z_0, [xs_at_z_0[i], xs_at_z_0[j]], M_0]
+    #         )
 
-    # 2. Now calculate \Delta z_i for each S-wall and
-    # find the two points on the curve that are projected onto it.
+    # return seeds
+
+def get_s_wall_seeds(sw, theta, branch_point, config,):
+    ### S-walls are seeded from branch points.
+    ### Each branch point has a number of ramification 
+    ### points lying above it.
+    ### Regardless of the representation, it is sufficient
+    ### to consider one of these ramification points
+    ### to extract the seed data.
+    ### We thus stick to (any)one ramification point of the 
+    ### fundamental representation to get the seeds.
+
+    # FIXME: reintroduce the handling of massless punctures
+    # see previous versions of this function, left above in comment.
+
+    
+    delta = config['accuracy']
+    dt = config['size_of_small_step']
     seeds = []
-    for cv, cs in gathered_cs.iteritems():
-        # cv is the value of c, cm is its multiplicity.
-        cm = len(cs)
-        # resize to the size of the small step
-        Delta_z = cv/abs(cv)*delta
-        z_0 = rp.z + Delta_z
-        xs_at_z_0 = find_xs_at_z_0(sw, z_0, rp.x, rp.i, ffr=True)
-        dev_phases = [pi for i in range(len(xs_at_z_0)**2)] 
-        for i in range(len(xs_at_z_0)):
-            diffx = sw.diff.num_v.subs(z, z_0)
-            v_i = complex(diffx.subs(x, xs_at_z_0[i]))
-            for j in range(len(xs_at_z_0)):
-                if i == j:
-                    continue
-                else:
-                    v_j = complex(diffx.subs(x, xs_at_z_0[j]))
-                    delta_z = exp(1j*theta)/(v_i - v_j)*dt
-                    # flattened index
-                    fij = i*len(xs_at_z_0) + j
-                    dev_phases[fij] = phase((delta_z/Delta_z))
-        min_dev_indices = n_nearest_indices(dev_phases, 0.0, cm)
-        for k in min_dev_indices:
-            i, j = unravel(k, len(xs_at_z_0))
+
+    for rp in branch_point.ffr_ramification_points:
+        z_0 = rp.z
+        x_0 = rp.x
+        r_i = rp.i
+        rp_type = rp.ramification_type
+        sw_diff_coeff = rp.sw_diff_coeff
+        logging.debug('Analyze ramification point (z,x)={}'.format([z_0,x_0]))
+        logging.debug('Ramification index = {}'.format(r_i))
+        logging.debug('Ramification type = {}'.format(rp_type))
+        logging.debug('leading coefficient of SW diff = {}\n'.format(
+                        sw_diff_coeff
+                    ))
+
+        # Construct the seeding points for the branch point
+        # by studying the type of ramification structure of the r.p.
+        if rp_type == 'type_I':
+            phases = [exp(2*pi*1j*float(i)/r_i) for i in range(r_i)]
+            phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+            
+            omega = exp(2.0*pi*1j*float(r_i)/float(r_i+1))
+            dz_phases = [
+                        (1.0/cpow(sw_diff_coeff, r_i, r_i+1)) *
+                        exp(1j * theta * float(r_i)/(r_i+1)) *
+                        ((1.0 / phi[i][j]) ** (float(r_i)/(r_i+1))) * 
+                        (omega ** s)
+                        for i in range(r_i) for j in range(r_i) 
+                        for s in range(r_i + 1) if i!=j
+                    ]
+
+            norm_dz_phases = [d/abs(d) for d in dz_phases]
+            # these are the normalized phases of the seeds
+            # with respect to the branch point:
+            zetas = remove_duplicate(norm_dz_phases,
+                                    lambda p1, p2: abs(p1 - p2) < (delta/100))
+        
+        elif rp_type == 'type_II':
+            if r_i % 2 == 1:
+                raise Exception('Cannot have a type II ramification point' +
+                                'with odd ramification index.')
+            # defining this object just for enhanced readability of code 
+            # in comparing with notes on classification of ramifications
+            r_k = r_i / 2
+            phases = [exp(2*pi*1j*float(i)/(2.0*r_k)) for i in range(r_k)]
+            phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+            psi = [
+                [(phases[i] + phases[j])*numpy.sign(i-j) for i in range(r_k)] 
+                for j in range(r_k)
+            ]
+            
+            omega = exp(2.0*pi*1j*float(2*r_k)/float(2*r_k+1))
+            dz_phases = ([
+                        (1.0/cpow(sw_diff_coeff, 2*r_k, 2*r_k+1)) *
+                        exp(1j * theta * float(2*r_k)/(2*r_k+1)) *
+                        ((1.0 / phi[i][j]) ** (float(2*r_k)/(2*r_k+1))) * 
+                        (omega ** s)
+                        for i in range(r_k) for j in range(r_k) 
+                        for s in range(2*r_k + 1) if i!=j
+                    ] + 
+                    [
+                        (1.0/cpow(sw_diff_coeff, 2*r_k, 2*r_k+1)) *
+                        exp(1j * theta * float(2*r_k)/(2*r_k+1)) *
+                        ((1.0 / psi[i][j]) ** (float(2*r_k)/(2*r_k+1))) * 
+                        (omega ** s)
+                        for i in range(r_k) for j in range(r_k) 
+                        for s in range(2*r_k + 1) if i!=j
+                    ])
+
+            norm_dz_phases = [d/abs(d) for d in dz_phases]
+            # these are the normalized phases of the seeds
+            # with respect to the branch point:
+            zetas = remove_duplicate(norm_dz_phases,
+                                    lambda p1, p2: abs(p1 - p2) < delta)
+
+        elif rp_type == 'type_III':
+            if r_i % 2 == 1:
+                raise Exception('Cannot have a type III ramification point' +
+                                'with odd ramification index.')
+            # defining this object just for enhanced readability of code 
+            # in comparing with notes on classification of ramifications
+            r_k = r_i / 2
+
+            phases = [
+                    exp(2*pi*1j*float(i)/(2.0*(r_k-1))) for i in range(r_k-1)
+                ] + [0.0]
+            phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+            psi = [
+                [(phases[i] + phases[j])*numpy.sign(i-j) for i in range(r_k)] 
+                for j in range(r_k)
+            ]
+            # print 'phi = {}'.format(phi)
+            omega = exp(2.0*pi*1j*float(2*r_k-2)/float(2*r_k-1))
+            dz_phases = ([
+                        (1.0/cpow(sw_diff_coeff, 2*r_k-2, 2*r_k-1)) *
+                        exp(1j * theta * float(2*r_k-2)/(2*r_k-1)) *
+                        ((1.0 / phi[i][j]) ** (float(2*r_k-2)/(2*r_k-1))) * 
+                        (omega ** s)
+                        for i in range(r_k) for j in range(r_k) 
+                        for s in range(2*r_k - 1) if i!=j
+                    ] + 
+                    [
+                        (1.0/cpow(sw_diff_coeff, 2*r_k-2, 2*r_k-1)) *
+                        exp(1j * theta * float(2*r_k-2)/(2*r_k-1)) *
+                        ((1.0 / psi[i][j]) ** (float(2*r_k-2)/(2*r_k-1))) * 
+                        (omega ** s)
+                        for i in range(r_k) for j in range(r_k) 
+                        for s in range(2*r_k - 1) if i!=j
+                    ])
+            norm_dz_phases = [d/abs(d) for d in dz_phases]
+            # these are the normalized phases of the seeds
+            # with respect to the branch point:
+            zetas = remove_duplicate(norm_dz_phases,
+                                            lambda p1, p2: abs(p1 - p2) < delta)
+        
+        # Now for each seeding point z_1 we identify two sheets
+        # of the cover which match the phase of the displacement z_1-z_0
+
+        for zeta in zetas:
+            # z_1 = z_0 + delta * zeta
+            z_1 = z_0 + dt * zeta
+            if rp_type == 'type_I':
+                x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
+                # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
+                # a list of the type
+                # [... [phase, [x_i, x_j]] ...]
+                x_i_x_j_phases = []
+                for i, x_i in enumerate(x_s): 
+                    for j, x_j in enumerate(x_s):
+                        if i != j:
+                            v_i = complex(
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                )
+                            v_j = complex(
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                )
+                            ij_factor = -1.0 * exp(1j*theta)/(v_j - v_i)
+                            x_i_x_j_phases.append(
+                                                [(ij_factor)/abs(ij_factor),
+                                                [x_i, x_j]]
+                                            )
+
+            elif rp_type == 'type_II' or rp_type == 'type_III':
+                # we assume that the ramification index is maximal
+                # therefore we ask for all the sheets at z_1.
+                x_s = find_xs_at_z_0(sw, z_1, ffr=True)
+
+                # a list of the type
+                # [... [phase, [x_i, x_j]] ...]
+                # where we eclude x_i=x_j and x_i=-x_j 
+                # since in D-type there are no roots 
+                # between a weight v and -v.
+                x_i_x_j_phases = []
+                for i, x_i in enumerate(x_s): 
+                    for j, x_j in enumerate(x_s):
+                        if abs(x_j-x_i) > delta and abs(x_j+x_i) > delta:
+                            v_i = complex(
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                )
+                            v_j = complex(
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                )
+                            ij_factor = -1.0 * exp(1j*theta)/(v_j - v_i)
+                            # ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
+                            x_i_x_j_phases.append(
+                                                [(ij_factor)/abs(ij_factor),
+                                                [x_i, x_j]]
+                                            )
+
+            closest_pair = sorted(
+                        x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
+                    )[0][1]
+            logging.debug('Mismatch between the phase of a seed and that ' 
+                        'of the displacement: {}'.format(
+                        abs(sorted(
+                                x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
+                            )[0][0]-zeta))
+                        )
             M_0 = 0
             seeds.append(
-                [z_0, [xs_at_z_0[i], xs_at_z_0[j]], M_0]
-            )
+                    [z_1, closest_pair, M_0]
+                )
 
+    # for higher-index ramification points we need greater accuracy to 
+    # keep all the correct seeds, since delta is also their displacement
+    # |z_1-z_0| we cannot just use delta, but must choose a small 
+    # fraction of it
+    seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(delta/100))
+    logging.info('Number of S-walls emanating = {}'.format(len(seeds)))
+    logging.debug('these are the seeds {}\n'.format(seeds))
     return seeds
 
 
@@ -727,7 +944,7 @@ def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data=None, label=None):
     """
     Return a joint if formed, otherwise return None.
     """
-
+    logging.debug('evaluating possible joint at z = {}'.format(z))
     alpha_1 = s_wall_1.get_root_at_t(t_1)
     alpha_2 = s_wall_2.get_root_at_t(t_2)
 
