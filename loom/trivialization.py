@@ -267,7 +267,6 @@ class SWDataWithTrivialization(SWDataBase):
         self.reference_ffr_xs, self.reference_xs = self.get_aligned_xs(
             self.base_point,
         )
-        print self.reference_ffr_xs
 
         ### Construct the list of branch points
         for i, z_bp in enumerate(bpzs):
@@ -322,7 +321,14 @@ class SWDataWithTrivialization(SWDataBase):
         ffr_sheets_along_path = [[x] for x in ffr_xs_0]
         
         for i, z in enumerate(z_path):
-            ffr_xs_1, xs_1 = self.get_aligned_xs(z)
+            near_degenerate_branch_locus = False
+            if is_path_to_bp is True and abs(z - z_path[-1]) < self.accuracy:
+                near_degenerate_branch_locus = True
+            ffr_xs_1, xs_1 = self.get_aligned_xs(
+                    z, 
+                    near_degenerate_branch_locus=near_degenerate_branch_locus
+                )
+
             if is_path_to_bp == False:
                 sorted_ffr_xs = get_sorted_xs(
                     ffr_xs_0, ffr_xs_1, accuracy=self.accuracy,
@@ -414,13 +420,9 @@ class SWDataWithTrivialization(SWDataBase):
                 uniq.append(s[1])
                 seen.add(s[1])
         if len(uniq) < len(sorted_sheets):
-            # print 'uniq: {}\nsorted sheets = {}'.format( uniq, sorted_sheets)
             # When studying D-type covers there may be situations
             # where two sheets collide at x=0 everywhere
             # Do not raise an error in this case.
-            # print min(map(abs, [s[1] for s in sorted_sheets]))==0.0
-            # print self.g_data.type=='D' 
-            # print len(sorted_sheets)-len(uniq)==1
             if (
                 self.g_data.type=='D' 
                 and min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
@@ -442,8 +444,10 @@ class SWDataWithTrivialization(SWDataBase):
                         if labels_multiplicities[i] == 2:
                             multiple_labels.append(u)
                         else:
-                            print 'int labels = {}'.format(int_labels)
-                            print 'multiple labels = {}'.format(multiple_labels)
+                            logging.info('int labels = {}'.format(int_labels))
+                            logging.info('multiple labels = {}'.format(
+                                        multiple_labels)
+                                    )
                             raise Exception('Too many degenerate sheets')
                 if len(multiple_labels)!=1:
                     raise Exception('Cannot determine which sheets are'+
@@ -455,13 +459,12 @@ class SWDataWithTrivialization(SWDataBase):
                                     if s[0]==multiple_labels[0]]
 
                 corrected_sheets = sorted_sheets 
-                corrected_sheets[double_sheets[0]] = initial_sheets[double_sheets[0]]
-                corrected_sheets[double_sheets[1]] = initial_sheets[double_sheets[1]]
-                # print ('these are the sorted sheets: {}\n' + 
-                #         'this is the double label: {}\n' + 
-                #         'these are the corrected sheets: {}\n').format(
-                #         sorted_sheets, multiple_labels[0], corrected_sheets
-                #         )
+                corrected_sheets[double_sheets[0]] = (
+                                            initial_sheets[double_sheets[0]]
+                                        )
+                corrected_sheets[double_sheets[1]] = (
+                                            initial_sheets[double_sheets[1]]
+                                        )
                 sorted_sheets = corrected_sheets
                 pass
             else:
@@ -534,7 +537,7 @@ class SWDataWithTrivialization(SWDataBase):
         bp.order = len(bp.positive_roots) + 1
 
         path_around_bp = get_path_around(bp.z, self.base_point,
-                                         self.min_distance)
+                                         self.min_distance, n_loci)
         bp.monodromy = self.get_sheet_monodromy(path_around_bp)
 
         bp.ffr_ramification_points = [rp 
@@ -548,7 +551,7 @@ class SWDataWithTrivialization(SWDataBase):
             .format(irr_sing.z)
         )
         path_around_z = get_path_around(irr_sing.z, self.base_point,
-                                        self.min_distance)
+                                        self.min_distance, n_loci)
         irr_sing.monodromy = (
             self.get_sheet_monodromy(path_around_z)
         )
@@ -607,7 +610,6 @@ class SWDataWithTrivialization(SWDataBase):
         logging.info('\nThe ramification point at (z,x)={} is of {}'.format(
                         [rp.z, rp.x], rp_type)
                     )
-        # print 'a = {}\nb = {}\n'.format(a, b)
         rp.ramification_type = rp_type
 
         num_v = self.diff.num_v
@@ -702,11 +704,11 @@ def get_path_to(z_pt, sw_data, n_loci=None):
     
 
 
-def get_path_around(z_pt, base_pt, min_distance):
+def get_path_around(z_pt, base_pt, min_distance, n_loci=2):
     logging.debug("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
     z_1 = 1j * base_pt.imag + z_pt.real
-    radius = min_distance / 2.0
+    radius = min_distance / n_loci
     z_2 = z_pt - 1j * radius
 
     steps = N_PATH_AROUND_PT
@@ -754,15 +756,13 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 and len(sorted_xs)-len(unique_sorted_xs)==1):
                 return sorted_xs
             else:
-                print "\nAt step %s, between %s and %s " % (index, z_0, z_1)
-                print "ref_xs:" 
-                print ref_xs
-                print "new_xs:"
-                print new_xs
-                print "sorted_xs:" 
-                print sorted_xs
-                print "unique_sorted_xs:" 
-                print unique_sorted_xs
+                logging.info(
+                        "At step %s, between %s and %s " % (index, z_0, z_1)
+                    )
+                logging.info("ref_xs:\n{}".format(ref_xs)) 
+                logging.info("new_xs:\n{}".format(new_xs)) 
+                logging.info("sorted_xs:\n{}".format(sorted_xs)) 
+                logging.info("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
                 raise ValueError(
                     '\nCannot track the sheets!\n'
                     'Probably passing too close to a branch point.'
@@ -806,8 +806,6 @@ def get_positive_roots_of_branch_point(bp, g_data):
         ### consider all possible pairs, and compute 
         ### the corresponding difference.
         ### Then add it to the vanishing positive roots.
-        # print 'groups = {}'.format(g)
-        # print 'weights = {}'.format(weights)
         for s_1, s_2 in combinations(g, 2):
             v_1 = weights[s_1]
             v_2 = weights[s_2]
@@ -820,8 +818,6 @@ def get_positive_roots_of_branch_point(bp, g_data):
             else:
                 continue
     if vanishing_positive_roots == []:
-        #print 'positive roots\n{}'.format(positive_roots)
-        #print 'groups {}'.format(bp.groups)
         logging.info("Branch point doesn't correspond "
                 "to a positive root. May be an accidental branch point.")
         return []
@@ -830,6 +826,9 @@ def get_positive_roots_of_branch_point(bp, g_data):
     ### as well as the roots which are not linearly independent
     ### TODO: Check if we really need to remove linearly depedent 
     ### roots. Isn't it part of the information a branch pt carries?
+    ### Pietro: the information of the branch point is the vector space
+    ### spanned by these roots. Therefore only linearly independent ones 
+    ### are needed.
     return keep_linearly_independent_vectors(vanishing_positive_roots)
 
 def belongs_to_cluster(x, c, enum_sh):

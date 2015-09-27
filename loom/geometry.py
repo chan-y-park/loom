@@ -12,6 +12,7 @@ from sympy.mpmath.libmp.libhyper import NoConvergence
 from warnings import warn
 from pprint import pformat
 from itertools import combinations
+from cmath import phase
 
 import sage_subprocess
 from misc import (ctor2, r2toc, get_root_multiplicity, PSL2C,
@@ -476,7 +477,7 @@ class SWDataBase(object):
                 
                 logging.info('These are the punctures:')
                 for pct in self.punctures:
-                    logging.info('Puncture {} at z={}'.format(pct.label, pct.z))
+                    logging.info('{} at z={}'.format(pct.label, pct.z))
                 # Now check if the z-plane needs to be rotated
 
                 # z-coords of branch points.
@@ -533,7 +534,7 @@ class SWDataBase(object):
                 )
 
 
-    def get_aligned_xs(self, z_0):
+    def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
         """
         Returns (aligned_ffr_xs, aligned_xs), where each element is
         a numpy array of x-coordinates of the fibers over z.
@@ -574,16 +575,49 @@ class SWDataBase(object):
             #  (-1, 0, 0, 0, 0),
             #  ...
             #  (0, 0, 0, 0, -1)]      
-            sorted_ffr_xs = numpy.array(
-                sorted(ffr_xs, key=lambda z: (z.real, z.imag), reverse=True,)
-            )
-            # Pick x's corresponding to the positive weights.
-            # The order among the positive x's is arbitrary.
-            positive_xs = sorted_ffr_xs[:algebra_rank]
-            # Then pick an x corresponding to each negative weight
-            # aligned according to the positive x's.
-            negative_xs = numpy.zeros_like(positive_xs)
-            for nx in sorted_ffr_xs[algebra_rank:]:
+            
+
+            zero_xs = [x for x in ffr_xs if abs(x)<=self.accuracy]
+            non_zero_xs = [x for x in ffr_xs if abs(x)>self.accuracy]
+            n_zero_xs = len(zero_xs)
+
+            if n_zero_xs == 0:
+                sorted_ffr_xs = sorted(
+                            ffr_xs, key=lambda x: phase(x), 
+                            # reverse=True,
+                        )
+
+                # Pick x's corresponding to the positive weights.
+                # The order among the positive x's is arbitrary.
+                positive_xs = sorted_ffr_xs[:algebra_rank]
+                # Then pick an x corresponding to each negative weight
+                # aligned according to the positive x's.
+                unsorted_negative_xs = sorted_ffr_xs[algebra_rank:]
+                negative_xs = list(numpy.zeros_like(positive_xs))
+            
+            # Handle also degenerate cases, such as 
+            # when two sheets are identically zero
+            else:
+                if n_zero_xs != 2 and near_degenerate_branch_locus is False:
+                    logging.info(
+                        'At z ={} found the following sheets \n{}'.format(
+                            z_0, ffr_xs
+                        ))
+                    raise Exception('Zero sheets must be none or two.')
+                else:
+                    sorted_ffr_xs = sorted(
+                            non_zero_xs, key=lambda x: phase(x), 
+                            # reverse=True,
+                        )
+                    positive_xs = (
+                            sorted_ffr_xs[:(algebra_rank-1)] + [zero_xs[0]]
+                        )
+                    unsorted_negative_xs = (
+                            x for x in ffr_xs if x not in positive_xs
+                        )
+                    negative_xs = list(numpy.zeros_like(positive_xs))
+
+            for nx in unsorted_negative_xs:
                 difference = numpy.fromiter(
                     (abs(px - (-nx)) for px in positive_xs),
                     dtype=float,
@@ -592,8 +626,9 @@ class SWDataBase(object):
                 # Check the pairing of positive and negative x's.
                 px_j = positive_xs[j]
                 if numpy.isclose(px_j, -nx) is False:
-                    warn("get_ordered_xs(): No pairing of x's in the D-type, "
-                         "({}, {}) != (x, -x).".format(px_j, nx))
+                    warn(("get_ordered_xs(): No pairing of x's in the D-type, "
+                         "({}, {}) != (x, -x).").format(px_j, nx))
+                    logging.info('positive xs : {}'.format(positive_xs))
                 else:
                     # Put the negative x at the same index
                     # as its positive pair.
@@ -950,7 +985,6 @@ def get_ramification_points_using_discriminant(
     # Find the roots of D(z), the discriminant of f(x, z)
     # as a polynomial of x. 
     D_z = sympy.discriminant(f_n.subs(subs_dict), x)
-    print D_z
     if D_z == 0:
         logging.info('The discriminant of F(x,z) is identically zero')
         if g_data.type == 'A':
@@ -958,13 +992,13 @@ def get_ramification_points_using_discriminant(
         if g_data.type == 'D':
             D_z = sympy.discriminant(f_n.subs(subs_dict) / (x**2), x)
         logging.info(
-            'Will work with the effective discriminant instead: {}'.format(D_z)
+            'Will work with the effective discriminant:\n{}'.format(D_z)
         )
 
     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
     factors = sympy.factor_list(sympy.expand(sympy.Poly(D_z_n, z)))[1]
     for fact in factors:
-        print 'styding roots of factor {}'.format(fact)
+        logging.debug('styding roots of factor {}'.format(fact))
         # separate the factor itself and the multiplicity
         f_P = sympy.Poly(fact[0], z)
         f_m = fact[1]
@@ -996,7 +1030,6 @@ def get_ramification_points_using_discriminant(
 
         is_same_z = lambda a, b: abs(a - b) < accuracy
         gathered_f_roots = gather(f_roots, is_same_z)  
-        print 'its roots are {}'.format(gathered_f_roots)
 
         # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
         for z_i, zs in gathered_f_roots.iteritems():
