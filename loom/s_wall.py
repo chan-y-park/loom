@@ -56,7 +56,8 @@ class Joint:
 
         # FIXME: The following, including self.ode_xs, can be removed
         # once the seeding of an S-wall is done by using a root.
-        ffr_xs_at_z = find_xs_at_z_0(sw_data, z, ffr=True)
+        # ffr_xs_at_z = find_xs_at_z_0(sw_data, z, ffr=True)
+        ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
         ffr_new_wall_weight_pairs = (
             sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
         )
@@ -882,7 +883,13 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                 for i, x_i in enumerate(x_s): 
                     for j, x_j in enumerate(x_s):
                         if i != j:
-                            ij_factor = 1.0 * exp(1j*theta)/(x_j - x_i)
+                            v_i = complex(
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                )
+                            v_j = complex(
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                )
+                            ij_factor = -1.0 * exp(1j*theta)/(v_j - v_i)
                             x_i_x_j_phases.append(
                                                 [(ij_factor)/abs(ij_factor),
                                                 [x_i, x_j]]
@@ -917,7 +924,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                     )[0][0]-zeta))
             M_0 = 0
             seeds.append(
-                    [z_1, [closest_pair[1], closest_pair[0]], M_0]
+                    [z_1, closest_pair, M_0]
                 )
 
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=delta)
