@@ -908,7 +908,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             closest_pair = sorted(
                         x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
                     )[0][1]
-            logging.info('Mismatch between the phase of a seed and that ' 
+            logging.debug('Mismatch between the phase of a seed and that ' 
                         'of the displacement: {}'.format(
                         abs(sorted(
                                 x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
