@@ -875,7 +875,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         # of the cover which match the phase of the displacement z_1-z_0
 
         for zeta in zetas:
-            z_1 = z_0 + delta * zeta
+            # z_1 = z_0 + delta * zeta
+            z_1 = z_0 + dt * zeta
             if rp_type == 'type_I':
                 x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                 # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
