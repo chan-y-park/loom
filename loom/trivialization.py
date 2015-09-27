@@ -248,11 +248,12 @@ class SWDataWithTrivialization(SWDataBase):
             max_distance = 1.0
             self.min_distance = 1.0
 
-        ### Alternative fix for only one branch locus
-        ###        
-        # center = sum([z_pt for z_pt in all_points_z]) / n_critical_loci
-        # self.base_point = center - 1j * max_distance
+         
+        center = sum([z_pt for z_pt in all_points_z]) / n_critical_loci
+        self.base_point = center - 1j * max_distance
 
+        ### Alternative fix for only one branch locus
+        ###       
         # # Minimun mutual distance among all the
         # # branch points/punctures.
         # non_zero_distances = [x for x in all_distances
