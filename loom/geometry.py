@@ -1047,6 +1047,8 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     """
     Get x's above z_0 and return the num_x of them 
     which are nearest to x_0.
+    NOTE: these are NOT sorted according to the weight/sheet 
+    dictionary.
     """
     if ffr is True:
         xs_at_z_0 = sw_data.ffr_curve.get_xs(z_0) 
