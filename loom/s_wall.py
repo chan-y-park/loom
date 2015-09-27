@@ -789,8 +789,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             norm_dz_phases = [d/abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
+            print '\n the normalized phases of displacement \n{}'.format(norm_dz_phases)
             zetas = remove_duplicate(norm_dz_phases,
-                                            lambda p1, p2: abs(p1 - p2) < delta)
+                                    lambda p1, p2: abs(p1 - p2) < (delta/100))
+            print '\n the zetas\n{}'.format(zetas)
         ###!!!!!!!!!!!! REVIEW BELOW !!!!!!!!!!!!!!
         elif rp_type == 'type_II':
             if r_i % 2 == 1:
@@ -827,7 +829,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(norm_dz_phases,
-                                            lambda p1, p2: abs(p1 - p2) < delta)
+                                    lambda p1, p2: abs(p1 - p2) < delta)
 
         elif rp_type == 'type_III':
             if r_i % 2 == 1:
@@ -927,7 +929,11 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                     [z_1, closest_pair, M_0]
                 )
 
-    seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=delta)
+    # for higher-index ramification points we need greater accuracy to 
+    # keep all the correct seeds, since delta is also their displacement
+    # |z_1-z_0| we cannot just use delta, but must choose a small 
+    # fraction of it
+    seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(delta/100))
     logging.info('\nNumber of S-walls emanating = {}\n'.format(len(seeds)))
     print '\n\n***phases of the seeds : {}\n\n'.format([phase(s[0]-branch_point.z) for s in seeds])
     print 'these are the seeds {}\n'.format(seeds)
