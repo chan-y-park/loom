@@ -708,7 +708,8 @@ def get_path_around(z_pt, base_pt, min_distance, n_loci=2):
     logging.debug("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
     z_1 = 1j * base_pt.imag + z_pt.real
-    radius = min_distance / n_loci
+    # radius = min_distance / n_loci
+    radius = min_distance / 2
     z_2 = z_pt - 1j * radius
 
     steps = N_PATH_AROUND_PT
@@ -744,6 +745,12 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 min_d = abs(s_2 - s_1)
                 closest_candidate = s_2
         sorted_xs.append(closest_candidate)
+        # rel_min_d = abs((s_1 - closest_candidate) / (s_1 + closest_candidate))
+        # for s_2 in new_xs:
+        #     if abs((s_2 - s_1)/max(map(abs, [s_2 , s_1]))) < rel_min_d:
+        #         min_d = abs((s_2 - s_1)/max(map(abs, [s_2 , s_1])))
+        #         closest_candidate = s_2
+        # sorted_xs.append(closest_candidate)
     
     if check_tracking == True:
         ### Now we check that sheet tracking is not making a mistake.
@@ -765,7 +772,8 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 logging.info("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
                 raise ValueError(
                     '\nCannot track the sheets!\n'
-                    'Probably passing too close to a branch point.'
+                    'Probably passing too close to a branch point '
+                    'or a puncture'
                 )
         else:
             return sorted_xs
