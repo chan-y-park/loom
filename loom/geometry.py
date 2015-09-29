@@ -1088,7 +1088,7 @@ def get_ramification_points_using_discriminant(
                 if m_x == 1:
                     continue
 
-                sols.append([z_i, (x_j, m_x)])
+                sols.append([complex(z_i), (complex(x_j), m_x)])
     return sols
 
 
