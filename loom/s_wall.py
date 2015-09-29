@@ -1,3 +1,4 @@
+
 import logging
 import numpy
 import sympy
@@ -17,6 +18,9 @@ x, z = sympy.symbols('x z')
 # TODO: Generalize this.
 # Number of x's at a fixed z
 NUM_ODE_XS_OVER_Z = 2
+
+# Desired precision on the phase of seeds
+SEED_PHASE_PRECISION = 0.001
 
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
@@ -735,8 +739,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
 
     
     delta = config['accuracy']
-    dt = config['size_of_small_step']
+    # dt = config['size_of_small_step']
     seeds = []
+    max_r_i = max([rp.i for rp in branch_point.ffr_ramification_points])
 
     for rp in branch_point.ffr_ramification_points:
         z_0 = rp.z
@@ -854,6 +859,12 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0
 
+        dt = (
+            (1 + max_r_i)**max_r_i * 
+            abs(sw_diff_coeff)**(-1 * max_r_i * (max_r_i + 1)) *
+            SEED_PHASE_PRECISION**max_r_i
+            )
+
         for zeta in zetas:
             # z_1 = z_0 + delta * zeta
             z_1 = z_0 + dt * zeta
@@ -883,15 +894,23 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                 # therefore we ask for all the sheets at z_1.
                 x_s = find_xs_at_z_0(sw, z_1, ffr=True)
 
+                # order of magnitude of expected separation 
+                # of sheets at z_1
+                dx = abs(sw_diff_coeff) * dt
+                x_accuracy = min([delta, dx])
+
                 # a list of the type
                 # [... [phase, [x_i, x_j]] ...]
                 # where we eclude x_i=x_j and x_i=-x_j 
                 # since in D-type there are no roots 
                 # between a weight v and -v.
                 x_i_x_j_phases = []
-                for i, x_i in enumerate(x_s): 
+                for i, x_i in enumerate(x_s):
                     for j, x_j in enumerate(x_s):
-                        if abs(x_j-x_i) > delta and abs(x_j+x_i) > delta:
+                        if (
+                            abs(x_j-x_i) > x_accuracy 
+                            and abs(x_j+x_i) > x_accuracy
+                        ):
                             v_i = complex(
                                     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
                                 )
@@ -920,10 +939,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                 )
 
     # for higher-index ramification points we need greater accuracy to 
-    # keep all the correct seeds, since delta is also their displacement
-    # |z_1-z_0| we cannot just use delta, but must choose a small 
+    # keep all the correct seeds, since dt is also their displacement
+    # |z_1-z_0| we cannot just use dt, but must choose a small 
     # fraction of it
-    seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(delta/100))
+    seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(dt/100))
     logging.info('Number of S-walls emanating = {}'.format(len(seeds)))
     logging.debug('these are the seeds {}\n'.format(seeds))
     return seeds

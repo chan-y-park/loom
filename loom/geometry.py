@@ -531,9 +531,14 @@ class SWDataBase(object):
                                 'Will not rotate z-plane any more.\n')
                     rotate_z_plane = False
                     break
+                
                 else:
-                    rotate_z_plane = False
-            
+                    logging.info('Some branch points or punctures '
+                                'are vertically aligned.\n'
+                                'Need to rotate the z-plane.\n')
+                    n_r += 1
+                    z_plane_rotation *= z_r
+
             if rotate_z_plane is False:
                 break
 

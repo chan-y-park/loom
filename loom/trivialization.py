@@ -238,15 +238,24 @@ class SWDataWithTrivialization(SWDataBase):
             non_zero_distances = [x for x in all_distances
                                   if abs(x) > self.accuracy]
             self.min_distance = min(non_zero_distances)
+            horizontal_distances = [abs(x.real - y.real) for x in all_points_z
+                                                        for y in all_points_z]
+            self.min_horizontal_distance = min(
+                    [x for x in horizontal_distances if abs(x) > self.accuracy]
+                )
             
-        else:
+        elif n_critical_loci == 1:
             # If there is only one branching locus, we still
             # need to set distance scales, as these will be used to 
             # circumvent the branch locus when constructing paths 
             # to trivializae the cover, as well as to fix a basepoint
             # for the trivialization
-            max_distance = 1.0
-            self.min_distance = 1.0
+            max_distance = 3.0
+            self.min_distance = max_distance
+            self.min_horizontal_distance = max_distance
+
+        elif n_critical_loci == 0:
+            raise Exception('Must have at least one critical locus on C.')
 
          
         center = sum([z_pt for z_pt in all_points_z]) / n_critical_loci
@@ -288,7 +297,7 @@ class SWDataWithTrivialization(SWDataBase):
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
             bp.label = 'Branch point #{}'.format(i)
-            self.analyze_branch_point(bp, n_critical_loci)
+            self.analyze_branch_point(bp)
             if bp.order > 1:
                 # only add if there are any positive roots associated
                 # otherwise may be an accidental BP
@@ -302,7 +311,7 @@ class SWDataWithTrivialization(SWDataBase):
             irr_sing = IrregularSingularity(
                                 z=z_irr_sing, label='Irr.Sing. #{}'.format(j)
                                 )
-            self.analyze_irregular_singularity(irr_sing, n_critical_loci)
+            self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
 
         ### Analyze ramification points
@@ -519,12 +528,12 @@ class SWDataWithTrivialization(SWDataBase):
         return perm_matrix
 
 
-    def analyze_branch_point(self, bp, n_loci):
+    def analyze_branch_point(self, bp):
         logging.info(
             "Analyzing a branch point at z = {}."
             .format(bp.z)
         )
-        path_to_bp = get_path_to(bp.z, self, n_loci=n_loci)
+        path_to_bp = get_path_to(bp.z, self)
         sheets_along_path = self.get_sheets_along_path(
             path_to_bp, is_path_to_bp=True
         )
@@ -552,8 +561,7 @@ class SWDataWithTrivialization(SWDataBase):
         )
         bp.order = len(bp.positive_roots) + 1
 
-        path_around_bp = get_path_around(bp.z, self.base_point,
-                                         self.min_distance, n_loci)
+        path_around_bp = get_path_around(bp.z, self.base_point, self)
         bp.monodromy = self.get_sheet_monodromy(path_around_bp)
 
         bp.ffr_ramification_points = [rp 
@@ -561,13 +569,12 @@ class SWDataWithTrivialization(SWDataBase):
                     if abs(rp.z - bp.z) < self.accuracy]
 
 
-    def analyze_irregular_singularity(self, irr_sing, n_loci):
+    def analyze_irregular_singularity(self, irr_sing):
         logging.info(
             "Analyzing an irregular singularity at z = {}."
             .format(irr_sing.z)
         )
-        path_around_z = get_path_around(irr_sing.z, self.base_point,
-                                        self.min_distance, n_loci)
+        path_around_z = get_path_around(irr_sing.z, self.base_point, self)
         irr_sing.monodromy = (
             self.get_sheet_monodromy(path_around_z)
         )
@@ -623,7 +630,7 @@ class SWDataWithTrivialization(SWDataBase):
             a = local_curve.n().coeff(Dz).coeff(Dx, 2)
             b = local_curve.n().subs(Dz, 0).coeff(Dx**rp.i)
         
-        logging.info('\nThe ramification point at (z,x)={} is of {}'.format(
+        logging.debug('\nThe ramification point at (z,x)={} is of {}'.format(
                         [rp.z, rp.x], rp_type)
                     )
         rp.ramification_type = rp_type
@@ -649,17 +656,18 @@ class SWDataWithTrivialization(SWDataBase):
 
 
 
-def get_path_to(z_pt, sw_data, n_loci=None):
+def get_path_to(z_pt, sw_data):
     """
     Return a rectangular path from the base point to z_pt.
     If the path has to pass too close to a branch point, 
     we avoid the latter by drawing an arc around it.
     """
-    if n_loci==None:
-        n_loci = len(sw_data.branch_points + sw_data.irregular_singularities)
     base_pt = sw_data.base_point
     closest_bp = None
-    radius = sw_data.min_distance / n_loci
+    # if n_loci==None:
+    #     n_loci = len(sw_data.branch_points + sw_data.irregular_singularities)
+    # radius = sw_data.min_distance / n_loci
+    radius = sw_data.min_horizontal_distance / 2.0
 
     logging.debug("Constructing a path [{}, {}]".format(base_pt, z_pt))
 
@@ -667,6 +675,9 @@ def get_path_to(z_pt, sw_data, n_loci=None):
     ### close to a branch point.
     for bp in sw_data.branch_points:
         delta_z = z_pt - bp.z
+        # NOTE we only check for one possible nearby point
+        # based on the fact that the radius is always less
+        # than the minimal horizontal separation of them
         if abs(delta_z.real) < radius and delta_z.imag > 0:
             closest_bp = bp
             break
@@ -720,12 +731,14 @@ def get_path_to(z_pt, sw_data, n_loci=None):
     
 
 
-def get_path_around(z_pt, base_pt, min_distance, n_loci=2):
+def get_path_around(z_pt, base_pt, sw):
     logging.debug("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
     z_1 = 1j * base_pt.imag + z_pt.real
+    # if n_loci==None:
+    #     n_loci = len(sw.branch_points + sw.irregular_singularities)
     # radius = min_distance / n_loci
-    radius = min_distance / 2
+    radius = sw.min_horizontal_distance / 2.0
     z_2 = z_pt - 1j * radius
 
     steps = N_PATH_AROUND_PT
