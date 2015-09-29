@@ -23,7 +23,7 @@ NUM_ODE_XS_OVER_Z = 2
 # Warning: setting it too small will bring the seeding point
 # too close to a branch point.
 SEED_PHASE_PRECISION = 0.001
-SEED_PRECISION_MAX_DEPTH = 30
+SEED_PRECISION_MAX_DEPTH = 10
 
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
@@ -767,14 +767,15 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
             
             omega = exp(2.0*pi*1j*float(r_i)/float(r_i+1))
-            dz_phases = [
-                        (1.0/cpow(sw_diff_coeff, r_i, r_i+1)) *
-                        exp(1j * theta * float(r_i)/(r_i+1)) *
-                        ((1.0 / phi[i][j]) ** (float(r_i)/(r_i+1))) * 
-                        (omega ** s)
-                        for i in range(r_i) for j in range(r_i) 
-                        for s in range(r_i + 1) if i!=j
-                    ]
+
+            dz_phases = ([\
+                        (1.0/cpow(sw_diff_coeff, r_i, r_i+1)) *\
+                        exp(1j * theta * float(r_i)/(r_i+1)) *\
+                        ((1.0 / phi[i][j]) ** (float(r_i)/(r_i+1))) * \
+                        (omega ** s)\
+                        for i in range(r_i) for j in range(r_i) \
+                        for s in range(r_i + 1) if i!=j\
+                    ])
 
             norm_dz_phases = [d/abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
@@ -858,7 +859,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(norm_dz_phases,
-                                            lambda p1, p2: abs(p1 - p2) < delta)
+                                        lambda p1, p2: abs(p1 - p2) < delta)
         
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0
@@ -879,6 +880,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                     min_dt = dt
                 # z_1 = z_0 + delta * zeta
                 z_1 = z_0 + dt * zeta
+
                 if rp_type == 'type_I':
                     x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                     # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
@@ -889,15 +891,15 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                         for j, x_j in enumerate(x_s):
                             if i != j:
                                 v_i = complex(
-                                        sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
                                     )
                                 v_j = complex(
-                                        sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
                                     )
                                 ij_factor = -1.0 * exp(1j*theta)/(v_j - v_i)
                                 x_i_x_j_phases.append(
-                                                    [(ij_factor)/abs(ij_factor),
-                                                    [x_i, x_j]]
+                                                [(ij_factor)/abs(ij_factor),
+                                                [x_i, x_j]]
                                                 )
 
                 elif rp_type == 'type_II' or rp_type == 'type_III':
@@ -907,7 +909,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
 
                     # order of magnitude of expected separation 
                     # of sheets at z_1
-                    dx = abs(sw_diff_coeff) * (dt**(1/float(rp_i-2)))
+                    dx = abs(sw_diff_coeff) * (dt**(1.0/float(r_i)))
                     x_accuracy = min([delta, dx])
 
                     # a list of the type
@@ -923,16 +925,16 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                                 and abs(x_j+x_i) > x_accuracy
                             ):
                                 v_i = complex(
-                                        sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
                                     )
                                 v_j = complex(
-                                        sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
                                     )
                                 ij_factor = -1.0 * exp(1j*theta)/(v_j - v_i)
                                 # ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
                                 x_i_x_j_phases.append(
-                                                    [(ij_factor)/abs(ij_factor),
-                                                    [x_i, x_j]]
+                                                [(ij_factor)/abs(ij_factor),
+                                                [x_i, x_j]]
                                                 )
 
                 closest_pair = sorted(

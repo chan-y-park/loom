@@ -16,13 +16,14 @@ from misc import n_remove_duplicate
 x, z = sympy.symbols('x z')
 
 
+# TODO: set both of the following automatically: e.g. using the
+# minimal_distance attribute of the SW fibration
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
 N_PATH_TO_PT = 100
-
 ### number of steps for each SEGMENT of the path around a 
 ### branching point (either branch-point, or irregular singularity)
-N_PATH_AROUND_PT = 30
+N_PATH_AROUND_PT = 60
 #N_PATH_AROUND_PT = 100
 
 ### Tolerance for recognizing colliding sheets at a branch-point
@@ -759,7 +760,7 @@ def get_path_around(z_pt, base_pt, sw):
 ### TODO: Make smarter checks based on the types
 ### of ramification points above the branch point.
 def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True, 
-                  index=None, z_0=None, z_1=None, g_data=None):
+                  index=None, z_0=None, z_1=None, g_data=None,):
     """
     Returns a sorted version of 'new_xs'
     based on matching the closest points with 
@@ -799,10 +800,11 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 logging.info("new_xs:\n{}".format(new_xs)) 
                 logging.info("sorted_xs:\n{}".format(sorted_xs)) 
                 logging.info("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
-                raise ValueError(
+                raise Exception(
                     '\nCannot track the sheets!\n'
                     'Probably passing too close to a branch point '
-                    'or a puncture'
+                    'or a puncture. Try increasing N_PATH_TO_PT '
+                    'or N_PATH_AROUND_PT.'
                 )
         else:
             return sorted_xs
