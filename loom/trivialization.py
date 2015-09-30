@@ -25,6 +25,9 @@ N_PATH_TO_PT = 100
 ### branching point (either branch-point, or irregular singularity)
 N_PATH_AROUND_PT = 60
 #N_PATH_AROUND_PT = 100
+### Number of times the tracking of sheets is allowed to automatically zoom in.
+MAX_ZOOM_LEVEL = 5
+ZOOM_FACTOR = 100
 
 ### Tolerance for recognizing colliding sheets at a branch-point
 BP_PROXIMITY_THRESHOLD = 0.05
@@ -323,7 +326,9 @@ class SWDataWithTrivialization(SWDataBase):
         
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
-    def get_sheets_along_path(self, z_path, is_path_to_bp=False, ffr=False):
+    def get_sheets_along_path(self, z_path, is_path_to_bp=False, ffr=False,
+                                ffr_xs_0=None, zoom_level=MAX_ZOOM_LEVEL,
+                            ):
         """
         Tracks the sheets along a path.
         It checks at each step that tracking is successful,
@@ -332,21 +337,25 @@ class SWDataWithTrivialization(SWDataBase):
         For tracking roots as we run into a branch point, one should
         set the variable 'is_path_to_bp=True', and the check for 
         sheets becoming too similar will be ignored altogether.
-        """
-        ### NOTE: instead of disabling the check, we could 
-        ### still perform it, and suppress the check only towards the 
-        ### end of the tracking.
-
+        """       
         g_data = self.g_data
-        ffr_xs_0 = self.reference_ffr_xs
-        xs_0 = self.reference_xs
+        # If the initial sheets are unspecified, 
+        # the initial point should be the basepoint of the trivialization 
+        if ffr_xs_0 == None:
+            if abs(z_path[0] - self.base_point) < self.accuracy:
+                ffr_xs_0 = self.reference_ffr_xs
+                xs_0 = self.reference_xs
+            else:
+                raise Exception('Must specify initial sheets for tracking.')
+        print 'working at level {}'.format(zoom_level)
         ### Each element is a sheet, which is a list of x's along the path.
         ### Initialized with reference_xs.
         ### TODO: set each element to an integer rather than a float.
-        sheets_along_path = [[x] for x in xs_0]
         ffr_sheets_along_path = [[x] for x in ffr_xs_0]
         
         for i, z in enumerate(z_path):
+            if any(isinstance(i, list) for i in ffr_xs_0):
+                print 'ffr_xs_0 = {}'.format(ffr_xs_0)
             near_degenerate_branch_locus = False
             if is_path_to_bp is True and abs(z - z_path[-1]) < self.accuracy:
                 near_degenerate_branch_locus = True
@@ -356,37 +365,67 @@ class SWDataWithTrivialization(SWDataBase):
                 )
 
             if is_path_to_bp == False:
-                sorted_ffr_xs = get_sorted_xs(
-                    ffr_xs_0, ffr_xs_1, accuracy=self.accuracy,
-                    check_tracking=True, index=i,
-                    z_0=z_path[i-1], z_1=z_path[i],
-                    g_data=g_data,
-                )
+                sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1, 
+                                            accuracy=self.accuracy,
+                                            check_tracking=True, index=i,
+                                            z_0=z_path[i-1], z_1=z_path[i],
+                                            g_data=g_data,
+                                        )
+            elif near_degenerate_branch_locus is False:
+                sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1,
+                                            accuracy=self.accuracy,
+                                            check_tracking=True,
+                                            g_data=g_data,
+                                        )
             else:
                 sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1,
-                                              accuracy=self.accuracy,
-                                              check_tracking=False,
-                                              g_data=g_data,
-                                              )
-            if g_data.fundamental_representation_index == 1:
-                sorted_xs = sorted_ffr_xs
-                #print 'sorted_ffr_xs = {}'.format(sorted_ffr_xs)
+                                            accuracy=self.accuracy,
+                                            check_tracking=False,
+                                            g_data=g_data,
+                                        )
+            if sorted_ffr_xs == 'raise precision':
+                if zoom_level > 0:
+                    delta_z = (z_path[i] - z_path[i-1])/ZOOM_FACTOR
+                    zoomed_path = [z_path[i-1] + j*delta_z 
+                                            for j in range(ZOOM_FACTOR+1)]
+                    print 'will raise precision, using ffr_xs_0 = {}'.format(ffr_xs_0)
+                    sheets_along_zoomed_path = self.get_sheets_along_path(
+                                    zoomed_path, 
+                                    is_path_to_bp=near_degenerate_branch_locus,
+                                    ffr=True,
+                                    ffr_xs_0=ffr_xs_0,
+                                    zoom_level=(zoom_level-1)
+                                )
+                    sorted_ffr_xs = [zoom_s[-1] for zoom_s in sheets_along_path]
+                    for j, s_j in enumerate(ffr_sheets_along_path):
+                        s_j += sorted_ffr_xs[j]
+
+                else:
+                    raise Exception(
+                        '\nCannot track the sheets!\n'
+                        'Probably passing too close to a branch point '
+                        'or a puncture. Try increasing N_PATH_TO_PT '
+                        'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
+                    )
             else:
-                sorted_xs = self.get_xs_of_weights_from_ffr_xs(sorted_ffr_xs)                
-            for j, s_j in enumerate(sheets_along_path):
-                # print 'sorted xs = {}'.format(sorted_xs)
-                s_j.append(sorted_xs[j])
-            for j, s_j in enumerate(ffr_sheets_along_path):
-                s_j.append(sorted_ffr_xs[j])
-            ffr_xs_0 = sorted_ffr_xs
+                # this is just the ordinary step, where we add the 
+                # latest value of ordered sheets
+                for j, s_j in enumerate(ffr_sheets_along_path):
+                    s_j.append(sorted_ffr_xs[j])
+            
 
         ### the result is of the form [sheet_path_1, sheet_path_2, ...]
         ### where sheet_path_i = [x_0, x_1, ...] are the fiber coordinates
         ### of the sheet along the path
-        if ffr==False:
-            return sheets_along_path
-        elif ffr==True:
+        if ffr is True:
             return ffr_sheets_along_path
+        elif ffr is False:
+            sheets_along_path = []
+            for s in ffr_sheets_along_path:
+                sheets_along_path.append(
+                    [self.get_xs_of_weights_from_ffr_xs(ffr_x) for ffr_x in s]
+                )
+            return sheets_along_path
 
 
     def get_sheets_at_z(self, z_pt, g_data=None, ffr=False):
@@ -800,12 +839,8 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 logging.info("new_xs:\n{}".format(new_xs)) 
                 logging.info("sorted_xs:\n{}".format(sorted_xs)) 
                 logging.info("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
-                raise Exception(
-                    '\nCannot track the sheets!\n'
-                    'Probably passing too close to a branch point '
-                    'or a puncture. Try increasing N_PATH_TO_PT '
-                    'or N_PATH_AROUND_PT.'
-                )
+                logging.warning('Having trouble tracking sheets, will zoom in.')
+                return 'raise precision'
         else:
             return sorted_xs
     else:
