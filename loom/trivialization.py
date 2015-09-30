@@ -27,7 +27,7 @@ N_PATH_TO_PT = 100
 N_PATH_AROUND_PT = 60
 #N_PATH_AROUND_PT = 100
 ### Number of times the tracking of sheets is allowed to automatically zoom in.
-MAX_ZOOM_LEVEL = 2
+MAX_ZOOM_LEVEL = 1
 ZOOM_FACTOR = 10
 
 ### Tolerance for recognizing colliding sheets at a branch-point
@@ -895,6 +895,7 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy):
             correct_xy_pairs.update({ref_xs[i] : ys[i]})
         else:
             trouble_ys.append(ys[i])
+
     trouble_ys = n_remove_duplicate(trouble_ys, 0.0)
     for y_t in trouble_ys:
         # get all positions of the troubling y
@@ -911,36 +912,37 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy):
             # a check
             if (closest_ys_0!=closest_ys_1 
                 and closest_ys_0!=closest_ys_1.reverse()):
-                raise Exception(('the cloasest sheets to the reference pair {}'
+                logging.warning(('the closest sheets to the reference pair {}'
                         '\ndont match: they are respectively:\n{}\n{}'
                         ).format(x_pair, closest_ys_0, closest_ys_1)
                     )
+            
+            # compute the differences of the various combinations
+            dx_00 = closest_ys_0[0] - x_pair[0]
+            dx_01 = closest_ys_0[1] - x_pair[0]
+            dx_10 = closest_ys_1[0] - x_pair[1]
+            dx_11 = closest_ys_1[1] - x_pair[1]
+            # pick for each x in the x_pair its companion based on 
+            # the phase of the displacement, choosing the closest to 
+            # the previous step in the tracking
+            i_0 = ref_xs.index(x_pair[0])
+            i_1 = ref_xs.index(x_pair[1])
+            ref_dx_0 = delta_xs[i_0]
+            ref_dx_1 = delta_xs[i_1]
+            # first find the companion for x_pair[0]
+            if abs(phase(dx_00/ref_dx_0)) < abs(phase(dx_01/ref_dx_0)):
+                correct_xy_pairs.update({x_pair[0] : closest_ys_0[0]})
             else:
-                # compute the differences of the various combinations
-                dx_00 = closest_ys_0[0] - x_pair[0]
-                dx_01 = closest_ys_0[1] - x_pair[0]
-                dx_10 = closest_ys_0[0] - x_pair[1]
-                dx_11 = closest_ys_0[1] - x_pair[1]
-                # pick for each x in the x_pair its companion based on 
-                # the phase of the displacement, choosing the closest to 
-                # the previous step in the tracking
-                i_0 = ref_xs.index(x_pair[0])
-                i_1 = ref_xs.index(x_pair[1])
-                ref_dx_0 = delta_xs[i_0]
-                ref_dx_1 = delta_xs[i_1]
-                # first find the companion for x_pair[0]
-                if abs(phase(dx_00/ref_dx_0)) < abs(phase(dx_01/ref_dx_0)):
-                    correct_xy_pairs.update({x_pair[0] : closest_ys_0[0]})
-                else:
-                    correct_xy_pairs.update({x_pair[0] : closest_ys_0[1]})
-                # then repeat for x_pair[1]
-                if abs(phase(dx_10/ref_dx_1)) < abs(phase(dx_11/ref_dx_1)):
-                    correct_xy_pairs.update({x_pair[1] : closest_ys_0[0]})
-                else:
-                    correct_xy_pairs.update({x_pair[1] : closest_ys_0[1]})
+                correct_xy_pairs.update({x_pair[0] : closest_ys_0[1]})
+            # then repeat for x_pair[1]
+            if abs(phase(dx_10/ref_dx_1)) < abs(phase(dx_11/ref_dx_1)):
+                correct_xy_pairs.update({x_pair[1] : closest_ys_0[0]})
+            else:
+                correct_xy_pairs.update({x_pair[1] : closest_ys_0[1]})
 
     # at this point, we should have sorted all the new_xs
     # we check if the sorting was successful
+
     sorted_xs = [correct_xy_pairs[x] for x in ref_xs]
     unique_sorted_xs = n_remove_duplicate(sorted_xs, 0.0)
 
