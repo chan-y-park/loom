@@ -8,6 +8,7 @@ from sympy import oo
 from numpy.linalg import matrix_rank
 from itertools import combinations
 from pprint import pprint
+from heapq import nsmallest
 
 from geometry import SWDataBase
 #from misc import n_unique
@@ -26,8 +27,8 @@ N_PATH_TO_PT = 100
 N_PATH_AROUND_PT = 60
 #N_PATH_AROUND_PT = 100
 ### Number of times the tracking of sheets is allowed to automatically zoom in.
-MAX_ZOOM_LEVEL = 5
-ZOOM_FACTOR = 100
+MAX_ZOOM_LEVEL = 2
+ZOOM_FACTOR = 10
 
 ### Tolerance for recognizing colliding sheets at a branch-point
 BP_PROXIMITY_THRESHOLD = 0.05
@@ -328,6 +329,7 @@ class SWDataWithTrivialization(SWDataBase):
     # PL: Do we actually need to?
     def get_sheets_along_path(self, z_path, is_path_to_bp=False, ffr=False,
                                 ffr_xs_0=None, zoom_level=MAX_ZOOM_LEVEL,
+                                accuracy=None, ffr_sheets_along_path=None,
                             ):
         """
         Tracks the sheets along a path.
@@ -337,8 +339,14 @@ class SWDataWithTrivialization(SWDataBase):
         For tracking roots as we run into a branch point, one should
         set the variable 'is_path_to_bp=True', and the check for 
         sheets becoming too similar will be ignored altogether.
+        If tracking fails, an attempt will be made to 'zoom in',
+        up to a certain number of times.
+        If zooming also fails, the tracking will take into account 
+        the first derivative of sheets and match them according to it.
         """       
         g_data = self.g_data
+        if accuracy==None:
+            accuracy = self.accuracy
         # If the initial sheets are unspecified, 
         # the initial point should be the basepoint of the trivialization 
         if ffr_xs_0 == None:
@@ -347,11 +355,12 @@ class SWDataWithTrivialization(SWDataBase):
                 xs_0 = self.reference_xs
             else:
                 raise Exception('Must specify initial sheets for tracking.')
-        print 'working at level {}'.format(zoom_level)
+        logging.info('Zooming to level {}'.format(zoom_level))
         ### Each element is a sheet, which is a list of x's along the path.
         ### Initialized with reference_xs.
         ### TODO: set each element to an integer rather than a float.
-        ffr_sheets_along_path = [[x] for x in ffr_xs_0]
+        if ffr_sheets_along_path==None:
+            ffr_sheets_along_path = [[x] for x in ffr_xs_0]
         
         for i, z in enumerate(z_path):
             if any(isinstance(i, list) for i in ffr_xs_0):
@@ -366,47 +375,56 @@ class SWDataWithTrivialization(SWDataBase):
 
             if is_path_to_bp == False:
                 sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1, 
-                                            accuracy=self.accuracy,
+                                            accuracy=accuracy,
                                             check_tracking=True, index=i,
                                             z_0=z_path[i-1], z_1=z_path[i],
                                             g_data=g_data,
                                         )
             elif near_degenerate_branch_locus is False:
                 sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1,
-                                            accuracy=self.accuracy,
+                                            accuracy=accuracy,
                                             check_tracking=True,
                                             g_data=g_data,
                                         )
             else:
                 sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1,
-                                            accuracy=self.accuracy,
+                                            accuracy=accuracy,
                                             check_tracking=False,
                                             g_data=g_data,
                                         )
-            if sorted_ffr_xs == 'raise precision':
+            if sorted_ffr_xs == 'sorting failed':
                 if zoom_level > 0:
                     delta_z = (z_path[i] - z_path[i-1])/ZOOM_FACTOR
                     zoomed_path = [z_path[i-1] + j*delta_z 
                                             for j in range(ZOOM_FACTOR+1)]
-                    print 'will raise precision, using ffr_xs_0 = {}'.format(ffr_xs_0)
                     sheets_along_zoomed_path = self.get_sheets_along_path(
                                     zoomed_path, 
                                     is_path_to_bp=near_degenerate_branch_locus,
                                     ffr=True,
                                     ffr_xs_0=ffr_xs_0,
-                                    zoom_level=(zoom_level-1)
+                                    zoom_level=(zoom_level-1),
+                                    accuracy=(accuracy/ZOOM_FACTOR),
+                                    ffr_sheets_along_path=ffr_sheets_along_path,
                                 )
-                    sorted_ffr_xs = [zoom_s[-1] for zoom_s in sheets_along_path]
-                    for j, s_j in enumerate(ffr_sheets_along_path):
-                        s_j += sorted_ffr_xs[j]
+                    sorted_ffr_xs = [
+                            zoom_s[-1] for zoom_s in sheets_along_zoomed_path
+                        ]
+                    # for j, s_j in enumerate(ffr_sheets_along_path):
+                    #     s_j += sorted_ffr_xs[j]
 
                 else:
-                    raise Exception(
-                        '\nCannot track the sheets!\n'
-                        'Probably passing too close to a branch point '
-                        'or a puncture. Try increasing N_PATH_TO_PT '
-                        'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
-                    )
+                    old_ffr_xs = [s[-2] for s in ffr_sheets_along_path]
+                    delta_xs = [ffr_xs_0[j] - old_ffr_xs[j] 
+                                                for j in range(len(ffr_xs_0))]
+                    sorted_ffr_xs = sort_xs_by_derivative(ffr_xs_0, ffr_xs_1, 
+                                                        delta_xs, self.accuracy)
+                    if sorted_ffr_xs == 'sorting failed':
+                        raise Exception(
+                            '\nCannot track the sheets!\n'
+                            'Probably passing too close to a branch point '
+                            'or a puncture. Try increasing N_PATH_TO_PT '
+                            'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
+                        )
             else:
                 # this is just the ordinary step, where we add the 
                 # latest value of ordered sheets
@@ -807,12 +825,13 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
     """
     sorted_xs = []
     for s_1 in ref_xs:
-        closest_candidate = new_xs[0]
-        min_d = abs(s_1 - closest_candidate)
-        for s_2 in new_xs:
-            if abs(s_2 - s_1) < min_d:
-                min_d = abs(s_2 - s_1)
-                closest_candidate = s_2
+        # closest_candidate = new_xs[0]
+        # min_d = abs(s_1 - closest_candidate)
+        # for s_2 in new_xs:
+        #     if abs(s_2 - s_1) < min_d:
+        #         min_d = abs(s_2 - s_1)
+        #         closest_candidate = s_2
+        closest_candidate = nsmallest(1, new_xs, key=lambda x: abs(x-s_1))[0]
         sorted_xs.append(closest_candidate)
         # rel_min_d = abs((s_1 - closest_candidate) / (s_1 + closest_candidate))
         # for s_2 in new_xs:
@@ -832,15 +851,15 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 and len(sorted_xs)-len(unique_sorted_xs)==1):
                 return sorted_xs
             else:
-                logging.info(
+                logging.debug(
                         "At step %s, between %s and %s " % (index, z_0, z_1)
                     )
-                logging.info("ref_xs:\n{}".format(ref_xs)) 
-                logging.info("new_xs:\n{}".format(new_xs)) 
-                logging.info("sorted_xs:\n{}".format(sorted_xs)) 
-                logging.info("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
-                logging.warning('Having trouble tracking sheets, will zoom in.')
-                return 'raise precision'
+                logging.debug("ref_xs:\n{}".format(ref_xs)) 
+                logging.debug("new_xs:\n{}".format(new_xs)) 
+                logging.debug("sorted_xs:\n{}".format(sorted_xs)) 
+                logging.debug("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
+                logging.debug('Having trouble tracking sheets, will zoom in.')
+                return 'sorting failed'
         else:
             return sorted_xs
     else:
@@ -849,6 +868,86 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
         ### because it would produce an error, since by definition
         ### sheets will be indistinguishable at the very end.
         return sorted_xs
+
+def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy):
+    # will only work if there are at most two sheets being 
+    # too close two each other, not three or more.
+    # TODO: generalize to handle more gneral cases (if we need it at all)
+    logging.debug('Resorting to tracking sheets by their derivatives')
+    groups = []
+    # first, identify the problematic sheets
+    ys = []
+    for s_1 in ref_xs:
+        closest_candidate = nsmallest(1, new_xs, key=lambda x: abs(x-s_1))[0]
+        ys.append(closest_candidate)
+        
+    # the list of ys corresponds to the ref_xs as
+    # ref_xs = [x_1, x_2, x_3, ...]
+    #     ys = [y_1, y_2, y_1, ...]
+    # and will contain doubles. 
+    # We use them to identify the pairs that give trouble
+    correct_xy_pairs = {}   # (a dictionary)
+    trouble_xs = []
+    trouble_ys = []
+    for i in range(len(ys)):
+        if ys.count(ys[i]) == 1:
+            # add this key and value to the dictioanry
+            correct_xy_pairs.update({ref_xs[i] : ys[i]})
+        else:
+            trouble_ys.append(ys[i])
+    trouble_ys = n_remove_duplicate(trouble_ys, 0.0)
+    for y_t in trouble_ys:
+        # get all positions of the troubling y
+        y_positions = [j for j, y in enumerate(ys) if y==y_t]
+        # then get all x's which are mapped to it
+        trouble_xs.append([ref_xs[j] for j in y_positions])
+
+    for x_pair in trouble_xs:
+        if len(x_pair) != 2:
+            raise Exception('Cannot handle this kind of sheet degeneracy')
+        else:
+            closest_ys_0 = nsmallest(2, new_xs, key=lambda x: abs(x-x_pair[0]))
+            closest_ys_1 = nsmallest(2, new_xs, key=lambda x: abs(x-x_pair[1]))
+            # a check
+            if (closest_ys_0!=closest_ys_1 
+                and closest_ys_0!=closest_ys_1.reverse()):
+                raise Exception(('the cloasest sheets to the reference pair {}'
+                        '\ndont match: they are respectively:\n{}\n{}'
+                        ).format(x_pair, closest_ys_0, closest_ys_1)
+                    )
+            else:
+                # compute the differences of the various combinations
+                dx_00 = closest_ys_0[0] - x_pair[0]
+                dx_01 = closest_ys_0[1] - x_pair[0]
+                dx_10 = closest_ys_0[0] - x_pair[1]
+                dx_11 = closest_ys_0[1] - x_pair[1]
+                # pick for each x in the x_pair its companion based on 
+                # the phase of the displacement, choosing the closest to 
+                # the previous step in the tracking
+                i_0 = ref_xs.index(x_pair[0])
+                i_1 = ref_xs.index(x_pair[1])
+                ref_dx_0 = delta_xs[i_0]
+                ref_dx_1 = delta_xs[i_1]
+                # first find the companion for x_pair[0]
+                if abs(phase(dx_00/ref_dx_0)) < abs(phase(dx_01/ref_dx_0)):
+                    correct_xy_pairs.update({x_pair[0] : closest_ys_0[0]})
+                else:
+                    correct_xy_pairs.update({x_pair[0] : closest_ys_0[1]})
+                # then repeat for x_pair[1]
+                if abs(phase(dx_10/ref_dx_1)) < abs(phase(dx_11/ref_dx_1)):
+                    correct_xy_pairs.update({x_pair[1] : closest_ys_0[0]})
+                else:
+                    correct_xy_pairs.update({x_pair[1] : closest_ys_0[1]})
+
+    # at this point, we should have sorted all the new_xs
+    # we check if the sorting was successful
+    sorted_xs = [correct_xy_pairs[x] for x in ref_xs]
+    unique_sorted_xs = n_remove_duplicate(sorted_xs, 0.0)
+
+    if len(sorted_xs)==len(unique_sorted_xs):
+        return sorted_xs
+    else:
+        return 'sorting failed'
 
 
 def kr_delta(i, j):
