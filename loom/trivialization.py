@@ -327,10 +327,9 @@ class SWDataWithTrivialization(SWDataBase):
         
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
-    def get_sheets_along_path(self, z_path, is_path_to_bp=False, ffr=False,
-                                ffr_xs_0=None, zoom_level=MAX_ZOOM_LEVEL,
-                                accuracy=None, ffr_sheets_along_path=None,
-                            ):
+    def get_sheets_along_path(self, z_path, is_path_to_bp=False,
+                              ffr_xs_0=None, zoom_level=MAX_ZOOM_LEVEL,
+                              accuracy=None, ffr_sheets_along_path=None,):
         """
         Tracks the sheets along a path.
         It checks at each step that tracking is successful,
@@ -349,7 +348,7 @@ class SWDataWithTrivialization(SWDataBase):
             accuracy = self.accuracy
         # If the initial sheets are unspecified, 
         # the initial point should be the basepoint of the trivialization 
-        if ffr_xs_0 == None:
+        if ffr_xs_0 is None:
             if abs(z_path[0] - self.base_point) < self.accuracy:
                 ffr_xs_0 = self.reference_ffr_xs
                 xs_0 = self.reference_xs
@@ -359,7 +358,7 @@ class SWDataWithTrivialization(SWDataBase):
         ### Each element is a sheet, which is a list of x's along the path.
         ### Initialized with reference_xs.
         ### TODO: set each element to an integer rather than a float.
-        if ffr_sheets_along_path==None:
+        if ffr_sheets_along_path is None:
             ffr_sheets_along_path = [[x] for x in ffr_xs_0]
         
         for i, z in enumerate(z_path):
@@ -398,14 +397,13 @@ class SWDataWithTrivialization(SWDataBase):
                     zoomed_path = [z_path[i-1] + j*delta_z 
                                             for j in range(ZOOM_FACTOR+1)]
                     sheets_along_zoomed_path = self.get_sheets_along_path(
-                                    zoomed_path, 
-                                    is_path_to_bp=near_degenerate_branch_locus,
-                                    ffr=True,
-                                    ffr_xs_0=ffr_xs_0,
-                                    zoom_level=(zoom_level-1),
-                                    accuracy=(accuracy/ZOOM_FACTOR),
-                                    ffr_sheets_along_path=ffr_sheets_along_path,
-                                )
+                        zoomed_path, 
+                        is_path_to_bp=near_degenerate_branch_locus,
+                        ffr_xs_0=ffr_xs_0,
+                        zoom_level=(zoom_level-1),
+                        accuracy=(accuracy/ZOOM_FACTOR),
+                        ffr_sheets_along_path=ffr_sheets_along_path,
+                    )
                     sorted_ffr_xs = [
                             zoom_s[-1] for zoom_s in sheets_along_zoomed_path
                         ]
@@ -435,13 +433,13 @@ class SWDataWithTrivialization(SWDataBase):
         ### the result is of the form [sheet_path_1, sheet_path_2, ...]
         ### where sheet_path_i = [x_0, x_1, ...] are the fiber coordinates
         ### of the sheet along the path
-        if ffr is True:
+        if g_data.fundamental_representation_index == 1:
             return ffr_sheets_along_path
-        elif ffr is False:
+        else:
             sheets_along_path = []
             for s in ffr_sheets_along_path:
                 sheets_along_path.append(
-                    [self.get_xs_of_weights_from_ffr_xs(ffr_x) for ffr_x in s]
+                    [self.get_xs_of_weights_from_ffr_xs(xs) for xs in s]
                 )
             return sheets_along_path
 
@@ -925,8 +923,8 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy):
             # pick for each x in the x_pair its companion based on 
             # the phase of the displacement, choosing the closest to 
             # the previous step in the tracking
-            i_0 = ref_xs.index(x_pair[0])
-            i_1 = ref_xs.index(x_pair[1])
+            i_0 = numpy.abs(ref_xs - x_pair[0]).argmin()
+            i_1 = numpy.abs(ref_xs - x_pair[1]).argmin()
             ref_dx_0 = delta_xs[i_0]
             ref_dx_1 = delta_xs[i_1]
             # first find the companion for x_pair[0]
