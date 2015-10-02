@@ -531,9 +531,14 @@ class SWDataBase(object):
                                 'Will not rotate z-plane any more.\n')
                     rotate_z_plane = False
                     break
+                
                 else:
-                    rotate_z_plane = False
-            
+                    logging.info('Some branch points or punctures '
+                                'are vertically aligned.\n'
+                                'Need to rotate the z-plane.\n')
+                    n_r += 1
+                    z_plane_rotation *= z_r
+
             if rotate_z_plane is False:
                 break
 
@@ -1083,7 +1088,7 @@ def get_ramification_points_using_discriminant(
                 if m_x == 1:
                     continue
 
-                sols.append([z_i, (x_j, m_x)])
+                sols.append([complex(z_i), (complex(x_j), m_x)])
     return sols
 
 

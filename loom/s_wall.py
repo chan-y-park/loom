@@ -1,3 +1,4 @@
+
 import logging
 import numpy
 import sympy
@@ -17,6 +18,12 @@ x, z = sympy.symbols('x z')
 # TODO: Generalize this.
 # Number of x's at a fixed z
 NUM_ODE_XS_OVER_Z = 2
+
+# Desired precision on the phase of seeds
+# Warning: setting it too small will bring the seeding point
+# too close to a branch point.
+SEED_PHASE_PRECISION = 0.001
+SEED_PRECISION_MAX_DEPTH = 10
 
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
@@ -735,8 +742,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
 
     
     delta = config['accuracy']
-    dt = config['size_of_small_step']
+    initial_seed_size = config['size_of_small_step']
     seeds = []
+    max_r_i = max([rp.i for rp in branch_point.ffr_ramification_points])
+    min_dt = 1.0
 
     for rp in branch_point.ffr_ramification_points:
         z_0 = rp.z
@@ -758,20 +767,21 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
             
             omega = exp(2.0*pi*1j*float(r_i)/float(r_i+1))
-            dz_phases = [
-                        (1.0/cpow(sw_diff_coeff, r_i, r_i+1)) *
-                        exp(1j * theta * float(r_i)/(r_i+1)) *
-                        ((1.0 / phi[i][j]) ** (float(r_i)/(r_i+1))) * 
-                        (omega ** s)
-                        for i in range(r_i) for j in range(r_i) 
-                        for s in range(r_i + 1) if i!=j
-                    ]
+
+            dz_phases = ([\
+                        (1.0/cpow(sw_diff_coeff, r_i, r_i+1)) *\
+                        exp(1j * theta * float(r_i)/(r_i+1)) *\
+                        ((1.0 / phi[i][j]) ** (float(r_i)/(r_i+1))) * \
+                        (omega ** s)\
+                        for i in range(r_i) for j in range(r_i) \
+                        for s in range(r_i + 1) if i!=j\
+                    ])
 
             norm_dz_phases = [d/abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(norm_dz_phases,
-                                    lambda p1, p2: abs(p1 - p2) < (delta/100))
+                                    lambda p1, p2: abs(p1 - p2) < (delta))
         
         elif rp_type == 'type_II':
             if r_i % 2 == 1:
@@ -849,81 +859,119 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(norm_dz_phases,
-                                            lambda p1, p2: abs(p1 - p2) < delta)
+                                        lambda p1, p2: abs(p1 - p2) < delta)
         
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0
 
+        
         for zeta in zetas:
-            # z_1 = z_0 + delta * zeta
-            z_1 = z_0 + dt * zeta
-            if rp_type == 'type_I':
-                x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
-                # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
-                # a list of the type
-                # [... [phase, [x_i, x_j]] ...]
-                x_i_x_j_phases = []
-                for i, x_i in enumerate(x_s): 
-                    for j, x_j in enumerate(x_s):
-                        if i != j:
-                            v_i = complex(
+            raise_precision = True
+            precision_level = 0
+            while (
+                    raise_precision is True and 
+                    precision_level <= SEED_PRECISION_MAX_DEPTH
+                ):
+                logging.debug('Seeding precision level = {}'.format(
+                        precision_level)
+                    )
+                dt = initial_seed_size * 0.1**(precision_level)
+                if dt < min_dt:
+                    min_dt = dt
+                # z_1 = z_0 + delta * zeta
+                z_1 = z_0 + dt * zeta
+
+                if rp_type == 'type_I':
+                    x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
+                    # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
+                    # a list of the type
+                    # [... [phase, [x_i, x_j]] ...]
+                    x_i_x_j_phases = []
+                    for i, x_i in enumerate(x_s): 
+                        for j, x_j in enumerate(x_s):
+                            if i != j:
+                                v_i = complex(
                                     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
-                                )
-                            v_j = complex(
+                                    )
+                                v_j = complex(
                                     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
-                                )
-                            ij_factor = -1.0 * exp(1j*theta)/(v_j - v_i)
-                            x_i_x_j_phases.append(
+                                    )
+                                ij_factor = -1.0 * exp(1j*theta)/(v_j - v_i)
+                                x_i_x_j_phases.append(
                                                 [(ij_factor)/abs(ij_factor),
                                                 [x_i, x_j]]
-                                            )
+                                                )
 
-            elif rp_type == 'type_II' or rp_type == 'type_III':
-                # we assume that the ramification index is maximal
-                # therefore we ask for all the sheets at z_1.
-                x_s = find_xs_at_z_0(sw, z_1, ffr=True)
+                elif rp_type == 'type_II' or rp_type == 'type_III':
+                    # we assume that the ramification index is maximal
+                    # therefore we ask for all the sheets at z_1.
+                    x_s = find_xs_at_z_0(sw, z_1, ffr=True)
 
-                # a list of the type
-                # [... [phase, [x_i, x_j]] ...]
-                # where we eclude x_i=x_j and x_i=-x_j 
-                # since in D-type there are no roots 
-                # between a weight v and -v.
-                x_i_x_j_phases = []
-                for i, x_i in enumerate(x_s): 
-                    for j, x_j in enumerate(x_s):
-                        if abs(x_j-x_i) > delta and abs(x_j+x_i) > delta:
-                            v_i = complex(
+                    # order of magnitude of expected separation 
+                    # of sheets at z_1
+                    dx = abs(sw_diff_coeff) * (dt**(1.0/float(r_i)))
+                    x_accuracy = min([delta, dx])
+
+                    # a list of the type
+                    # [... [phase, [x_i, x_j]] ...]
+                    # where we eclude x_i=x_j and x_i=-x_j 
+                    # since in D-type there are no roots 
+                    # between a weight v and -v.
+                    x_i_x_j_phases = []
+                    for i, x_i in enumerate(x_s):
+                        for j, x_j in enumerate(x_s):
+                            if (
+                                abs(x_j-x_i) > x_accuracy 
+                                and abs(x_j+x_i) > x_accuracy
+                            ):
+                                v_i = complex(
                                     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
-                                )
-                            v_j = complex(
+                                    )
+                                v_j = complex(
                                     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
-                                )
-                            ij_factor = -1.0 * exp(1j*theta)/(v_j - v_i)
-                            # ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
-                            x_i_x_j_phases.append(
+                                    )
+                                ij_factor = -1.0 * exp(1j*theta)/(v_j - v_i)
+                                # ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
+                                x_i_x_j_phases.append(
                                                 [(ij_factor)/abs(ij_factor),
                                                 [x_i, x_j]]
-                                            )
+                                                )
 
-            closest_pair = sorted(
-                        x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
-                    )[0][1]
-            logging.debug('Mismatch between the phase of a seed and that ' 
-                        'of the displacement: {}'.format(
-                        abs(sorted(
+                closest_pair = sorted(
+                            x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
+                        )[0][1]
+                phase_mismatch = abs(sorted(
                                 x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
-                            )[0][0]-zeta))
-                        )
+                                )[0][0]-zeta)
+                if phase_mismatch < SEED_PHASE_PRECISION:
+                    logging.debug('Reached desired precision for seed'
+                            '\nThe Mismatch between its phase '
+                            'and that of the displacement '
+                            'is : {}'.format(phase_mismatch)
+                            )
+                    raise_precision = False
+                else:
+                    if precision_level < SEED_PRECISION_MAX_DEPTH:
+                        precision_level += 1
+                    else:
+                        logging.warning('Could not get the desired precision '
+                            'on the seed of an S-wall.\nThe Mismatch between '
+                            'the phase of a seed and that of the displacement '
+                            'is : {}'.format(phase_mismatch)
+                            )
+                        raise_precision = False
+                        break
+            
             M_0 = 0
             seeds.append(
                     [z_1, closest_pair, M_0]
                 )
 
     # for higher-index ramification points we need greater accuracy to 
-    # keep all the correct seeds, since delta is also their displacement
-    # |z_1-z_0| we cannot just use delta, but must choose a small 
+    # keep all the correct seeds, since dt is also their displacement
+    # |z_1-z_0| we cannot just use dt, but must choose a small 
     # fraction of it
-    seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(delta/100))
+    seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(min_dt/100))
     logging.info('Number of S-walls emanating = {}'.format(len(seeds)))
     logging.debug('these are the seeds {}\n'.format(seeds))
     return seeds
