@@ -216,6 +216,7 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
             for a_file in file_list:
                 fp.write(a_file, os.path.relpath(a_file, data_dir))
 
+    logging.info('Finished saving data to {}.'.format(data_file_path))
 
 def make_spectral_network_plot(spectral_network_data, master=None,
                                show_plot=True, plot_range=None, **kwargs):

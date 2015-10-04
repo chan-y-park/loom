@@ -137,7 +137,6 @@ class SpectralNetwork:
         Save the spectral network data in a JSON-compatible file.
         """
         json_data = {}
-
         json_data['phase'] = self.phase
         json_data['s_walls'] = [s_wall.get_json_data()
                                 for s_wall in self.s_walls]

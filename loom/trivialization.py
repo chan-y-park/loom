@@ -310,7 +310,6 @@ class SWDataWithTrivialization(SWDataBase):
             for rp in bp.ffr_ramification_points:
                 self.analyze_ffr_ramification_point(rp)
 
-        
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
     def get_sheets_along_path(self, z_path, is_path_to_bp=False, ffr=False):
