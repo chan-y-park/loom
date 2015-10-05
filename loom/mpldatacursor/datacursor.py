@@ -57,7 +57,7 @@ class DataCursor(object):
     def __init__(self, artists, tolerance=5, formatter=None, point_labels=None,
                 display='one-per-axes', draggable=False, hover=False,
                 props_override=None, keybindings=True, date_format='%x %X',
-		display_button=1, hide_button=3,
+		display_button=1, hide_button=3, keep_inside=True,
                 **kwargs):
         """Create the data cursor and connect it to the relevant figure.
 
@@ -114,6 +114,11 @@ class DataCursor(object):
             The mouse button that triggers hiding the selected annotation box.
             Defaults to 3, for right-clicking. (Common options are
             1:left-click, 2:middle-click, 3:right-click, None:hiding disabled)
+        keep_inside : boolean, optional
+            Whether or not to adjust the x,y offset to keep the text box inside
+            the figure. This option has no effect on draggable datacursors.
+            Defaults to True. Note: Currently disabled on OSX and
+            NbAgg/notebook backends.
         **kwargs : additional keyword arguments, optional
             Additional keyword arguments are passed on to annotate.
         """
@@ -159,6 +164,7 @@ class DataCursor(object):
             self.display = 'single'
             self.draggable = False
 
+        self.keep_inside = keep_inside
         self.tolerance = tolerance
         self.point_labels = point_labels
         self.draggable = draggable
@@ -169,6 +175,12 @@ class DataCursor(object):
         self.axes = tuple(set(art.axes for art in self.artists))
         self.figures = tuple(set(ax.figure for ax in self.axes))
         self._mplformatter = ScalarFormatter(useOffset=False, useMathText=True)
+
+        if self.draggable:
+            # If we're dealing with draggable cursors, don't try to override
+            # the x,y position.  Otherwise, dragging the cursor outside the
+            # figure will have unexpected consequences.
+            self.keep_inside = False
 
         if formatter is None:
             self.formatter = self._formatter
@@ -183,18 +195,41 @@ class DataCursor(object):
                 # Hide the annotation box until clicked...
                 self.annotations[ax].set_visible(False)
 
+        if keybindings:
+            if keybindings is True:
+                self.keybindings = self.default_keybindings
+            else:
+                self.keybindings = keybindings
+            for fig in self.figures:
+                fig.canvas.mpl_connect('key_press_event', self._on_keypress)
+
+        self._setup_timers()
+        self.enable()
+
+    def _setup_timers(self):
+        """Set up timers to limit call-rate and avoid "flickering" effect."""
+        self.timer_expired = {}
+        self.ax_timer = {}
+
         # Timer to control call-rate.
         def expire_func(ax, *args, **kwargs):
             self.timer_expired[ax] = True
             # Return True to keep callback
             return True
 
-        self.timer_expired = {}
-        self.ax_timer = {}
         for ax in self.axes:
             interval = 300 if self.hover else 100
-            self.ax_timer[ax] = ax.figure.canvas.new_timer(interval=interval,
-                                        callbacks=[(expire_func, [ax], {})])
+            try:
+                self.ax_timer[ax] = ax.figure.canvas.new_timer(
+                                        interval=interval,
+                                        callbacks=[(expire_func, [ax], {})],
+                                        )
+            except AttributeError:
+                # Some backends don't have timers at all!  Starting/stopping
+                # will raise an AttributeError, but this is caught regardless
+                # as some backend's timers don't support start/stop.
+                self.ax_timer[ax] = None
+
             try:
                 if plt.get_backend() != 'MacOSX':
                     # Single-shot timers on the OSX backend segfault!
@@ -205,16 +240,6 @@ class DataCursor(object):
                 # safely ignored.
                 pass
             self.timer_expired[ax] = True
-
-        if keybindings:
-            if keybindings is True:
-                self.keybindings = self.default_keybindings
-            else:
-                self.keybindings = keybindings
-            for fig in self.figures:
-                fig.canvas.mpl_connect('key_press_event', self._on_keypress)
-
-        self.enable()
 
     def __call__(self, event):
         """Create or update annotations for the given event. (This is intended
@@ -300,8 +325,14 @@ class DataCursor(object):
         props['point_label'] = self._point_label(event)
 
         funcs = registry.get(type(event.artist), [default_func])
+
+        # 3D artist don't share inheritance. Fall back to naming convention.
+        if '3D' in type(event.artist).__name__:
+            funcs += [pick_info.three_dim_props]
+
         for func in funcs:
             props.update(func(event))
+
         return props
 
     def _point_label(self, event):
@@ -331,15 +362,19 @@ class DataCursor(object):
                  or isinstance(fmt, mdates.AutoDateFormatter))
         def format_date(num):
             return mdates.num2date(num).strftime(self.date_format)
+
         ax = kwargs['event'].mouseevent.inaxes
-        if is_date(ax.xaxis):
-            x = format_date(x)
-        if is_date(ax.yaxis):
-            y = format_date(y)
 
         # Display x and y with range-specific formatting
-        x = self._format_coord(x, ax.get_xlim())
-        y = self._format_coord(y, ax.get_ylim())
+        if is_date(ax.xaxis):
+            x = format_date(x)
+        else:
+            x = self._format_coord(x, ax.get_xlim())
+
+        if is_date(ax.yaxis):
+            y = format_date(y)
+        else:
+            y = self._format_coord(y, ax.get_ylim())
 
         output = []
         for key, val in zip(['x', 'y', 'z', 's'], [x, y, z, s]):
@@ -392,8 +427,6 @@ class DataCursor(object):
                 kwargs[key] = new
             return kwargs
 
-        user_set_ha = 'ha' in kwargs or 'horizontalalignment' in kwargs
-        user_set_va = 'va' in kwargs or 'verticalalignment' in kwargs
 
         # Ensure bbox and arrowstyle params passed in use the defaults for
         # DataCursor. This allows things like ``bbox=dict(alpha=1)`` to show a
@@ -406,16 +439,6 @@ class DataCursor(object):
             if key not in kwargs:
                 kwargs[key] = self.default_annotation_kwargs[key]
 
-        # Make text alignment match the specified offsets (this allows easier
-        # changing of relative position of text box...)
-        dx, dy = kwargs['xytext']
-        horizontal = {1:'left', 0:'center', -1:'right'}[np.sign(dx)]
-        vertical = {1:'bottom', 0:'center', -1:'top'}[np.sign(dy)]
-        if not user_set_ha:
-            kwargs['ha'] = horizontal
-        if not user_set_va:
-            kwargs['va'] = vertical
-
         annotation = ax.annotate('This text will be reset', **kwargs)
 
         # Place the annotation in the figure instead of the axes so that it
@@ -426,7 +449,32 @@ class DataCursor(object):
         if self.draggable:
             offsetbox.DraggableAnnotation(annotation)
 
+        # Save whether or not alignment is user-specified. If not, adjust to
+        # match text offset (and update when display moves out of figure).
+        self._user_set_ha = 'ha' in kwargs or 'horizontalalignment' in kwargs
+        self._user_set_va = 'va' in kwargs or 'verticalalignment' in kwargs
+        self._adjust_alignment(annotation)
+
         return annotation
+
+    def _adjust_alignment(self, annotation):
+        """
+        Make text alignment match the specified offsets (this allows easier
+        changing of relative position of text box...)
+        """
+        try:
+            # annotation.xytext is depreciated in recent versions
+            dx, dy = annotation.xyann
+        except AttributeError:
+            # but xyann doesn't exist in older versions...
+            dx, dy = annotation.xytext
+
+        horizontal = {1:'left', 0:'center', -1:'right'}[np.sign(dx)]
+        vertical = {1:'bottom', 0:'center', -1:'top'}[np.sign(dy)]
+        if not self._user_set_ha:
+            annotation.set_horizontalalignment(horizontal)
+        if not self._user_set_va:
+            annotation.set_verticalalignment(vertical)
 
     def hide(self):
         """Hides all annotation artists associated with the DataCursor. Returns
@@ -502,10 +550,52 @@ class DataCursor(object):
         annotation.set_text(self.formatter(**info))
         annotation.xy = info['x'], info['y']
 
+        # Unfortnately, 3D artists are a bit more complex...
+        # Also, 3D artists don't share inheritance. Use naming instead.
+        if '3D' in type(event.artist).__name__:
+            annotation.xy = event.mouseevent.xdata, event.mouseevent.ydata
+
         # In case it's been hidden earlier...
         annotation.set_visible(True)
 
+        if self.keep_inside:
+            self._keep_annotation_inside(annotation)
+
         event.canvas.draw()
+
+    def _keep_annotation_inside(self, anno):
+        fig = anno.figure
+
+        # Need to draw the annotation to get the correct extent
+        try:
+            anno.draw(fig.canvas.renderer)
+        except AttributeError:
+            # Can't draw properly on OSX and NbAgg backends. Disable keep_inside
+            return
+        bbox = anno.get_window_extent()
+
+        inside = [fig.bbox.contains(*corner) for corner in bbox.corners()]
+        if all(inside):
+            return
+
+        outside = [not x for x in inside]
+        xsign, ysign = 1, 1
+
+        if outside[0] or outside[1]:
+            xsign = -1
+        if outside[2] or outside[3]:
+            ysign = -1
+
+        try:
+            # annotation.xytext is depreciated
+            dx, dy = anno.xyann
+            anno.xyann = xsign * dx, ysign * dy
+        except AttributeError:
+            # but annotation.xyann doesn't exist in older mpl versions.
+            dx, dy = anno.xytext
+            anno.xytext = xsign * dx, ysign * dy
+
+        self._adjust_alignment(anno)
 
     def _on_keypress(self, event):
         if event.key == self.keybindings['hide']:

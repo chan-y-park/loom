@@ -28,7 +28,6 @@ import numpy as np
 
 import json
 
-import mpldatacursor
 import pdb
 
 
@@ -41,10 +40,6 @@ def create_figure():
     t = np.arange(0.0, 3.0, 0.01)
     s = np.sin(2 * np.pi * t)
     p = ax.plot(t, s)
-
-    mpldatacursor.datacursor(
-        axes=fig.axes, 
-    )
 
     return fig
 
