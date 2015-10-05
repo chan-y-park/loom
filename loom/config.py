@@ -50,6 +50,8 @@ class LoomConfig:
             value = None
         return value
 
+    def keys(self):
+        return self.data.keys()
 
     def iteritems(self):
         return self.data.iteritems()

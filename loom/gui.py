@@ -72,6 +72,7 @@ class GUILoom:
         )
 
         ### Entry & Label layout
+        # TODO: display config file name.
         grid_row += 1
         grid_col = 0
         tk.Label(self.root,
@@ -141,8 +142,9 @@ class GUILoom:
         ).grid(row=grid_row, column=grid_col)
 
         ### Set default parameters.
-        for option in self.entry_var:
-            self.entry_var[option].set(self.config[option])
+        #for option in self.entry_var:
+        #    self.entry_var[option].set(self.config[option])
+        self.update_entries_from_config()
 
         ### 'Generate' button
         grid_row += 1
@@ -198,12 +200,13 @@ class GUILoom:
         else:
             self.config = config
 
-        for option, value in self.config.iteritems():
-            try:
-                self.entry_var[option].set(value)
-            except KeyError:
-                logging.warning('No entry for "{}".'.format(option))
-                pass
+#        for option, value in self.config.iteritems():
+#            try:
+#                self.entry_var[option].set(value)
+#            except KeyError:
+#                logging.warning('No entry for "{}".'.format(option))
+#                pass
+        self.update_entries_from_config()
 
 
     def menu_save_config_action(self):
@@ -216,6 +219,7 @@ class GUILoom:
         if config is None:
             return None
         self.config = config 
+        self.update_entries_from_config()
         self.spectral_networks = spectral_network_data.spectral_networks
         self.sw_data = spectral_network_data.sw_data
         logging.info('Finished loading spectral network data.')
@@ -241,6 +245,21 @@ class GUILoom:
             )
         return None
 
+    def update_entries_from_config(self):
+        # Update the text values of the entries 
+        # when a new configuration is loaded to self.config.
+        config_options = self.config.keys()
+        for option in self.entry_var:
+            value = self.config[option]
+            if value is not None:
+                config_options.remove(option)
+            self.entry_var[option].set(self.config[option])
+        if len(config_options) > 0:
+            logging.warning(
+                'The following options are in the configuration '
+                'file but has no corresponding entry in the GUI: {}.'
+                .format(config_options)
+            )
 
     def update_config_from_entries(self):
         ### Read config options from Entries.
