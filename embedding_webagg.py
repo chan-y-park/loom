@@ -20,6 +20,8 @@ import tornado.ioloop
 import tornado.websocket
 
 
+import matplotlib
+matplotlib.use('WebAgg')
 from matplotlib.backends.backend_webagg_core import (
     FigureManagerWebAgg, new_figure_manager_given_figure)
 from matplotlib.figure import Figure
@@ -28,6 +30,7 @@ import numpy as np
 
 import json
 
+import loom
 import pdb
 
 
@@ -35,13 +38,16 @@ def create_figure():
     """
     Creates a simple example figure.
     """
-    fig = Figure()
-    ax = fig.add_subplot(111)
-    t = np.arange(0.0, 3.0, 0.01)
-    s = np.sin(2 * np.pi * t)
-    p = ax.plot(t, s)
+    #fig = Figure()
+    #ax = fig.add_subplot(111)
+    #t = np.arange(0.0, 3.0, 0.01)
+    #s = np.sin(2 * np.pi * t)
+    #p = ax.plot(t, s)
 
-    return fig
+    #return fig
+    sn_config, sn_data = loom.load('data/issue_2')
+    sn_plot = loom.plot(sn_data)
+    return sn_plot.figure
 
 
 # The following is the content of the web page.  You would normally

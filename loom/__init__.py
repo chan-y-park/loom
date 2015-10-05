@@ -2,6 +2,8 @@ import os, platform
 import matplotlib
 if matplotlib.rcParams['backend'] == 'nbAgg':
     print('Use IPython notebook backend for matplotlib.')
+elif matplotlib.rcParams['backend'] == 'WebAgg':
+    print('Use WebAgg backend for matplotlib.')
 elif platform.system() == 'Linux':
     try:
         os.environ['DISPLAY']
