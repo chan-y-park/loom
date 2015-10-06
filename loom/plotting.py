@@ -367,7 +367,6 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
                 side=tk.LEFT,
             )
 
-
 def make_root_dictionary(g_data):
     g_roots = list(g_data.roots)
     root_dictionary = (

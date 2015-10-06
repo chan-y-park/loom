@@ -147,6 +147,7 @@ def load_spectral_network(data_dir=None):
             spectral_network_list.append(spectral_network)
 
     data = SpectralNetworkData(sw, spectral_network_list)
+    logging.info('Finished loading data from {}.'.format(data_dir))
 
     return (config, data)
 
@@ -216,7 +217,7 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
             for a_file in file_list:
                 fp.write(a_file, os.path.relpath(a_file, data_dir))
 
-    logging.info('Finished saving data to {}.'.format(data_file_path))
+    logging.info('Finished saving data to {}.'.format(data_dir))
 
 def make_spectral_network_plot(spectral_network_data, master=None,
                                show_plot=True, plot_range=None, **kwargs):
@@ -244,7 +245,7 @@ def make_spectral_network_plot(spectral_network_data, master=None,
             sw_data.branch_points,
             punctures=sw_data.punctures,
             irregular_singularities=sw_data.irregular_singularities,
-            g_data=spectral_network_data.sw_data.g_data,
+            g_data=sw_data.g_data,
             **kwargs
         )
 
