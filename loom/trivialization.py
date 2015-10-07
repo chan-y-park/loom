@@ -287,8 +287,15 @@ class SWDataWithTrivialization(SWDataBase):
         ### Construct the list of branch points
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
-            bp.label = 'Branch point #{}'.format(i)
             self.analyze_branch_point(bp, n_critical_loci)
+            
+            # Prepare a label for the branch point.
+            label = 'Branch point #{}'.format(i)
+            #label = 'Branch point #{}\n'.format(i)
+            #for root in bp.positive_roots:
+            #    label += str(root.tolist()) + ', '
+            #bp.label = label[:-2]
+
             if bp.order > 1:
                 # only add if there are any positive roots associated
                 # otherwise may be an accidental BP
