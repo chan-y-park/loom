@@ -19,11 +19,16 @@ x, z = sympy.symbols('x z')
 # Number of x's at a fixed z
 NUM_ODE_XS_OVER_Z = 2
 
+# within a disc of such radius from any branch point,
+# the intersection of a S-wall oroginating from there
+# with the corresponding cut, will be ignored.
+BRANCH_POINT_RADIUS = 0.01 
+
 # Desired precision on the phase of seeds
 # Warning: setting it too small will bring the seeding point
 # too close to a branch point.
-SEED_PHASE_PRECISION = 0.01
-SEED_PRECISION_MAX_DEPTH = 1
+SEED_PHASE_PRECISION = 0.001
+SEED_PRECISION_MAX_DEPTH = 5
 
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
@@ -350,6 +355,7 @@ class SWall(object):
         it changes root-type 3 times. 
         """
         g_data = sw_data.g_data
+        accuracy = sw_data.accuracy
         branch_points = sw_data.branch_points
         irregular_singularities = sw_data.irregular_singularities
 
@@ -406,12 +412,32 @@ class SWall(object):
             for t in intersection_ts:
                 branch_locus = branching_loci[br_loc_idx]
                 if branch_locus.__class__.__name__ == 'BranchPoint':
+                    # # Drop intersections of a primary S-wall with the 
+                    # # branch cut emanating from its parent branch-point
+                    # # if such intersections happens at t=0 or t=1.
+                    # if (branch_locus.label == self.parents[0] 
+                    #                             and (t == 0 or t == 1)):
+                    #     continue
+
                     # Drop intersections of a primary S-wall with the 
                     # branch cut emanating from its parent branch-point
-                    # if such intersections happens at t=0 or t=1.
-                    if (branch_locus.label == self.parents[0] 
-                                                and (t == 0 or t == 1)):
+                    # if such intersections happens within a short 
+                    # distance from the starting point
+                    if (branch_locus.label == self.parents[0] and 
+                        # t<6):
+                        abs(branch_locus.z - self.z[t]) < BRANCH_POINT_RADIUS):
+                        # abs(branch_locus.z - self.z[t]) < accuracy):
                         continue
+
+                # Check that the intersection actually happens
+                # and is not an artifact of the interpolation used above
+                # which could become an extrapolation
+
+                elif not (self.z[t-1].real < branch_locus.z.real < self.z[t+1].real
+                    or self.z[t+1].real < branch_locus.z.real < self.z[t-1].real):
+                    logging.info('Dropping a fake cut intersection.')
+                    continue
+
                 # Add 
                 # [the branch-point identifier(index), t,
                 #  the direction (either 'cw' or 'ccw')]
@@ -420,12 +446,6 @@ class SWall(object):
                     [branch_locus, t, clock(left_right(self.z, t))]
                 )
             _cuts_intersections += intersections
-
-        # TODO: Might be worth implementing an algorithm for handling 
-        # overlapping branch cuts: e.g. the one with a lower starting point 
-        # will be taken to be on the left, or a similar criterion.
-        # Still, there will be other sorts of problems, it is necessary
-        # to just rotate the z-plane and avoid such situations.
 
         # Now sort intersections according to where they happen in proper 
         # time; recall that the elements of cuts_intersections are organized 
@@ -741,7 +761,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     # see previous versions of this function, left above in comment.
 
     
-    delta = config['accuracy']
+    accuracy = config['accuracy']
     initial_seed_size = config['size_of_small_step']
     seeds = []
     max_r_i = max([rp.i for rp in branch_point.ffr_ramification_points])
@@ -781,7 +801,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(norm_dz_phases,
-                                    lambda p1, p2: abs(p1 - p2) < (delta))
+                                    lambda p1, p2: abs(p1 - p2) < (accuracy))
         
         elif rp_type == 'type_II':
             if r_i % 2 == 1:
@@ -819,7 +839,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(norm_dz_phases,
-                                    lambda p1, p2: abs(p1 - p2) < delta)
+                                    lambda p1, p2: abs(p1 - p2) < accuracy)
 
         elif rp_type == 'type_III':
             if r_i % 2 == 1:
@@ -859,7 +879,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(norm_dz_phases,
-                                        lambda p1, p2: abs(p1 - p2) < delta)
+                                        lambda p1, p2: abs(p1 - p2) < accuracy)
         
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0
@@ -878,7 +898,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                 dt = initial_seed_size * 0.1**(precision_level)
                 if dt < min_dt:
                     min_dt = dt
-                # z_1 = z_0 + delta * zeta
+                # z_1 = z_0 + accuracy * zeta
                 z_1 = z_0 + dt * zeta
 
                 if rp_type == 'type_I':
@@ -910,7 +930,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                     # order of magnitude of expected separation 
                     # of sheets at z_1
                     dx = abs(sw_diff_coeff) * (dt**(1.0/float(r_i)))
-                    x_accuracy = min([delta, dx])
+                    x_accuracy = min([accuracy, dx])
 
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
