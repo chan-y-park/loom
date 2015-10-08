@@ -410,7 +410,8 @@ def print_spectral_network_data(
         print(
             bp.label + 
             '\tposition : {}\n'.format(bp.z) +
-            '\t\troot type : {}\n'.format(rt_labels)
+            '\t\troot type : {}\n'.format(rt_labels) +
+            '\t\monodromy matrix : \n{}\n'.format(bp.monodromy)
         )
 
     print('\t--- The Irregular Singularities ---\n')
@@ -418,7 +419,7 @@ def print_spectral_network_data(
         print(
             irs.label + 
             '\tposition : {}\n'.format(irs.z) + 
-            '\tmonodomry matrix : {}\n'.format(irs.monodromy)
+            '\tmonodomry matrix : \n{}\n'.format(irs.monodromy)
         )
 
 

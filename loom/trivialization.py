@@ -19,15 +19,18 @@ x, z = sympy.symbols('x z')
 
 # TODO: set both of the following automatically: e.g. using the
 # minimal_distance attribute of the SW fibration
+
 ### number of steps used to track the sheets along a leg 
 ### the path used to trivialize the cover at any given point
 N_PATH_TO_PT = 100
+
 ### number of steps for each SEGMENT of the path around a 
 ### branching point (either branch-point, or irregular singularity)
 N_PATH_AROUND_PT = 60
 #N_PATH_AROUND_PT = 100
+
 ### Number of times the tracking of sheets is allowed to automatically zoom in.
-MAX_ZOOM_LEVEL = 1
+MAX_ZOOM_LEVEL = 3
 ZOOM_FACTOR = 10
 
 ### Tolerance for recognizing colliding sheets at a branch-point
@@ -363,8 +366,6 @@ class SWDataWithTrivialization(SWDataBase):
             ffr_sheets_along_path = [[x] for x in ffr_xs_0]
         
         for i, z in enumerate(z_path):
-            if any(isinstance(i, list) for i in ffr_xs_0):
-                print 'ffr_xs_0 = {}'.format(ffr_xs_0)
             near_degenerate_branch_locus = False
             if is_path_to_bp is True and abs(z - z_path[-1]) < self.accuracy:
                 near_degenerate_branch_locus = True
@@ -373,6 +374,7 @@ class SWDataWithTrivialization(SWDataBase):
                     near_degenerate_branch_locus=near_degenerate_branch_locus
                 )
 
+            # if it's not a path to branch point, check tracking
             if is_path_to_bp == False:
                 sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1, 
                                             accuracy=accuracy,
@@ -380,12 +382,16 @@ class SWDataWithTrivialization(SWDataBase):
                                             z_0=z_path[i-1], z_1=z_path[i],
                                             g_data=g_data,
                                         )
+            # if it's a path to branch point, but we are far from it,
+            # still check tracking
             elif near_degenerate_branch_locus is False:
                 sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1,
                                             accuracy=accuracy,
                                             check_tracking=True,
                                             g_data=g_data,
                                         )
+            # if it's a path to a branch point and we are getting close to it, 
+            # don't check tracking anymore
             else:
                 sorted_ffr_xs = get_sorted_xs(ffr_xs_0, ffr_xs_1,
                                             accuracy=accuracy,
@@ -393,6 +399,7 @@ class SWDataWithTrivialization(SWDataBase):
                                             g_data=g_data,
                                         )
             if sorted_ffr_xs == 'sorting failed':
+                logging.info('Encountered a problem with sheet tracking')
                 if zoom_level > 0:
                     delta_z = (z_path[i] - z_path[i-1])/ZOOM_FACTOR
                     zoomed_path = [z_path[i-1] + j*delta_z 
@@ -406,6 +413,7 @@ class SWDataWithTrivialization(SWDataBase):
                                     accuracy=(accuracy/ZOOM_FACTOR),
                                     ffr_sheets_along_path=ffr_sheets_along_path,
                                 )
+                    # Just keep the last tracked value for each sheet 
                     sorted_ffr_xs = [
                             zoom_s[-1] for zoom_s in sheets_along_zoomed_path
                         ]
@@ -425,24 +433,37 @@ class SWDataWithTrivialization(SWDataBase):
                             'or a puncture. Try increasing N_PATH_TO_PT '
                             'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
                         )
-            else:
-                # this is just the ordinary step, where we add the 
-                # latest value of ordered sheets
-                for j, s_j in enumerate(ffr_sheets_along_path):
-                    s_j.append(sorted_ffr_xs[j])
-            
 
+            # this is just the ordinary step, where we add the 
+            # latest value of ordered sheets
+            for j, s_j in enumerate(ffr_sheets_along_path):
+                s_j.append(sorted_ffr_xs[j])
+
+            ffr_xs_0 = sorted_ffr_xs
+            
         ### the result is of the form [sheet_path_1, sheet_path_2, ...]
         ### where sheet_path_i = [x_0, x_1, ...] are the fiber coordinates
         ### of the sheet along the path
         if ffr is True:
             return ffr_sheets_along_path
         elif ffr is False:
-            sheets_along_path = []
-            for s in ffr_sheets_along_path:
-                sheets_along_path.append(
-                    [self.get_xs_of_weights_from_ffr_xs(ffr_x) for ffr_x in s]
-                )
+            rep_dim = len(g_data.weights)
+            # Warning: the following is offset by 1 from len(z_path)!
+            n_steps = len(ffr_sheets_along_path[0])
+            sheets_along_path = [[0 for j in range(n_steps)] 
+                                                        for i in range(rep_dim)]
+
+            for i in range(n_steps):
+                # Note: here it is crucial that the sheets are 
+                # ordered according to the weights of the rep
+                # to quich they correspond
+                ffr_xs_at_step_i = [s[i] for s in ffr_sheets_along_path]
+                xs_at_step_i = self.get_xs_of_weights_from_ffr_xs(
+                                                            ffr_xs_at_step_i
+                                                        )
+                for j, sheet_track_j in enumerate(sheets_along_path):
+                    sheet_track_j[i] = xs_at_step_i[j]
+
             return sheets_along_path
 
 
@@ -473,16 +494,19 @@ class SWDataWithTrivialization(SWDataBase):
         )
         initial_xs = self.reference_xs
         initial_sheets = [[i, x] for i, x in enumerate(initial_xs)]
-        final_xs = [sheet_i[-1] 
-                    for sheet_i in self.get_sheets_along_path(z_path)]
+        sheet_tracks = self.get_sheets_along_path(z_path)
+        final_xs = [s_t[-1] for s_t in sheet_tracks]
         final_sheets = [[i, x] for i, x in enumerate(final_xs)]
 
-        ### Now we compare the initial and final sheets 
-        ### to extract the monodromy permutation
-        ### recall that each entry of initial_sheets and final_sheets
-        ### is of the form [i, x] with i the integer label
-        ### and x the actual position of the sheet in the fiber 
-        ### above the basepoint.
+        # print 'the initial sheets: {}'.format(initial_sheets)
+        # print 'the final sheets: {}'.format(final_sheets)
+
+        ## Now we compare the initial and final sheets 
+        ## to extract the monodromy permutation
+        ## recall that each entry of initial_sheets and final_sheets
+        ## is of the form [i, x] with i the integer label
+        ## and x the actual position of the sheet in the fiber 
+        ## above the basepoint.
         sorted_sheets = []
         for s_1 in initial_sheets:
             closest_candidate = final_sheets[0]
@@ -502,6 +526,7 @@ class SWDataWithTrivialization(SWDataBase):
             if s[1] not in seen:
                 uniq.append(s[1])
                 seen.add(s[1])
+
         if len(uniq) < len(sorted_sheets):
             # When studying D-type covers there may be situations
             # where two sheets collide at x=0 everywhere
@@ -591,9 +616,16 @@ class SWDataWithTrivialization(SWDataBase):
             "Analyzing a branch point at z = {}."
             .format(bp.z)
         )
+        logging.info(
+            "Studying groups of colliding sheets"
+        )
         path_to_bp = get_path_to(bp.z, self)
+        # it's important that we set ffr=False, as the sheets here
+        # will be used along with the algorithm for matching them to
+        # roots, and there the sheets will be assumed to be in 1-1
+        # correspondence (and ordered) with the weights of the representation
         sheets_along_path = self.get_sheets_along_path(
-            path_to_bp, is_path_to_bp=True
+            path_to_bp, is_path_to_bp=True, ffr=False,
         )
         xs_at_bp = [s_i[-1] for s_i in sheets_along_path]
         enum_sh = [[i, x_i] for i, x_i in enumerate(xs_at_bp)]
@@ -614,13 +646,22 @@ class SWDataWithTrivialization(SWDataBase):
         bp.groups = [c for c in clusters if len(c) > 1]
         bp.singles = [c[0] for c in clusters if len(c) == 1]
 
+        # print 'enum_sh {}'.format(enum_sh)
+        # print 'groups {}'.format(bp.groups)
+        # print 'singles {}'.format(bp.singles)
+
         bp.positive_roots = get_positive_roots_of_branch_point(
             bp, self.g_data,  
         )
         bp.order = len(bp.positive_roots) + 1
-
+        
+        logging.info(
+            "Computing the monodromy"
+        )
         path_around_bp = get_path_around(bp.z, self.base_point, self)
         bp.monodromy = self.get_sheet_monodromy(path_around_bp)
+        # TODO: it would be good to make a check here, e.g. on the 
+        # relation between vanishing roots and the monodromy.
 
         bp.ffr_ramification_points = [rp 
                     for rp in self.ffr_ramification_points
@@ -824,6 +865,7 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
     'ref_xs'
     """
     sorted_xs = []
+    # print 'reference xs = {}'.format(ref_xs)
     for s_1 in ref_xs:
         # closest_candidate = new_xs[0]
         # min_d = abs(s_1 - closest_candidate)
@@ -832,6 +874,7 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
         #         min_d = abs(s_2 - s_1)
         #         closest_candidate = s_2
         closest_candidate = nsmallest(1, new_xs, key=lambda x: abs(x-s_1))[0]
+        # print 'the closest to {} is {}'.format(s_1, closest_candidate)
         sorted_xs.append(closest_candidate)
         # rel_min_d = abs((s_1 - closest_candidate) / (s_1 + closest_candidate))
         # for s_2 in new_xs:
@@ -843,6 +886,12 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
     if check_tracking == True:
         ### Now we check that sheet tracking is not making a mistake.
         unique_sorted_xs = n_remove_duplicate(sorted_xs, accuracy)
+
+        max_dx = max([abs(x_i - x_j) for x_i in sorted_xs for x_j in sorted_xs])
+        max_dx_dt = max(
+                    [abs(sorted_xs[i] - ref_xs[i]) for i in range(len(ref_xs))]
+                )
+
         if len(unique_sorted_xs) < len(sorted_xs):
             # When studying D-type covers there may be situations
             # where two sheets collide at x=0 everywhere
@@ -860,6 +909,10 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 logging.debug("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
                 logging.debug('Having trouble tracking sheets, will zoom in.')
                 return 'sorting failed'
+        # don't trust tracking if dx/dt for a single step is larger than
+        # the maximum difference between any two xs
+        elif max_dx_dt > max_dx:
+            return 'sorting failed'
         else:
             return sorted_xs
     else:
@@ -970,7 +1023,7 @@ def get_positive_roots_of_branch_point(bp, g_data):
     """
     vanishing_positive_roots = []
     positive_roots = g_data.positive_roots
-    ### Note that bp.groups carries indicies, which can be used
+    ### Note that bp.groups carries indices, which can be used
     ### to map each x at the reference point to the weights, i.e.
     ### reference_xs[i] <-> weights[i].
     weights = g_data.weights

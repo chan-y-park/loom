@@ -22,8 +22,8 @@ NUM_ODE_XS_OVER_Z = 2
 # Desired precision on the phase of seeds
 # Warning: setting it too small will bring the seeding point
 # too close to a branch point.
-SEED_PHASE_PRECISION = 0.001
-SEED_PRECISION_MAX_DEPTH = 10
+SEED_PHASE_PRECISION = 0.01
+SEED_PRECISION_MAX_DEPTH = 1
 
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,

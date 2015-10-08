@@ -675,7 +675,8 @@ class SWDataBase(object):
 
     def get_xs_of_weights_from_ffr_xs(self, ffr_xs):
         g_data = self.g_data
-        xs = numpy.zeros(len(g_data.weights), dtype=complex)
+        # xs = numpy.zeros(len(g_data.weights), dtype=complex)
+        xs = [0.0j for i in range(len(g_data.weights))]
 
         if g_data.type == 'A' or g_data.type == 'D':
             for i, cs in enumerate(g_data.weight_coefficients):
