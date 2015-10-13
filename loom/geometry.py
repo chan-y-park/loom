@@ -133,27 +133,35 @@ class GData:
         return pairs
 
 
-    def weyl_monodromy(self, root, br_loc, direction):
+    def weyl_monodromy(self, root, br_loc, direction, reverse=False):
         """
         Returns a new root of the segment of an S-wall
         when it crossed a branch cut from a brancing locus
         which could be a branch point or an irregular singularity.
         """
-        if direction == 'ccw':
-            monodromy_matrix = br_loc.monodromy
-        elif direction == 'cw':
-            monodromy_matrix = (
-                    numpy.linalg.inv(br_loc.monodromy).astype(int))
+        if reverse is False:
+            if direction == 'ccw':
+                monodromy_matrix = br_loc.monodromy
+            elif direction == 'cw':
+                monodromy_matrix = (
+                        numpy.linalg.inv(br_loc.monodromy).astype(int))
+        elif reverse is True:
+            if direction == 'cw':
+                monodromy_matrix = br_loc.monodromy
+            elif direction == 'ccw':
+                monodromy_matrix = (
+                        numpy.linalg.inv(br_loc.monodromy).astype(int))
+                
         pair_0 = self.ordered_weight_pairs(root)[0]
         v_i_ind = pair_0[0]
         v_j_ind = pair_0[1]
         ordered_weights = self.weights
         new_v_i = sum(
-                        [monodromy_matrix[k][v_i_ind] * v 
+                        [monodromy_matrix[v_i_ind][k] * v 
                         for k, v in enumerate(ordered_weights)]
                     )
         new_v_j = sum(
-                        [monodromy_matrix[k][v_j_ind] * v 
+                        [monodromy_matrix[v_j_ind][k] * v 
                         for k, v in enumerate(ordered_weights)]
                     ) 
 

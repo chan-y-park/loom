@@ -191,6 +191,7 @@ class SWall(object):
 
         # cuts_intersections = [[b_pt_idx, i, '(c)cw'], ...]
         self.cuts_intersections = []
+        self.root_basepoint = []
         self.local_roots = []
         # local_weight_pairs is a list of pair of intgers.
         self.local_weight_pairs = []        
@@ -347,30 +348,158 @@ class SWall(object):
         # print 'this is the trajectory\n{}'.format(self.z[0:10])
 
 
+    # def determine_root_types(self, sw_data):
+
+    #     """
+    #     Determine at which points the wall crosses a cut, 
+    #     for instance [55, 107, 231] would mean that 
+    #     it changes root-type 3 times. 
+    #     """
+    #     g_data = sw_data.g_data
+    #     accuracy = sw_data.accuracy
+    #     branch_points = sw_data.branch_points
+    #     irregular_singularities = sw_data.irregular_singularities
+
+    #     # Determine the initial root-type
+    #     z_0 = self.z[0]
+    #     xs_0 = self.x[0]
+    #     initial_root = get_s_wall_root(z_0, xs_0, sw_data,)
+    #     # A list of ordered pairs [...[i, j]...]
+    #     # such that weights[j] - weights[i] = root
+    #     initial_weight_pairs = (
+    #         sw_data.g_data.ordered_weight_pairs(initial_root,)
+    #     )
+        
+    #     self.local_roots = [initial_root]
+    #     self.local_weight_pairs = [initial_weight_pairs]
+
+    #     # If the length of the S-wall's coordinates
+    #     # is 3 or less, do not check cuts.
+    #     # Otherwise, the interpolation methood would
+    #     # raise an error.
+    #     if len(self.z) <= 3:
+    #         return None
+
+    #     # branching will occur at branch points or irregular singularities
+    #     branching_loci = branch_points + irregular_singularities
+    #     br_loc_zs_r = [bl.z.real for bl in branching_loci]
+        
+    #     # parametrizing the z-coordinate of the k-wall's coordinates
+    #     # as a function of proper time
+    #     traj_t = numpy.array(range(len(self.z)))
+    #     traj_z_r = numpy.array([z.real for z in self.z])
+        
+    #     # Scan over branching loci cuts, see if path ever crosses one 
+    #     # based on x-coordinates only
+    #     _cuts_intersections = []
+    #     for br_loc_idx, x_0 in list(enumerate(br_loc_zs_r)):
+    #         g = interpolate.splrep(traj_t, traj_z_r - x_0, s=0)
+    #         # now produce a list of integers corresponding to points in the 
+    #         # S-wall's coordinate list that seem to cross branch-cuts
+    #         # based on the z-coordinate's real part.
+    #         # Now get the list of intersection points as integer values 
+    #         # of the proper time, approximated by the floor function
+
+    #         __intersection_ts = map(int, map(floor, interpolate.sproot(g)))
+    #         # Remove duplicates.
+    #         _intersection_ts = delete_duplicates(__intersection_ts)
+    #         # Enforce imaginary-part of z-coordinate intersection criterion:
+    #         # branch cuts extend vertically.
+    #         y_0 = branching_loci[br_loc_idx].z.imag
+    #         intersection_ts = [t for t in _intersection_ts
+    #                            if self.z[t].imag > y_0]
+            
+    #         intersections = []
+    #         for t in intersection_ts:
+    #             branch_locus = branching_loci[br_loc_idx]
+    #             if branch_locus.__class__.__name__ == 'BranchPoint':
+    #                 # # Drop intersections of a primary S-wall with the 
+    #                 # # branch cut emanating from its parent branch-point
+    #                 # # if such intersections happens at t=0 or t=1.
+    #                 # if (branch_locus.label == self.parents[0] 
+    #                 #                             and (t == 0 or t == 1)):
+    #                 #     continue
+
+    #                 # Drop intersections of a primary S-wall with the 
+    #                 # branch cut emanating from its parent branch-point
+    #                 # if such intersections happens within a short 
+    #                 # distance from the starting point
+    #                 if (branch_locus.label == self.parents[0] and 
+    #                     # t<6):
+    #                     abs(branch_locus.z - self.z[t]) < BRANCH_POINT_RADIUS):
+    #                     # abs(branch_locus.z - self.z[t]) < accuracy):
+    #                     continue
+
+    #             # Check that the intersection actually happens
+    #             # and is not an artifact of the interpolation used above
+    #             # which could become an extrapolation
+
+    #             elif not (self.z[t-1].real < branch_locus.z.real < self.z[t+1].real
+    #                 or self.z[t+1].real < branch_locus.z.real < self.z[t-1].real):
+    #                 logging.info('Dropping a fake cut intersection.')
+    #                 continue
+
+    #             # Add 
+    #             # [the branch-point identifier(index), t,
+    #             #  the direction (either 'cw' or 'ccw')]
+    #             # to each intersection.
+    #             intersections.append(
+    #                 [branch_locus, t, clock(left_right(self.z, t))]
+    #             )
+    #         _cuts_intersections += intersections
+
+    #     # Now sort intersections according to where they happen in proper 
+    #     # time; recall that the elements of cuts_intersections are organized 
+    #     # as      [..., [branch_point_idx, t, 'ccw'] ,...]
+    #     # where 't' is the integer of proper time at the intersection.
+    #     self.cuts_intersections = sorted(
+    #         _cuts_intersections, 
+    #         cmp = lambda k1, k2: cmp(k1[1], k2[1])
+    #     )
+    #     logging.debug(
+    #         'S-wall {} intersects the following'
+    #         'cuts at the points\n{}.'.format(self.label, intersections)
+    #     )
+
+    #     if len(self.cuts_intersections) > 0:
+    #         # Add the actual intersection point to the S-wall
+    #         # then update the attribute SWall.cuts_intersections accordingly
+    #         self.enhance_at_cuts()
+            
+    #         for k in range(len(self.cuts_intersections)):
+    #             branch_locus, t, direction = self.cuts_intersections[k]
+
+    #             current_root = self.local_roots[-1]
+    #             new_root = g_data.weyl_monodromy(
+    #                 current_root, branch_locus, direction
+    #             )
+    #             new_weight_pairs = g_data.ordered_weight_pairs(new_root)
+
+    #             self.local_roots.append(new_root)
+    #             self.local_weight_pairs.append(new_weight_pairs)
+
+
+
     def determine_root_types(self, sw_data):
 
         """
         Determine at which points the wall crosses a cut, 
         for instance [55, 107, 231] would mean that 
         it changes root-type 3 times. 
+        Then, pick a suitable point along the swall, away 
+        from branch points or singularities, and determine 
+        the root there. Finally, extend the determination 
+        of the root type to other segments by following
+        the wall across the various splittings induced by cuts,
+        both forward and backwards, using the Weyl monodromy.
         """
         g_data = sw_data.g_data
         accuracy = sw_data.accuracy
         branch_points = sw_data.branch_points
         irregular_singularities = sw_data.irregular_singularities
-
-        # Determine the initial root-type
-        z_0 = self.z[0]
-        xs_0 = self.x[0]
-        initial_root = get_s_wall_root(z_0, xs_0, sw_data,)
-        # A list of ordered pairs [...[i, j]...]
-        # such that weights[j] - weights[i] = root
-        initial_weight_pairs = (
-            sw_data.g_data.ordered_weight_pairs(initial_root,)
+        max_radius = 2 * max(
+            [abs(c_l.z) for c_l in branch_points + irregular_singularities]
         )
-        
-        self.local_roots = [initial_root]
-        self.local_weight_pairs = [initial_weight_pairs]
 
         # If the length of the S-wall's coordinates
         # is 3 or less, do not check cuts.
@@ -460,13 +589,50 @@ class SWall(object):
             'cuts at the points\n{}.'.format(self.label, intersections)
         )
 
+        # Add the actual intersection point to the S-wall
+        # then update the attribute SWall.cuts_intersections accordingly    
+        self.enhance_at_cuts()
+
+        # Choose a suitable point along the wall
+        # we pick the one whose z coordinate's real part is 
+        # farthest from critical loci of the fibration
+        
+        t_0 = sorted(
+            (
+                [[t_i, min(z_r_distance_from_ramification_loci(z_i, sw_data))]
+                for t_i, z_i in enumerate(self.z) if abs(z_i) < max_radius]
+            ), cmp = lambda a, b: cmp(a[1], b[1])
+        )[-1][0]
+
+        z_0 = self.z[t_0]
+        xs_0 = self.x[t_0]
+        self.root_basepoint = [t_0, z_0, xs_0]
+
+        # Determine the initial root-type
+        initial_root = get_s_wall_root(z_0, xs_0, sw_data,)
+        # A list of ordered pairs [...[i, j]...]
+        # such that weights[j] - weights[i] = root
+        initial_weight_pairs = (
+            sw_data.g_data.ordered_weight_pairs(initial_root,)
+        )
+        
+        self.local_roots = [initial_root]
+        self.local_weight_pairs = [initial_weight_pairs]
+        
+
         if len(self.cuts_intersections) > 0:
-            # Add the actual intersection point to the S-wall
-            # then update the attribute SWall.cuts_intersections accordingly
-            self.enhance_at_cuts()
-            
-            for k in range(len(self.cuts_intersections)):
-                branch_locus, t, direction = self.cuts_intersections[k]
+            # Note that we reverse the time-ordering!
+            intersections_before_t_0 = [
+                i_p for i_p in self.cuts_intersections if i_p[1] < t_0
+            ][::-1]
+
+            intersections_after_t_0 = [
+                i_p for i_p in self.cuts_intersections if i_p[1] > t_0
+            ]
+
+            # Fill in the root types that occur after the basepoint
+            for k in range(len(intersections_after_t_0)):
+                branch_locus, t, direction = intersections_after_t_0[k]
 
                 current_root = self.local_roots[-1]
                 new_root = g_data.weyl_monodromy(
@@ -477,6 +643,20 @@ class SWall(object):
                 self.local_roots.append(new_root)
                 self.local_weight_pairs.append(new_weight_pairs)
 
+            # Fill in the root types that occur before the basepoint
+            # recall that their time-ordering has already been reversed
+            # so the first one in the list is the closest to t_0, and so on
+            for k in range(len(intersections_before_t_0)):
+                branch_locus, t, direction = intersections_before_t_0[k]
+
+                current_root = self.local_roots[0]
+                new_root = g_data.weyl_monodromy(
+                    current_root, branch_locus, direction, reverse=True
+                )
+                new_weight_pairs = g_data.ordered_weight_pairs(new_root)
+
+                self.local_roots.insert(0, new_root)
+                self.local_weight_pairs.insert(0, new_weight_pairs)
 
 
     def get_root_at_t(self, t):
@@ -529,8 +709,13 @@ class SWall(object):
 
 
     def enhance_at_cuts(self):
-        # Add the intersection points of Swalls and branch cuts
-        # also update the intersection data accordingly
+        """
+        Add the intersection points of Swalls and branch cuts
+        also update the intersection data accordingly
+        """
+        if len(self.cuts_intersections) == 0:
+            return None
+
         wall_pieces_z = []
         wall_pieces_x = []
         wall_pieces_M = []
@@ -1021,3 +1206,7 @@ def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data=None, label=None):
     else:
         return None
 
+
+def z_r_distance_from_ramification_loci(z, sw_data):
+    critical_loci = sw_data.branch_points + sw_data.irregular_singularities
+    return [abs(z.real - c_l.z.real) for c_l in critical_loci]
