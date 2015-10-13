@@ -8,13 +8,109 @@ import tkFileDialog
 import matplotlib
 import pdb
 
+from multiprocessing import Queue
+
 from config import LoomConfig
 from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
+#from logutils.queue import QueueHandler#, QueueListener
 
-LOGGING_FILE_NAME = 'logs/log.loom.txt'
+#
+# QueueHandler
+# Copyright (C) 2010-2013 Vinay Sajip. See LICENSE.txt for details.
+#
+"""
+This module contains classes which help you work with queues. A typical
+application is when you want to log from performance-critical threads, but
+where the handlers you want to use are slow (for example,
+:class:`~logging.handlers.SMTPHandler`). In that case, you can create a queue,
+pass it to a :class:`QueueHandler` instance and use that instance with your
+loggers. Elsewhere, you can instantiate a :class:`QueueListener` with the same
+queue and some slow handlers, and call :meth:`~QueueListener.start` on it.
+This will start monitoring the queue on a separate thread and call all the
+configured handlers *on that thread*, so that your logging thread is not held
+up by the slow handlers.
+
+Note that as well as in-process queues, you can use these classes with queues
+from the :mod:`multiprocessing` module.
+
+**N.B.** This is part of the standard library since Python 3.2, so the
+version here is for use with earlier Python versions.
+"""
+class QueueHandler(logging.Handler):
+    """
+    This handler sends events to a queue. Typically, it would be used together
+    with a multiprocessing Queue to centralise logging to file in one process
+    (in a multi-process application), so as to avoid file write contention
+    between processes.
+    
+    :param queue: The queue to send `LogRecords` to.
+    """
+
+    def __init__(self, queue):
+        """
+        Initialise an instance, using the passed queue.
+        """
+        logging.Handler.__init__(self)
+        self.queue = queue
+
+    def enqueue(self, record):
+        """
+        Enqueue a record.
+
+        The base implementation uses :meth:`~queue.Queue.put_nowait`. You may
+        want to override this method if you want to use blocking, timeouts or
+        custom queue implementations.
+        
+        :param record: The record to enqueue.
+        """
+        #self.queue.put_nowait(record)
+        self.queue.put(record)
+
+    def prepare(self, record):
+        """
+        Prepares a record for queuing. The object returned by this method is
+        enqueued.
+
+        The base implementation formats the record to merge the message
+        and arguments, and removes unpickleable items from the record
+        in-place.
+
+        You might want to override this method if you want to convert
+        the record to a dict or JSON string, or send a modified copy
+        of the record while leaving the original intact.
+        
+        :param record: The record to prepare.
+        """
+        # The format operation gets traceback text into record.exc_text
+        # (if there's exception data), and also puts the message into
+        # record.message. We can then use this to replace the original
+        # msg + args, as these might be unpickleable. We also zap the
+        # exc_info attribute, as it's no longer needed and, if not None,
+        # will typically not be pickleable.
+        self.format(record)
+        record.msg = record.message
+        record.args = None
+        record.exc_info = None
+        return record
+
+    def emit(self, record):
+        """
+        Emit a record.
+
+        Writes the LogRecord to the queue, preparing it for pickling first.
+        
+        :param record: The record to emit.
+        """
+        try:
+            self.enqueue(self.prepare(record))
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError(record)
+
 
 class SpectralNetworkData:
     """
@@ -26,34 +122,47 @@ class SpectralNetworkData:
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
 
-def set_logging(level):
-    if level == 'debug':
-        logging_level = logging.DEBUG
+def get_logging_formatter(level):
+    if level == logging.DEBUG:
         logging_format = '%(module)s@%(lineno)d: %(funcName)s: %(message)s'
-    elif level == 'info':
-        logging_level = logging.INFO
+    elif level == logging.INFO:
         logging_format = '%(process)d: %(message)s'
     else:
-        logging_level = logging.WARNING
         logging_format = '%(message)s'
+    return logging.Formatter(logging_format)
+
+def set_logging(level, queue=None, file_name='logs/log.loom.txt'):
+    #print('Setting logging level to "{}".'.format(level))
 
     logger = logging.getLogger()
-    ### Remove other handlers
+    logger.setLevel(level)
+    formatter = get_logging_formatter(level)
+    # Remove other handlers.
     for handler in logger.handlers:
         logger.removeHandler(handler)
-    logger.setLevel(logging_level)
-    formatter = logging.Formatter(logging_format)
-    ### create console handler with a higher log level
-    ch = logging.StreamHandler()
-    ch.setLevel(logging_level)
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-    ### Log to a file 'log.mose.txt'
-    fh = logging.FileHandler(LOGGING_FILE_NAME, 'w')
-    fh.setLevel(logging_level)
+
+    # Create a log file.
+    fh = logging.FileHandler(file_name, 'w')
+    fh.setLevel(level)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
+    if queue is None:
+        # Create a stream handler to stderr.
+        logger.addHandler(
+            get_logging_handler(level, logging.StreamHandler, None)
+        )
+    else:
+        # Create a queue handler for multiprocessing.
+        logger.addHandler(
+            get_logging_handler(level, QueueHandler, queue)
+        )
+
+def get_logging_handler(level, handler_class, buffer_object):
+    h = handler_class(buffer_object)
+    h.setLevel(level)
+    h.setFormatter(get_logging_formatter(level))
+    return h
 
 def generate_spectral_network(config, phase=None):
     """
@@ -96,16 +205,16 @@ def generate_spectral_network(config, phase=None):
 
 def load_config(config_file=None):
     if config_file is None:
-        root = tk.Tk()
+        toplevel = tk.Toplevel()
         file_opts = {
             'defaultextension': '.ini',
             'initialdir': os.curdir,
             'initialfile': 'config.ini',
-            'parent': root,
+            'parent': toplevel,
             'title': 'Select a configuration file to load.',
         }
         config_file = tkFileDialog.askopenfilename(**file_opts)
-        root.destroy()
+        toplevel.destroy()
         if config_file == '':
             return None
 
@@ -115,17 +224,23 @@ def load_config(config_file=None):
     return config
 
 
-def load_spectral_network(data_dir=None):
+def load_spectral_network(
+    data_dir=None,
+    logging_level=None,
+    logging_queue=None,
+    result_queue=None,
+):
     if data_dir is None:
-        root = tk.Tk()
+        return (None, None)
+        toplevel = tk.Toplevel()
         dir_opts = {
             'initialdir': os.curdir,
             'mustexist': False,
-            'parent': root,
+            'parent': toplevel,
             'title': 'Select a directory that contains data files.',
         }
         data_dir = tkFileDialog.askdirectory(**dir_opts)
-        root.destroy()
+        toplevel.destroy()
         if data_dir == '':
             return (None, None)
 
@@ -149,8 +264,14 @@ def load_spectral_network(data_dir=None):
     data = SpectralNetworkData(sw, spectral_network_list)
     logging.info('Finished loading data from {}.'.format(data_dir))
 
-    return (config, data)
-
+    if logging_queue is not None:
+        logging_queue.put_nowait(None) 
+        
+    rv = (config, data)
+    if result_queue is None:
+        return rv
+    else:
+        result_queue.put(rv)
 
 def save_config(config, path=None):
     if path is None:

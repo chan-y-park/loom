@@ -1,5 +1,6 @@
 import numpy
 import logging
+#import loom_logging as logging
 import pdb
 import sympy
 
@@ -290,7 +291,7 @@ class SWDataWithTrivialization(SWDataBase):
             self.analyze_branch_point(bp, n_critical_loci)
             
             # Prepare a label for the branch point.
-            label = 'Branch point #{}'.format(i)
+            bp.label = 'Branch point #{}'.format(i)
             #label = 'Branch point #{}\n'.format(i)
             #for root in bp.positive_roots:
             #    label += str(root.tolist()) + ', '

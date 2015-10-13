@@ -2,6 +2,7 @@ import ConfigParser
 import os
 import sys
 import logging
+#import loom_logging as logging
 import pdb
 
 from math import pi
@@ -61,7 +62,8 @@ class LoomConfig:
         """
         Read an .ini file and load the configuration data.
         """
-        logging.info('config file: %s', config_file)
+        logging.info('Loading a configuration from {}...'.format(config_file))
+        #logging.info('config file: %s', config_file)
         config_parser = LoomConfigParser()
 
         with open(config_file, 'r') as fp:

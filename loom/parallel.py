@@ -1,6 +1,7 @@
 import signal
 import multiprocessing
 import logging
+#import loom_logging as logging
 
 from spectral_network import SpectralNetwork
 

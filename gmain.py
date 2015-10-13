@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 
-import sys
-from loom.__main__ import run_with_sys_argv
+import os
+import logging
+#import sys
+#from loom.__main__ import run_with_sys_argv
 
-argv = sys.argv[1:]
-argv += ['--gui-mode', 'True']
+from loom.gui import open_gui
 
-run_with_sys_argv(argv)
+#argv = sys.argv[1:]
+#argv += ['--gui-mode', 'True']
+
+#run_with_sys_argv(argv)
+config_file = os.path.join(os.curdir, 'default.ini')
+open_gui(config_file, logging_level=logging.INFO)
+

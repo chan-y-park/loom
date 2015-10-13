@@ -2,32 +2,62 @@ import os
 import logging
 import Tkinter as tk
 import tkFileDialog
+import multiprocessing
+import threading
 import pdb
+import time
 
-from api import (generate_spectral_network, load_config, load_spectral_network,
+from StringIO import StringIO
+from Queue import Empty as QueueEmpty
+
+from logutils.queue import QueueListener
+
+from api import (set_logging, get_logging_handler,
+                 generate_spectral_network, load_config, load_spectral_network,
                  save_config, save_spectral_network, 
                  make_spectral_network_plot, SpectralNetworkData,)
 from trivialization import SWDataWithTrivialization
 
+GUI_LOOP_DELAY = 100    # in millisec
+
 class GUILoom:
-    def __init__(self, config=None, spectral_networks=[],):
+    def __init__(self, config_file, logging_level=logging.INFO,):
         root = tk.Tk()
         root.wm_title('loom')
 
-        # Put the window at the center
+        # Put the window at the center.
         ws = root.winfo_screenwidth()
         hs = root.winfo_screenheight()
         root.geometry('+{}+{}'.format(ws/2, hs/2))
 
+        # Tkinter root
         self.root = root
-        self.config = config
+
+        # Logging handling
+        self.logging_level = logging_level
+        self.logging_queue = multiprocessing.Queue()
+        set_logging(
+            logging_level,
+            queue=self.logging_queue,
+        )
+        self.logging_stream = StringIO()
+        self.logging_stream_handler = get_logging_handler(
+            self.logging_level,
+            logging.StreamHandler,
+            self.logging_stream,
+        )
+
+        self.config = load_config(
+            config_file, #self.logging_level, self.logging_stream,
+        )
+
         self.entry = {}
         self.entry_var = {}
         self.mb = None
         self.check = {}
         self.sw_data = None
-        self.spectral_networks = spectral_networks
-
+        #self.spectral_networks = spectral_networks
+        self.spectral_networks = [] 
 
     def create_widgets(self):
         # Layout variables
@@ -167,6 +197,42 @@ class GUILoom:
         grid_col += 1
         self.button_plot.grid(row=grid_row, column=grid_col, sticky=tk.E)
 
+        # Log text
+        grid_row += 1
+        grid_col = 0
+        self.log_text = tk.Text(self.root)
+        self.log_text.grid(
+            row=grid_row, column=grid_col, columnspan=4, sticky=tk.EW
+        )
+        grid_col = 4 
+        log_text_scroll = tk.Scrollbar(self.root)
+        log_text_scroll.grid(row=grid_row, column=grid_col, sticky=tk.NS)
+        log_text_scroll.config(command=self.log_text.yview)
+        self.log_text.config(yscrollcommand=log_text_scroll.set)
+
+        self.root.after(GUI_LOOP_DELAY, self.get_log)
+
+    def print_log(self):
+        logs = self.logging_stream.getvalue()
+        self.logging_stream.truncate(0)
+        self.log_text.insert(tk.END, logs)
+        self.log_text.see(tk.END)
+
+    def get_log(self):
+        try:
+            record = self.logging_queue.get_nowait()
+            if record is not None:
+                self.logging_stream_handler.handle(record)
+                self.print_log()
+        except QueueEmpty:
+            pass 
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            import sys, traceback
+            print >> sys.stderr, 'logging_listener_process:'
+            traceback.print_exc(file=sys.stderr)
+        self.root.after(GUI_LOOP_DELAY, self.get_log)
 
     def button_print_config_action(self):
         self.update_config_from_entries()
@@ -192,30 +258,54 @@ class GUILoom:
         else:
             return False
 
-
     def menu_load_config_action(self):
+        self.log_text.delete('1.0', tk.END)
         config = load_config()
         if config is None:
             return None
         else:
             self.config = config
-
-#        for option, value in self.config.iteritems():
-#            try:
-#                self.entry_var[option].set(value)
-#            except KeyError:
-#                logging.warning('No entry for "{}".'.format(option))
-#                pass
         self.update_entries_from_config()
-
 
     def menu_save_config_action(self):
         self.update_config_from_entries()
         save_config(self.config)
 
-
     def menu_load_data_action(self):
-        config, spectral_network_data = load_spectral_network()
+        self.log_text.delete('1.0', tk.END)
+        result_queue = multiprocessing.Queue()
+        toplevel = tk.Toplevel()
+        dir_opts = {
+            'initialdir': os.curdir,
+            'mustexist': False,
+            'parent': toplevel,
+            'title': 'Select a directory that contains data files.',
+        }
+        data_dir = tkFileDialog.askdirectory(**dir_opts)
+        toplevel.destroy()
+        if data_dir == '':
+            return (None, None)
+
+        load_process = multiprocessing.Process(
+            target=load_spectral_network,
+            kwargs=dict(
+                data_dir=data_dir,
+                logging_level=self.logging_level,
+                logging_queue=self.logging_queue,
+                result_queue=result_queue,
+            )
+        )
+        load_process.start()
+        self.root.after(GUI_LOOP_DELAY, self.finish_load_data, load_process,
+                        result_queue)
+
+    def finish_load_data(self, *args):
+        load_process, result_queue = args
+        if result_queue.empty() is True:
+            self.root.after(GUI_LOOP_DELAY, self.finish_load_data, *args)
+            return None
+        config, spectral_network_data = result_queue.get() 
+        load_process.join()
         if config is None:
             return None
         self.config = config 
@@ -302,9 +392,8 @@ class GUILoom:
             return None
 
 
-def open_gui(config, spectral_networks,):
-
-    gui_loom = GUILoom(config, spectral_networks=spectral_networks)
+def open_gui(config_file, logging_level='info',):
+    gui_loom = GUILoom(config_file, logging_level)
     gui_loom.create_widgets()
     gui_loom.root.protocol("WM_DELETE_WINDOW", lambda: quit_gui(gui_loom),)
     gui_loom.root.mainloop()
