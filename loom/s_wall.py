@@ -357,7 +357,6 @@ class SWall(object):
         both forward and backwards, using the Weyl monodromy.
         """
         g_data = sw_data.g_data
-
         branch_points = sw_data.branch_points
         irregular_singularities = sw_data.irregular_singularities
         # Adding a minimal radius of 1.0, this is necessary 
@@ -376,8 +375,7 @@ class SWall(object):
             return None
 
         # branching will occur at branch points or irregular singularities
-        branching_loci = (sw_data.branch_points +
-                          sw_data.irregular_singularities)
+        branching_loci = branch_points + irregular_singularities
         br_loc_zs_r = [bl.z.real for bl in branching_loci]
         
         # parametrizing the z-coordinate of the k-wall's coordinates
@@ -452,7 +450,7 @@ class SWall(object):
                 #  the direction (either 'cw' or 'ccw')]
                 # to each intersection.
                 intersections.append(
-                    [br_loc_idx, t, clock(left_right(self.z, t))]
+                    [branch_locus, t, clock(left_right(self.z, t))]
                 )
             _cuts_intersections += intersections
 
@@ -523,7 +521,7 @@ class SWall(object):
 
                 current_root = self.local_roots[-1]
                 new_root = g_data.weyl_monodromy(
-                    current_root, branching_locus, direction
+                    current_root, branch_locus, direction
                 )
                 new_weight_pairs = g_data.ordered_weight_pairs(new_root)
 
@@ -609,8 +607,7 @@ class SWall(object):
         # piece add the corresponding intersection point
         t_0 = 0
         for int_data in self.cuts_intersections:
-            br_loc_idx, t, chi = int_data
-            br_loc = branching_loci[br_loc_idx]
+            br_loc, t, chi = int_data
 
             z_1 = self.z[t]
             z_2 = self.z[t + 1]
@@ -655,9 +652,9 @@ class SWall(object):
         # Update the intersection data.
         new_cuts_intersections = []
         for i, int_data in enumerate(self.cuts_intersections):
-            br_loc_idx, t_old, chi = int_data
+            br_loc, t_old, chi = int_data
             t_new = t_old + i + 1
-            new_cuts_intersections.append([br_loc_idx, t_new, chi])
+            new_cuts_intersections.append([br_loc, t_new, chi])
         
         self.cuts_intersections = new_cuts_intersections
 

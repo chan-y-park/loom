@@ -8,6 +8,7 @@ from sympy import oo
 from numpy.linalg import matrix_rank
 from itertools import combinations
 from pprint import pprint
+from heapq import nsmallest
 
 from geometry import SWDataBase
 # from misc import n_unique
@@ -285,7 +286,7 @@ class SWDataWithTrivialization(SWDataBase):
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
             bp.label = 'Branch point #{}'.format(i)
-            self.analyze_branch_point(bp, n_critical_loci)
+            self.analyze_branch_point(bp)
             if bp.order > 1:
                 # only add if there are any positive roots associated
                 # otherwise may be an accidental BP
@@ -758,11 +759,12 @@ def get_path_to(z_pt, sw_data):
     If the path has to pass too close to a branch point, 
     we avoid the latter by drawing an arc around it.
     """
-    if n_loci==None:
-        n_loci = len(sw_data.branch_points + sw_data.irregular_singularities)
     base_pt = sw_data.base_point
     closest_bp = None
-    radius = sw_data.min_distance / n_loci
+    # if n_loci==None:
+    #     n_loci = len(sw_data.branch_points + sw_data.irregular_singularities)
+    # radius = sw_data.min_distance / n_loci
+    radius = sw_data.min_horizontal_distance / 2.0
 
     logging.debug("Constructing a path [{}, {}]".format(base_pt, z_pt))
 
@@ -770,6 +772,9 @@ def get_path_to(z_pt, sw_data):
     # close to a branch point.
     for bp in sw_data.branch_points:
         delta_z = z_pt - bp.z
+        # NOTE we only check for one possible nearby point
+        # based on the fact that the radius is always less
+        # than the minimal horizontal separation of them
         if abs(delta_z.real) < radius and delta_z.imag > 0:
             closest_bp = bp
             break
@@ -822,14 +827,16 @@ def get_path_to(z_pt, sw_data):
         return (
             path_segment_1 + path_segment_2 + path_segment_3 + path_segment_4
         )
-    
+
 
 def get_path_around(z_pt, base_pt, sw):
     logging.debug("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
     z_1 = 1j * base_pt.imag + z_pt.real
+    # if n_loci==None:
+    #     n_loci = len(sw.branch_points + sw.irregular_singularities)
     # radius = min_distance / n_loci
-    radius = min_distance / 2
+    radius = sw.min_horizontal_distance / 2.0
     z_2 = z_pt - 1j * radius
 
     steps = N_PATH_AROUND_PT
@@ -855,7 +862,7 @@ def get_path_around(z_pt, base_pt, sw):
 # TODO: Make smarter checks based on the types
 # of ramification points above the branch point.
 def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True, 
-                  index=None, z_0=None, z_1=None, g_data=None):
+                  index=None, z_0=None, z_1=None, g_data=None,):
     """
     Returns a sorted version of 'new_xs'
     based on matching the closest points with 

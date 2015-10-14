@@ -2,12 +2,8 @@ import sympy
 import numpy
 import logging
 import copy
-<<<<<<< HEAD
-import pdb
-=======
 # import cmath
 # import pdb
->>>>>>> enhanced_sheet_tracking
 import sympy.mpmath as mpmath
 
 from sympy import oo
