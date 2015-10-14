@@ -16,6 +16,7 @@ from misc import n_remove_duplicate
 
 x, z = sympy.symbols('x z')
 
+
 # TODO: set both of the following automatically: e.g. using the
 # minimal_distance attribute of the SW fibration
 
@@ -248,7 +249,6 @@ class SWDataWithTrivialization(SWDataBase):
                 x for x in all_distances if abs(x) > self.accuracy
             ]
             self.min_distance = min(non_zero_distances)
-
             horizontal_distances = [
                 abs(x.real - y.real) for x in all_points_z 
                 for y in all_points_z
@@ -257,14 +257,18 @@ class SWDataWithTrivialization(SWDataBase):
                 [x for x in horizontal_distances if abs(x) > self.accuracy]
             )
             
-        else:
+        elif n_critical_loci == 1:
             # If there is only one branching locus, we still
             # need to set distance scales, as these will be used to 
             # circumvent the branch locus when constructing paths 
             # to trivializae the cover, as well as to fix a basepoint
             # for the trivialization
-            max_distance = 1.0
-            self.min_distance = 1.0
+            max_distance = 3.0
+            self.min_distance = max_distance
+            self.min_horizontal_distance = max_distance
+
+        elif n_critical_loci == 0:
+            raise Exception('Must have at least one critical locus on C.')
 
         center = sum([z_pt for z_pt in all_points_z]) / n_critical_loci
         self.base_point = center - 1j * max_distance
@@ -323,11 +327,11 @@ class SWDataWithTrivialization(SWDataBase):
         For tracking roots as we run into a branch point, one should
         set the variable 'is_path_to_bp=True', and the check for 
         sheets becoming too similar will be ignored altogether.
-        """
-        ### NOTE: instead of disabling the check, we could 
-        ### still perform it, and suppress the check only towards the 
-        ### end of the tracking.
-
+        If tracking fails, an attempt will be made to 'zoom in',
+        up to a certain number of times.
+        If zooming also fails, the tracking will take into account 
+        the first derivative of sheets and match them according to it.
+        """       
         g_data = self.g_data
         if accuracy is None:
             accuracy = self.accuracy
@@ -663,13 +667,12 @@ class SWDataWithTrivialization(SWDataBase):
             if abs(rp.z - bp.z) < self.accuracy
         ]
 
-    def analyze_irregular_singularity(self, irr_sing, n_loci):
+    def analyze_irregular_singularity(self, irr_sing):
         logging.info(
             "Analyzing an irregular singularity at z = {}."
             .format(irr_sing.z)
         )
-        path_around_z = get_path_around(irr_sing.z, self.base_point,
-                                        self.min_distance, n_loci)
+        path_around_z = get_path_around(irr_sing.z, self.base_point, self)
         irr_sing.monodromy = (
             self.get_sheet_monodromy(path_around_z)
         )
@@ -827,7 +830,7 @@ def get_path_to(z_pt, sw_data):
         return (
             path_segment_1 + path_segment_2 + path_segment_3 + path_segment_4
         )
-
+    
 
 def get_path_around(z_pt, base_pt, sw):
     logging.debug("Constructing a closed path around z = {}".format(z_pt))

@@ -157,7 +157,6 @@ class GData:
         v_i_ind = pair_0[0]
         v_j_ind = pair_0[1]
         ordered_weights = self.weights
-
         new_v_i = sum([
             monodromy_matrix[v_i_ind][k] * v 
             for k, v in enumerate(ordered_weights)
@@ -307,7 +306,6 @@ class SWDiff:
     def __init__(
             self, v_str, g_data=None, diff_params=None, mt_params=None,
             z_rotation=None,):
-
         # sym_v is a SymPy expression. 
         self.sym_v = sympy.sympify(v_str)
         # num_v is from sym_v with its parameters 
@@ -501,7 +499,6 @@ class SWDataBase(object):
                 z_list = bpzs + pctzs
                 z_r_list = map(float, [z.real for z in (bpzs + pctzs)])
                 if len(z_r_list) > 1:
-
                     min_x_distance = min([
                         abs(x - y) for i, x in enumerate(z_r_list) 
                         for y in z_r_list[i + 1:]
@@ -517,9 +514,9 @@ class SWDataBase(object):
                         'are sufficiently separated horizontally.\n'
                         'Will not rotate z-plane any more.\n'
                     )
-
                     rotate_z_plane = False
                     break
+
                 elif len(z_r_list) == 0:
                     raise Exception(
                         'Could not find any punctures' + 
@@ -534,6 +531,7 @@ class SWDataBase(object):
                     )
                     rotate_z_plane = False
                     break
+                
                 else:
                     logging.info(
                         'Some branch points or punctures '
@@ -951,8 +949,8 @@ def get_ramification_points_using_discriminant(
                 polyroots_maxsteps += 10
                 polyroots_extra_precision += 10
 
-        gathered_f_roots = gather(f_roots,
-                                  lambda a, b: abs(a - b) < accuracy)  
+        is_same_z = lambda a, b: abs(a - b) < accuracy
+        gathered_f_roots = gather(f_roots, is_same_z)  
 
         # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
         for z_i, zs in gathered_f_roots.iteritems():
