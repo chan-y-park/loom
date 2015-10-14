@@ -15,7 +15,6 @@ from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
-#from logutils.queue import QueueHandler#, QueueListener
 
 #
 # QueueHandler
@@ -164,47 +163,9 @@ def get_logging_handler(level, handler_class, buffer_object):
     h.setFormatter(get_logging_formatter(level))
     return h
 
-def generate_spectral_network(config, phase=None):
-    """
-    Generate one or more spectral networks according to
-    the command-line options and the configuration file
-    and return a list of data obtained from SpectralNetwork.get_data()
-    """
 
-    phase_range = config['phase_range']
-    sw = SWDataWithTrivialization(config)
-
-    start_time = time.time()
-    logging.info('start cpu time: %s', start_time)
-
-    if(phase is not None):
-        logging.info('Generate a single spectral network at theta = {}.'
-                     .format(phase))
-        spectral_network = SpectralNetwork(
-            phase=phase, 
-        ) 
-
-        spectral_network.grow(config, sw)
-
-        spectral_networks = [spectral_network]
-
-    elif(phase_range is not None):
-        logging.info('Generate multiple spectral networks.')
-        logging.info('phase_range = {}.'.format(phase_range))
-        spectral_networks = parallel_get_spectral_network(
-            sw, 
-            config,
-        ) 
-
-    end_time = time.time()
-    logging.info('end cpu time: %.8f', end_time)
-    logging.info('elapsed cpu time: %.8f', end_time - start_time)
-
-    return SpectralNetworkData(sw, spectral_networks)
-
-
-def load_config(config_file=None):
-    if config_file is None:
+def load_config(file_path=None):
+    if file_path is None:
         toplevel = tk.Toplevel()
         file_opts = {
             'defaultextension': '.ini',
@@ -213,16 +174,39 @@ def load_config(config_file=None):
             'parent': toplevel,
             'title': 'Select a configuration file to load.',
         }
-        config_file = tkFileDialog.askopenfilename(**file_opts)
+        file_path = tkFileDialog.askopenfilename(**file_opts)
         toplevel.destroy()
-        if config_file == '':
+        if file_path == '':
             return None
 
     config = LoomConfig()
-    config.read(config_file)
+    logging.info('Loading configuration from {}...'.format(file_path))
+    config.read(file_path)
+    logging.info('Finished loading configuration from {}.'.format(file_path))
 
     return config
 
+def save_config(config, file_path=None):
+    if file_path is None:
+        toplevel = tk.Toplevel()
+        file_opts = {
+            'defaultextension': '.ini',
+            'initialdir': os.curdir,
+            'initialfile': 'config.ini',
+            'parent': toplevel,
+            'title': 'Save the current configuration to a file.',
+        }
+        file_path = tkFileDialog.asksaveasfilename(**file_opts)
+        toplevel.destroy()
+        if file_path == '':
+            return None
+
+    logging.info('Saving configuration to {}.'.format(file_path))
+    with open(file_path, 'w') as fp:
+        config.parser.write(fp)
+    logging.info('Finished saving configuration to {}.'.format(file_path))
+
+    return None
 
 def load_spectral_network(
     data_dir=None,
@@ -264,42 +248,19 @@ def load_spectral_network(
     data = SpectralNetworkData(sw, spectral_network_list)
     logging.info('Finished loading data from {}.'.format(data_dir))
 
-    if logging_queue is not None:
-        logging_queue.put_nowait(None) 
-        
     rv = (config, data)
     if result_queue is None:
         return rv
     else:
         result_queue.put(rv)
-
-def save_config(config, path=None):
-    if path is None:
-        root = tk.Tk()
-        file_opts = {
-            'defaultextension': '.ini',
-            'initialdir': os.curdir,
-            'initialfile': 'config.ini',
-            'parent': root,
-            'title': 'Save the current configuration to a file.',
-        }
-        path = tkFileDialog.asksaveasfilename(**file_opts)
-        root.destroy()
-        if path == '':
-            return None
-
-    logging.info('Save configuration to {}.'.format(path))
-    with open(path, 'wb') as fp:
-        config.parser.write(fp)
-
-    return None
+        return None
 
 
 def save_spectral_network(config, spectral_network_data, data_dir=None,
                           make_zipped_file=True):
     spectral_networks = spectral_network_data.spectral_networks
     if data_dir is None:
-        ### Prepare to save spectral network data to files.
+        # Prepare to save spectral network data to files.
         timestamp = str(int(time.time()))
         data_dir = os.path.join(
             os.curdir,
@@ -311,11 +272,11 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
-    ### Save configuration to a file.
+    # Save configuration to a file.
     config_file_path = os.path.join(data_dir, 'config.ini')
     save_config(config, path=config_file_path)
 
-    ### Save spectral network data.
+    # Save spectral network data.
     for i, spectral_network in enumerate(spectral_networks):
         data_file_path = os.path.join(
             data_dir,
@@ -329,7 +290,7 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
 
     if make_zipped_file is True:
         file_list = [config_file_path]
-        ### Make a compressed data file.
+        # Make a compressed data file.
         file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
         zipped_file_path = data_dir + '.zip'
         logging.info('Save compressed data to {}.'.format(zipped_file_path))
@@ -339,6 +300,51 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
                 fp.write(a_file, os.path.relpath(a_file, data_dir))
 
     logging.info('Finished saving data to {}.'.format(data_dir))
+    return None
+
+
+def generate_spectral_network(config, phase=None, result_queue=None,):
+    """
+    Generate one or more spectral networks according to
+    the command-line options and the configuration file
+    and return a list of data obtained from SpectralNetwork.get_data()
+    """
+
+    phase_range = config['phase_range']
+    sw = SWDataWithTrivialization(config)
+
+    start_time = time.time()
+    logging.info('start cpu time: %s', start_time)
+
+    if(phase is not None):
+        logging.info('Generate a single spectral network at theta = {}.'
+                     .format(phase))
+        spectral_network = SpectralNetwork(
+            phase=phase, 
+        ) 
+
+        spectral_network.grow(config, sw)
+
+        spectral_networks = [spectral_network]
+
+    elif(phase_range is not None):
+        logging.info('Generate multiple spectral networks.')
+        logging.info('phase_range = {}.'.format(phase_range))
+        spectral_networks = parallel_get_spectral_network(
+            sw, 
+            config,
+        ) 
+
+    end_time = time.time()
+    logging.info('end cpu time: %.8f', end_time)
+    logging.info('elapsed cpu time: %.8f', end_time - start_time)
+
+    rv = SpectralNetworkData(sw, spectral_networks)
+    if result_queue is None:
+        return rv
+    else:
+        result_queue.put(rv)
+        return None
 
 def make_spectral_network_plot(spectral_network_data, master=None,
                                show_plot=True, plot_range=None, **kwargs):

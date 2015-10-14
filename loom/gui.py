@@ -55,6 +55,7 @@ class GUILoom:
         self.entry_var = {}
         self.mb = None
         self.check = {}
+        self.button = {}
         self.sw_data = None
         #self.spectral_networks = spectral_networks
         self.spectral_networks = [] 
@@ -171,31 +172,30 @@ class GUILoom:
             variable=self.check['plot_on_cylinder']
         ).grid(row=grid_row, column=grid_col)
 
-        ### Set default parameters.
-        #for option in self.entry_var:
-        #    self.entry_var[option].set(self.config[option])
         self.update_entries_from_config()
 
-        ### 'Generate' button
+        # 'Generate' button
         grid_row += 1
         grid_col = 0
-        self.button_generate = tk.Button(
+        self.button['generate'] = tk.Button(
             self.root,
             text='Generate',
             command=self.button_generate_action,
         )
         grid_col += 1
-        self.button_generate.grid(row=grid_row, column=grid_col, sticky=tk.E)
+        self.button['generate'].grid(
+            row=grid_row, column=grid_col, sticky=tk.E
+        )
 
-        ### 'Plot' button
+        # 'Plot' button
         grid_col += 1
-        self.button_plot = tk.Button(
+        self.button['plot'] = tk.Button(
             self.root,
             text='Plot',
             command=self.button_plot_action,
         )
         grid_col += 1
-        self.button_plot.grid(row=grid_row, column=grid_col, sticky=tk.E)
+        self.button['plot'].grid(row=grid_row, column=grid_col, sticky=tk.E)
 
         # Log text
         grid_row += 1
@@ -212,18 +212,22 @@ class GUILoom:
 
         self.root.after(GUI_LOOP_DELAY, self.get_log)
 
-    def print_log(self):
-        logs = self.logging_stream.getvalue()
-        self.logging_stream.truncate(0)
-        self.log_text.insert(tk.END, logs)
-        self.log_text.see(tk.END)
+    #def print_log(self):
+    #    logs = self.logging_stream.getvalue()
+    #    self.logging_stream.truncate(0)
+    #    self.log_text.insert(tk.END, logs)
+    #    self.log_text.see(tk.END)
 
     def get_log(self):
         try:
             record = self.logging_queue.get_nowait()
             if record is not None:
                 self.logging_stream_handler.handle(record)
-                self.print_log()
+                #self.print_log()
+                logs = self.logging_stream.getvalue()
+                self.logging_stream.truncate(0)
+                self.log_text.insert(tk.END, logs)
+                self.log_text.see(tk.END)
         except QueueEmpty:
             pass 
         except (KeyboardInterrupt, SystemExit):
@@ -234,6 +238,236 @@ class GUILoom:
             traceback.print_exc(file=sys.stderr)
         self.root.after(GUI_LOOP_DELAY, self.get_log)
 
+    def menu_load_config_action(self):
+        self.change_gui_state('off')
+        self.log_text.delete('1.0', tk.END)
+        config = load_config()
+        if config is None:
+            self.change_gui_state('on')
+            return None
+        self.config = config
+        self.update_entries_from_config()
+        self.change_gui_state('on')
+        return None
+
+    def menu_save_config_action(self):
+        self.change_gui_state('off')
+        self.update_config_from_entries()
+        save_config(self.config,)
+        self.change_gui_state('on')
+        return None
+
+    def menu_load_data_action(self):
+        self.change_gui_state('off')
+        self.log_text.delete('1.0', tk.END)
+        result_queue = multiprocessing.Queue()
+        toplevel = tk.Toplevel()
+
+        dir_opts = {
+            'initialdir': os.curdir,
+            'mustexist': False,
+            'parent': toplevel,
+            'title': 'Select a directory that contains data files.',
+        }
+        data_dir = tkFileDialog.askdirectory(**dir_opts)
+        toplevel.destroy()
+        if data_dir == '':
+            self.change_gui_state('on')
+            return (None, None)
+
+        load_data_process = multiprocessing.Process(
+            target=load_spectral_network,
+            kwargs=dict(
+                data_dir=data_dir,
+                logging_level=self.logging_level,
+                logging_queue=self.logging_queue,
+                result_queue=result_queue,
+            )
+        )
+        load_data_process.start()
+        self.root.after(
+            GUI_LOOP_DELAY,
+            self.finish_load_data,
+            load_data_process,
+            result_queue
+        )
+        return None
+
+    def finish_load_data(self, *args):
+        load_data_process, result_queue = args
+        if result_queue.empty() is True:
+            if load_data_process.is_alive():
+                self.root.after(GUI_LOOP_DELAY, self.finish_load_data, *args)
+                return None
+            else:
+                logging.warning('Loading data failed: process = {}'
+                                .format(load_data_process))
+                self.change_gui_state('on')
+                return None
+
+        config, spectral_network_data = result_queue.get() 
+        load_data_process.join()
+        if config is None:
+            logging.warning('Data contains no configuration.')
+            self.change_gui_state('on')
+            return None
+        self.config = config 
+        self.update_entries_from_config()
+        self.spectral_networks = spectral_network_data.spectral_networks
+        self.sw_data = spectral_network_data.sw_data
+        logging.info('Spectral network data is ready.')
+        self.change_gui_state('on')
+        return None
+
+    def menu_save_data_action(self):
+        self.change_gui_state('off')
+
+        dir_opts = {
+            'initialdir': os.curdir,
+            'mustexist': False,
+            'parent': self.root,
+            'title': 'Select a directory to save data files.',
+        }
+        data_dir = tkFileDialog.askdirectory(**dir_opts)
+        if data_dir == '':
+            self.change_gui_state('on')
+            return None
+
+        self.update_config_from_entries()
+        save_data_process = multiprocessing.Process(
+            target=save_spectral_network,
+            args=(
+                self.config, 
+                SpectralNetworkData(self.sw_data, self.spectral_networks,),
+                data_dir,
+            ),
+            kwargs=dict(
+                make_zipped_file=False,
+            )
+        )
+        save_data_process.start()
+        self.root.after(
+            GUI_LOOP_DELAY, 
+            self.finish_save_data, 
+            save_data_process,
+        )
+        return None
+
+    def finish_save_data(self, save_data_process):
+        if save_data_process.is_alive():
+            self.root.after(GUI_LOOP_DELAY, self.finish_save_data,
+                            save_data_process,)
+            return None
+        else:
+            save_data_process.join()
+            self.change_gui_state('on')
+            return None
+
+    def button_generate_action(self):
+        self.change_gui_state('off')
+        self.update_config_from_entries()
+        result_queue = multiprocessing.Queue()
+
+        generate_process = multiprocessing.Process(
+            target = generate_spectral_network,
+            args=(
+                self.config,
+                eval(self.entry['phase'].get()),
+                result_queue,
+            ),
+        )
+        generate_process.start()
+        self.root.after(
+            GUI_LOOP_DELAY,
+            self.finish_generate,
+            generate_process,
+            result_queue
+        )
+
+    def finish_generate(self, generate_process, result_queue):
+        if result_queue.empty() is True:
+            if generate_process.is_alive():
+                self.root.after(
+                    GUI_LOOP_DELAY,
+                    self.finish_generate,
+                    generate_process,
+                    result_queue
+                )
+                return None
+            else:
+                logging.warning('Generating spectral networks failed: '
+                                'process = {}.'.format(generate_process))
+                self.change_gui_state('on')
+                return None
+        spectral_network_data = result_queue.get()
+        generate_process.join()
+        self.sw_data = spectral_network_data.sw_data
+        self.spectral_networks = spectral_network_data.spectral_networks
+        logging.info('Finished generating spectral network data.')
+        self.change_gui_state('on')
+        return None
+
+    def button_plot_action(self):
+        self.change_gui_state('off')
+        self.update_config_from_entries()
+
+        if (len(self.spectral_networks) == 0):
+            logging.warning('No spectral network to plot.')
+            self.change_gui_state('on')
+            return None
+
+        snd = SpectralNetworkData(self.sw_data, self.spectral_networks)
+        make_spectral_network_plot(
+            snd,
+            master=self.root,
+            plot_on_cylinder=self.check_plot_on_cylinder,
+            plot_range=self.config['plot_range'],
+        )
+        self.change_gui_state('on')
+        
+        return None
+
+#        plot_process = multiprocessing.Process(
+#            target=make_spectral_network_plot,
+#            args=(snd,),
+#            kwargs=dict(
+#                master=self.root,
+#                plot_on_cylinder=self.check_plot_on_cylinder,
+#                plot_range=self.config['plot_range'],
+#            )
+#        )
+#        plot_process.start()
+#        self.root.after(
+#            GUI_LOOP_DELAY,
+#            self.finish_plot,
+#            plot_process,
+#        )
+#        return None
+#
+#    def finish_plot(self, plot_process):
+#        if plot_process.is_alive():
+#            self.root.after(GUI_LOOP_DELAY, self.finish_plot,
+#                            plot_process,)
+#            return None
+#        else:
+#            plot_process.join()
+#            self.change_gui_state('on')
+#            return None
+
+    def change_gui_state(self, state):
+        if state == 'on':
+            tk_state = tk.NORMAL
+        elif state == 'off':
+            tk_state = tk.DISABLED
+        else:
+            tk_state = state
+        for name, button_widget in self.button.iteritems():
+            button_widget.config(state=tk_state)
+        for name, entry_widget in self.entry.iteritems():
+            entry_widget.config(state=tk_state)
+        self.mb.config(state=tk_state) 
+
+    # For debugging purpose only.
     def button_print_config_action(self):
         self.update_config_from_entries()
         print("config in parser:")
@@ -250,90 +484,12 @@ class GUILoom:
         for option, value in self.config.iteritems():
             print("{} = {}".format(option, value))
 
-
     def check_plot_on_cylinder(self):
         check = self.check['plot_on_cylinder'].get()
         if check == 1:
             return True
         else:
             return False
-
-    def menu_load_config_action(self):
-        self.log_text.delete('1.0', tk.END)
-        config = load_config()
-        if config is None:
-            return None
-        else:
-            self.config = config
-        self.update_entries_from_config()
-
-    def menu_save_config_action(self):
-        self.update_config_from_entries()
-        save_config(self.config)
-
-    def menu_load_data_action(self):
-        self.log_text.delete('1.0', tk.END)
-        result_queue = multiprocessing.Queue()
-        toplevel = tk.Toplevel()
-        dir_opts = {
-            'initialdir': os.curdir,
-            'mustexist': False,
-            'parent': toplevel,
-            'title': 'Select a directory that contains data files.',
-        }
-        data_dir = tkFileDialog.askdirectory(**dir_opts)
-        toplevel.destroy()
-        if data_dir == '':
-            return (None, None)
-
-        load_process = multiprocessing.Process(
-            target=load_spectral_network,
-            kwargs=dict(
-                data_dir=data_dir,
-                logging_level=self.logging_level,
-                logging_queue=self.logging_queue,
-                result_queue=result_queue,
-            )
-        )
-        load_process.start()
-        self.root.after(GUI_LOOP_DELAY, self.finish_load_data, load_process,
-                        result_queue)
-
-    def finish_load_data(self, *args):
-        load_process, result_queue = args
-        if result_queue.empty() is True:
-            self.root.after(GUI_LOOP_DELAY, self.finish_load_data, *args)
-            return None
-        config, spectral_network_data = result_queue.get() 
-        load_process.join()
-        if config is None:
-            return None
-        self.config = config 
-        self.update_entries_from_config()
-        self.spectral_networks = spectral_network_data.spectral_networks
-        self.sw_data = spectral_network_data.sw_data
-        logging.info('Finished loading spectral network data.')
-
-
-    def menu_save_data_action(self):
-        dir_opts = {
-            'initialdir': os.curdir,
-            'mustexist': False,
-            'parent': self.root,
-            'title': 'Select a directory to save data files.',
-        }
-        data_dir = tkFileDialog.askdirectory(**dir_opts)
-        if data_dir == '':
-            return None
-        else:
-            self.update_config_from_entries()
-            save_spectral_network(
-                self.config, 
-                SpectralNetworkData(self.sw_data, self.spectral_networks,),
-                data_dir,
-                make_zipped_file=False,
-            )
-        return None
 
     def update_entries_from_config(self):
         # Update the text values of the entries 
@@ -352,7 +508,7 @@ class GUILoom:
             )
 
     def update_config_from_entries(self):
-        ### Read config options from Entries.
+        # Read config options from Entries.
         for section in self.config.parser.sections():
             for option in self.config.parser.options(section):
                 value = self.entry_var[option].get()
@@ -361,36 +517,6 @@ class GUILoom:
                 else:
                     self.config[option] = value
                 self.config.parser.set(section, option, value)
-
-
-    def button_generate_action(self):
-        self.update_config_from_entries()
-
-        spectral_network_data = generate_spectral_network(
-            self.config,
-            phase=eval(self.entry_phase.get()),
-        )
-        self.sw_data = spectral_network_data.sw_data
-        self.spectral_networks = spectral_network_data.spectral_networks
-
-        return None
-
-    def button_plot_action(self):
-        self.update_config_from_entries()
-
-        if (len(self.spectral_networks) > 0):
-            snd = SpectralNetworkData(self.sw_data, self.spectral_networks)
-            make_spectral_network_plot(
-                snd,
-                master=self.root,
-                plot_on_cylinder=self.check_plot_on_cylinder,
-                plot_range=self.config['plot_range'],
-            )
-            return None
-        else:
-            logging.warning('No spectral network to plot.')
-            return None
-
 
 def open_gui(config_file, logging_level='info',):
     gui_loom = GUILoom(config_file, logging_level)
