@@ -450,7 +450,7 @@ class SWall(object):
                 #  the direction (either 'cw' or 'ccw')]
                 # to each intersection.
                 intersections.append(
-                    [branch_locus, t, clock(left_right(self.z, t))]
+                    [branch_locus.label, t, clock(left_right(self.z, t))]
                 )
             _cuts_intersections += intersections
 
@@ -471,7 +471,7 @@ class SWall(object):
 
         # Add the actual intersection point to the S-wall
         # then update the attribute SWall.cuts_intersections accordingly    
-        self.enhance_at_cuts()
+        self.enhance_at_cuts(sw_data)
 
         # Choose a suitable point along the wall
         # we pick the one whose z coordinate's real part is 
@@ -517,7 +517,8 @@ class SWall(object):
 
             # Fill in the root types that occur after the basepoint
             for k in range(len(intersections_after_t_0)):
-                branch_locus, t, direction = intersections_after_t_0[k]
+                br_loc_label, t, direction = intersections_after_t_0[k]
+                branch_locus = branch_locus_from_label(sw_data, br_loc_label)
 
                 current_root = self.local_roots[-1]
                 new_root = g_data.weyl_monodromy(
@@ -532,7 +533,8 @@ class SWall(object):
             # recall that their time-ordering has already been reversed
             # so the first one in the list is the closest to t_0, and so on
             for k in range(len(intersections_before_t_0)):
-                branch_locus, t, direction = intersections_before_t_0[k]
+                br_loc_label, t, direction = intersections_before_t_0[k]
+                branch_locus = branch_locus_from_label(sw_data, br_loc_label)
 
                 current_root = self.local_roots[0]
                 new_root = g_data.weyl_monodromy(
@@ -591,7 +593,7 @@ class SWall(object):
         weight_pairs = self.get_weight_pairs_at_t(t)
         return [[xs_at_z[w_p[0]], xs_at_z[w_p[1]]] for w_p in weight_pairs]
 
-    def enhance_at_cuts(self):
+    def enhance_at_cuts(self, sw_data):
         """
         Add the intersection points of Swalls and branch cuts
         also update the intersection data accordingly
@@ -607,7 +609,8 @@ class SWall(object):
         # piece add the corresponding intersection point
         t_0 = 0
         for int_data in self.cuts_intersections:
-            br_loc, t, chi = int_data
+            br_loc_label, t, chi = int_data
+            br_loc = branch_locus_from_label(sw_data, br_loc_label)
 
             z_1 = self.z[t]
             z_2 = self.z[t + 1]
@@ -652,9 +655,9 @@ class SWall(object):
         # Update the intersection data.
         new_cuts_intersections = []
         for i, int_data in enumerate(self.cuts_intersections):
-            br_loc, t_old, chi = int_data
+            br_loc_label, t_old, chi = int_data
             t_new = t_old + i + 1
-            new_cuts_intersections.append([br_loc, t_new, chi])
+            new_cuts_intersections.append([br_loc_label, t_new, chi])
         
         self.cuts_intersections = new_cuts_intersections
 
@@ -995,3 +998,13 @@ def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data=None, label=None):
 def z_r_distance_from_ramification_loci(z, sw_data):
     critical_loci = sw_data.branch_points + sw_data.irregular_singularities
     return [abs(z.real - c_l.z.real) for c_l in critical_loci]
+
+
+def branch_locus_from_label(sw_data, br_loc_label):
+    branch_loci = sw_data.branch_points + sw_data.irregular_singularities
+    for br_loc in branch_loci:
+        if br_loc.label == br_loc_label:
+            return br_loc
+    raise Exception(
+        'Could not find any branching locus labeled {}'.format(br_loc_label)
+    )

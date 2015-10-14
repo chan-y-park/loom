@@ -738,17 +738,22 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
         phi = casimir_differentials
         # u_(1, 2, 3, 4, 5) = phi[2, 5, 6, 8, 9, 12]
         if g_rank == 6:
-            tau = tau_str.format(u_6=phi[12])
-            q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-                                 u_4=phi[8], u_5=phi[9])
-            p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-                                 u_4=phi[8], u_5=phi[9])
-            p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-                                 u_4=phi[8], u_5=phi[9])
-            q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
+            ## Temporarily working with a highly non generic curve
+            #tau = tau_str.format(u_6=phi[12])
+            #q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+            #                     u_4=phi[8], u_5=phi[9])
+            #p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+            #                     u_4=phi[8], u_5=phi[9])
+            #p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+            #                     u_4=phi[8], u_5=phi[9])
+            #q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
+            #curve_str = (
+            #    '(1/2)*x^3*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
+            #    .format(tau=tau, q_1=q_1, q_2=q_2)
+            #)
             curve_str = (
-                '(1/2)*x^3*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
-                .format(tau=tau, q_1=q_1, q_2=q_2)
+                'x^27 + x^15 * u_12 + x^3 * u_24'
+                .format(u_12=phi[12], u_24=phi[24])
             )
             return curve_str
 
