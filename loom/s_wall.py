@@ -497,8 +497,12 @@ class SWall(object):
         accuracy = sw_data.accuracy
         branch_points = sw_data.branch_points
         irregular_singularities = sw_data.irregular_singularities
+        # Adding a minimal radius of 1.0, this is necessary 
+        # in case there is only a single branch point at z=0,
+        # otherwise max_radius would be 0.
         max_radius = 2 * max(
-            [abs(c_l.z) for c_l in branch_points + irregular_singularities]
+            [abs(c_l.z) for c_l in branch_points + irregular_singularities] + 
+            [1.0]
         )
 
         # If the length of the S-wall's coordinates
@@ -540,6 +544,10 @@ class SWall(object):
             intersections = []
             for t in intersection_ts:
                 branch_locus = branching_loci[br_loc_idx]
+
+                # print 'the intersection point : {}'.format(branch_locus.z.real)
+                # print 'the neighboring points : \n{}\n{}'.format(self.z[t-1].real, self.z[t+1].real)
+                
                 if branch_locus.__class__.__name__ == 'BranchPoint':
                     # # Drop intersections of a primary S-wall with the 
                     # # branch cut emanating from its parent branch-point
@@ -562,8 +570,10 @@ class SWall(object):
                 # and is not an artifact of the interpolation used above
                 # which could become an extrapolation
 
-                elif not (self.z[t-1].real < branch_locus.z.real < self.z[t+1].real
-                    or self.z[t+1].real < branch_locus.z.real < self.z[t-1].real):
+                if not (
+                    self.z[t-1].real < branch_locus.z.real < self.z[t+1].real
+                    or self.z[t+1].real < branch_locus.z.real < self.z[t-1].real
+                ):
                     logging.info('Dropping a fake cut intersection.')
                     continue
 
@@ -585,8 +595,10 @@ class SWall(object):
             cmp = lambda k1, k2: cmp(k1[1], k2[1])
         )
         logging.debug(
-            'S-wall {} intersects the following'
-            'cuts at the points\n{}.'.format(self.label, intersections)
+            'S-wall {} intersects the following '
+            'cuts at the points\n{}.'.format(
+                self.label, self.cuts_intersections
+            )
         )
 
         # Add the actual intersection point to the S-wall
@@ -595,12 +607,18 @@ class SWall(object):
 
         # Choose a suitable point along the wall
         # we pick the one whose z coordinate's real part is 
-        # farthest from critical loci of the fibration
-        
+        # farthest from critical loci of the fibration        
+        # Ideally, we would like this basepoint to be not too far away 
+        # on the C-plane, because getting close to infinity
+        # means colliding sheets usually.
+        # But some walls are born beyond the max_radius in general
+        # in that case, we just choose the t=0 coordinate
         t_0 = sorted(
             (
                 [[t_i, min(z_r_distance_from_ramification_loci(z_i, sw_data))]
-                for t_i, z_i in enumerate(self.z) if abs(z_i) < max_radius]
+                for t_i, z_i in enumerate(self.z) if (
+                    abs(z_i) < max_radius or t_i == 0
+                    )]
             ), cmp = lambda a, b: cmp(a[1], b[1])
         )[-1][0]
 
@@ -728,6 +746,7 @@ class SWall(object):
 
             z_1 = self.z[t]
             z_2 = self.z[t+1]
+            
             z_to_add = get_intermediate_z_point(z_1, z_2, br_loc.z)
 
             xs_1 = self.x[t]

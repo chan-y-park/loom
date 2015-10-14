@@ -1006,10 +1006,10 @@ def get_ramification_points_using_discriminant(
     rf = sympy.cancel(f)
     f_n, f_d = rf.as_numer_denom()
     subs_dict = copy.deepcopy(diff_params)
-
     # Find the roots of D(z), the discriminant of f(x, z)
     # as a polynomial of x. 
     D_z = sympy.discriminant(f_n.subs(subs_dict), x)
+
     if D_z == 0:
         logging.info('The discriminant of F(x,z) is identically zero')
         if g_data.type == 'A':
@@ -1023,7 +1023,7 @@ def get_ramification_points_using_discriminant(
     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
     factors = sympy.factor_list(sympy.expand(sympy.Poly(D_z_n, z)))[1]
     for fact in factors:
-        logging.debug('styding roots of factor {}'.format(fact))
+        logging.debug('stuyding roots of factor {}'.format(fact))
         # separate the factor itself and the multiplicity
         f_P = sympy.Poly(fact[0], z)
         f_m = fact[1]

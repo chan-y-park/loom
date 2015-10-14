@@ -358,7 +358,9 @@ class SWDataWithTrivialization(SWDataBase):
                 xs_0 = self.reference_xs
             else:
                 raise Exception('Must specify initial sheets for tracking.')
-        logging.info('Zooming to level {}'.format(zoom_level))
+        logging.info(
+            'Zooming level: {}/{}'.format(zoom_level, MAX_ZOOM_LEVEL)
+        )
         ### Each element is a sheet, which is a list of x's along the path.
         ### Initialized with reference_xs.
         ### TODO: set each element to an integer rather than a float.
