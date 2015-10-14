@@ -5,7 +5,6 @@ Objects and functions to find intersections of real 1-dim curves
 on a real 2-dim plane.
 """
 import logging
-#import loom_logging as logging
 import numpy
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq, newton

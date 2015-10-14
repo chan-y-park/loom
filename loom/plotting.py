@@ -2,7 +2,6 @@ import os
 import numpy
 import pdb
 import logging
-#import loom_logging as logging
 import Tkinter as tk
 
 import matplotlib

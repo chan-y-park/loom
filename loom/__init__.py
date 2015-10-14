@@ -16,7 +16,6 @@ else:
     print('Use default backend defined in matplotlibrc: '
           '{}'.format(matplotlib.rcParams['backend']))
 
-#from __main__ import run
 #from api import set_logging
 from api import generate_spectral_network as generate
 from api import load_spectral_network as load
@@ -26,14 +25,12 @@ from api import load_config, save_config
 
 __all__ = [
     'config',
-    #'data_io',
     'gui',
     'intersection',
     'misc',
     'plotting',
     'spectral_network',
     's_wall',
-    #'run',
     #'set_logging',
     'load_config',
     'save_config',

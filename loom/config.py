@@ -2,7 +2,6 @@ import ConfigParser
 import os
 import sys
 import logging
-#import loom_logging as logging
 import pdb
 
 from math import pi

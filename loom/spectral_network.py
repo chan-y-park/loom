@@ -5,7 +5,6 @@ import scipy
 import sympy
 import ctypes
 import logging
-#import loom_logging as logging
 import json
 
 import pdb

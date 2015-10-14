@@ -1,7 +1,6 @@
 import numpy
 import sympy
 import logging
-#import loom_logging as logging
 
 from fractions import Fraction
 from sympy import limit, oo
