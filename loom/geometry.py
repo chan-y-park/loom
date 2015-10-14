@@ -2,7 +2,12 @@ import sympy
 import numpy
 import logging
 import copy
+<<<<<<< HEAD
 import pdb
+=======
+# import cmath
+# import pdb
+>>>>>>> enhanced_sheet_tracking
 import sympy.mpmath as mpmath
 
 from sympy import oo
@@ -131,25 +136,40 @@ class GData:
 
         return pairs
 
-    def weyl_monodromy(self, root, br_loc, direction):
+    def weyl_monodromy(self, root, br_loc, direction, reverse=False):
         """
         Returns a new root of the segment of an S-wall
         when it crossed a branch cut from a brancing locus
         which could be a branch point or an irregular singularity.
         """
-        if direction == 'ccw':
-            monodromy_matrix = br_loc.monodromy
-        elif direction == 'cw':
-            monodromy_matrix = (numpy.linalg.inv(br_loc.monodromy)
-                                .astype(int))
+        if reverse is False:
+            if direction == 'ccw':
+                monodromy_matrix = br_loc.monodromy
+            elif direction == 'cw':
+                monodromy_matrix = (
+                    numpy.linalg.inv(br_loc.monodromy).astype(int)
+                )
+        elif reverse is True:
+            if direction == 'cw':
+                monodromy_matrix = br_loc.monodromy
+            elif direction == 'ccw':
+                monodromy_matrix = (
+                    numpy.linalg.inv(br_loc.monodromy).astype(int)
+                )
+                
         pair_0 = self.ordered_weight_pairs(root)[0]
         v_i_ind = pair_0[0]
         v_j_ind = pair_0[1]
         ordered_weights = self.weights
-        new_v_i = sum([monodromy_matrix[k][v_i_ind] * v 
-                       for k, v in enumerate(ordered_weights)])
-        new_v_j = sum([monodromy_matrix[k][v_j_ind] * v 
-                       for k, v in enumerate(ordered_weights)]) 
+
+        new_v_i = sum([
+            monodromy_matrix[v_i_ind][k] * v 
+            for k, v in enumerate(ordered_weights)
+        ])
+        new_v_j = sum([
+            monodromy_matrix[v_j_ind][k] * v 
+            for k, v in enumerate(ordered_weights)
+        ]) 
 
         new_root = new_v_j - new_v_i
         return new_root
@@ -177,7 +197,9 @@ class GData:
 
 
 class RamificationPoint:
-    #def __init__(self, z=None, x=None, i=None, label=None, is_puncture=False):
+    # def __init__(
+    #     self, z=None, x=None, i=None, label=None, is_puncture=False
+    # ):
     def __init__(self, z=None, Ciz=None, x=None, i=None, label=None):
         # z is the numerical value of the PSL2C-transformed z-coordinate.
         self.z = z
@@ -192,7 +214,7 @@ class RamificationPoint:
         # in the trivializatio module.
         self.ramification_type = None
         self.sw_diff_coeff = None
-        #self.is_puncture = is_puncture
+        # self.is_puncture = is_puncture
 
     def __str__(self):
         return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
@@ -207,7 +229,7 @@ class RamificationPoint:
             'x': ctor2(self.x),
             'i': ctor2(self.i),
             'label': self.label,
-            #'is_puncture': self.is_puncture
+            # 'is_puncture': self.is_puncture
         }
         return json_data
 
@@ -217,7 +239,7 @@ class RamificationPoint:
         self.x = r2toc(json_data['x'])
         self.i = r2toc(json_data['i'])
         self.label = json_data['label']
-        #self.is_puncture = json_data['is_puncture']
+        # self.is_puncture = json_data['is_puncture']
 
 
 class Puncture:
@@ -286,8 +308,10 @@ class SWCurve:
 
 
 class SWDiff:
-    def __init__(self, v_str, g_data=None, diff_params=None, mt_params=None,
-                 z_rotation=None):
+    def __init__(
+            self, v_str, g_data=None, diff_params=None, mt_params=None,
+            z_rotation=None,):
+
         # sym_v is a SymPy expression. 
         self.sym_v = sympy.sympify(v_str)
         # num_v is from sym_v with its parameters 
@@ -481,34 +505,45 @@ class SWDataBase(object):
                 z_list = bpzs + pctzs
                 z_r_list = map(float, [z.real for z in (bpzs + pctzs)])
                 if len(z_r_list) > 1:
-                    min_x_distance = min(
-                        [abs(x - y) for i, x in enumerate(z_r_list) 
-                         for y in z_r_list[i + 1:]]
-                    )
-                    min_abs_distance = min(
-                        [abs(x - y) for i, x in enumerate(z_list)
-                         for y in z_list[i + 1:]]
-                    )
+
+                    min_x_distance = min([
+                        abs(x - y) for i, x in enumerate(z_r_list) 
+                        for y in z_r_list[i + 1:]
+                    ])
+                    min_abs_distance = min([
+                        abs(x - y) for i, x in enumerate(z_list)
+                        for y in z_list[i + 1:]
+                    ])
+                    
                 elif len(z_r_list) == 1:
-                    logging.info('All branch points and punctures '
-                                 'are sufficiently separated horizontally.\n'
-                                 'Will not rotate z-plane any more.\n')
+                    logging.info(
+                        'All branch points and punctures '
+                        'are sufficiently separated horizontally.\n'
+                        'Will not rotate z-plane any more.\n'
+                    )
+
                     rotate_z_plane = False
                     break
                 elif len(z_r_list) == 0:
-                    raise Exception('Could not find any punctures' + 
-                                    ' or branch points')
+                    raise Exception(
+                        'Could not find any punctures' + 
+                        ' or branch points'
+                    )
 
                 if min_x_distance > min_abs_distance / len(z_list):
-                    logging.info('All branch points and punctures '
-                                 'are sufficiently separated horizontally.\n'
-                                 'Will not rotate z-plane any more.\n')
+                    logging.info(
+                        'All branch points and punctures '
+                        'are sufficiently separated horizontally.\n'
+                        'Will not rotate z-plane any more.\n'
+                    )
                     rotate_z_plane = False
                     break
                 else:
-                    logging.info('Some branch points or punctures '
-                                 'are vertically aligned.\n'
-                                 'Need to rotate the z-plane.\n')
+                    logging.info(
+                        'Some branch points or punctures '
+                        'are vertically aligned.\n'
+                        'Need to rotate the z-plane.\n'
+                    )
                     n_r += 1
                     z_plane_rotation *= z_r
 
@@ -516,8 +551,9 @@ class SWDataBase(object):
                 break
 
         if n_r == pi_div == max_pi_div:
-            raise ValueError('Could not find a suitable rotation '
-                             'for the z-plane.')
+            raise ValueError(
+                'Could not find a suitable rotation for the z-plane.'
+            )
 
     def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
         """
@@ -566,7 +602,10 @@ class SWDataBase(object):
             n_zero_xs = len(zero_xs)
 
             if n_zero_xs == 0:
-                sorted_ffr_xs = sorted(ffr_xs, key=lambda x: phase(x),)
+                sorted_ffr_xs = sorted(
+                    ffr_xs, key=lambda x: phase(x),  # reverse=True,
+                )
+
                 # Pick x's corresponding to the positive weights.
                 # The order among the positive x's is arbitrary.
                 positive_xs = sorted_ffr_xs[:algebra_rank]
@@ -585,12 +624,15 @@ class SWDataBase(object):
                         ))
                     raise Exception('Zero sheets must be none or two.')
                 else:
-                    sorted_ffr_xs = sorted(non_zero_xs,
-                                           key=lambda x: phase(x),)
-                    positive_xs = (sorted_ffr_xs[:(algebra_rank - 1)] +
-                                   [zero_xs[0]])
-                    unsorted_negative_xs = (x for x in ffr_xs
-                                            if x not in positive_xs)
+                    sorted_ffr_xs = sorted(
+                        non_zero_xs, key=lambda x: phase(x),  # reverse=True,
+                    )
+                    positive_xs = (
+                        sorted_ffr_xs[:(algebra_rank - 1)] + [zero_xs[0]]
+                    )
+                    unsorted_negative_xs = (
+                        x for x in ffr_xs if x not in positive_xs
+                    )
                     negative_xs = list(numpy.zeros_like(positive_xs))
 
             for nx in unsorted_negative_xs:
@@ -627,7 +669,7 @@ class SWDataBase(object):
                 if fund_rep_index == 1:
                     xs = aligned_ffr_xs
                 else:
-                    #xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
+                    # xs = self.get_xs_of_weights_from_ffr_xs(aligned_ffr_xs)
                     raise NotImplementedError
             elif algebra_rank == 7:
                 raise NotImplementedError
@@ -636,7 +678,8 @@ class SWDataBase(object):
 
     def get_xs_of_weights_from_ffr_xs(self, ffr_xs):
         g_data = self.g_data
-        xs = numpy.zeros(len(g_data.weights), dtype=complex)
+        # xs = numpy.zeros(len(g_data.weights), dtype=complex)
+        xs = [0.0j for i in range(len(g_data.weights))]
 
         if g_data.type == 'A' or g_data.type == 'D':
             for i, cs in enumerate(g_data.weight_coefficients):
@@ -649,24 +692,25 @@ class SWDataBase(object):
 
 # E_6 curve strings
 tau_str = 't + 1/t + {u_6}'
-q_1_str = """ 
-270*x^(15) + 342*({u_1})*x^(13) + 162*({u_1})^2*x^(11) - 252*({u_2})*x^(10)
-+ (26*({u_1})^3 + 18*({u_3}))*x^9 - 162*({u_1})*({u_2})*x^8
-+ (6*({u_1})*({u_3}) - 27*({u_4}))*x^7
-- (30*({u_1})^2*({u_2}) - 36*({u_5}))*x^6
-+ (27*({u_2})^2 - 9*({u_1})*({u_4}))*x^5
-- (3*({u_2})*({u_3}) - 6*({u_1})*({u_5}))*x^4
-- 3*({u_1})*({u_2})^2*x^3 - 3*({u_2})*({u_5})*x - ({u_2})^3
-"""
+q_1_str = (
+    '270*x^(15) + 342*({u_1})*x^(13) + 162*({u_1})^2*x^(11)'  
+    '- 252*({u_2})*x^(10) + (26*({u_1})^3 + 18*({u_3}))*x^9' 
+    '- 162*({u_1})*({u_2})*x^8 + (6*({u_1})*({u_3}) - 27*({u_4}))*x^7' 
+    '- (30*({u_1})^2*({u_2}) - 36*({u_5}))*x^6' 
+    '+ (27*({u_2})^2 - 9*({u_1})*({u_4}))*x^5' 
+    '- (3*({u_2})*({u_3}) - 6*({u_1})*({u_5}))*x^4' 
+    '- 3*({u_1})*({u_2})^2*x^3 - 3*({u_2})*({u_5})*x - ({u_2})^3'
+)
 q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
-p_1_str = """ 
-78*x^10 + 60*({u_1})*x^8 + 14*({u_1})^2*x^6 - 33*({u_2})*x^5 + 2*({u_3})*x^4
-- 5*({u_1})*({u_2})*x^3 - ({u_4})*x^2 - ({u_5})*x - ({u_2})^2
-"""
-p_2_str = """ 
-12*x^10 + 12*({u_1})*x^8 + 4*({u_1})^2*x^6 - 12*({u_2})*x^5 + ({u_3})*x^4
-- 4*({u_1})*({u_2})*x^3 - 2*({u_4})*x^2 + 4*({u_5})*x  + ({u_2})^2
-"""
+p_1_str = (
+    '78*x^10 + 60*({u_1})*x^8 + 14*({u_1})^2*x^6 - 33*({u_2})*x^5' 
+    '+ 2*({u_3})*x^4 - 5*({u_1})*({u_2})*x^3 - ({u_4})*x^2 - ({u_5})*x'
+    '- ({u_2})^2'
+)
+p_2_str = (
+    '12*x^10 + 12*({u_1})*x^8 + 4*({u_1})^2*x^6 - 12*({u_2})*x^5 + ({u_3})*x^4' 
+    '- 4*({u_1})*({u_2})*x^3 - 2*({u_4})*x^2 + 4*({u_5})*x  + ({u_2})^2'
+)
 
 
 def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
@@ -723,9 +767,9 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     # g_type == 'A' or g_type == 'D':
     curve_str = 'x^{} '.format(N)
     for k, c_k in cs:
-        curve_str += '+ ({}) '.format(c_k)
+        curve_str += ' + ({}) '.format(c_k)
         if k != N:
-            curve_str += '* x^{}'.format(N - k)
+            curve_str += ' * x^{}'.format(N - k)
 
     return curve_str
 
@@ -740,7 +784,7 @@ def get_ramification_points(
     method=None,
     g_data=None
 ):
-    #FIXME: Why are we computing the ramification points
+    # FIXME: Why are we computing the ramification points
     # in the non-PLS2C rotated curve?
     # All the numerics of the Spectral Network happens
     # after we do PLS2C, and we should probably study the 
@@ -757,7 +801,7 @@ def get_ramification_points(
             punctures=punctures,
             g_data=g_data,
         )
-    #elif method == 'system_of_eqs':
+    # elif method == 'system_of_eqs':
     else:
         sols = get_ramification_points_using_system_of_eqs(
             curve=curve, 
@@ -766,7 +810,7 @@ def get_ramification_points(
             accuracy=accuracy, 
             punctures=punctures,
         )
-    #else:
+    # else:
     #    raise ValueError(
     #        'Unknown or no method set to find ramification points.\n'
     #        'Set ramification_point_finding_method = '
@@ -814,8 +858,8 @@ def get_ramification_points_using_system_of_eqs(
     eq_2 = d_x_f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True) 
 
     # NOTE: solve_poly_system vs. solve
-    #sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
-    #sols = sympy.solve([f, f.diff(x)], z, x)
+    # sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
+    # sols = sympy.solve([f, f.diff(x)], z, x)
     z_x_s = sage_subprocess.solve_system_of_eqs(
         [eq_1, eq_2],
         precision=ROOT_FINDING_PRECISION,
@@ -847,101 +891,8 @@ def get_ramification_points_using_system_of_eqs(
              (complex(mpmath.chop(x_i)), m_x)]
         )
 
-    return sols
-            
+    return sols      
 
-# def get_ramification_points_using_discriminant(
-#     curve=None, 
-#     diff_params=None, 
-#     mt_params=None,
-#     accuracy=None, 
-#     punctures=None,
-# ):
-#     sols = []
-#     f = curve.sym_eq
-#     # Make f into the form of rf = f_n/f_d
-#     rf = sympy.cancel(f)
-#     f_n, f_d = rf.as_numer_denom()
-#     subs_dict = copy.deepcopy(diff_params)
-
-#     # Find the roots of D(z), the discriminant of f(x, z)
-#     # as a polynomial of x. 
-#     D_z = sympy.discriminant(f_n, x)
-#     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
-#     D_z_n_P = sympy.Poly(D_z_n, z)
-#     cs = [
-#         c_sym.evalf(
-#             subs=subs_dict, n=ROOT_FINDING_PRECISION
-#         ).as_real_imag()
-#         for c_sym in D_z_n_P.all_coeffs()
-#     ]
-#     D_z_n_P_coeffs = [mpmath.mpc(*c) for c in cs]
-#     # Increase maxsteps & extraprec when root-finding fails.
-#     D_z_roots = None
-#     polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
-#     polyroots_extra_precision = ROOT_FINDING_PRECISION
-#     while D_z_roots is None:
-#         try:
-#             D_z_roots = mpmath.polyroots(
-#                 D_z_n_P_coeffs, 
-#                 maxsteps=polyroots_maxsteps,
-#                 extraprec=polyroots_extra_precision,
-#             )
-#         except NoConvergence:
-#             logging.warning(
-#                 'mpmath.polyroots failed; increase maxsteps & extraprec '
-#                 'by 10.'
-#             )
-#             polyroots_maxsteps += 10
-#             polyroots_extra_precision += 10
-
-#     is_same_z = lambda a, b: abs(a - b) < accuracy
-#     gathered_D_z_roots = gather(D_z_roots, is_same_z)  
-
-#     # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
-#     for z_i, zs in gathered_D_z_roots.iteritems():
-#         # m_z is the multiplicity of z_i.
-#         m_z = len(zs)
-#         # Check if z_i is one of the punctures.
-#         is_puncture = False
-#         for p in punctures:
-#             if abs(z_i - p.Ciz) < accuracy:
-#                 is_puncture = True
-#         if is_puncture:
-#             continue
-                
-#         subs_dict[z] = z_i
-#         f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
-#                   for c in sympy.Poly(f, x).all_coeffs()]
-#         f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
-#         f_x_roots = None
-#         while f_x_roots is None:
-#             try:
-#                 f_x_roots = mpmath.polyroots(
-#                     f_x_coeffs,
-#                     maxsteps=polyroots_maxsteps,
-#                     extraprec=polyroots_extra_precision
-#                 )
-#             except NoConvergence:
-#                 logging.warning(
-#                     'mpmath.polyroots failed; increase maxsteps & '
-#                     'extraprec by 10.'
-#                 )
-#                 polyroots_maxsteps += 10
-#                 polyroots_extra_precision += 10
-
-#         # In general x-roots have worse errors.
-#         is_same_x = lambda a, b: abs(a - b) < accuracy/1e-2
-#         gathered_f_x_roots = gather(f_x_roots, is_same_x)
-#         for x_j, xs in gathered_f_x_roots.iteritems():
-#             # m_x is the multiplicity of x_j.
-#             m_x = len(xs)
-#             if m_x == 1:
-#                 continue
-
-#             sols.append([z_i, (x_j, m_x)])
-
-#     return sols
 
 def get_ramification_points_using_discriminant(
     curve=None, 
@@ -957,16 +908,16 @@ def get_ramification_points_using_discriminant(
     rf = sympy.cancel(f)
     f_n, f_d = rf.as_numer_denom()
     subs_dict = copy.deepcopy(diff_params)
-
     # Find the roots of D(z), the discriminant of f(x, z)
     # as a polynomial of x. 
     D_z = sympy.discriminant(f_n.subs(subs_dict), x)
+
     if D_z == 0:
         logging.info('The discriminant of F(x,z) is identically zero')
         if g_data.type == 'A':
             D_z = sympy.discriminant(f_n.subs(subs_dict) / x, x)
         if g_data.type == 'D':
-            D_z = sympy.discriminant(f_n.subs(subs_dict) / (x**2), x)
+            D_z = sympy.discriminant(f_n.subs(subs_dict) / (x ** 2), x)
         logging.info(
             'Will work with the effective discriminant:\n{}'.format(D_z)
         )
@@ -974,10 +925,10 @@ def get_ramification_points_using_discriminant(
     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
     factors = sympy.factor_list(sympy.expand(sympy.Poly(D_z_n, z)))[1]
     for fact in factors:
-        logging.debug('styding roots of factor {}'.format(fact))
+        logging.debug('stuyding roots of factor {}'.format(fact))
         # separate the factor itself and the multiplicity
         f_P = sympy.Poly(fact[0], z)
-        #f_m = fact[1]
+        # f_m = fact[1]
         cs = [
             c_sym.evalf(
                 subs=subs_dict, n=ROOT_FINDING_PRECISION
@@ -1010,7 +961,7 @@ def get_ramification_points_using_discriminant(
         # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
         for z_i, zs in gathered_f_roots.iteritems():
             # m_z is the multiplicity of z_i.
-            #m_z = len(zs)
+            # m_z = len(zs)
             # Check if z_i is one of the punctures.
             is_puncture = False
             for p in punctures:
@@ -1040,10 +991,8 @@ def get_ramification_points_using_discriminant(
                     polyroots_extra_precision += 10
 
             # In general x-roots have worse errors.
-            gathered_f_x_roots = gather(
-                f_x_roots,
-                lambda a, b: abs(a - b) < (accuracy / 1e-2)
-            )
+            is_same_x = lambda a, b: abs(a - b) < accuracy / 1e-2
+            gathered_f_x_roots = gather(f_x_roots, is_same_x)
             for x_j, xs in gathered_f_x_roots.iteritems():
                 # m_x is the multiplicity of x_j.
                 m_x = len(xs)
@@ -1066,7 +1015,7 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     else:
         raise NotImplementedError
 
-    #xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=ffr).values()
+    # xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=ffr).values()
     if x_0 is None:
         return xs_at_z_0
     else:
@@ -1163,25 +1112,29 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
             else:
                 known_weights.append(i)
 
-    missing_weights = [i for i in range(len(weights)) 
-                       if i not in known_weights]
-    missing_sheets = [x for x in range(len(sheets)) 
-                      if i not in known_sheets]
+    missing_weights = [
+        i for i in range(len(weights)) if i not in known_weights
+    ]
+    missing_sheets = [
+        x for x in range(len(sheets)) if i not in known_sheets
+    ]
     
     # List all the combos of which WEIGHT quintets 
     # must/must not contain all missing WEIGHTS
     weight_combos = [
-        [quintet_contained(j, get_quintets(i, n_w_triples)) 
-         for i in known_weights]
-        for j in missing_weights
+        [
+            quintet_contained(j, get_quintets(i, n_w_triples)) 
+            for i in known_weights
+        ] for j in missing_weights
     ]
 
     # List all the combos of which SHEET quintets 
     # must/must not contain all missing SHEETS
     sheet_combos = [
-        [quintet_contained(x, get_quintets(y, n_s_triples)) 
-         for y in known_sheets]
-        for x in missing_sheets
+        [
+            quintet_contained(x, get_quintets(y, n_s_triples)) 
+            for y in known_sheets
+        ] for x in missing_sheets
     ]
 
     # Now match the patterns of inclusion in the quintets
