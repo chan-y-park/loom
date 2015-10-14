@@ -9,106 +9,12 @@ import matplotlib
 import pdb
 
 from multiprocessing import Queue
-
+from logutils_queue import QueueHandler
 from config import LoomConfig
 from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
-
-#
-# QueueHandler
-# Copyright (C) 2010-2013 Vinay Sajip. See LICENSE.txt for details.
-#
-"""
-This module contains classes which help you work with queues. A typical
-application is when you want to log from performance-critical threads, but
-where the handlers you want to use are slow (for example,
-:class:`~logging.handlers.SMTPHandler`). In that case, you can create a queue,
-pass it to a :class:`QueueHandler` instance and use that instance with your
-loggers. Elsewhere, you can instantiate a :class:`QueueListener` with the same
-queue and some slow handlers, and call :meth:`~QueueListener.start` on it.
-This will start monitoring the queue on a separate thread and call all the
-configured handlers *on that thread*, so that your logging thread is not held
-up by the slow handlers.
-
-Note that as well as in-process queues, you can use these classes with queues
-from the :mod:`multiprocessing` module.
-
-**N.B.** This is part of the standard library since Python 3.2, so the
-version here is for use with earlier Python versions.
-"""
-class QueueHandler(logging.Handler):
-    """
-    This handler sends events to a queue. Typically, it would be used together
-    with a multiprocessing Queue to centralise logging to file in one process
-    (in a multi-process application), so as to avoid file write contention
-    between processes.
-    
-    :param queue: The queue to send `LogRecords` to.
-    """
-
-    def __init__(self, queue):
-        """
-        Initialise an instance, using the passed queue.
-        """
-        logging.Handler.__init__(self)
-        self.queue = queue
-
-    def enqueue(self, record):
-        """
-        Enqueue a record.
-
-        The base implementation uses :meth:`~queue.Queue.put_nowait`. You may
-        want to override this method if you want to use blocking, timeouts or
-        custom queue implementations.
-        
-        :param record: The record to enqueue.
-        """
-        #self.queue.put_nowait(record)
-        self.queue.put(record)
-
-    def prepare(self, record):
-        """
-        Prepares a record for queuing. The object returned by this method is
-        enqueued.
-
-        The base implementation formats the record to merge the message
-        and arguments, and removes unpickleable items from the record
-        in-place.
-
-        You might want to override this method if you want to convert
-        the record to a dict or JSON string, or send a modified copy
-        of the record while leaving the original intact.
-        
-        :param record: The record to prepare.
-        """
-        # The format operation gets traceback text into record.exc_text
-        # (if there's exception data), and also puts the message into
-        # record.message. We can then use this to replace the original
-        # msg + args, as these might be unpickleable. We also zap the
-        # exc_info attribute, as it's no longer needed and, if not None,
-        # will typically not be pickleable.
-        self.format(record)
-        record.msg = record.message
-        record.args = None
-        record.exc_info = None
-        return record
-
-    def emit(self, record):
-        """
-        Emit a record.
-
-        Writes the LogRecord to the queue, preparing it for pickling first.
-        
-        :param record: The record to emit.
-        """
-        try:
-            self.enqueue(self.prepare(record))
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            self.handleError(record)
 
 
 class SpectralNetworkData:
@@ -134,11 +40,13 @@ def set_logging(level, queue=None, file_name='logs/log.loom.txt'):
     #print('Setting logging level to "{}".'.format(level))
 
     logger = logging.getLogger()
+    # Remove other handlers.
+    logger.handlers = []
+    #for handler in handlers:
+    #    logger.removeHandler(handler)
+
     logger.setLevel(level)
     formatter = get_logging_formatter(level)
-    # Remove other handlers.
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
 
     # Create a log file.
     fh = logging.FileHandler(file_name, 'w')
@@ -165,20 +73,21 @@ def get_logging_handler(level, handler_class, buffer_object):
 
 
 def load_config(file_path=None):
+#    if file_path is None:
+#        toplevel = tk.Toplevel()
+#        file_opts = {
+#            'defaultextension': '.ini',
+#            'initialdir': os.curdir,
+#            'initialfile': 'config.ini',
+#            'parent': toplevel,
+#            'title': 'Select a configuration file to load.',
+#        }
+#        file_path = tkFileDialog.askopenfilename(**file_opts)
+#        toplevel.destroy()
+#        if file_path == '':
+#            return None
     if file_path is None:
-        toplevel = tk.Toplevel()
-        file_opts = {
-            'defaultextension': '.ini',
-            'initialdir': os.curdir,
-            'initialfile': 'config.ini',
-            'parent': toplevel,
-            'title': 'Select a configuration file to load.',
-        }
-        file_path = tkFileDialog.askopenfilename(**file_opts)
-        toplevel.destroy()
-        if file_path == '':
-            return None
-
+        return None
     config = LoomConfig()
     logging.info('Loading configuration from {}...'.format(file_path))
     config.read(file_path)
@@ -187,20 +96,22 @@ def load_config(file_path=None):
     return config
 
 def save_config(config, file_path=None):
+#    if file_path is None:
+#        toplevel = tk.Toplevel()
+#        file_opts = {
+#            'defaultextension': '.ini',
+#            'initialdir': os.curdir,
+#            'initialfile': 'config.ini',
+#            'parent': toplevel,
+#            'title': 'Save the current configuration to a file.',
+#        }
+#        file_path = tkFileDialog.asksaveasfilename(**file_opts)
+#        toplevel.destroy()
+#        if file_path == '':
+#            return None
+#
     if file_path is None:
-        toplevel = tk.Toplevel()
-        file_opts = {
-            'defaultextension': '.ini',
-            'initialdir': os.curdir,
-            'initialfile': 'config.ini',
-            'parent': toplevel,
-            'title': 'Save the current configuration to a file.',
-        }
-        file_path = tkFileDialog.asksaveasfilename(**file_opts)
-        toplevel.destroy()
-        if file_path == '':
-            return None
-
+        return None
     logging.info('Saving configuration to {}.'.format(file_path))
     with open(file_path, 'w') as fp:
         config.parser.write(fp)
@@ -210,24 +121,25 @@ def save_config(config, file_path=None):
 
 def load_spectral_network(
     data_dir=None,
-    logging_level=None,
     logging_queue=None,
     result_queue=None,
 ):
+#    if data_dir is None:
+#        return (None, None)
+#        toplevel = tk.Toplevel()
+#        dir_opts = {
+#            'initialdir': os.curdir,
+#            'mustexist': False,
+#            'parent': toplevel,
+#            'title': 'Select a directory that contains data files.',
+#        }
+#        data_dir = tkFileDialog.askdirectory(**dir_opts)
+#        toplevel.destroy()
+#        if data_dir == '':
+#            return (None, None)
+#
     if data_dir is None:
         return (None, None)
-        toplevel = tk.Toplevel()
-        dir_opts = {
-            'initialdir': os.curdir,
-            'mustexist': False,
-            'parent': toplevel,
-            'title': 'Select a directory that contains data files.',
-        }
-        data_dir = tkFileDialog.askdirectory(**dir_opts)
-        toplevel.destroy()
-        if data_dir == '':
-            return (None, None)
-
     logging.info('Opening data directory "{}"...'.format(data_dir))
 
     config = LoomConfig()
@@ -274,7 +186,7 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
 
     # Save configuration to a file.
     config_file_path = os.path.join(data_dir, 'config.ini')
-    save_config(config, path=config_file_path)
+    save_config(config, file_path=config_file_path)
 
     # Save spectral network data.
     for i, spectral_network in enumerate(spectral_networks):

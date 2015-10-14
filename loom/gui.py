@@ -10,8 +10,6 @@ import time
 from StringIO import StringIO
 from Queue import Empty as QueueEmpty
 
-from logutils.queue import QueueListener
-
 from api import (set_logging, get_logging_handler,
                  generate_spectral_network, load_config, load_spectral_network,
                  save_config, save_spectral_network, 
@@ -19,6 +17,7 @@ from api import (set_logging, get_logging_handler,
 from trivialization import SWDataWithTrivialization
 
 GUI_LOOP_DELAY = 100    # in millisec
+
 
 class GUILoom:
     def __init__(self, config_file, logging_level=logging.INFO,):
@@ -60,6 +59,33 @@ class GUILoom:
         #self.spectral_networks = spectral_networks
         self.spectral_networks = [] 
 
+        # Array of ('entry label', 'config option') pairs. 
+        # Entries that will be placed in the same row
+        # are in the same row of this array.
+        self.entry_array = [
+            [('Root System', 'root_system'),
+             ('Representation', 'representation')],
+            [('Casimir differentials', 'casimir_differentials')],
+            [('Parameters of differentials','differential_parameters')],
+            [('Punctures', 'punctures')],
+            [('Mobius transformation', 'mt_params')], 
+            [('Ramification point finding method', 
+              'ramification_point_finding_method'),],
+            [('Plot range', 'plot_range')],
+            [('Number of steps', 'num_of_steps')],
+            [('Number of iterations', 'num_of_iterations')],
+            [('Size of a small step', 'size_of_small_step')],
+            [('Size of a large step', 'size_of_large_step')],
+            [('Size of a branch point cutoff', 'size_of_neighborhood')],
+            [('Size of a puncture cutoff', 'size_of_puncture_cutoff')],
+            [('Size of an intersection bin', 'size_of_bin')],
+            #[('', 'size_of_ramification_pt_cutoff')],
+            [('Accuracy', 'accuracy')],
+            [('Number of processes', 'n_processes')],
+            [('Mass limit', 'mass_limit')],
+            [('Range of phases', 'phase_range')],
+        ]
+    
     def create_widgets(self):
         # Layout variables
         grid_row = 0
@@ -87,92 +113,129 @@ class GUILoom:
             command=self.menu_save_data_action,
         )
 
-        # Associate each config option to an Entry
-        for option, value in self.config.iteritems():
-            self.entry_var[option] = tk.StringVar()
-            self.entry_var[option].set(value)
-            self.entry[option] = tk.Entry(
-                self.root,
-                textvariable=self.entry_var[option]
-            )
-        self.entry_phase = tk.StringVar()
-        self.entry_phase.set('1.0')
-        self.entry['phase'] = tk.Entry(
-            self.root,
-            textvariable=self.entry_phase
-        )
+#        # Associate each config option to an Entry
+#        for option, value in self.config.iteritems():
+#            self.entry_var[option] = tk.StringVar()
+#            self.entry_var[option].set(value)
+#            self.entry[option] = tk.Entry(
+#                self.root,
+#                textvariable=self.entry_var[option]
+#            )
+#        self.entry_phase_var = tk.StringVar()
+#        self.entry_phase_var.set('1.0')
+#        self.entry_phase = tk.Entry(
+#            self.root,
+#            textvariable=self.entry_phase
+#        )
 
-        ### Entry & Label layout
+        # Entry & Label layout
         # TODO: display config file name.
-        grid_row += 1
-        grid_col = 0
-        tk.Label(self.root,
-                 text='casimir_diffenrentials').grid(row=grid_row, 
-                                                     column=grid_col)
-        grid_col += 1
-        self.entry['casimir_differentials'].grid(
-            row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW
-        )
-
-        grid_row += 1
-        grid_col = 0
-        tk.Label(self.root,
-                 text='root_system').grid(row=grid_row, column=grid_col)
-        grid_col += 1
-        self.entry['root_system'].grid(row=grid_row, column=grid_col)
-        grid_col += 1
-        tk.Label(self.root,
-                 text='representation').grid(row=grid_row, column=grid_col)
-        grid_col += 1
-        self.entry['representation'].grid(row=grid_row, column=grid_col)
-
-        grid_row += 1
-        grid_col = 0
-        (tk.Label(self.root, text='differential_parameters')
-         .grid(row=grid_row, column=grid_col))
-        grid_col += 1
-        self.entry['differential_parameters'].grid(
-            row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW,
-        )
-
-        for option in ['punctures', 'mt_params', 
-                       'ramification_point_finding_method',
-                       'plot_range', 'num_of_steps', 'num_of_iterations',
-                       'size_of_small_step', 'size_of_large_step',
-                       'size_of_neighborhood', 'size_of_puncture_cutoff',
-                       'size_of_ramification_pt_cutoff',
-                       'accuracy', 'n_processes', 'mass_limit',]:
+        for entry_list in self.entry_array:
             grid_row += 1
-            grid_col = 0
-            tk.Label(self.root,
-                     text=option).grid(row=grid_row, column=grid_col)
-            grid_col += 1
-            self.entry[option].grid(row=grid_row, column=grid_col)
+            for column, entry in enumerate(entry_list):
+                grid_col = column * 2
+                entry_label_text, config_option = entry
+                label = tk.Label(self.root, text=entry_label_text)
+                label.grid(row=grid_row, column=grid_col)
+                
+                self.entry_var[config_option] = tk.StringVar()
+                self.entry[config_option] = tk.Entry(
+                    self.root,
+                    textvariable=self.entry_var[config_option]
+                )
 
-        grid_row += 1
-        grid_col = 0
-        tk.Label(self.root,
-                 text='phase_range').grid(row=grid_row, column=grid_col)
-        grid_col += 1
-        self.entry['phase_range'].grid(row=grid_row, column=grid_col)
+                grid_col += 1
+                if config_option in [
+                    'casimir_differentials',
+                    'differential_parameters',
+                ]:
+                    self.entry[config_option].grid(
+                        row=grid_row, column=grid_col, columnspan=3,
+                        sticky=tk.EW,
+                    )
+                else:
+                    self.entry[config_option].grid(
+                        row=grid_row, column=grid_col,
+                    )
 
+
+#        grid_row += 1
+#        grid_col = 0
+#        tk.Label(self.root,
+#                 text='casimir_diffenrentials').grid(row=grid_row, 
+#                                                     column=grid_col)
+#        grid_col += 1
+#        self.entry['casimir_differentials'].grid(
+#            row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW
+#        )
+#
+#        grid_row += 1
+#        grid_col = 0
+#        tk.Label(self.root,
+#                 text='root_system').grid(row=grid_row, column=grid_col)
+#        grid_col += 1
+#        self.entry['root_system'].grid(row=grid_row, column=grid_col)
+#        grid_col += 1
+#        tk.Label(self.root,
+#                 text='representation').grid(row=grid_row, column=grid_col)
+#        grid_col += 1
+#        self.entry['representation'].grid(row=grid_row, column=grid_col)
+#
+#        grid_row += 1
+#        grid_col = 0
+#        (tk.Label(self.root, text='differential_parameters')
+#         .grid(row=grid_row, column=grid_col))
+#        grid_col += 1
+#        self.entry['differential_parameters'].grid(
+#            row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW,
+#        )
+#
+#        for option in ['punctures', 'mt_params', 
+#                       'ramification_point_finding_method',
+#                       'plot_range', 'num_of_steps', 'num_of_iterations',
+#                       'size_of_small_step', 'size_of_large_step',
+#                       'size_of_neighborhood', 'size_of_puncture_cutoff',
+#                       'size_of_ramification_pt_cutoff',
+#                       'accuracy', 'n_processes', 'mass_limit',]:
+#            grid_row += 1
+#            grid_col = 0
+#            tk.Label(self.root,
+#                     text=option).grid(row=grid_row, column=grid_col)
+#            grid_col += 1
+#            self.entry[option].grid(row=grid_row, column=grid_col)
+#
+#        grid_row += 1
+#        grid_col = 0
+#        tk.Label(self.root,
+#                 text='phase_range').grid(row=grid_row, column=grid_col)
+#        grid_col += 1
+#        self.entry['phase_range'].grid(row=grid_row, column=grid_col)
+#
+        # phase is not a config option, treated separately here.
+        self.entry_phase_var = tk.StringVar()
+        self.entry_phase_var.set('1.0')
+        self.entry_phase = tk.Entry(
+            self.root,
+            textvariable=self.entry_phase_var
+        )
         grid_col += 1
         tk.Label(self.root,
                  text='phase').grid(row=grid_row, column=grid_col)
         grid_col += 1
-        self.entry['phase'].grid(row=grid_row, column=grid_col)
-
-        ### Check plot_on_cylinder
-        grid_row += 1
-        grid_col = 0
-        self.check['plot_on_cylinder'] = tk.IntVar()
-        tk.Checkbutton(
-            self.root,
-            text='Plot on cylinder',
-            variable=self.check['plot_on_cylinder']
-        ).grid(row=grid_row, column=grid_col)
+        self.entry_phase.grid(row=grid_row, column=grid_col)
 
         self.update_entries_from_config()
+
+        # Check plot_on_cylinder
+#        grid_row += 1
+#        grid_col = 0
+#        self.check['plot_on_cylinder'] = tk.IntVar()
+#        tk.Checkbutton(
+#            self.root,
+#            text='Plot on cylinder',
+#            variable=self.check['plot_on_cylinder']
+#        ).grid(row=grid_row, column=grid_col)
+
 
         # 'Generate' button
         grid_row += 1
@@ -187,8 +250,18 @@ class GUILoom:
             row=grid_row, column=grid_col, sticky=tk.E
         )
 
-        # 'Plot' button
+        # Checkbutton for plot_on_cylinder
+        # TODO: implement this functionality.
+        self.check['plot_on_cylinder'] = tk.IntVar()
         grid_col += 1
+        tk.Checkbutton(
+            self.root,
+            text='Plot on cylinder',
+            variable=self.check['plot_on_cylinder']
+        ).grid(row=grid_row, column=grid_col)
+
+        # 'Plot' button
+        #grid_col += 1
         self.button['plot'] = tk.Button(
             self.root,
             text='Plot',
@@ -201,6 +274,11 @@ class GUILoom:
         grid_row += 1
         grid_col = 0
         self.log_text = tk.Text(self.root)
+        self.log_text.config(
+            #spacing1=2,
+            spacing2=2,
+            spacing3=2,
+        )
         self.log_text.grid(
             row=grid_row, column=grid_col, columnspan=4, sticky=tk.EW
         )
@@ -211,12 +289,7 @@ class GUILoom:
         self.log_text.config(yscrollcommand=log_text_scroll.set)
 
         self.root.after(GUI_LOOP_DELAY, self.get_log)
-
-    #def print_log(self):
-    #    logs = self.logging_stream.getvalue()
-    #    self.logging_stream.truncate(0)
-    #    self.log_text.insert(tk.END, logs)
-    #    self.log_text.see(tk.END)
+        return None
 
     def get_log(self):
         try:
@@ -241,7 +314,23 @@ class GUILoom:
     def menu_load_config_action(self):
         self.change_gui_state('off')
         self.log_text.delete('1.0', tk.END)
-        config = load_config()
+
+        #toplevel = tk.Toplevel()
+        file_opts = {
+            'defaultextension': '.ini',
+            'initialdir': os.curdir,
+            'initialfile': 'config.ini',
+            #'parent': toplevel,
+            'parent': self.root,
+            'title': 'Select a configuration file to load.',
+        }
+        file_path = tkFileDialog.askopenfilename(**file_opts)
+        #toplevel.destroy()
+        if file_path == '' or file_path is None:
+            self.change_gui_state('on')
+            return None
+
+        config = load_config(file_path)
         if config is None:
             self.change_gui_state('on')
             return None
@@ -252,6 +341,23 @@ class GUILoom:
 
     def menu_save_config_action(self):
         self.change_gui_state('off')
+
+        #toplevel = tk.Toplevel()
+        file_opts = {
+            'defaultextension': '.ini',
+            'initialdir': os.curdir,
+            'initialfile': 'config.ini',
+        #    'parent': toplevel,
+            'parent': self.root,
+            'title': 'Save the current configuration to a file.',
+        }
+        file_path = tkFileDialog.asksaveasfilename(**file_opts)
+        #toplevel.destroy()
+        if file_path == '' or file_path is None:
+            self.change_gui_state('on')
+            return None
+
+        self.change_gui_state('off')
         self.update_config_from_entries()
         save_config(self.config,)
         self.change_gui_state('on')
@@ -261,17 +367,18 @@ class GUILoom:
         self.change_gui_state('off')
         self.log_text.delete('1.0', tk.END)
         result_queue = multiprocessing.Queue()
-        toplevel = tk.Toplevel()
 
+        #toplevel = tk.Toplevel()
         dir_opts = {
             'initialdir': os.curdir,
             'mustexist': False,
-            'parent': toplevel,
+        #    'parent': toplevel,
+            'parent': self.root,
             'title': 'Select a directory that contains data files.',
         }
         data_dir = tkFileDialog.askdirectory(**dir_opts)
-        toplevel.destroy()
-        if data_dir == '':
+        #toplevel.destroy()
+        if data_dir == '' or data_dir is None:
             self.change_gui_state('on')
             return (None, None)
 
@@ -279,7 +386,7 @@ class GUILoom:
             target=load_spectral_network,
             kwargs=dict(
                 data_dir=data_dir,
-                logging_level=self.logging_level,
+                #logging_level=self.logging_level,
                 logging_queue=self.logging_queue,
                 result_queue=result_queue,
             )
@@ -300,8 +407,11 @@ class GUILoom:
                 self.root.after(GUI_LOOP_DELAY, self.finish_load_data, *args)
                 return None
             else:
-                logging.warning('Loading data failed: process = {}'
-                                .format(load_data_process))
+                logging.warning(
+                    'Loading data failed: pid = {}, exitcode= {}'
+                    .format(load_data_process.pid, 
+                            load_data_process.exitcode,)
+                )
                 self.change_gui_state('on')
                 return None
 
@@ -329,7 +439,7 @@ class GUILoom:
             'title': 'Select a directory to save data files.',
         }
         data_dir = tkFileDialog.askdirectory(**dir_opts)
-        if data_dir == '':
+        if data_dir == '' or data_dir is None:
             self.change_gui_state('on')
             return None
 
@@ -372,7 +482,7 @@ class GUILoom:
             target = generate_spectral_network,
             args=(
                 self.config,
-                eval(self.entry['phase'].get()),
+                eval(self.entry_phase_var.get()),
                 result_queue,
             ),
         )
@@ -395,8 +505,12 @@ class GUILoom:
                 )
                 return None
             else:
-                logging.warning('Generating spectral networks failed: '
-                                'process = {}.'.format(generate_process))
+                logging.warning(
+                    'Generating spectral networks failed: '
+                    'pid = {}, exitcode = {}.'
+                    .format(generate_process.pid,
+                            generate_process.exitcode,)
+                )
                 self.change_gui_state('on')
                 return None
         spectral_network_data = result_queue.get()
@@ -431,7 +545,7 @@ class GUILoom:
 #            target=make_spectral_network_plot,
 #            args=(snd,),
 #            kwargs=dict(
-#                master=self.root,
+#                master=None,
 #                plot_on_cylinder=self.check_plot_on_cylinder,
 #                plot_range=self.config['plot_range'],
 #            )
@@ -453,7 +567,7 @@ class GUILoom:
 #            plot_process.join()
 #            self.change_gui_state('on')
 #            return None
-
+#
     def change_gui_state(self, state):
         if state == 'on':
             tk_state = tk.NORMAL
@@ -495,11 +609,12 @@ class GUILoom:
         # Update the text values of the entries 
         # when a new configuration is loaded to self.config.
         config_options = self.config.keys()
-        for option in self.entry_var:
-            value = self.config[option]
-            if value is not None:
-                config_options.remove(option)
-            self.entry_var[option].set(self.config[option])
+        for entry_list in self.entry_array:
+            for entry_label, config_option in entry_list:
+                value = self.config[config_option]
+                if value is not None:
+                    config_options.remove(config_option)
+                self.entry_var[config_option].set(value)
         if len(config_options) > 0:
             logging.warning(
                 'The following options are in the configuration '
