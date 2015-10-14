@@ -1,16 +1,14 @@
 import platform
 import os
 import numpy
-import scipy
 import sympy
 import ctypes
 import logging
 import json
-
-import pdb
+# import pdb
 
 from cmath import exp
-
+from scipy import integrate
 from s_wall import SWall, Joint, get_s_wall_seeds, get_joint
 from misc import (
     n_nearest_indices, 
@@ -41,14 +39,15 @@ class SpectralNetwork:
         """
         accuracy = config['accuracy']
         num_of_iterations = config['num_of_iterations']
-        n_steps=config['num_of_steps']
+        n_steps = config['num_of_steps']
         logging.info('Start growing a new spectral network...')
 
         logging.info('Seed S-walls at branch points...')
         
         for bp in sw_data.branch_points:
-            s_wall_seeds = get_s_wall_seeds(sw_data, self.phase, 
-                                                        bp, config)
+            s_wall_seeds = get_s_wall_seeds(
+                sw_data, self.phase, bp, config
+            )
             for z_0, x_0, M_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
                 self.s_walls.append(
@@ -114,8 +113,10 @@ class SpectralNetwork:
                 joint.label = 'joint #{}'.format(len(self.joints))
                 self.joints.append(joint)
                 label = 'S-wall #{}'.format(len(self.s_walls))
-                if (config['mass_limit'] is None or 
-                    joint.M < config['mass_limit']):
+                if (
+                    config['mass_limit'] is None or 
+                    joint.M < config['mass_limit']
+                ):
                     self.s_walls.append(
                         SWall(
                             z_0=joint.z,
@@ -131,20 +132,17 @@ class SpectralNetwork:
             logging.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
 
-
     def save_json_data(self, file_object, **kwargs):
         """
         Save the spectral network data in a JSON-compatible file.
         """
         json_data = {}
-
         json_data['phase'] = self.phase
         json_data['s_walls'] = [s_wall.get_json_data()
                                 for s_wall in self.s_walls]
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
         json.dump(json_data, file_object, **kwargs)
-
 
     def set_from_json_data(self, file_object, **kwargs):
         """
@@ -163,7 +161,6 @@ class SpectralNetwork:
             a_joint = Joint()
             a_joint.set_json_data(joint_data)
             self.joints.append(a_joint)
-
 
     def get_new_joints(self, new_s_wall_index, config, sw_data):
         try:
@@ -189,7 +186,7 @@ class SpectralNetwork:
         Find new wall-wall intersections using CGAL 2d curve intersection.
         """
         new_joints = []
-        if (config['root_system'] in ['A1',]):
+        if (config['root_system'] in ['A1', ]):
             logging.info('There is no joint for the given root system {}.'
                          .format(config['root_system']))
             return new_joints
@@ -197,7 +194,7 @@ class SpectralNetwork:
         if linux_distribution == 'Ubuntu':
             lib_name += '_ubuntu'
         elif linux_distribution == 'debian':
-            ### FIXME: Anaconda Python returns 'debian' instead of 'Ubuntu'.
+            # FIXME: Anaconda Python returns 'debian' instead of 'Ubuntu'.
             lib_name += '_ubuntu'
         elif linux_distribution == 'Scientific Linux':
             lib_name += '_het-math2'
@@ -227,10 +224,10 @@ class SpectralNetwork:
 
         cgal_find_intersections_of_curves.restype = ctypes.c_int
         cgal_find_intersections_of_curves.argtypes = [
-            #array_2d_float,
+            # array_2d_float,
             array_2d_complex,
             ctypes.c_long,
-            #array_2d_float, 
+            # array_2d_float, 
             array_2d_complex,
             ctypes.c_long,
             array_2d_float, ctypes.c_int,
@@ -265,11 +262,11 @@ class SpectralNetwork:
                                      'and run intersection finding again.')
                         buffer_size = num_of_intersections
                     else:
-                        intersections.resize((num_of_intersections,2))
+                        intersections.resize((num_of_intersections, 2))
                         intersection_search_finished = True
 
                 for ip_x, ip_y in intersections:
-                    ip_z = ip_x + 1j*ip_y
+                    ip_z = ip_x + 1j * ip_y
 
                     # t_n: index of new_s_wall.z nearest to ip_z
                     t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
@@ -299,11 +296,9 @@ class SpectralNetwork:
 
         return new_joints
 
-
     def get_new_joints_using_interpolation(
-                                            self, new_s_wall_index, 
-                                            config, sw_data
-                                        ):
+        self, new_s_wall_index, config, sw_data, 
+    ):
         """
         Find joints between the newly grown segment of the given S-wall
         and the other S-walls by interpolating S-walls with functions and
@@ -315,7 +310,7 @@ class SpectralNetwork:
         setup.
         """
         new_joints = []
-        if (config['root_system'] in ['A1',]):
+        if (config['root_system'] in ['A1', ]):
             logging.info('There is no joint for the given root system {}.'
                          .format(config['root_system']))
             return new_joints
@@ -330,9 +325,9 @@ class SpectralNetwork:
             prev_tps = prev_s_wall.get_turning_points()
             prev_z_segs = numpy.split(prev_s_wall.z, prev_tps, axis=0,)
 
-            for i_n in range(len(new_tps)+1):
+            for i_n in range(len(new_tps) + 1):
                 z_seg_n = new_z_segs[i_n]
-                for i_p in range(len(prev_tps)+1):
+                for i_p in range(len(prev_tps) + 1):
                     z_seg_p = prev_z_segs[i_p]
                     # Find an intersection on the z-plane.
                     try:
@@ -341,11 +336,10 @@ class SpectralNetwork:
                             (z_seg_p.real, z_seg_p.imag),
                             config['accuracy'],
                         )
-                        ip_z = ip_x + 1j*ip_y
+                        ip_z = ip_x + 1j * ip_y
 
                         # t_n: index of z_seg_n nearest to ip_z
                         t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
-
 
                         # t_p: index of z_seg_p nearest to ip_z
                         t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
@@ -385,24 +379,25 @@ def get_ode(sw, phase, accuracy):
     f = sw.ffr_curve.num_eq
     df_dz = f.diff(z)
     df_dx = f.diff(x)
-    # F = -(\partial f/\partial z)/(\partial f/\partial x).
-    F = sympy.lambdify((z, x), -df_dz/df_dx)
+    # F = -(\partial f / \partial z) / (\partial f / \partial x).
+    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
+    # Do we need to call sw.diff? Or can we just use the values of x_i's?
     v = sympy.lambdify((z, x), sw.diff.num_v)
 
     def ode_f(t, zx1x2M):
         z_i = zx1x2M[0]
         x1_i = zx1x2M[1]
         x2_i = zx1x2M[2]
-        dz_i_dt = exp(phase*1j)/(v(z_i, x1_i) - v(z_i, x2_i))
+        dz_i_dt = exp(phase * 1j) / (v(z_i, x1_i) - v(z_i, x2_i))
         dx1_i_dt = F(z_i, x1_i) * dz_i_dt
         dx2_i_dt = F(z_i, x2_i) * dz_i_dt
         dM_dt = 1
         return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
 
-    ode = scipy.integrate.ode(ode_f)
+    ode = integrate.ode(ode_f)
     ode.set_integrator(
         'zvode',
-        #method='adams',
+        # method='adams',
         atol=ode_absolute_tolerance,
     )
 
