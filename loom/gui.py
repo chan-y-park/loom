@@ -33,7 +33,6 @@ class GUILoom:
         self.root = root
 
         # Logging handling
-        self.logging_level = logging_level
         self.logging_queue = multiprocessing.Queue()
         set_logging(
             logging_level,
@@ -41,14 +40,13 @@ class GUILoom:
         )
         self.logging_stream = StringIO()
         self.logging_stream_handler = get_logging_handler(
-            self.logging_level,
+            logging_level,
             logging.StreamHandler,
             self.logging_stream,
         )
 
-        self.config = load_config(
-            config_file, #self.logging_level, self.logging_stream,
-        )
+        # Load default config.
+        self.config = load_config(config_file)
 
         self.entry = {}
         self.entry_var = {}
@@ -56,7 +54,6 @@ class GUILoom:
         self.check = {}
         self.button = {}
         self.sw_data = None
-        #self.spectral_networks = spectral_networks
         self.spectral_networks = [] 
 
         # Array of ('entry label', 'config option') pairs. 
@@ -386,7 +383,6 @@ class GUILoom:
             target=load_spectral_network,
             kwargs=dict(
                 data_dir=data_dir,
-                #logging_level=self.logging_level,
                 logging_queue=self.logging_queue,
                 result_queue=result_queue,
             )
