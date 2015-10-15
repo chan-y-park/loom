@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 
+import scipy
 import os
 import logging
 import sys
 import pdb
+import flask
+import time
 
 LOOM_DIR = os.path.dirname(os.path.realpath(__file__))
-os.chdir(LOOM_DIR)
-sys.path.insert(0, LOOM_DIR)
+#os.chdir(LOOM_DIR)
+#sys.path.insert(0, LOOM_DIR)
 sys.stdout = sys.stderr
 print os.getcwd()
 

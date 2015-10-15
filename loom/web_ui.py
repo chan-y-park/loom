@@ -2,6 +2,9 @@ import multiprocessing
 import time
 import pdb
 import flask
+import sys
+import logging
+sys.stdout = sys.stderr
 
 from api import (
     set_logging,
@@ -10,6 +13,15 @@ from api import (
 # Flask configuration
 DEBUG = True
 SECRET_KEY = 'web_loom_key'
+
+class LoomDB(object):
+    def __init__(self):
+        self.logging_queues = {}
+        self.result_queues = {}
+        self.processes = {}
+
+    def start_logging(key=None):
+        
 
 class WebLoomApplication(flask.Flask):
     def __init__(self, config_file, logging_level):
@@ -22,11 +34,11 @@ class WebLoomApplication(flask.Flask):
         print flask.current_app.app_id
 
 def index():
-    #flask.current_app.test()
-    return 'index'
+    flask.current_app.test()
+    return flask.render_template('index.html')
 
 def progress():
-    #flask.current_app.test()
+    flask.current_app.test()
     return 'progress'
 
 def get_application(config_file, logging_level):
