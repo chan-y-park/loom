@@ -22,11 +22,11 @@ class WebLoomApplication(flask.Flask):
         print flask.current_app.app_id
 
 def index():
-    flask.current_app.test()
+    #flask.current_app.test()
     return 'index'
 
 def progress():
-    flask.current_app.test()
+    #flask.current_app.test()
     return 'progress'
 
 def get_application(config_file, logging_level):
