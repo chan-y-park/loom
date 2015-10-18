@@ -280,6 +280,7 @@ class SWall(object):
         ramification_point_zs,
         puncture_point_zs,
         config,
+        clipping_radius=None,
     ):
         rpzs = ramification_point_zs
         ppzs = puncture_point_zs
@@ -341,8 +342,15 @@ class SWall(object):
             z_i = y_i[0]
             M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
             self[step] = y_i
+        if clipping_radius is not None:
+            i_clip = 0
+            for i, z_i in enumerate(self.z):
+                if abs(z_i) > clipping_radius:
+                    i_clip = i
+                    break
+            self.z = self.z[:i_clip]
+            self.x = self.x[:i_clip]
 
-        # print 'this is the trajectory\n{}'.format(self.z[0:10])
 
     def determine_root_types(self, sw_data):
         """

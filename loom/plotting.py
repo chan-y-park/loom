@@ -80,7 +80,6 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         walls = []
         walls_roots = []
         for i, s_wall in enumerate(spectral_network.s_walls):
-            print '{} has {} segments'.format(s_wall.label, len(s_wall.local_roots))
             segments = []
             seg_labels = []
             split_at = []
@@ -97,7 +96,6 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             else:
                 z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
                 
-            print 'recovered {} segments'.format(len(z_segs))
             seg_labels = [s_wall.label + '\n' + lab
                           for lab in map(str, s_wall.local_roots)]
 
@@ -113,10 +111,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             [g_data.root_color(root) for root in w_roots]
             for w_roots in walls_roots
         ]
-        print 'the length of colors for walls'
-        print map(len, walls_colors)
 
-        print('------------------------\n'
+        logging.info('------------------------\n'
               'phase : {}\n'.format(spectral_network.phase) +
               '------------------------\n')
         print_legend(g_data)
@@ -394,7 +390,7 @@ def print_spectral_network_data(
                     ):
     root_dictionary = make_root_dictionary(g_data)
 
-    print('\t--- The S-Wall Data ---\n')
+    logging.info('\t--- The S-Wall Data ---\n')
     for s in s_walls:
         rt_labels = [get_label(rt, root_dictionary) for rt in s.local_roots]
         wt_labels = [
@@ -403,26 +399,26 @@ def print_spectral_network_data(
                 for pair in loc_wts
             ] for loc_wts in s.local_weight_pairs
         ]
-        print(
+        logging.info(
             s.label + 
             '\troot types : {}\n'.format(rt_labels) +
             '\t\tsheet pairs : {}\n'.format(wt_labels)
         )
 
-    print('\t--- The Branch Points ---\n')
+    logging.info('\t--- The Branch Points ---\n')
     for bp in branch_points:
         rt_labels = [get_label(rt, root_dictionary)
                      for rt in bp.positive_roots]
-        print(
+        logging.info(
             bp.label + 
             '\tposition : {}\n'.format(bp.z) +
             '\t\troot type : {}\n'.format(rt_labels) +
             '\t\monodromy matrix : \n{}\n'.format(bp.monodromy)
         )
 
-    print('\t--- The Irregular Singularities ---\n')
+    logging.info('\t--- The Irregular Singularities ---\n')
     for irs in irregular_singularities:
-        print(
+        logging.info(
             irs.label + 
             '\tposition : {}\n'.format(irs.z) + 
             '\tmonodomry matrix : \n{}\n'.format(irs.monodromy)
@@ -460,14 +456,14 @@ def print_legend(g_data):
     weight_labels = weight_dictionary.keys()
     weights = weight_dictionary.values()
 
-    print('\t--- The Root System ---\n')
+    logging.info('\t--- The Root System ---\n')
     for i in range(len(roots)):
-        print(
+        logging.info(
             root_labels[i] + ' : {}\n'.format(list(roots[i])) +
             'ordered weight pairs : {}\n'.format(weight_pairs[i])
         )
 
-    print('\t--- The Weight System ---\n')
+    logging.info('\t--- The Weight System ---\n')
     for i in range(len(weights)):
-        print(weight_labels[i] + ' : {}\n'.format(list(weights[i])))
+        logging.info(weight_labels[i] + ' : {}\n'.format(list(weights[i])))
     
