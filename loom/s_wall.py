@@ -367,128 +367,135 @@ class SWall(object):
             [1.0]
         )
 
-        # If the length of the S-wall's coordinates
-        # is 3 or less, do not check cuts.
-        # Otherwise, the interpolation methood would
-        # raise an error.
-        if len(self.z) <= 3:
-            return None
-
         # branching will occur at branch points or irregular singularities
         branching_loci = branch_points + irregular_singularities
         br_loc_zs_r = [bl.z.real for bl in branching_loci]
         
-        # parametrizing the z-coordinate of the k-wall's coordinates
-        # as a function of proper time
-        traj_t = numpy.array(range(len(self.z)))
-        traj_z_r = numpy.array([z.real for z in self.z])
-        
-        # Scan over branching loci cuts, see if path ever crosses one 
-        # based on x-coordinates only
-        _cuts_intersections = []
-        for br_loc_idx, x_0 in list(enumerate(br_loc_zs_r)):
-            g = interpolate.splrep(traj_t, traj_z_r - x_0, s=0)
-            # now produce a list of integers corresponding to points in the 
-            # S-wall's coordinate list that seem to cross branch-cuts
-            # based on the z-coordinate's real part.
-            # Now get the list of intersection points as integer values 
-            # of the proper time, approximated by the floor function
-
-            __intersection_ts = map(int, map(floor, interpolate.sproot(g)))
-            # Remove duplicates.
-            _intersection_ts = delete_duplicates(__intersection_ts)
-            # Enforce imaginary-part of z-coordinate intersection criterion:
-            # branch cuts extend vertically.
-            y_0 = branching_loci[br_loc_idx].z.imag
-            intersection_ts = [t for t in _intersection_ts
-                               if self.z[t].imag > y_0]
+        # If the length of the S-wall's coordinates
+        # is 3 or less, do not check cuts.
+        # Otherwise, the interpolation method would
+        # raise an error.
+        if len(self.z) > 3:
+            # parametrizing the z-coordinate of the k-wall's coordinates
+            # as a function of proper time
+            traj_t = numpy.array(range(len(self.z)))
+            traj_z_r = numpy.array([z.real for z in self.z])
             
-            intersections = []
-            for t in intersection_ts:
-                branch_locus = branching_loci[br_loc_idx]
-                
-                if branch_locus.__class__.__name__ == 'BranchPoint':
-                    # # Drop intersections of a primary S-wall with the 
-                    # # branch cut emanating from its parent branch-point
-                    # # if such intersections happens at t=0 or t=1.
-                    # if (branch_locus.label == self.parents[0] 
-                    #                             and (t == 0 or t == 1)):
-                    #     continue
+            # Scan over branching loci cuts, see if path ever crosses one 
+            # based on x-coordinates only
+            _cuts_intersections = []
+            for br_loc_idx, x_0 in list(enumerate(br_loc_zs_r)):
+                g = interpolate.splrep(traj_t, traj_z_r - x_0, s=0)
+                # now produce a list of integers corresponding to points in  
+                # the S-wall's coordinate list that seem to cross branch-cuts
+                # based on the z-coordinate's real part.
+                # Now get the list of intersection points as integer values 
+                # of the proper time, approximated by the floor function
 
-                    # Drop intersections of a primary S-wall with the 
-                    # branch cut emanating from its parent branch-point
-                    # if such intersections happens within a short 
-                    # distance from the starting point
-                    if (
-                        branch_locus.label == self.parents[0] and 
-                        # t<6):
-                        abs(branch_locus.z - self.z[t]) < BRANCH_POINT_RADIUS
+                __intersection_ts = map(
+                    int, map(floor, interpolate.sproot(g))
+                )
+                # Remove duplicates.
+                _intersection_ts = delete_duplicates(__intersection_ts)
+                # Enforce imaginary-part of z-coordinate intersection 
+                # criterion: branch cuts extend vertically.
+                y_0 = branching_loci[br_loc_idx].z.imag
+                intersection_ts = [t for t in _intersection_ts
+                                   if self.z[t].imag > y_0]
+                
+                intersections = []
+                for t in intersection_ts:
+                    branch_locus = branching_loci[br_loc_idx]
+                    
+                    if branch_locus.__class__.__name__ == 'BranchPoint':
+                        # # Drop intersections of a primary S-wall with the 
+                        # # branch cut emanating from its parent branch-point
+                        # # if such intersections happens at t=0 or t=1.
+                        # if (branch_locus.label == self.parents[0] 
+                        #                             and (t == 0 or t == 1)):
+                        #     continue
+
+                        # Drop intersections of a primary S-wall with the 
+                        # branch cut emanating from its parent branch-point
+                        # if such intersections happens within a short 
+                        # distance from the starting point
+                        if (
+                            branch_locus.label == self.parents[0] and 
+                            # t<6):
+                            abs(branch_locus.z - self.z[t]) 
+                            < BRANCH_POINT_RADIUS
+                        ):
+                            # abs(branch_locus.z - self.z[t]) < accuracy):
+                            continue
+
+                    # Check that the intersection actually happens
+                    # and is not an artifact of the interpolation used above
+                    # which could become an extrapolation
+
+                    if not (
+                        (
+                            self.z[t - 1].real < branch_locus.z.real and
+                            branch_locus.z.real < self.z[t + 1].real
+                        )
+                        or 
+                        (
+                            self.z[t + 1].real < branch_locus.z.real and
+                            branch_locus.z.real < self.z[t - 1].real
+                        )
                     ):
-                        # abs(branch_locus.z - self.z[t]) < accuracy):
+                        logging.info('Dropping a fake cut intersection.')
                         continue
 
-                # Check that the intersection actually happens
-                # and is not an artifact of the interpolation used above
-                # which could become an extrapolation
-
-                if not (
-                    (
-                        self.z[t - 1].real < branch_locus.z.real and
-                        branch_locus.z.real < self.z[t + 1].real
+                    # Add 
+                    # [the branch-point identifier(index), t,
+                    #  the direction (either 'cw' or 'ccw')]
+                    # to each intersection.
+                    intersections.append(
+                        [branch_locus.label, t, clock(left_right(self.z, t))]
                     )
-                    or 
-                    (
-                        self.z[t + 1].real < branch_locus.z.real and
-                        branch_locus.z.real < self.z[t - 1].real
-                    )
-                ):
-                    logging.info('Dropping a fake cut intersection.')
-                    continue
+                _cuts_intersections += intersections
 
-                # Add 
-                # [the branch-point identifier(index), t,
-                #  the direction (either 'cw' or 'ccw')]
-                # to each intersection.
-                intersections.append(
-                    [branch_locus.label, t, clock(left_right(self.z, t))]
-                )
-            _cuts_intersections += intersections
-
-        # Now sort intersections according to where they happen in proper 
-        # time; recall that the elements of cuts_intersections are organized 
-        # as      [..., [branch_point_idx, t, 'ccw'] ,...]
-        # where 't' is the integer of proper time at the intersection.
-        self.cuts_intersections = sorted(
-            _cuts_intersections, 
-            cmp=lambda k1, k2: cmp(k1[1], k2[1])
-        )
-        logging.debug(
-            'S-wall {} intersects the following '
-            'cuts at the points\n{}.'.format(
-                self.label, self.cuts_intersections
+            # Now sort intersections according to where they happen in proper 
+            # time; recall that the elements of cuts_intersections are 
+            # organized  as      [..., [branch_point_idx, t, 'ccw'] ,...]
+            # where 't' is the integer of proper time at the intersection.
+            self.cuts_intersections = sorted(
+                _cuts_intersections, 
+                cmp=lambda k1, k2: cmp(k1[1], k2[1])
             )
-        )
-
-        # Add the actual intersection point to the S-wall
-        # then update the attribute SWall.cuts_intersections accordingly    
-        self.enhance_at_cuts(sw_data)
-
-        # Choose a suitable point along the wall
-        # we pick the one whose z coordinate's real part is 
-        # farthest from critical loci of the fibration        
-        # Ideally, we would like this basepoint to be not too far away 
-        # on the C-plane, because getting close to infinity
-        # means colliding sheets usually.
-        # But some walls are born beyond the max_radius in general
-        # in that case, we just choose the t=0 coordinate
-        t_0 = sorted(
-            ([
-                [t_i, min(z_r_distance_from_ramification_loci(z_i, sw_data))]
-                for t_i, z_i in enumerate(self.z) if (
-                    abs(z_i) < max_radius or t_i == 0
+            logging.debug(
+                'S-wall {} intersects the following '
+                'cuts at the points\n{}.'.format(
+                    self.label, self.cuts_intersections
                 )
-            ]), cmp=lambda a, b: cmp(a[1], b[1])
-        )[-1][0]
+            )
+
+            # Add the actual intersection point to the S-wall
+            # then update the attribute SWall.cuts_intersections accordingly    
+            self.enhance_at_cuts(sw_data)
+
+            # Choose a suitable point along the wall
+            # we pick the one whose z coordinate's real part is 
+            # farthest from critical loci of the fibration        
+            # Ideally, we would like this basepoint to be not too far away 
+            # on the C-plane, because getting close to infinity
+            # means colliding sheets usually.
+            # But some walls are born beyond the max_radius in general
+            # in that case, we just choose the t=0 coordinate
+            t_0 = sorted(
+                ([
+                    [t_i, min(
+                        z_r_distance_from_ramification_loci(z_i, sw_data)
+                    )]
+                    for t_i, z_i in enumerate(self.z) if (
+                        abs(z_i) < max_radius or t_i == 0
+                    )
+                ]), cmp=lambda a, b: cmp(a[1], b[1])
+            )[-1][0]
+        
+        else:
+            self.cuts_intersections = []
+            t_0 = 0
 
         z_0 = self.z[t_0]
         xs_0 = self.x[t_0]
@@ -501,7 +508,7 @@ class SWall(object):
         initial_weight_pairs = (
             sw_data.g_data.ordered_weight_pairs(initial_root,)
         )
-        
+            
         self.local_roots = [initial_root]
         self.local_weight_pairs = [initial_weight_pairs]
         

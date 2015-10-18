@@ -80,6 +80,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         walls = []
         walls_roots = []
         for i, s_wall in enumerate(spectral_network.s_walls):
+            print '{} has {} segments'.format(s_wall.label, len(s_wall.local_roots))
             segments = []
             seg_labels = []
             split_at = []
@@ -96,6 +97,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             else:
                 z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
                 
+            print 'recovered {} segments'.format(len(z_segs))
             seg_labels = [s_wall.label + '\n' + lab
                           for lab in map(str, s_wall.local_roots)]
 
@@ -104,11 +106,15 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
 
             walls.append(segments)
             walls_roots.append(s_wall.local_roots)
-            walls_colors = [
-                [g_data.root_color(root) for root in w_roots]
-                for w_roots in walls_roots
-            ]
+            
             labels['walls'].append(seg_labels)
+
+        walls_colors = [
+            [g_data.root_color(root) for root in w_roots]
+            for w_roots in walls_roots
+        ]
+        print 'the length of colors for walls'
+        print map(len, walls_colors)
 
         print('------------------------\n'
               'phase : {}\n'.format(spectral_network.phase) +
