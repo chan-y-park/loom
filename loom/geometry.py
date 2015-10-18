@@ -184,11 +184,20 @@ class GData:
     def root_color(self, root):
         if self.root_color_map is None:
             self.root_color_map = self.create_root_color_map()
-        root_color_map = self.root_color_map
-        return (
-            [k for k, v in root_color_map.iteritems()
-             if numpy.array_equal(v, root)][0]
-        )
+
+        is_actual_root = False
+        for alpha in self.roots:
+            if numpy.array_equal(alpha, root):
+                is_actual_root = True
+
+        if is_actual_root:
+            root_color_map = self.root_color_map
+            return (
+                [k for k, v in root_color_map.iteritems()
+                 if numpy.array_equal(v, root)][0]
+            )
+        else:
+            return None
 
 
 class RamificationPoint:

@@ -58,9 +58,14 @@ class NetworkPlotBase(object):
                     axes.plot(seg_xs, seg_ys, 'o', color='k')
 
                 seg_color = walls_colors[i][j]
-                axes.plot(seg_xs, seg_ys, '-',
-                          color=seg_color,
-                          label=labels['walls'][i][j],)
+                if seg_color is not None:
+                    axes.plot(seg_xs, seg_ys, '-',
+                              color=seg_color,
+                              label=labels['walls'][i][j],)
+                else:
+                    axes.plot(seg_xs, seg_ys, '+',
+                              color=seg_color,
+                              label=labels['walls'][i][j],)
 
         # Plot branch points.
         for i, bp in enumerate(branch_points):
