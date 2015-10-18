@@ -343,13 +343,14 @@ class SWall(object):
             M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
             self[step] = y_i
         if clipping_radius is not None:
-            i_clip = 0
+            i_clip = None
             for i, z_i in enumerate(self.z):
                 if abs(z_i) > clipping_radius:
                     i_clip = i
                     break
-            self.z = self.z[:i_clip]
-            self.x = self.x[:i_clip]
+            if i_clip is not None:
+                self.z = self.z[:i_clip]
+                self.x = self.x[:i_clip]
 
 
     def determine_root_types(self, sw_data):
