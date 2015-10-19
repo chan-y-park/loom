@@ -19,7 +19,7 @@ x, z = sympy.symbols('x z')
 NUM_ODE_XS_OVER_Z = 2
 
 # within a disc of such radius from any branch point,
-# the intersection of a S-wall oroginating from there
+# the intersection of a S-wall originating from there
 # with the corresponding cut, will be ignored.
 BRANCH_POINT_RADIUS = 0.01 
 
@@ -28,6 +28,9 @@ BRANCH_POINT_RADIUS = 0.01
 # too close to a branch point.
 SEED_PHASE_PRECISION = 0.001
 SEED_PRECISION_MAX_DEPTH = 5
+
+# cut S-walls if they get too close to punctures
+PUNCTURE_RADIUS = 0.001
 
 
 class Joint:
@@ -342,6 +345,19 @@ class SWall(object):
             z_i = y_i[0]
             M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
             self[step] = y_i
+
+        # cut near punctures
+        i_clip = None
+        for i, z_i in enumerate(self.z):
+            for ppz in puncture_point_zs:
+                if abs(z_i - ppz) < PUNCTURE_RADIUS:
+                    i_clip = i
+                    break
+        if i_clip is not None:
+            self.z = self.z[:i_clip]
+            self.x = self.x[:i_clip]
+
+        # cut far away on C
         if clipping_radius is not None:
             i_clip = None
             for i, z_i in enumerate(self.z):
