@@ -36,33 +36,45 @@ def get_logging_formatter(level):
         logging_format = '%(message)s'
     return logging.Formatter(logging_format)
 
-def set_logging(level, queue=None, file_name='logs/log.loom.txt'):
+def set_logging(
+    logger_name='loom_logger',
+    logging_level=logging.INFO, 
+    logging_queue=None, 
+    logging_stream=None,
+    #logging_file_name='logs/log.loom.txt',
+    logging_file_name=None,
+    remove_handlers=True,
+):
     #print('Setting logging level to "{}".'.format(level))
 
-    logger = logging.getLogger()
-    # Remove other handlers.
-    logger.handlers = []
-    #for handler in handlers:
-    #    logger.removeHandler(handler)
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging_level)
+    formatter = get_logging_formatter(logging_level)
 
-    logger.setLevel(level)
-    formatter = get_logging_formatter(level)
+    if remove_handlers is True:
+        # Remove other handlers.
+        logger.handlers = []
 
+    if logging_file_name is not None:
     # Create a log file.
-    fh = logging.FileHandler(file_name, 'w')
-    fh.setLevel(level)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
+        fh = logging.FileHandler(logging_file_name, 'w')
+        fh.setLevel(logging_level)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
-    if queue is None:
+    if logging_stream is not None:
         # Create a stream handler to stderr.
         logger.addHandler(
-            get_logging_handler(level, logging.StreamHandler, None)
+            get_logging_handler(
+                logging_level, logging.StreamHandler, logging_stream
+            )
         )
-    else:
+    if logging_queue is not None:
         # Create a queue handler for multiprocessing.
         logger.addHandler(
-            get_logging_handler(level, QueueHandler, queue)
+            get_logging_handler(
+                logging_level, QueueHandler, logging_queue
+            )
         )
 
 def get_logging_handler(level, handler_class, buffer_object):
@@ -72,50 +84,25 @@ def get_logging_handler(level, handler_class, buffer_object):
     return h
 
 
-def load_config(file_path=None):
-#    if file_path is None:
-#        toplevel = tk.Toplevel()
-#        file_opts = {
-#            'defaultextension': '.ini',
-#            'initialdir': os.curdir,
-#            'initialfile': 'config.ini',
-#            'parent': toplevel,
-#            'title': 'Select a configuration file to load.',
-#        }
-#        file_path = tkFileDialog.askopenfilename(**file_opts)
-#        toplevel.destroy()
-#        if file_path == '':
-#            return None
+def load_config(file_path=None, logger_name='loom_logger',):
+    logger = logging.getLogger(logger_name)
     if file_path is None:
         return None
-    config = LoomConfig()
-    logging.info('Loading configuration from {}...'.format(file_path))
+    config = LoomConfig(logger_name=logger_name)
+    logger.info('Loading configuration from {}...'.format(file_path))
     config.read(file_path)
-    logging.info('Finished loading configuration from {}.'.format(file_path))
+    logger.info('Finished loading configuration from {}.'.format(file_path))
 
     return config
 
-def save_config(config, file_path=None):
-#    if file_path is None:
-#        toplevel = tk.Toplevel()
-#        file_opts = {
-#            'defaultextension': '.ini',
-#            'initialdir': os.curdir,
-#            'initialfile': 'config.ini',
-#            'parent': toplevel,
-#            'title': 'Save the current configuration to a file.',
-#        }
-#        file_path = tkFileDialog.asksaveasfilename(**file_opts)
-#        toplevel.destroy()
-#        if file_path == '':
-#            return None
-#
+def save_config(config, file_path=None, logger_name='loom_logger',):
+    logger = logging.getLogger(logger_name)
     if file_path is None:
         return None
-    logging.info('Saving configuration to {}.'.format(file_path))
+    logger.info('Saving configuration to {}.'.format(file_path))
     with open(file_path, 'w') as fp:
         config.parser.write(fp)
-    logging.info('Finished saving configuration to {}.'.format(file_path))
+    logger.info('Finished saving configuration to {}.'.format(file_path))
 
     return None
 
@@ -123,42 +110,30 @@ def load_spectral_network(
     data_dir=None,
     logging_queue=None,
     result_queue=None,
+    logger_name='loom_logger',
 ):
-#    if data_dir is None:
-#        return (None, None)
-#        toplevel = tk.Toplevel()
-#        dir_opts = {
-#            'initialdir': os.curdir,
-#            'mustexist': False,
-#            'parent': toplevel,
-#            'title': 'Select a directory that contains data files.',
-#        }
-#        data_dir = tkFileDialog.askdirectory(**dir_opts)
-#        toplevel.destroy()
-#        if data_dir == '':
-#            return (None, None)
-#
+    logger = logging.getLogger(logger_name)
     if data_dir is None:
         return (None, None)
-    logging.info('Opening data directory "{}"...'.format(data_dir))
+    logger.info('Opening data directory "{}"...'.format(data_dir))
 
-    config = LoomConfig()
+    config = LoomConfig(logger_name=logger_name)
     config.read(os.path.join(data_dir, 'config.ini'))
 
-    sw = SWDataWithTrivialization(config)
+    sw = SWDataWithTrivialization(config, logger_name=logger_name)
     spectral_network_list = []
 
     data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
     data_file_list.sort()
     for data_file in data_file_list:
-        logging.info('Loading {}...'.format(data_file))
-        spectral_network = SpectralNetwork()
+        logger.info('Loading {}...'.format(data_file))
+        spectral_network = SpectralNetwork(logger_name=logger_name)
         with open(data_file, 'r') as fp:
             spectral_network.set_from_json_data(fp)
             spectral_network_list.append(spectral_network)
 
     data = SpectralNetworkData(sw, spectral_network_list)
-    logging.info('Finished loading data from {}.'.format(data_dir))
+    logger.info('Finished loading data from {}.'.format(data_dir))
 
     rv = (config, data)
     if result_queue is None:
@@ -168,8 +143,14 @@ def load_spectral_network(
         return None
 
 
-def save_spectral_network(config, spectral_network_data, data_dir=None,
-                          make_zipped_file=True):
+def save_spectral_network(
+    config, 
+    spectral_network_data,
+    data_dir=None,
+    make_zipped_file=True,
+    logger_name='loom_logger',
+):
+    logger = logging.getLogger(logger_name)
     spectral_networks = spectral_network_data.spectral_networks
     if data_dir is None:
         # Prepare to save spectral network data to files.
@@ -180,13 +161,13 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
             timestamp
         )
 
-    logging.info('Make a directory {} to save data.'.format(data_dir))
+    logger.info('Make a directory {} to save data.'.format(data_dir))
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
 
     # Save configuration to a file.
     config_file_path = os.path.join(data_dir, 'config.ini')
-    save_config(config, file_path=config_file_path)
+    save_config(config, file_path=config_file_path, logger_name=logger_name)
 
     # Save spectral network data.
     for i, spectral_network in enumerate(spectral_networks):
@@ -196,7 +177,7 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
                 str(i).zfill(len(str(len(spectral_networks)-1)))
             )
         )
-        logging.info('Saving data to {}.'.format(data_file_path))
+        logger.info('Saving data to {}.'.format(data_file_path))
         with open(data_file_path, 'wb') as fp:
             spectral_network.save_json_data(fp,)
 
@@ -205,34 +186,41 @@ def save_spectral_network(config, spectral_network_data, data_dir=None,
         # Make a compressed data file.
         file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
         zipped_file_path = data_dir + '.zip'
-        logging.info('Save compressed data to {}.'.format(zipped_file_path))
+        logger.info('Save compressed data to {}.'.format(zipped_file_path))
         with zipfile.ZipFile(zipped_file_path, 'w',
                              zipfile.ZIP_DEFLATED) as fp:
             for a_file in file_list:
                 fp.write(a_file, os.path.relpath(a_file, data_dir))
 
-    logging.info('Finished saving data to {}.'.format(data_dir))
+    logger.info('Finished saving data to {}.'.format(data_dir))
     return None
 
 
-def generate_spectral_network(config, phase=None, result_queue=None,):
+def generate_spectral_network(
+    config,
+    phase=None,
+    result_queue=None,
+    logger_name='loom_logger',
+):
     """
     Generate one or more spectral networks according to
     the command-line options and the configuration file
     and return a list of data obtained from SpectralNetwork.get_data()
     """
 
+    logger = logging.getLogger(logger_name)
     phase_range = config['phase_range']
-    sw = SWDataWithTrivialization(config)
+    sw = SWDataWithTrivialization(config, logger_name=logger_name)
 
     start_time = time.time()
-    logging.info('start cpu time: %s', start_time)
+    logger.info('start cpu time: %s', start_time)
 
     if(phase is not None):
-        logging.info('Generate a single spectral network at theta = {}.'
+        logger.info('Generate a single spectral network at theta = {}.'
                      .format(phase))
         spectral_network = SpectralNetwork(
             phase=phase, 
+            logger_name=logger_name,
         ) 
 
         spectral_network.grow(config, sw)
@@ -240,16 +228,17 @@ def generate_spectral_network(config, phase=None, result_queue=None,):
         spectral_networks = [spectral_network]
 
     elif(phase_range is not None):
-        logging.info('Generate multiple spectral networks.')
-        logging.info('phase_range = {}.'.format(phase_range))
+        logger.info('Generate multiple spectral networks.')
+        logger.info('phase_range = {}.'.format(phase_range))
         spectral_networks = parallel_get_spectral_network(
             sw, 
             config,
+            logger_name,
         ) 
 
     end_time = time.time()
-    logging.info('end cpu time: %.8f', end_time)
-    logging.info('elapsed cpu time: %.8f', end_time - start_time)
+    logger.info('end cpu time: %.8f', end_time)
+    logger.info('elapsed cpu time: %.8f', end_time - start_time)
 
     rv = SpectralNetworkData(sw, spectral_networks)
     if result_queue is None:
@@ -258,8 +247,15 @@ def generate_spectral_network(config, phase=None, result_queue=None,):
         result_queue.put(rv)
         return None
 
-def make_spectral_network_plot(spectral_network_data, master=None,
-                               show_plot=True, plot_range=None, **kwargs):
+def make_spectral_network_plot(
+    spectral_network_data,
+    master=None,
+    show_plot=True,
+    plot_range=None,
+    logger_name='loom_logger',
+    **kwargs
+):
+    logger = logging.getLogger(logger_name)
     sw_data = spectral_network_data.sw_data
     spectral_networks = spectral_network_data.spectral_networks
     spectral_network_plot_title = 'Spectral Network'
@@ -277,7 +273,7 @@ def make_spectral_network_plot(spectral_network_data, master=None,
         )
 
     for spectral_network in spectral_networks:
-        logging.info('Generating the plot of a spectral network '
+        logger.info('Generating the plot of a spectral network '
                      '@ theta = {}...'.format(spectral_network.phase))
         spectral_network_plot.draw(
             spectral_network, 

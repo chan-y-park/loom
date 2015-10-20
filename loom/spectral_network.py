@@ -22,10 +22,12 @@ class SpectralNetwork:
     def __init__(
         self,
         phase=None,
+        logger_name='loom_logger',
     ):
         self.phase = phase
         self.s_walls = []
         self.joints = []
+        self.logger_name = logger_name
 
     def grow(self, config, sw_data):
         """
@@ -37,16 +39,17 @@ class SpectralNetwork:
         that there is a joint from which an S-wall is not grown
         if the depth of the joint is too deep.
         """
+        logger = logging.getLogger(self.logger_name)
         accuracy = config['accuracy']
         num_of_iterations = config['num_of_iterations']
         n_steps = config['num_of_steps']
-        logging.info('Start growing a new spectral network...')
+        logger.info('Start growing a new spectral network...')
 
-        logging.info('Seed S-walls at branch points...')
+        logger.info('Seed S-walls at branch points...')
         
         for bp in sw_data.branch_points:
             s_wall_seeds = get_s_wall_seeds(
-                sw_data, self.phase, bp, config
+                sw_data, self.phase, bp, config, self.logger_name,
             )
             for z_0, x_0, M_0 in s_wall_seeds:
                 label = 'S-wall #{}'.format(len(self.s_walls))
@@ -58,10 +61,11 @@ class SpectralNetwork:
                         parents=[bp.label],
                         label=label,
                         n_steps=n_steps,
+                        logger_name=self.logger_name,
                     )
                 )
 
-        logging.debug('Setup the ODE integrator...')
+        logger.debug('Setup the ODE integrator...')
         ode = get_ode(sw_data, self.phase, accuracy)
 
         ppzs = [p.z for p in sw_data.punctures]
@@ -79,7 +83,7 @@ class SpectralNetwork:
             new_joints = []     # number of new joints found in each iteration
             for i in range(n_finished_s_walls, len(self.s_walls)):
                 s_i = self.s_walls[i]
-                logging.info('Growing S-wall #{}...'.format(i))
+                logger.info('Growing S-wall #{}...'.format(i))
                 s_i.grow(ode, bpzs, ppzs, config)
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
@@ -88,17 +92,17 @@ class SpectralNetwork:
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
-                logging.info('No additional joint found: '
-                             'Stop growing this spectral network '
-                             'at iteration #{}.'.format(iteration))
+                logger.info('No additional joint found: '
+                                 'Stop growing this spectral network '
+                                 'at iteration #{}.'.format(iteration))
                 break
             elif iteration == num_of_iterations:
                 # Last iteration finished. Do not form new joints,
                 # and do not seed additional S-walls, either.
                 break
             else:
-                logging.info('Growing S-walls in iteration #{} finished.'
-                             .format(iteration))
+                logger.info('Growing S-walls in iteration #{} finished.'
+                                 .format(iteration))
 
             # Seed an S-wall for each new joint.
             for joint in new_joints:
@@ -127,9 +131,10 @@ class SpectralNetwork:
                             parents=joint.parents,
                             label=label,
                             n_steps=n_steps,
+                            logger_name=self.logger_name,
                         )
                     )
-            logging.info('Iteration #{} finished.'.format(iteration))
+            logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
 
     def save_json_data(self, file_object, **kwargs):
@@ -153,7 +158,7 @@ class SpectralNetwork:
         self.phase = json_data['phase']
 
         for s_wall_data in json_data['s_walls']:
-            an_s_wall = SWall()
+            an_s_wall = SWall(logger_name=self.logger_name,)
             an_s_wall.set_json_data(s_wall_data)
             self.s_walls.append(an_s_wall)
 
@@ -163,6 +168,7 @@ class SpectralNetwork:
             self.joints.append(a_joint)
 
     def get_new_joints(self, new_s_wall_index, config, sw_data):
+        logger = logging.getLogger(self.logger_name)
         try:
             linux_distribution = platform.linux_distribution()[0]
             if linux_distribution != '':
@@ -174,9 +180,9 @@ class SpectralNetwork:
             else:
                 raise OSError
         except OSError:
-            logging.warning('CGAL not available; switch from '
-                            'get_new_joints_using_cgal() to '
-                            'get_new_joints_using_interpolation().')
+            logger.warning('CGAL not available; switch from '
+                                'get_new_joints_using_cgal() to '
+                                'get_new_joints_using_interpolation().')
             return self.get_new_joints_using_interpolation(new_s_wall_index,
                                                            config, sw_data)
 
@@ -185,10 +191,11 @@ class SpectralNetwork:
         """
         Find new wall-wall intersections using CGAL 2d curve intersection.
         """
+        logger = logging.getLogger(self.logger_name)
         new_joints = []
         if (config['root_system'] in ['A1', ]):
-            logging.info('There is no joint for the given root system {}.'
-                         .format(config['root_system']))
+            logger.info('There is no joint for the given root system {}.'
+                             .format(config['root_system']))
             return new_joints
         lib_name = 'libcgal_intersection'
         if linux_distribution == 'Ubuntu':
@@ -201,7 +208,7 @@ class SpectralNetwork:
         else:
             raise OSError
 
-        logging.info('Using CGAL to find intersections.')
+        logger.info('Using CGAL to find intersections.')
 
         # Load CGAL shared library.
         libcgal_intersection = numpy.ctypeslib.load_library(
@@ -257,9 +264,9 @@ class SpectralNetwork:
                         intersection_search_finished = True
                         raise NoIntersection
                     elif num_of_intersections > buffer_size:
-                        logging.info('Number of intersections larger than '
-                                     'the buffer size; increase its size '
-                                     'and run intersection finding again.')
+                        logger.info('Number of intersections larger than '
+                                         'the buffer size; increase its size '
+                                         'and run intersection finding again.')
                         buffer_size = num_of_intersections
                     else:
                         intersections.resize((num_of_intersections, 2))
@@ -277,13 +284,16 @@ class SpectralNetwork:
                     # TODO: need to put the joint into the parent
                     # S-walls?
 
+                    logger.debug(
+                        'evaluating possible joint at z = {}'.format(ip_z)
+                    )
                     a_joint = get_joint(
                         ip_z, 
                         prev_s_wall,
                         new_s_wall,                         
                         t_p, 
                         t_n,
-                        sw_data=sw_data
+                        sw_data,
                     )
 
                     if(a_joint is None):
@@ -309,10 +319,11 @@ class SpectralNetwork:
         S-walls, which in principle can happen but is unlikely in a numerical
         setup.
         """
+        logger = logging.getLogger(self.logger_name)
         new_joints = []
         if (config['root_system'] in ['A1', ]):
-            logging.info('There is no joint for the given root system {}.'
-                         .format(config['root_system']))
+            logger.info('There is no joint for the given root system {}.'
+                             .format(config['root_system']))
             return new_joints
 
         new_s_wall = self.s_walls[new_s_wall_index]
@@ -350,13 +361,16 @@ class SpectralNetwork:
                         # find mass of parent S-walls: this is approximate,
                         # since we don't interpolate precisely to the joint
                         # TODO: improve by doing precise interpolation
+                        logger.debug(
+                            'evaluating possible joint at z = {}'.format(ip_z)
+                        )
                         a_joint = get_joint(
                             ip_z, 
                             prev_s_wall,
                             new_s_wall, 
                             t_p,
                             t_n,
-                            sw_data=sw_data
+                            sw_data,
                         )
 
                         if(a_joint is None):

@@ -208,9 +208,11 @@ class SWDataWithTrivialization(SWDataBase):
     # overlap vertically.
     # This should be guaranteed by the automatic rotation of 
     # the z-plane which is performed before calling this class.
-    def __init__(self, config,):
-        super(SWDataWithTrivialization, self).__init__(config)
-        self.accuracy = config['accuracy']
+    def __init__(self, config, logger_name='loom_logger'):
+        super(SWDataWithTrivialization, self).__init__(
+            config, logger_name=logger_name
+        )
+        logger = logging.getLogger(self.logger_name)
         self.branch_points = []
         # FIXME: Mark each puncture in the config.ini as being (ir)regular,
         # or analyze all punctures to determine the irregularity.
@@ -278,7 +280,7 @@ class SWDataWithTrivialization(SWDataBase):
         # sw.g_data.weights, i.e. reference_sheets[i]
         # is the value of x corresponding to 
         # sw.g_data.weights[i].
-        logging.info(
+        logger.info(
             "Getting aligned x's at the base point z = {}."
             .format(self.base_point)
         )
@@ -332,6 +334,7 @@ class SWDataWithTrivialization(SWDataBase):
         If zooming also fails, the tracking will take into account 
         the first derivative of sheets and match them according to it.
         """       
+        logger = logging.getLogger(self.logger_name)
         g_data = self.g_data
         if accuracy is None:
             accuracy = self.accuracy
@@ -343,7 +346,7 @@ class SWDataWithTrivialization(SWDataBase):
                 # xs_0 = self.reference_xs
             else:
                 raise Exception('Must specify initial sheets for tracking.')
-        logging.info(
+        logger.info(
             'Zooming level: {}/{}'.format(zoom_level, MAX_ZOOM_LEVEL)
         )
         # Each element is a sheet, which is a list of x's along the path.
@@ -369,6 +372,7 @@ class SWDataWithTrivialization(SWDataBase):
                     check_tracking=True, index=i,
                     z_0=z_path[i - 1], z_1=z_path[i],
                     g_data=g_data,
+                    logger_name=self.logger_name,
                 )
             # if it's a path to branch point, but we are far from it,
             # still check tracking
@@ -378,6 +382,7 @@ class SWDataWithTrivialization(SWDataBase):
                     accuracy=accuracy,
                     check_tracking=True,
                     g_data=g_data,
+                    logger_name=self.logger_name,
                 )
             # if it's a path to a branch point and we are getting close to it, 
             # don't check tracking anymore
@@ -387,9 +392,12 @@ class SWDataWithTrivialization(SWDataBase):
                     accuracy=accuracy,
                     check_tracking=False,
                     g_data=g_data,
+                    logger_name=self.logger_name,
                 )
             if sorted_ffr_xs == 'sorting failed':
-                logging.info('Encountered a problem with sheet tracking')
+                logger.warning(
+                    'Encountered a problem with sheet tracking.'
+                )
                 if zoom_level > 0:
                     delta_z = (z_path[i] - z_path[i - 1]) / ZOOM_FACTOR
                     zoomed_path = [
@@ -419,7 +427,8 @@ class SWDataWithTrivialization(SWDataBase):
                         for j in range(len(ffr_xs_0))
                     ]
                     sorted_ffr_xs = sort_xs_by_derivative(
-                        ffr_xs_0, ffr_xs_1, delta_xs, self.accuracy
+                        ffr_xs_0, ffr_xs_1, delta_xs, self.accuracy,
+                        logger_name=self.logger_name,
                     )
                     if sorted_ffr_xs == 'sorting failed':
                         raise Exception(
@@ -482,7 +491,8 @@ class SWDataWithTrivialization(SWDataBase):
         the basis of reference sheets, such that
         new_sheets = M . old_sheets
         """
-        logging.debug(
+        logger = logging.getLogger(self.logger_name)
+        logger.debug(
             "Analyzing the monodromy around a closed path "
             "of length {}.".format(len(z_path))
         )
@@ -546,9 +556,12 @@ class SWDataWithTrivialization(SWDataBase):
                         if labels_multiplicities[i] == 2:
                             multiple_labels.append(u)
                         else:
-                            logging.info('int labels = {}'.format(int_labels))
-                            logging.info('multiple labels = {}'.format(
-                                multiple_labels)
+                            logger.debug(
+                                'int labels = {}'.format(int_labels)
+                            )
+                            logger.debug(
+                                'multiple labels = {}'
+                                .format(multiple_labels)
                             )
                             raise Exception('Too many degenerate sheets')
                 if len(multiple_labels) != 1:
@@ -593,7 +606,8 @@ class SWDataWithTrivialization(SWDataBase):
 
         n_sheets = len(initial_sheets)
 
-        logging.debug('Sorted sheets around locus {}'.format(sorted_sheets))
+        logger.debug('Sorted sheets around locus {}'
+                          .format(sorted_sheets))
         
         # NOTE: in the following basis vectors, i = 0 , ... , n-1
         def basis_e(i):
@@ -606,16 +620,17 @@ class SWDataWithTrivialization(SWDataBase):
 
         perm_matrix = numpy.array(perm_list).transpose()
 
-        logging.debug('Permutation matrix {}'.format(perm_matrix))
+        logger.debug('Permutation matrix {}'.format(perm_matrix))
 
         return perm_matrix
 
     def analyze_branch_point(self, bp):
-        logging.info(
+        logger = logging.getLogger(self.logger_name)
+        logger.info(
             "Analyzing a branch point at z = {}."
             .format(bp.z)
         )
-        logging.info(
+        logger.info(
             "Studying groups of colliding sheets"
         )
         path_to_bp = get_path_to(bp.z, self)
@@ -650,14 +665,12 @@ class SWDataWithTrivialization(SWDataBase):
         # print 'singles {}'.format(bp.singles)
 
         bp.positive_roots = get_positive_roots_of_branch_point(
-            bp, self.g_data,  
+            bp, self.g_data, self.logger_name,
         )
         bp.order = len(bp.positive_roots) + 1
         
-        logging.info(
-            "Computing the monodromy"
-        )
-        path_around_bp = get_path_around(bp.z, self.base_point, self)
+        logger.info("Computing the monodromy")
+        path_around_bp = get_path_around(bp.z, self.base_point, self,)
         bp.monodromy = self.get_sheet_monodromy(path_around_bp)
         # TODO: it would be good to make a check here, e.g. on the 
         # relation between vanishing roots and the monodromy.
@@ -668,7 +681,8 @@ class SWDataWithTrivialization(SWDataBase):
         ]
 
     def analyze_irregular_singularity(self, irr_sing):
-        logging.info(
+        logger = logging.getLogger(self.logger_name)
+        logger.info(
             "Analyzing an irregular singularity at z = {}."
             .format(irr_sing.z)
         )
@@ -678,6 +692,7 @@ class SWDataWithTrivialization(SWDataBase):
         )
     
     def analyze_ffr_ramification_point(self, rp):
+        logger = logging.getLogger(self.logger_name)
         rp_type = None
         num_eq = self.ffr_curve.num_eq
 
@@ -688,7 +703,7 @@ class SWDataWithTrivialization(SWDataBase):
             .series(Dx, 0, rp.i + 1).removeO()
             .series(Dz, 0, 2).removeO()
         )
-        logging.debug('\nlocal curve = {}\n'.format(local_curve))
+        logger.debug('\nlocal curve = {}\n'.format(local_curve))
             
         # Classify which type of ramification point
         # type_I: ADE type with x_0 != 0
@@ -756,12 +771,13 @@ class SWDataWithTrivialization(SWDataBase):
         rp.sw_diff_coeff = complex(diff_c.n())
 
 
-def get_path_to(z_pt, sw_data):
+def get_path_to(z_pt, sw_data, logger_name='loom_logger'):
     """
     Return a rectangular path from the base point to z_pt.
     If the path has to pass too close to a branch point, 
     we avoid the latter by drawing an arc around it.
     """
+    logger = logging.getLogger(logger_name)
     base_pt = sw_data.base_point
     closest_bp = None
     # if n_loci==None:
@@ -769,7 +785,7 @@ def get_path_to(z_pt, sw_data):
     # radius = sw_data.min_distance / n_loci
     radius = sw_data.min_horizontal_distance / 2.0
 
-    logging.debug("Constructing a path [{}, {}]".format(base_pt, z_pt))
+    logger.debug("Constructing a path [{}, {}]".format(base_pt, z_pt))
 
     # Determine if the path will need to pass 
     # close to a branch point.
@@ -833,7 +849,8 @@ def get_path_to(z_pt, sw_data):
     
 
 def get_path_around(z_pt, base_pt, sw):
-    logging.debug("Constructing a closed path around z = {}".format(z_pt))
+    logger = logging.getLogger(sw.logger_name)
+    logger.debug("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
     z_1 = 1j * base_pt.imag + z_pt.real
     # if n_loci==None:
@@ -865,12 +882,14 @@ def get_path_around(z_pt, base_pt, sw):
 # TODO: Make smarter checks based on the types
 # of ramification points above the branch point.
 def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True, 
-                  index=None, z_0=None, z_1=None, g_data=None,):
+                  index=None, z_0=None, z_1=None, g_data=None,
+                  logger_name='loom_logger'):
     """
     Returns a sorted version of 'new_xs'
     based on matching the closest points with 
     'ref_xs'
     """
+    logger = logging.getLogger(logger_name)
     sorted_xs = []
     # print 'reference xs = {}'.format(ref_xs)
     for s_1 in ref_xs:
@@ -913,14 +932,14 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
             ):
                 return sorted_xs
             else:
-                logging.debug(
+                logger.debug(
                     "At step %s, between %s and %s " % (index, z_0, z_1)
                 )
-                logging.debug("ref_xs:\n{}".format(ref_xs)) 
-                logging.debug("new_xs:\n{}".format(new_xs)) 
-                logging.debug("sorted_xs:\n{}".format(sorted_xs)) 
-                logging.debug("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
-                logging.debug('Having trouble tracking sheets, will zoom in.')
+                logger.debug("ref_xs:\n{}".format(ref_xs)) 
+                logger.debug("new_xs:\n{}".format(new_xs)) 
+                logger.debug("sorted_xs:\n{}".format(sorted_xs)) 
+                logger.debug("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
+                logger.debug('Having trouble tracking sheets, will zoom in.')
                 return 'sorting failed'
         # don't trust tracking if dx/dt for a single step is larger than
         # the maximum difference between any two xs
@@ -936,11 +955,13 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
         return sorted_xs
 
 
-def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy):
+def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy, 
+                          logger_name='loom_logger'):
     # will only work if there are at most two sheets being 
     # too close two each other, not three or more.
     # TODO: generalize to handle more gneral cases (if we need it at all)
-    logging.debug('Resorting to tracking sheets by their derivatives')
+    logger = logging.getLogger(logger_name)
+    logger.debug('Resorting to tracking sheets by their derivatives')
 
     # first, identify the problematic sheets
     ys = []
@@ -985,7 +1006,7 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy):
                 closest_ys_0 != closest_ys_1 and 
                 closest_ys_0 != closest_ys_1.reverse()
             ):
-                logging.warning((
+                logger.warning((
                     'the closest sheets to the reference pair {}'
                     '\ndont match: they are respectively:\n{}\n{}'
                 ).format(x_pair, closest_ys_0, closest_ys_1))
@@ -1032,7 +1053,7 @@ def kr_delta(i, j):
         return 0
 
 
-def get_positive_roots_of_branch_point(bp, g_data):
+def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom_logger'):
     """
     Determines the positive roots associated with 
     a branch point's 'structure', i.e. how the sheets
@@ -1041,6 +1062,7 @@ def get_positive_roots_of_branch_point(bp, g_data):
     any redundant roots that can be obtained as linear
     combinations of others.
     """
+    logger = logging.getLogger(logger_name)
     vanishing_positive_roots = []
     positive_roots = g_data.positive_roots
     # Note that bp.groups carries indices, which can be used
@@ -1065,7 +1087,7 @@ def get_positive_roots_of_branch_point(bp, g_data):
             else:
                 continue
     if vanishing_positive_roots == []:
-        logging.info(
+        logger.info(
             "Branch point doesn't correspond "
             "to a positive root. May be an accidental branch point."
         )

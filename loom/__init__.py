@@ -1,4 +1,4 @@
-import os, platform, logging
+import os, sys, platform, logging
 import matplotlib
 if matplotlib.rcParams['backend'] == 'nbAgg':
     print('Use IPython notebook backend for matplotlib.')
@@ -23,7 +23,12 @@ from api import save_spectral_network as save
 from api import make_spectral_network_plot as plot
 from api import load_config, save_config
 
-set_logging(logging.INFO)
+set_logging(
+    logger_name='loom_logger',
+    logging_level=logging.INFO,
+    logging_stream=sys.stdout,
+    logging_file_name='logs/log.loom.txt',
+)
 
 __all__ = [
     'config',

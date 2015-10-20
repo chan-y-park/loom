@@ -4,7 +4,7 @@ A general intersection module.
 Objects and functions to find intersections of real 1-dim curves
 on a real 2-dim plane.
 """
-import logging
+#import logging
 import numpy
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq, newton
@@ -101,7 +101,7 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=1e-1,
         due to many cases when there is no intersection but
         the module keeps trying to find one.
     """
-    ### First check if the two segments share any x- and y-range.
+    # First check if the two segments share any x- and y-range.
     x_range, y_range = find_curve_range_intersection(
         segment_1, segment_2, cut_at_inflection=True
     )
@@ -117,8 +117,8 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=1e-1,
 
     if (x_range.is_EmptySet or y_range.is_EmptySet or x_range.is_FiniteSet or
             y_range.is_FiniteSet):
-        ### The segments and the bin do not share a domain and therefore
-        ### there is no intersection.
+        # The segments and the bin do not share a domain and therefore
+        # there is no intersection.
         raise NoIntersection()
 
     f1 = interp1d(*segment_1)
@@ -126,7 +126,7 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=1e-1,
     delta_f12 = lambda x: f1(x) - f2(x)
 
     try:
-        logging.debug('try brentq.')
+        #logging.debug('try brentq.')
         intersection_x = brentq(delta_f12, x_range.start, x_range.end)
         intersection_y = f1(intersection_x)
 
@@ -135,23 +135,23 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=1e-1,
         x0 = 0.5*(x_range.start + x_range.end)
 
         try:
-            logging.debug('try newton with x0 = %.8f.', x0)
+            #logging.debug('try newton with x0 = %.8f.', x0)
             intersection_x = newton(delta_f12, x0, maxiter=newton_maxiter)
-            logging.debug('intersection_x = %.8f.', intersection_x)
+            #logging.debug('intersection_x = %.8f.', intersection_x)
         except ValueError:
-            ### newton() searches for x outside the interpolation domain.
-            ### Declare no intersection.
+            # newton() searches for x outside the interpolation domain.
+            # Declare no intersection.
             raise NoIntersection()
         except RuntimeError:
-            ### Newton's method fails to converge; declare no intersection
+            # Newton's method fails to converge; declare no intersection
             raise NoIntersection()
 
-        ### Verify the solution returned by newton().
+        # Verify the solution returned by newton().
         if abs(delta_f12(intersection_x)) > accuracy:
             raise NoIntersection()
 
-        ### Check if the intersection is within the curve range.
-        ### If not, the intersecion is not valid.
+        # Check if the intersection is within the curve range.
+        # If not, the intersecion is not valid.
         if intersection_x not in x_range:
             raise NoIntersection()
         intersection_y = f1(intersection_x)

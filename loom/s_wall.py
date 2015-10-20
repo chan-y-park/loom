@@ -1,16 +1,15 @@
-
 import logging
+import warnings
 import numpy
 import sympy
-# import pdb
+import pdb
 
 from cmath import exp, pi
 from math import floor
 from scipy import interpolate
 
 from geometry import find_xs_at_z_0
-from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,
-                  clock, left_right,)
+from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,)
 
 x, z = sympy.symbols('x z')
 
@@ -32,7 +31,8 @@ SEED_PRECISION_MAX_DEPTH = 5
 
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
-                 t_1=None, t_2=None, label=None, sw_data=None):
+                 t_1=None, t_2=None, label=None, sw_data=None, 
+                 logger_name='loom_logger',):
         self.z = None
         self.M = None
         self.parents = None
@@ -161,7 +161,7 @@ class Joint:
 
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, M_0=None, parents=None,
-                 label=None, n_steps=None,):
+                 label=None, n_steps=None, logger_name='loom_logger'):
         """
         SWall.z is a NumPy array of length n_steps+1,
         where z[t] is the base coordinate.
@@ -172,6 +172,7 @@ class SWall(object):
         numerical ode evolution. To get the sheets use the method
         SWall.get_sheets_at_t() instead.)
         """
+        self.logger_name = logger_name
         # FIXME: self.zs & self.xs instead of z & x?
         if n_steps is None:
             self.z = []
@@ -356,6 +357,7 @@ class SWall(object):
         the wall across the various splittings induced by cuts,
         both forward and backwards, using the Weyl monodromy.
         """
+        logger = logging.getLogger(self.logger_name)
         g_data = sw_data.g_data
         branch_points = sw_data.branch_points
         irregular_singularities = sw_data.irregular_singularities
@@ -442,7 +444,7 @@ class SWall(object):
                         branch_locus.z.real < self.z[t - 1].real
                     )
                 ):
-                    logging.info('Dropping a fake cut intersection.')
+                    logger.debug('Dropping a fake cut intersection.')
                     continue
 
                 # Add 
@@ -462,7 +464,7 @@ class SWall(object):
             _cuts_intersections, 
             cmp=lambda k1, k2: cmp(k1[1], k2[1])
         )
-        logging.debug(
+        logger.debug(
             'S-wall {} intersects the following '
             'cuts at the points\n{}.'.format(
                 self.label, self.cuts_intersections
@@ -714,7 +716,7 @@ def get_intermediate_value(v_1, v_2, z_1, z_2, z_med):
     return v_med
 
 
-def get_s_wall_seeds(sw, theta, branch_point, config,):
+def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     """
     S-walls are seeded from branch points.
     Each branch point has a number of ramification 
@@ -725,6 +727,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     We thus stick to (any)one ramification point of the 
     fundamental representation to get the seeds.
     """
+    logger = logging.getLogger(logger_name)
 
     # FIXME: reintroduce the handling of massless punctures
     # see previous versions of this function, left above in comment.
@@ -741,10 +744,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
         r_i = rp.i
         rp_type = rp.ramification_type
         sw_diff_coeff = rp.sw_diff_coeff
-        logging.debug('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
-        logging.debug('Ramification index = {}'.format(r_i))
-        logging.debug('Ramification type = {}'.format(rp_type))
-        logging.debug(
+        logger.debug('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
+        logger.debug('Ramification index = {}'.format(r_i))
+        logger.debug('Ramification type = {}'.format(rp_type))
+        logger.debug(
             'leading coefficient of SW diff = {}\n'.format(sw_diff_coeff)
         )
 
@@ -863,7 +866,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                 raise_precision is True and 
                 precision_level <= SEED_PRECISION_MAX_DEPTH
             ):
-                logging.debug(
+                logger.debug(
                     'Seeding precision level = {}'.format(precision_level)
                 )
                 dt = initial_seed_size * 0.1 ** (precision_level)
@@ -937,7 +940,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                     x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
                 )[0][0] - zeta)
                 if phase_mismatch < SEED_PHASE_PRECISION:
-                    logging.debug(
+                    logger.debug(
                         'Reached desired precision for seed'
                         '\nThe Mismatch between its phase '
                         'and that of the displacement '
@@ -948,7 +951,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
                     if precision_level < SEED_PRECISION_MAX_DEPTH:
                         precision_level += 1
                     else:
-                        logging.warning(
+                        logger.warning(
                             'Could not get the desired precision '
                             'on the seed of an S-wall.\nThe Mismatch between '
                             'the phase of a seed and that of the displacement '
@@ -965,8 +968,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config,):
     # |z_1-z_0| we cannot just use dt, but must choose a small 
     # fraction of it
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(min_dt / 100))
-    logging.info('Number of S-walls emanating = {}'.format(len(seeds)))
-    logging.debug('these are the seeds {}\n'.format(seeds))
+    logger.debug('Number of S-walls emanating = {}'.format(len(seeds)))
+    logger.debug('these are the seeds {}\n'.format(seeds))
     return seeds
 
 
@@ -981,11 +984,10 @@ def is_root(np_array, g_data):
     return ans
 
 
-def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data=None, label=None):
+def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data, label=None):
     """
     Return a joint if formed, otherwise return None.
     """
-    logging.debug('evaluating possible joint at z = {}'.format(z))
     alpha_1 = s_wall_1.get_root_at_t(t_1)
     alpha_2 = s_wall_2.get_root_at_t(t_2)
 
@@ -1008,3 +1010,35 @@ def branch_locus_from_label(sw_data, br_loc_label):
     raise Exception(
         'Could not find any branching locus labeled {}'.format(br_loc_label)
     )
+
+def clock(direction):
+    if direction == 'left':
+        return 'ccw'
+    elif direction == 'right':
+        return 'cw'
+    else:
+        raise ValueError('Cannot read direction!')
+
+def left_right(l, point):
+    """
+    given the list 
+    l = [..., z, ...]
+    and a point in the list (specified by the corresponding integer),
+    determines whether x increases or decreases at that point, 
+    returning repsectively 'left' or 'right'
+    """
+    if point > len(l)-1:
+        raise ValueError(
+            'Can\'t determine direction, point doesnt belong to list!'
+        )
+    elif point > 0:
+        if l[point-1].real < l[point].real:
+            return 'right'
+        else:
+            return 'left'
+    elif point == 0:
+        if l[point].real < l[point+1].real:
+            return 'right'
+        else:
+            return 'left'
+

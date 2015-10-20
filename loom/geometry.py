@@ -1,6 +1,7 @@
 import sympy
 import numpy
 import logging
+import warnings
 import copy
 # import cmath
 # import pdb
@@ -9,7 +10,6 @@ import sympy.mpmath as mpmath
 from sympy import oo
 from sympy.mpmath import mp
 from sympy.mpmath.libmp.libhyper import NoConvergence
-from warnings import warn
 from pprint import pformat
 from itertools import combinations
 from cmath import phase
@@ -88,16 +88,16 @@ class GData:
                     self.fundamental_representation_index = i + 1
             if height > 1:
                 self.fundamental_representation_index = None 
-                warn('{} is not a fundamental representation.'
-                     .format(representation_str))
+                warnings.warn('{} is not a fundamental representation.'
+                              .format(representation_str))
                 
         sage_data = sage_subprocess.get_g_data(
             root_system, 
             self.highest_weight,
         )
-        logging.info("Representation data of ({}, {}) retrieved from SAGE:\n"
-                     "{}".format(root_system, representation_str,
-                                 pformat(sage_data)))
+#        logging.info("Representation data of ({}, {}) retrieved from SAGE:\n"
+#                     "{}".format(root_system, representation_str,
+#                                 pformat(sage_data)))
 
         self.ffr_weights = numpy.array(sage_data['ffr_weights'])
         self.roots = numpy.array(sage_data['roots'])
@@ -192,10 +192,10 @@ class GData:
 
 
 class RamificationPoint:
-    # def __init__(
-    #     self, z=None, x=None, i=None, label=None, is_puncture=False
-    # ):
-    def __init__(self, z=None, Ciz=None, x=None, i=None, label=None):
+    def __init__(
+        self, z=None, Ciz=None, x=None, i=None, label=None,
+        #is_puncture=False,
+    ):
         # z is the numerical value of the PSL2C-transformed z-coordinate.
         self.z = z
         # Ciz is the value of the z-coordinate 
@@ -284,7 +284,7 @@ class SWCurve:
         else:
             # TODO: Need to build a cover in a general representation
             # from the differentials, using symmetric polynomials.
-            logging.warning(
+            raise NotImplementedError(
                 'class SWCurve with a general representation '
                 'is not implemented yet.'
             )
@@ -334,7 +334,10 @@ class SWDataBase(object):
     This is the base class of SWDataWithTrivialization, where 
     the trivialization data of the curve is contained.
     """
-    def __init__(self, config):
+    def __init__(self, config, logger_name='loom_logger',):
+        self.logger_name = logger_name
+        logger = logging.getLogger(self.logger_name)
+
         self.g_data = None
         self.punctures = []
         self.ffr_curve = None
@@ -371,14 +374,14 @@ class SWDataBase(object):
                 # we study the case of no rotations at all.
                 z_r = sympy.sympify('1') 
                 n_r = -1
-                logging.info('The z-plane has not been rotated.')
+                logger.info('The z-plane has not been rotated.')
             elif pi_div == 1:
                 # there are no nontrivial rotations when this is 1.
                 continue
             else: 
                 z_r = sympy.sympify('exp(pi* I / {})'.format(pi_div))
                 n_r = 1
-                logging.info(
+                logger.info(
                     'Will try rotating z-plane in increments'
                     ' of pi/{}'.format(pi_div)
                 )
@@ -387,7 +390,7 @@ class SWDataBase(object):
 
             while (rotate_z_plane is True) and n_r < pi_div:
                 if pi_div != 0:
-                    logging.info(
+                    logger.info(
                         'The z-plane has been rotated {} times.\n'
                         'Current rotation of the z-plane: {}\n'
                         .format(n_r, z_plane_rotation)
@@ -436,7 +439,7 @@ class SWDataBase(object):
                     z_rotation=z_plane_rotation,
                     ffr=True,
                 )
-                logging.info(
+                logger.info(
                     'Seiberg-Witten curve in the 1st fundamental '
                     'representation:\n{} = 0\n(numerically\n{}=0\n)'
                     .format(sympy.latex(self.ffr_curve.sym_eq),
@@ -446,7 +449,7 @@ class SWDataBase(object):
                 if self.g_data.fundamental_representation_index == 1:
                     self.curve = self.ffr_curve
                 else:
-                    logging.warning(
+                    logger.warning(
                         'Seiberg-Witten curve in a general representation '
                         'is not implemented yet.'
                     )
@@ -461,10 +464,12 @@ class SWDataBase(object):
                     z_rotation=z_plane_rotation,
                 )
 
-                logging.info('Seiberg-Witten differential:\n{} dz\n'.format(
-                             sympy.latex(self.diff.num_v)))
+                logger.info(
+                    'Seiberg-Witten differential:\n{} dz\n'
+                    .format(sympy.latex(self.diff.num_v))
+                )
 
-                logging.info(
+                logger.info(
                     'Calculating ramification points of '
                     'the Seiberg-Witten curve '
                     'in the first fundamental rep.'
@@ -478,12 +483,13 @@ class SWDataBase(object):
                     accuracy=config['accuracy'], 
                     punctures=self.punctures,
                     method=config['ramification_point_finding_method'],
-                    g_data=self.g_data
+                    g_data=self.g_data,
+                    logger_name=logger_name,
                 )
                 
-                logging.info('These are the punctures:')
+                logger.info('These are the punctures:')
                 for pct in self.punctures:
-                    logging.info('{} at z={}'.format(pct.label, pct.z))
+                    logger.info('{} at z={}'.format(pct.label, pct.z))
                 # Now check if the z-plane needs to be rotated
 
                 # z-coords of branch points.
@@ -509,7 +515,7 @@ class SWDataBase(object):
                     ])
                     
                 elif len(z_r_list) == 1:
-                    logging.info(
+                    logger.info(
                         'All branch points and punctures '
                         'are sufficiently separated horizontally.\n'
                         'Will not rotate z-plane any more.\n'
@@ -524,7 +530,7 @@ class SWDataBase(object):
                     )
 
                 if min_x_distance > min_abs_distance / len(z_list):
-                    logging.info(
+                    logger.info(
                         'All branch points and punctures '
                         'are sufficiently separated horizontally.\n'
                         'Will not rotate z-plane any more.\n'
@@ -533,7 +539,7 @@ class SWDataBase(object):
                     break
                 
                 else:
-                    logging.info(
+                    logger.info(
                         'Some branch points or punctures '
                         'are vertically aligned.\n'
                         'Need to rotate the z-plane.\n'
@@ -556,6 +562,8 @@ class SWDataBase(object):
         The order of x's is the same as the order of the weights
         in g_data.weights.
         """
+        logger = logging.getLogger(self.logger_name)
+
         algebra_type = self.g_data.type
         algebra_rank = self.g_data.rank
         fund_rep_index = self.g_data.fundamental_representation_index
@@ -612,7 +620,7 @@ class SWDataBase(object):
             # when two sheets are identically zero
             else:
                 if n_zero_xs != 2 and near_degenerate_branch_locus is False:
-                    logging.info(
+                    logger.info(
                         'At z ={} found the following sheets \n{}'.format(
                             z_0, ffr_xs
                         ))
@@ -640,7 +648,7 @@ class SWDataBase(object):
                 if numpy.isclose(px_j, -nx) is False:
                     warn(("get_ordered_xs(): No pairing of x's in the D-type, "
                          "({}, {}) != (x, -x).").format(px_j, nx))
-                    logging.info('positive xs : {}'.format(positive_xs))
+                    logger.info('positive xs : {}'.format(positive_xs))
                 else:
                     # Put the negative x at the same index
                     # as its positive pair.
@@ -781,8 +789,10 @@ def get_ramification_points(
     accuracy=None, 
     punctures=None,
     method=None,
-    g_data=None
+    g_data=None,
+    logger_name='loom_logger',
 ):
+    logger = logging.getLogger(logger_name)
     # FIXME: Why are we computing the ramification points
     # in the non-PLS2C rotated curve?
     # All the numerics of the Spectral Network happens
@@ -799,6 +809,7 @@ def get_ramification_points(
             accuracy=accuracy, 
             punctures=punctures,
             g_data=g_data,
+            logger_name=logger_name,
         )
     # elif method == 'system_of_eqs':
     else:
@@ -808,6 +819,7 @@ def get_ramification_points(
             mt_params=mt_params,
             accuracy=accuracy, 
             punctures=punctures,
+            logger_name=logger_name,
         )
     # else:
     #    raise ValueError(
@@ -833,8 +845,8 @@ def get_ramification_points(
             label=('ramification point #{}'
                    .format(len(ramification_points)))
         )
-        logging.info("{}: z = {}, x = {}, i = {}."
-                     .format(label, rp.z, rp.x, rp.i))
+        logger.info("{}: z = {}, x = {}, i = {}."
+                    .format(label, rp.z, rp.x, rp.i))
         ramification_points.append(rp)
 
     return ramification_points
@@ -846,6 +858,7 @@ def get_ramification_points_using_system_of_eqs(
     mt_params=None,
     accuracy=None, 
     punctures=None,
+    logger_name='loom_logger',
 ):
     sols = []
     f = curve.sym_eq
@@ -900,7 +913,9 @@ def get_ramification_points_using_discriminant(
     accuracy=None, 
     punctures=None,
     g_data=None,
+    logger_name='loom_logger',
 ):
+    logger = logging.getLogger(logger_name)
     sols = []
     f = curve.sym_eq
     # Make f into the form of rf = f_n/f_d
@@ -912,19 +927,19 @@ def get_ramification_points_using_discriminant(
     D_z = sympy.discriminant(f_n.subs(subs_dict), x)
 
     if D_z == 0:
-        logging.info('The discriminant of F(x,z) is identically zero')
+        logger.info('The discriminant of F(x,z) is identically zero')
         if g_data.type == 'A':
             D_z = sympy.discriminant(f_n.subs(subs_dict) / x, x)
         if g_data.type == 'D':
             D_z = sympy.discriminant(f_n.subs(subs_dict) / (x ** 2), x)
-        logging.info(
+        logger.info(
             'Will work with the effective discriminant:\n{}'.format(D_z)
         )
 
     D_z_n, D_z_d = sympy.cancel(D_z).as_numer_denom()
     factors = sympy.factor_list(sympy.expand(sympy.Poly(D_z_n, z)))[1]
     for fact in factors:
-        logging.debug('stuyding roots of factor {}'.format(fact))
+        logger.debug('stuyding roots of factor {}'.format(fact))
         # separate the factor itself and the multiplicity
         f_P = sympy.Poly(fact[0], z)
         # f_m = fact[1]

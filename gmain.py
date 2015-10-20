@@ -11,6 +11,6 @@ from loom.gui import open_gui
 #argv += ['--gui-mode', 'True']
 
 #run_with_sys_argv(argv)
-config_file = os.path.join(os.curdir, 'default.ini')
-open_gui(config_file, logging_level=logging.INFO)
+config_file_path = os.path.join(os.curdir, 'default.ini')
+open_gui(config_file_path=config_file_path, logging_level=logging.INFO)
 

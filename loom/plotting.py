@@ -1,7 +1,6 @@
 import os
 import numpy
 import pdb
-import logging
 import Tkinter as tk
 
 import matplotlib

@@ -1,7 +1,7 @@
 import numpy
 import sympy
-import logging
-
+#import logging
+import warnings
 from fractions import Fraction
 from sympy import limit, oo
 from cmath import log
@@ -60,27 +60,6 @@ def get_root_multiplicity(coefficients, root_0, accuracy):
 def cpow(base, exponent_numerator, exponent_denominator=1):
     return complex(base)**complex(Fraction(exponent_numerator,
                                            exponent_denominator))
-
-
-#def gather(a_list, compare, result=None):
-#    if result is None:
-#        result = []
-#    e_0 = a_list[0]
-#    result.append([e_0, 0])
-#    next_list = []
-#    pop_list = []
-#    for i in range(len(a_list)):
-#        if compare(e_0, a_list[i]) is True:
-#            pop_list.append(i)
-#    for i, e_i in enumerate(a_list):
-#        if i in pop_list:
-#            result[-1][1] += 1
-#        else:
-#            next_list.append(e_i)
-#    if len(next_list) == 0:
-#        return result
-#    else:
-#        return gather(next_list, compare, result)
 
 def gather(a_list, compare):
     """
@@ -150,16 +129,16 @@ def unravel(k, row_size, column_size=None):
         column_size = row_size
 
     if k < 0:
-        logging.error('k = {} should not be negative.'.format(k))
-        raise UnravelError(k)
+        error_msg = 'k = {} should not be negative.'.format(k)
+        raise UnravelError(error_msg)
 
     i = k / row_size
     j = k % row_size
 
     if i > column_size:
-        logging.error('i = {} should not be greater than '
-                      'the size of the column = {}.'.format(i, column_size))
-        raise UnravelError(k)
+        error_msg = ('i = {} should not be greater than '
+                     'the size of the column = {}.'.format(i, column_size))
+        raise UnravelError(error_msg)
 
     return (i, j)
 
@@ -213,8 +192,8 @@ def delete_duplicates(l, key=None, accuracy=False):
     if key==None and accuracy==None:
         for x in l:
             if not isinstance(x, (int, bool, str, unicode)):
-                logging.warning('delete_duplicates(): testing the membership'
-                                'of an element of an unsupported type.')
+                warnings.warn('delete_duplicates(): testing the membership'
+                              'of an element of an unsupported type.')
             if x not in seen:
                 uniq.append(x)
                 seen.add(x)
@@ -236,54 +215,6 @@ def delete_duplicates(l, key=None, accuracy=False):
                 seen.add(key(x))
             
     return uniq
-
-
-#def n_unique(a, accuracy):
-#    """
-#    Get an array and return its unique elements
-#    within a given accuracy.
-#    """
-#    if len(a) == 0:
-#        return a
-#    a_sorted = numpy.sort(numpy.array(a))
-#    a_diff = numpy.diff(a_sorted)
-#    a_unique = [a_sorted[0]]
-#    for i, d in enumerate(a_diff):
-#        if abs(d) > accuracy:
-#            a_unique.append(a_sorted[i+1])
-#    return a_unique
-    
-
-def clock(direction):
-    if direction == 'left':
-        return 'ccw'
-    elif direction == 'right':
-        return 'cw'
-    else:
-        logging.info('\nCannot read direction!\n')
-
-
-def left_right(l, point):
-    """
-    given the list 
-    l = [..., z, ...]
-    and a point in the list (specified by the corresponding integer),
-    determines whether x increases or decreases at that point, 
-    returning repsectively 'left' or 'right'
-    """
-    if point > len(l)-1:
-        logging.info('Cant determine direction, point doesnt belong to list!')
-    elif point > 0:
-        if l[point-1].real < l[point].real:
-            return 'right'
-        else:
-            return 'left'
-    elif point == 0:
-        if l[point].real < l[point+1].real:
-            return 'right'
-        else:
-            return 'left'
-
 
 def split_with_overlap(np_1d_array, splittings):
     """

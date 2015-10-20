@@ -17,13 +17,15 @@ def a_child_process(
     phase,
     config,
     shared_n_started_spectral_networks,
-    shared_n_finished_spectral_networks
+    shared_n_finished_spectral_networks,
+    logger_name,
 ):
+    logger = logging.getLogger(logger_name)
     theta_i, theta_f, theta_n = config['phase_range']
 
     shared_n_started_spectral_networks.value += 1
     job_id = shared_n_started_spectral_networks.value
-    logging.info('Start generating spectral network #{}/{}: theta = {}.'
+    logger.info('Start generating spectral network #{}/{}: theta = {}.'
                  .format(job_id, theta_n, phase)
     )
 
@@ -34,7 +36,7 @@ def a_child_process(
     spectral_network.grow(config, sw)
 
     shared_n_finished_spectral_networks.value += 1
-    logging.info('Finished generating spectral network #{}/{}.'
+    logger.info('Finished generating spectral network #{}/{}.'
                  .format(shared_n_finished_spectral_networks.value, theta_n)
     )
 
@@ -44,7 +46,9 @@ def a_child_process(
 def parallel_get_spectral_network(
     sw, 
     config,
+    logger_name,
 ):
+    logger = logging.getLogger(logger_name)
     spectral_network_list = []
     n_processes = config['n_processes']
 
@@ -58,27 +62,27 @@ def parallel_get_spectral_network(
 
     n_cpu = multiprocessing.cpu_count()
     if (n_processes == 0):
-        ### Use all the CPUs.
+        # Use all the CPUs.
         n_processes = n_cpu
     elif (n_processes < 0):
-        ### Leave |n_processes| CPUs.
+        # Leave |n_processes| CPUs.
         if(n_cpu > -n_processes):
             n_processes = n_cpu - (-n_processes)
         else:
-            logging.warning('The number of CPUs is smaller than {}.'
+            logger.warning('The number of CPUs is smaller than {}.'
                             .format(-config['n_processes']))
-            logging.warning('Set n_processes to 1.')
+            logger.warning('Set n_processes to 1.')
             n_processes = 1
     elif (n_cpu < n_processes):
-            logging.warning('The number of CPUs is smaller than {}.'
+            logger.warning('The number of CPUs is smaller than {}.'
                             .format(config['n_processes']))
-            logging.warning('Set n_processes to {}.'.format(n_cpu))
+            logger.warning('Set n_processes to {}.'.format(n_cpu))
             n_processes = n_cpu
 
-    ### Use n_processes CPUs.
+    # Use n_processes CPUs.
     multiprocessing.freeze_support()
     pool =  multiprocessing.Pool(n_processes, init_process)
-    logging.info('Number of processes in the pool: {}'.format(n_processes))
+    logger.info('Number of processes in the pool: {}'.format(n_processes))
 
     try:
         results = [
@@ -90,6 +94,7 @@ def parallel_get_spectral_network(
                     config,
                     shared_n_started_spectral_networks,
                     shared_n_finished_spectral_networks,
+                    logger_name,
                 )
             ) for phase in phases
         ]
@@ -99,7 +104,7 @@ def parallel_get_spectral_network(
             spectral_network_list.append(result.get())
 
     except KeyboardInterrupt:
-        logging.warning('Caught ^C; terminates processes...')
+        logger.warning('Caught ^C; terminates processes...')
         pool.terminate()
         pool.join()
 

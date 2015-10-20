@@ -32,9 +32,10 @@ class LoomConfig:
     A container class of the configuration data.
     Saves the configuration data as a Python dictionary.
     """
-    def __init__(self):
+    def __init__(self, logger_name='loom_logger'):
         self.data = {}
         self.parser = None
+        self.logger_name = logger_name
 
 
     def __setitem__(self, option, value):
@@ -42,10 +43,11 @@ class LoomConfig:
 
 
     def __getitem__(self, option):
+        logger = logging.getLogger(self.logger_name)
         try:
             value = self.data[option]
         except KeyError as e:
-            logging.warning('Option {} not specified; use None.'.format(e))
+            logger.warning('Option {} not specified; use None.'.format(e))
             #self.data[option] = None
             value = None
         return value
@@ -61,23 +63,15 @@ class LoomConfig:
         """
         Read an .ini file and load the configuration data.
         """
-        #logging.info('config file: %s', config_file)
         config_parser = LoomConfigParser()
 
         with open(config_file, 'r') as fp:
             config_parser.readfp(fp)
 
-        ### Initialize sw_parameters
-        #self['sw_parameters'] = {}
-
         for section in config_parser.sections():
             for option in config_parser.options(section):
                 if (section == 'Seiberg-Witten data'):
                     self[option] = config_parser.getstr(section, option)
-                #elif section == 'Seiberg-Witten parameters':
-                #    self['sw_parameters'][option] = config_parser.getstr(
-                #        section, option
-                #    )
                 else:
                     self[option] = config_parser.get(section, option)
 

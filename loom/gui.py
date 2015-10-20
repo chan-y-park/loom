@@ -20,7 +20,7 @@ GUI_LOOP_DELAY = 100    # in millisec
 
 
 class GUILoom:
-    def __init__(self, config_file, logging_level=logging.INFO,):
+    def __init__(self, config_file_path, logging_level,):
         root = tk.Tk()
         root.wm_title('loom')
 
@@ -34,9 +34,11 @@ class GUILoom:
 
         # Logging handling
         self.logging_queue = multiprocessing.Queue()
+        self.logger_name = 'loom_logger.gui_logger'
         set_logging(
-            logging_level,
-            queue=self.logging_queue,
+            logger_name=self.logger_name,
+            logging_level=logging_level,
+            logging_queue=self.logging_queue,
         )
         self.logging_stream = StringIO()
         self.logging_stream_handler = get_logging_handler(
@@ -46,7 +48,8 @@ class GUILoom:
         )
 
         # Load default config.
-        self.config = load_config(config_file)
+        self.config = load_config(config_file_path,
+                                  logger_name=self.logger_name)
 
         self.entry = {}
         self.entry_var = {}
@@ -109,22 +112,7 @@ class GUILoom:
             label='Save data',
             command=self.menu_save_data_action,
         )
-
-#        # Associate each config option to an Entry
-#        for option, value in self.config.iteritems():
-#            self.entry_var[option] = tk.StringVar()
-#            self.entry_var[option].set(value)
-#            self.entry[option] = tk.Entry(
-#                self.root,
-#                textvariable=self.entry_var[option]
-#            )
-#        self.entry_phase_var = tk.StringVar()
-#        self.entry_phase_var.set('1.0')
-#        self.entry_phase = tk.Entry(
-#            self.root,
-#            textvariable=self.entry_phase
-#        )
-
+        
         # Entry & Label layout
         # TODO: display config file name.
         for entry_list in self.entry_array:
@@ -155,59 +143,6 @@ class GUILoom:
                         row=grid_row, column=grid_col,
                     )
 
-
-#        grid_row += 1
-#        grid_col = 0
-#        tk.Label(self.root,
-#                 text='casimir_diffenrentials').grid(row=grid_row, 
-#                                                     column=grid_col)
-#        grid_col += 1
-#        self.entry['casimir_differentials'].grid(
-#            row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW
-#        )
-#
-#        grid_row += 1
-#        grid_col = 0
-#        tk.Label(self.root,
-#                 text='root_system').grid(row=grid_row, column=grid_col)
-#        grid_col += 1
-#        self.entry['root_system'].grid(row=grid_row, column=grid_col)
-#        grid_col += 1
-#        tk.Label(self.root,
-#                 text='representation').grid(row=grid_row, column=grid_col)
-#        grid_col += 1
-#        self.entry['representation'].grid(row=grid_row, column=grid_col)
-#
-#        grid_row += 1
-#        grid_col = 0
-#        (tk.Label(self.root, text='differential_parameters')
-#         .grid(row=grid_row, column=grid_col))
-#        grid_col += 1
-#        self.entry['differential_parameters'].grid(
-#            row=grid_row, column=grid_col, columnspan=3, sticky=tk.EW,
-#        )
-#
-#        for option in ['punctures', 'mt_params', 
-#                       'ramification_point_finding_method',
-#                       'plot_range', 'num_of_steps', 'num_of_iterations',
-#                       'size_of_small_step', 'size_of_large_step',
-#                       'size_of_neighborhood', 'size_of_puncture_cutoff',
-#                       'size_of_ramification_pt_cutoff',
-#                       'accuracy', 'n_processes', 'mass_limit',]:
-#            grid_row += 1
-#            grid_col = 0
-#            tk.Label(self.root,
-#                     text=option).grid(row=grid_row, column=grid_col)
-#            grid_col += 1
-#            self.entry[option].grid(row=grid_row, column=grid_col)
-#
-#        grid_row += 1
-#        grid_col = 0
-#        tk.Label(self.root,
-#                 text='phase_range').grid(row=grid_row, column=grid_col)
-#        grid_col += 1
-#        self.entry['phase_range'].grid(row=grid_row, column=grid_col)
-#
         # phase is not a config option, treated separately here.
         self.entry_phase_var = tk.StringVar()
         self.entry_phase_var.set('1.0')
@@ -293,7 +228,6 @@ class GUILoom:
             record = self.logging_queue.get_nowait()
             if record is not None:
                 self.logging_stream_handler.handle(record)
-                #self.print_log()
                 logs = self.logging_stream.getvalue()
                 self.logging_stream.truncate(0)
                 self.log_text.insert(tk.END, logs)
@@ -327,7 +261,7 @@ class GUILoom:
             self.change_gui_state('on')
             return None
 
-        config = load_config(file_path)
+        config = load_config(file_path, logger_name=self.logger_name)
         if config is None:
             self.change_gui_state('on')
             return None
@@ -356,7 +290,8 @@ class GUILoom:
 
         self.change_gui_state('off')
         self.update_config_from_entries()
-        save_config(self.config,)
+        save_config(self.config, file_path=file_path,
+                    logger_name=self.logger_name,)
         self.change_gui_state('on')
         return None
 
@@ -385,6 +320,7 @@ class GUILoom:
                 data_dir=data_dir,
                 logging_queue=self.logging_queue,
                 result_queue=result_queue,
+                logger_name=self.logger_name,
             )
         )
         load_data_process.start()
@@ -397,13 +333,14 @@ class GUILoom:
         return None
 
     def finish_load_data(self, *args):
+        logger = logging.getLogger(self.logger_name)
         load_data_process, result_queue = args
         if result_queue.empty() is True:
             if load_data_process.is_alive():
                 self.root.after(GUI_LOOP_DELAY, self.finish_load_data, *args)
                 return None
             else:
-                logging.warning(
+                logger.warning(
                     'Loading data failed: pid = {}, exitcode= {}'
                     .format(load_data_process.pid, 
                             load_data_process.exitcode,)
@@ -414,14 +351,14 @@ class GUILoom:
         config, spectral_network_data = result_queue.get() 
         load_data_process.join()
         if config is None:
-            logging.warning('Data contains no configuration.')
+            logger.warning('Data contains no configuration.')
             self.change_gui_state('on')
             return None
         self.config = config 
         self.update_entries_from_config()
         self.spectral_networks = spectral_network_data.spectral_networks
         self.sw_data = spectral_network_data.sw_data
-        logging.info('Spectral network data is ready.')
+        logger.info('Spectral network data is ready.')
         self.change_gui_state('on')
         return None
 
@@ -445,9 +382,10 @@ class GUILoom:
             args=(
                 self.config, 
                 SpectralNetworkData(self.sw_data, self.spectral_networks,),
-                data_dir,
             ),
             kwargs=dict(
+                data_dir=data_dir,
+                logger_name=self.logger_name,
                 make_zipped_file=False,
             )
         )
@@ -478,8 +416,11 @@ class GUILoom:
             target = generate_spectral_network,
             args=(
                 self.config,
-                eval(self.entry_phase_var.get()),
-                result_queue,
+            ),
+            kwargs=dict(
+                phase=eval(self.entry_phase_var.get()),
+                result_queue=result_queue,
+                logger_name=self.logger_name,
             ),
         )
         generate_process.start()
@@ -491,6 +432,7 @@ class GUILoom:
         )
 
     def finish_generate(self, generate_process, result_queue):
+        logger = logging.getLogger(self.logger_name)
         if result_queue.empty() is True:
             if generate_process.is_alive():
                 self.root.after(
@@ -501,7 +443,7 @@ class GUILoom:
                 )
                 return None
             else:
-                logging.warning(
+                logger.warning(
                     'Generating spectral networks failed: '
                     'pid = {}, exitcode = {}.'
                     .format(generate_process.pid,
@@ -513,16 +455,17 @@ class GUILoom:
         generate_process.join()
         self.sw_data = spectral_network_data.sw_data
         self.spectral_networks = spectral_network_data.spectral_networks
-        logging.info('Finished generating spectral network data.')
+        logger.info('Finished generating spectral network data.')
         self.change_gui_state('on')
         return None
 
     def button_plot_action(self):
+        logger = logging.getLogger(self.logger_name)
         self.change_gui_state('off')
         self.update_config_from_entries()
 
         if (len(self.spectral_networks) == 0):
-            logging.warning('No spectral network to plot.')
+            logger.warning('No spectral network to plot.')
             self.change_gui_state('on')
             return None
 
@@ -532,38 +475,12 @@ class GUILoom:
             master=self.root,
             plot_on_cylinder=self.check_plot_on_cylinder,
             plot_range=self.config['plot_range'],
+            logger_name=self.logger_name,
         )
         self.change_gui_state('on')
         
         return None
 
-#        plot_process = multiprocessing.Process(
-#            target=make_spectral_network_plot,
-#            args=(snd,),
-#            kwargs=dict(
-#                master=None,
-#                plot_on_cylinder=self.check_plot_on_cylinder,
-#                plot_range=self.config['plot_range'],
-#            )
-#        )
-#        plot_process.start()
-#        self.root.after(
-#            GUI_LOOP_DELAY,
-#            self.finish_plot,
-#            plot_process,
-#        )
-#        return None
-#
-#    def finish_plot(self, plot_process):
-#        if plot_process.is_alive():
-#            self.root.after(GUI_LOOP_DELAY, self.finish_plot,
-#                            plot_process,)
-#            return None
-#        else:
-#            plot_process.join()
-#            self.change_gui_state('on')
-#            return None
-#
     def change_gui_state(self, state):
         if state == 'on':
             tk_state = tk.NORMAL
@@ -602,8 +519,11 @@ class GUILoom:
             return False
 
     def update_entries_from_config(self):
-        # Update the text values of the entries 
-        # when a new configuration is loaded to self.config.
+        """
+        Update the text values of the entries 
+        when a new configuration is loaded to self.config.
+        """
+        logger = logging.getLogger(self.logger_name)
         config_options = self.config.keys()
         for entry_list in self.entry_array:
             for entry_label, config_option in entry_list:
@@ -612,25 +532,35 @@ class GUILoom:
                     config_options.remove(config_option)
                 self.entry_var[config_option].set(value)
         if len(config_options) > 0:
-            logging.warning(
+            logger.warning(
                 'The following options are in the configuration '
                 'file but has no corresponding entry in the GUI: {}.'
                 .format(config_options)
             )
 
     def update_config_from_entries(self):
-        # Read config options from Entries.
+        """
+        Read config options from entries.
+        """
+        logger = logging.getLogger(self.logger_name)
         for section in self.config.parser.sections():
             for option in self.config.parser.options(section):
-                value = self.entry_var[option].get()
-                if (section == 'numerical parameters'):
-                    self.config[option] = eval(value)
-                else:
-                    self.config[option] = value
-                self.config.parser.set(section, option, value)
+                try:
+                    value = self.entry_var[option].get()
+                    if (section == 'numerical parameters'):
+                        self.config[option] = eval(value)
+                    else:
+                        self.config[option] = value
+                    self.config.parser.set(section, option, value)
+                except KeyError:
+                    logger.warning(
+                        'No entry for option = {}, skip it.'
+                        .format(option)
+                    )
+                    pass
 
-def open_gui(config_file, logging_level='info',):
-    gui_loom = GUILoom(config_file, logging_level)
+def open_gui(config_file_path=None, logging_level=None,):
+    gui_loom = GUILoom(config_file_path, logging_level)
     gui_loom.create_widgets()
     gui_loom.root.protocol("WM_DELETE_WINDOW", lambda: quit_gui(gui_loom),)
     gui_loom.root.mainloop()
