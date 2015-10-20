@@ -158,11 +158,11 @@ class GData:
         v_j_ind = pair_0[1]
         ordered_weights = self.weights
         new_v_i = sum([
-            monodromy_matrix[v_i_ind][k] * v 
+            monodromy_matrix[k][v_i_ind] * v 
             for k, v in enumerate(ordered_weights)
         ])
         new_v_j = sum([
-            monodromy_matrix[v_j_ind][k] * v 
+            monodromy_matrix[k][v_j_ind] * v 
             for k, v in enumerate(ordered_weights)
         ]) 
 
@@ -646,9 +646,11 @@ class SWDataBase(object):
                 j = difference.argsort()[0]
                 # Check the pairing of positive and negative x's.
                 px_j = positive_xs[j]
-                if numpy.isclose(px_j, -nx) is False:
-                    warn(("get_ordered_xs(): No pairing of x's in the D-type, "
-                         "({}, {}) != (x, -x).").format(px_j, nx))
+                if numpy.isclose(
+                    px_j, -nx, atol=SHEET_NULL_TOLERANCE
+                ) is False:
+                    warn(("get_ordered_xs(): No pairing of x's in the D-type,"
+                         " ({}, {}) != (x, -x).").format(px_j, nx))
                     logging.info('positive xs : {}'.format(positive_xs))
                 else:
                     # Put the negative x at the same index
