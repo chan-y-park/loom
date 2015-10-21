@@ -12,7 +12,7 @@ LOOM_DIR = os.path.dirname(os.path.realpath(__file__))
 #os.chdir(LOOM_DIR)
 #sys.path.insert(0, LOOM_DIR)
 sys.stdout = sys.stderr
-print os.getcwd()
+print 'loom WSGI working directory: {}'.format(os.getcwd())
 
 from loom.web_ui import get_application
 

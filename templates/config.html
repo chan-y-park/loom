@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block body %}
+    <div style="width:30em; margin:20px; padding:10px; 
+                border:1px solid black;">
+    <h2>Configuration</h2>
+    {% for message in get_flashed_messages() %}
+    <div class=flash><p>Error: {{ message }}</p></div>
+    {% endfor %}
+    <form action="{{ url_for('config') }}" method="post">
+        <dl>
+            <dt>Type
+            <dd>
+                <label class="radio-inline">
+                    <input type="radio" name="type" value="A">A
+                </label>
+                <label class="radio-inline">
+                    <input type="radio" name="type" value="D">D
+                </label>
+                <label class="radio-inline">
+                    <input type="radio" name="type" value="E" 
+                     checked="checked">E
+                </label>
+            <dt>Rank
+            <dd><input type=text name=rank value="6">
+            <dt>Index of the fundamental weight of the representation
+            <dd><input type=text name=n_of_v_0 value="1">
+        </dl>
+    </form>
+    </div>
+{% endblock %}
