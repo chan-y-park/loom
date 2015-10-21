@@ -4,13 +4,17 @@ import pdb
 import flask
 import sys
 import logging
+import uuid
+
 from StringIO import StringIO
+from Queue import Empty as QueueEmpty
 #sys.stdout = sys.stderr
 
 from api import (
     get_logging_handler,
     set_logging,
-    gerenate_spectral_network,
+    load_config,
+    generate_spectral_network,
 )
 
 # Flask configuration
@@ -29,7 +33,7 @@ class LoomDB(object):
     ):
         logging_queue = multiprocessing.Queue()
         self.logging_queues[process_uuid] = logging_queue
-        logger_name = PARENT_LOGGER_NAME + '.' + process_uuid
+        logger_name = get_logger_name(process_uuid)
         set_logging(
             logger_name=logger_name,
             logging_level=logging_level,
@@ -50,7 +54,7 @@ class LoomDB(object):
                 logger_name=logger_name,
             ),
         )
-        self.processes[process_uuid] = loom_process
+        self.loom_processes[process_uuid] = loom_process
         loom_process.start()
 
         return None
@@ -101,10 +105,10 @@ class LoomDB(object):
         yield '<input type=submit class="btn btn-default" value=Plot>'
                 
     def finish_loom_process(self, process_uuid):
-        logger_name = PARENT_LOGGER_NAME + '.' + process_uuid
+        logger_name = get_logger_name(process_uuid)
         logger = logging.getLogger(logger_name)
         result_queue = self.result_queues[process_uuid]
-        loom_process = self.processes[process_uuid]
+        loom_process = self.loom_processes[process_uuid]
         if result_queue.empty() is True:
             if loom_process.is_alive():
                 logger.warning('Job {} still running.'.format(name))
@@ -143,12 +147,13 @@ def index():
 
 def config():
     loom_config = None
-    if flask.request_method == 'GET':
+    if flask.request.method == 'GET':
         return flask.render_template('config.html')
-    elif flask.request_method == 'POST':
+    elif flask.request.method == 'POST':
         phase = eval(flask.request.form['phase'])
         process_uuid = str(uuid.uuid4())
-        loom_config = get_loom_config(request_dict) 
+        logger_name = get_logger_name(process_uuid)
+        loom_config = get_loom_config(flask.request.form, logger_name) 
         #app = flask.current_app._get_current_object()
         app = flask.current_app
         app.loom_db.start_loom_process(
@@ -167,18 +172,18 @@ def progress_stream_template(template_name, **context):
     return rv
 
 def progress(process_uuid):
-    if flask.request_method == 'GET':
+    if flask.request.method == 'GET':
         app = flask.current_app
         return flask.Response(
             progress_stream_template(
                 'progress.html',
                 process_uuid=process_uuid,
                 progress=app.loom_db.yield_log_message(
-                    process_uid, logging.INFO,
+                    process_uuid, logging.INFO,
                 )
             )
         )
-    elif flask.request_method == 'POST':
+    elif flask.request.method == 'POST':
         return flask.redirect(
             flask.url_for(
                 'plot',
@@ -189,6 +194,8 @@ def progress(process_uuid):
 
 def plot(process_uuid):
     # Finish loom_process
+    app = flask.current_app
+    app.loom_db.finish_loom_process(process_uuid)
     # Make a Bokeh plot
     return flask.render_template(
         'plot.html',
@@ -198,8 +205,25 @@ def plot(process_uuid):
 def get_application(config_file, logging_level):
     application = WebLoomApplication(config_file, logging_level)
     application.config.from_object(__name__)
-    application.add_url_rule('/', 'index', index)
-    application.add_url_rule('/config', 'config', config)
-    application.add_url_rule('/progress/<process_uuid>', 'progress', progress)
-    application.add_url_rule('/plot/<process_uuid>', 'plot', plot)
+    application.add_url_rule(
+        '/', 'index', index, methods=['GET'],
+    )
+    application.add_url_rule(
+        '/config', 'config', config, methods=['GET', 'POST'],
+    )
+    application.add_url_rule(
+        '/progress/<process_uuid>', 'progress', progress,
+        methods=['GET', 'POST'],
+    )
+    application.add_url_rule(
+        '/plot/<process_uuid>', 'plot', plot,
+        methods=['GET'],
+    )
     return application
+
+def get_logger_name(uuid):
+    return PARENT_LOGGER_NAME + '.' + uuid
+
+def get_loom_config(request_dict, logger_name):
+    loom_config = load_config('default.ini', logger_name=logger_name)
+    return loom_config

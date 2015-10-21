@@ -8,8 +8,8 @@
 <script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
 {% endblock %}
 {% block body %}
-    <form action="{{ url_for('plot') }}" method="post">
-    <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
+    <form method="post">
+    <!--<input type="hidden" name="process_uuid" value="{{ process_uuid }}">-->
     <div id="data">Showing progress...</div>
 {% for message in progress: %}
     <script>
