@@ -18,9 +18,9 @@ from api import (
 )
 
 # Flask configuration
-#DEBUG = True
-#SECRET_KEY = 'web_loom_key'
-PARENT_LOGGER_NAME = 'web_loom_logger'
+DEBUG = True
+SECRET_KEY = 'web_loom_key'
+PARENT_LOGGER_NAME = 'loom.web'
 
 class LoomDB(object):
     def __init__(self):

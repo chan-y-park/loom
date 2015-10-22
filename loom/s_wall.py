@@ -32,7 +32,7 @@ SEED_PRECISION_MAX_DEPTH = 5
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
                  t_1=None, t_2=None, label=None, sw_data=None, 
-                 logger_name='loom_logger',):
+                 logger_name='loom',):
         self.z = None
         self.M = None
         self.parents = None
@@ -161,7 +161,7 @@ class Joint:
 
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, M_0=None, parents=None,
-                 label=None, n_steps=None, logger_name='loom_logger'):
+                 label=None, n_steps=None, logger_name='loom'):
         """
         SWall.z is a NumPy array of length n_steps+1,
         where z[t] is the base coordinate.

@@ -334,7 +334,7 @@ class SWDataBase(object):
     This is the base class of SWDataWithTrivialization, where 
     the trivialization data of the curve is contained.
     """
-    def __init__(self, config, logger_name='loom_logger',):
+    def __init__(self, config, logger_name='loom',):
         self.logger_name = logger_name
         logger = logging.getLogger(self.logger_name)
 
@@ -790,7 +790,7 @@ def get_ramification_points(
     punctures=None,
     method=None,
     g_data=None,
-    logger_name='loom_logger',
+    logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
     # FIXME: Why are we computing the ramification points
@@ -858,7 +858,7 @@ def get_ramification_points_using_system_of_eqs(
     mt_params=None,
     accuracy=None, 
     punctures=None,
-    logger_name='loom_logger',
+    logger_name='loom',
 ):
     sols = []
     f = curve.sym_eq
@@ -913,7 +913,7 @@ def get_ramification_points_using_discriminant(
     accuracy=None, 
     punctures=None,
     g_data=None,
-    logger_name='loom_logger',
+    logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
     sols = []

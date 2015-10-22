@@ -22,7 +22,7 @@ class SpectralNetwork:
     def __init__(
         self,
         phase=None,
-        logger_name='loom_logger',
+        logger_name='loom',
     ):
         self.phase = phase
         self.s_walls = []

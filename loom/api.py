@@ -37,7 +37,7 @@ def get_logging_formatter(level):
     return logging.Formatter(logging_format)
 
 def set_logging(
-    logger_name='loom_logger',
+    logger_name='loom',
     logging_level=logging.INFO, 
     logging_queue=None, 
     logging_stream=None,
@@ -84,7 +84,7 @@ def get_logging_handler(level, handler_class, buffer_object):
     return h
 
 
-def load_config(file_path=None, logger_name='loom_logger',):
+def load_config(file_path=None, logger_name='loom',):
     logger = logging.getLogger(logger_name)
     if file_path is None:
         return None
@@ -95,7 +95,7 @@ def load_config(file_path=None, logger_name='loom_logger',):
 
     return config
 
-def save_config(config, file_path=None, logger_name='loom_logger',):
+def save_config(config, file_path=None, logger_name='loom',):
     logger = logging.getLogger(logger_name)
     if file_path is None:
         return None
@@ -110,7 +110,7 @@ def load_spectral_network(
     data_dir=None,
     logging_queue=None,
     result_queue=None,
-    logger_name='loom_logger',
+    logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
     if data_dir is None:
@@ -148,7 +148,7 @@ def save_spectral_network(
     spectral_network_data,
     data_dir=None,
     make_zipped_file=True,
-    logger_name='loom_logger',
+    logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
     spectral_networks = spectral_network_data.spectral_networks
@@ -201,7 +201,7 @@ def generate_spectral_network(
     phase=None,
     result_queue=None,
     logging_queue=None,
-    logger_name='loom_logger',
+    logger_name='loom',
 ):
     """
     Generate one or more spectral networks according to
@@ -261,7 +261,7 @@ def make_spectral_network_plot(
     master=None,
     show_plot=True,
     plot_range=None,
-    logger_name='loom_logger',
+    logger_name='loom',
     **kwargs
 ):
     logger = logging.getLogger(logger_name)

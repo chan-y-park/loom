@@ -32,7 +32,7 @@ class LoomConfig:
     A container class of the configuration data.
     Saves the configuration data as a Python dictionary.
     """
-    def __init__(self, logger_name='loom_logger'):
+    def __init__(self, logger_name='loom'):
         self.data = {}
         self.parser = None
         self.logger_name = logger_name

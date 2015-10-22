@@ -18,7 +18,7 @@ def a_child_process(
     config,
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks,
-    logger_name,
+    logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
     theta_i, theta_f, theta_n = config['phase_range']
@@ -46,7 +46,7 @@ def a_child_process(
 def parallel_get_spectral_network(
     sw, 
     config,
-    logger_name,
+    logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
     spectral_network_list = []

@@ -208,7 +208,7 @@ class SWDataWithTrivialization(SWDataBase):
     # overlap vertically.
     # This should be guaranteed by the automatic rotation of 
     # the z-plane which is performed before calling this class.
-    def __init__(self, config, logger_name='loom_logger'):
+    def __init__(self, config, logger_name='loom'):
         super(SWDataWithTrivialization, self).__init__(
             config, logger_name=logger_name
         )
@@ -771,7 +771,7 @@ class SWDataWithTrivialization(SWDataBase):
         rp.sw_diff_coeff = complex(diff_c.n())
 
 
-def get_path_to(z_pt, sw_data, logger_name='loom_logger'):
+def get_path_to(z_pt, sw_data, logger_name='loom'):
     """
     Return a rectangular path from the base point to z_pt.
     If the path has to pass too close to a branch point, 
@@ -883,7 +883,7 @@ def get_path_around(z_pt, base_pt, sw):
 # of ramification points above the branch point.
 def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True, 
                   index=None, z_0=None, z_1=None, g_data=None,
-                  logger_name='loom_logger'):
+                  logger_name='loom'):
     """
     Returns a sorted version of 'new_xs'
     based on matching the closest points with 
@@ -956,7 +956,7 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
 
 
 def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy, 
-                          logger_name='loom_logger'):
+                          logger_name='loom'):
     # will only work if there are at most two sheets being 
     # too close two each other, not three or more.
     # TODO: generalize to handle more gneral cases (if we need it at all)
@@ -1053,7 +1053,7 @@ def kr_delta(i, j):
         return 0
 
 
-def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom_logger'):
+def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
     """
     Determines the positive roots associated with 
     a branch point's 'structure', i.e. how the sheets

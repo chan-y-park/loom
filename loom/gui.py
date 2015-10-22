@@ -34,11 +34,12 @@ class GUILoom:
 
         # Logging handling
         self.logging_queue = multiprocessing.Queue()
-        self.logger_name = 'loom_logger.gui_logger'
+        self.logger_name = 'loom.gui'
         set_logging(
             logger_name=self.logger_name,
             logging_level=logging_level,
             logging_queue=self.logging_queue,
+            logging_file_name='logs/loom.gui.log',
         )
         self.logging_stream = StringIO()
         self.logging_stream_handler = get_logging_handler(
