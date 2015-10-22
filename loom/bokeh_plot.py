@@ -10,9 +10,11 @@ from bokeh.plotting import figure, output_file, show
 from misc import split_with_overlap
 
 def get_spectral_network_bokeh_plot(
-    spectral_networks, sw_data, plot_range=None,
+    spectral_network_data, plot_range=None,
     plot_joints=False, plot_data_points=False, plot_on_cylinder=False,
 ):
+    spectral_networks = spectral_network_data.spectral_networks
+    sw_data = spectral_network_data.sw_data
     plot_width = 800
     plot_height = plot_width
 

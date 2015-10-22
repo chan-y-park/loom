@@ -5,10 +5,12 @@ import flask
 import sys
 import logging
 import uuid
+import bokeh
 
 from StringIO import StringIO
 from Queue import Empty as QueueEmpty
 #sys.stdout = sys.stderr
+
 
 from api import (
     get_logging_handler,
@@ -17,10 +19,13 @@ from api import (
     generate_spectral_network,
 )
 
+from bokeh_plot import get_spectral_network_bokeh_plot
+
 # Flask configuration
 DEBUG = True
 SECRET_KEY = 'web_loom_key'
-PARENT_LOGGER_NAME = 'loom.web'
+PARENT_LOGGER_NAME = 'loom'
+WEB_APP_NAME = 'web_loom'
 
 class LoomDB(object):
     def __init__(self):
@@ -140,17 +145,21 @@ class LoomDB(object):
         # Remove the logger.
         del logging.Logger.manager.loggerDict[logger_name]
         # Call the plotting function.
-        return None
+        bokeh_layout = get_spectral_network_bokeh_plot(spectral_network_data)
+        script, div = bokeh.embed.components(bokeh_layout)
+        return (script, div) 
+
 
 class WebLoomApplication(flask.Flask):
     def __init__(self, config_file, logging_level):
-        super(WebLoomApplication, self).__init__('web_loom')
+        super(WebLoomApplication, self).__init__(WEB_APP_NAME)
         set_logging(
-            logger_name=PARENT_LOGGER_NAME,
+            logger_name=WEB_APP_NAME,
             logging_level=logging_level,
-            logging_file_name='logs/web_loom.txt',
+            logging_file_name='logs/web_loom.log',
         )
         self.loom_db = LoomDB()
+
 
 def index():
     return flask.render_template('index.html')
@@ -194,13 +203,20 @@ def logging_stream(process_uuid):
 def plot(process_uuid):
     # Finish loom_process
     app = flask.current_app
-    app.loom_db.finish_loom_process(process_uuid)
+    plot_script, plot_div = app.loom_db.finish_loom_process(process_uuid)
     # Make a Bokeh plot
     return flask.render_template(
         'plot.html',
-        process_uuid=process_uuid,
-        # Bokeh results
+        plot_script=plot_script,
+        plot_div=plot_div,
     )
+
+def get_logger_name(uuid):
+    return WEB_APP_NAME + '.' + uuid
+
+def get_loom_config(request_dict, logger_name):
+    loom_config = load_config('default.ini', logger_name=logger_name)
+    return loom_config
 
 def get_application(config_file, logging_level):
     application = WebLoomApplication(config_file, logging_level)
@@ -220,9 +236,4 @@ def get_application(config_file, logging_level):
     )
     return application
 
-def get_logger_name(uuid):
-    return PARENT_LOGGER_NAME + '.' + uuid
 
-def get_loom_config(request_dict, logger_name):
-    loom_config = load_config('default.ini', logger_name=logger_name)
-    return loom_config

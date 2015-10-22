@@ -26,11 +26,13 @@ application = get_application(DEFAULT_CONFIG_FILE, logging_level=logging.INFO)
 if __name__ == '__main__':
     host = '0.0.0.0'
     port = 8888
-    print 'Listening on {}:{}.'.format(host, port)
-    application.run(
-        host=host,
-        port=port,
-        #debug=True,
-        #use_reloader=False,
-        threaded=True,
-    )
+    try:
+        application.run(
+            host=host,
+            port=port,
+            #debug=True,
+            #use_reloader=False,
+            threaded=True,
+        )
+    except (KeyboardInterrupt, SystemExit):
+        raise

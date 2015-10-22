@@ -52,6 +52,8 @@ def set_logging(
     formatter = get_logging_formatter(logging_level)
 
     if remove_handlers is True:
+        # Remove root log handlers.
+        logging.getLogger().handlers = []
         # Remove other handlers.
         logger.handlers = []
 
