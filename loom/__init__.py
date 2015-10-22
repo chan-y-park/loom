@@ -24,10 +24,10 @@ from api import make_spectral_network_plot as plot
 from api import load_config, save_config
 
 set_logging(
-    logger_name='loom_logger',
+    logger_name='loom',
     logging_level=logging.INFO,
     logging_stream=sys.stdout,
-    logging_file_name='logs/log.loom.txt',
+    logging_file_name='logs/loom.log',
 )
 
 __all__ = [
