@@ -1,21 +1,15 @@
 {% extends "layout.html" %}
 {% block head %}
-<style>
-    #data {
-        text-align: center;
-    }
-</style>
-<script type="text/javascript" src="http://code.jquery.com/jquery-latest.js"></script>
 {% endblock %}
 {% block body %}
-    <form method="post">
-    <!--<input type="hidden" name="process_uuid" value="{{ process_uuid }}">-->
-    <div id="data">Showing progress...</div>
+<textarea name="logging">
+No logging yet.
+</textarea>
 {% for message in progress: %}
-    <script>
-        $("#data").text("{{ message|safe }}")
-    </script>
-    {{ message|safe}}
+<script>
+    var box = $("textarea[name=logging]");
+    var logs = box.val();
+    box.val(logs + "{{ message | safe }}");
+</script>
 {% endfor %}
-    </form>
 {% endblock %}

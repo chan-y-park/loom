@@ -1,6 +1,8 @@
 {% extends "layout.html" %}
+{% block head %}
+{% endblock %}
 {% block body %}
-    <div style="width:30em; margin:20px; padding:10px; 
+    <div style="width:80em; margin:20px; padding:10px; 
                 border:1px solid black;">
     <h2>Configuration</h2>
     {% for message in get_flashed_messages() %}
@@ -26,8 +28,36 @@
             <dd><input type=text name=n_of_v_0 value="1">
             <dt>Phase
             <dd><input type=text name=phase value="1.0">
-            <dd><input type=submit class"btn btn-default" value=Start>
+            <dt>Generate spectral networks
+            <dd><input type=submit class="btn btn-default" value=Start>
         </dl>
     </form>
+    <textarea id="logging_textarea" name="logging" rows=24 cols=80>
+    {{ text_area_content }}
+    </textarea>
+    <script>
+        var box = $("textarea[name=logging]");
+
+        var source = new EventSource("{{ event_source_url }}");
+
+        source.onmessage = function(e) {
+            var logs = box.val();
+            box.val(logs + '\n' + e.data);
+            logging_textarea = document.getElementById("logging_textarea");
+            logging_textarea.scrollTop = logging_textarea.scrollHeight;
+        }
+
+        source.addEventListener('finish', function(e) {
+            document.getElementById("plot_button").disabled = false;
+            source.close();
+        }, false);
+    </script>
+    <form action="{{ plot_url }}" method="post">
+        <dl>
+            <dt>Plot spectral networks
+            <dd><input id="plot_button" type=submit class="btn btn-default" value=Plot disabled=true>
+        </dl>
+    </form>
+    </div>
     </div>
 {% endblock %}

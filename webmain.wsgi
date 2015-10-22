@@ -30,7 +30,7 @@ if __name__ == '__main__':
     application.run(
         host=host,
         port=port,
-        debug=True,
-        use_reloader=False,
+        #debug=True,
+        #use_reloader=False,
         threaded=True,
     )

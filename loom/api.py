@@ -200,6 +200,7 @@ def generate_spectral_network(
     config,
     phase=None,
     result_queue=None,
+    logging_queue=None,
     logger_name='loom_logger',
 ):
     """
@@ -241,6 +242,14 @@ def generate_spectral_network(
     logger.info('elapsed cpu time: %.8f', end_time - start_time)
 
     rv = SpectralNetworkData(sw, spectral_networks)
+    if logging_queue is not None:
+        # Put a mark that generating spectral networks is done.
+        try:
+            logging_queue.put_nowait(None)
+        except:
+            logger.warn("Failed in putting a finish mark "
+                        "in the logging queue.")
+
     if result_queue is None:
         return rv
     else:

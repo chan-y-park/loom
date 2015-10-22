@@ -18,8 +18,8 @@ from api import (
 )
 
 # Flask configuration
-DEBUG = True
-SECRET_KEY = 'web_loom_key'
+#DEBUG = True
+#SECRET_KEY = 'web_loom_key'
 PARENT_LOGGER_NAME = 'web_loom_logger'
 
 class LoomDB(object):
@@ -51,6 +51,7 @@ class LoomDB(object):
             kwargs=dict(
                 phase=phase,
                 result_queue=result_queue,
+                logging_queue=logging_queue,
                 logger_name=logger_name,
             ),
         )
@@ -62,12 +63,14 @@ class LoomDB(object):
     def get_log_message(
         self, process_uuid, logging_stream, logging_stream_handler
     ):
-        record = self.logging_queues[process_uuid].get_nowait()
+        record = self.logging_queues[process_uuid].get(True, 3)
         if record is not None:
             logging_stream_handler.handle(record)
             logs = logging_stream.getvalue()
             logging_stream.truncate(0)
             return logs
+        else:
+            raise QueueEmpty
 
     def yield_log_message(self, process_uuid, logging_level,):
         logging_stream = StringIO()
@@ -81,7 +84,7 @@ class LoomDB(object):
             try:
                 logs = self.get_log_message(process_uuid, logging_stream,
                                             logging_stream_handler,)
-                yield '<br>{}</br>\n'.format(logs)
+                yield 'data: {}\n\n'.format(logs)
             except QueueEmpty:
                 pass 
             except (KeyboardInterrupt, SystemExit):
@@ -96,13 +99,12 @@ class LoomDB(object):
             try:
                 logs = self.get_log_message(process_uuid, logging_stream,
                                             logging_stream_handler,)
-                yield '<br>{}</br>\n'.format(logs)
+                yield 'data: {}\n\n'.format(logs)
             except QueueEmpty:
                 break 
             except (KeyboardInterrupt, SystemExit):
                 raise
-        # Draw 'Plot' button.
-        yield '<input type=submit class="btn btn-default" value=Plot>'
+        yield 'event: finish\ndata: \n\n'
                 
     def finish_loom_process(self, process_uuid):
         logger_name = get_logger_name(process_uuid)
@@ -122,13 +124,21 @@ class LoomDB(object):
                 )
 
         spectral_network_data = result_queue.get()
-        loom_process.join()
         sw_data = spectral_network_data.sw_data
         spectral_networks = spectral_network_data.spectral_networks
         logger.info('Finished generating spectral network data.')
+
+        loom_process.join()
+        del self.loom_processes[process_uuid]
+
         # Remove the result queue
+        del self.result_queues[process_uuid]
         # Remove the logging queue.
+        del self.logging_queues[process_uuid]
         # Remove the logging queue handler.
+        logger.handlers = []
+        # Remove the logger.
+        del logging.Logger.manager.loggerDict[logger_name]
         # Call the plotting function.
         return None
 
@@ -148,7 +158,10 @@ def index():
 def config():
     loom_config = None
     if flask.request.method == 'GET':
-        return flask.render_template('config.html')
+        return flask.render_template(
+            'config.html',
+            event_source_url = None,
+        )
     elif flask.request.method == 'POST':
         phase = eval(flask.request.form['phase'])
         process_uuid = str(uuid.uuid4())
@@ -159,39 +172,25 @@ def config():
         app.loom_db.start_loom_process(
             process_uuid, logging.INFO, loom_config, phase,
         )
-        return flask.redirect(
-            flask.url_for('progress', process_uuid=process_uuid) 
+        return flask.render_template(
+            'config.html',
+            event_source_url = flask.url_for(
+                'logging_stream', process_uuid=process_uuid,
+            ),
+            text_area_content = "Start loom, uuid = {}".format(process_uuid),
+            plot_url = flask.url_for(
+                'plot', process_uuid=process_uuid,
+            ),
         )
 
-def progress_stream_template(template_name, **context):
-    # http://flask.pocoo.org/docs/patterns/streaming/#streaming-from-templates
-    app = flask.current_app
-    app.update_template_context(context)
-    t = app.jinja_env.get_template(template_name)
-    rv = t.stream(context)
-    return rv
-
-def progress(process_uuid):
-    if flask.request.method == 'GET':
+def logging_stream(process_uuid):
+    if flask.request.headers.get('accept') == 'text/event-stream':
         app = flask.current_app
         return flask.Response(
-            progress_stream_template(
-                'progress.html',
-                process_uuid=process_uuid,
-                progress=app.loom_db.yield_log_message(
-                    process_uuid, logging.INFO,
-                )
-            )
+            app.loom_db.yield_log_message(process_uuid, logging.INFO),
+            mimetype='text/event-stream',
         )
-    elif flask.request.method == 'POST':
-        return flask.redirect(
-            flask.url_for(
-                'plot',
-                #process_uuid=flask.request.form['process_uuid'],
-                process_uuid=process_uuid,
-            )
-        )
-
+        
 def plot(process_uuid):
     # Finish loom_process
     app = flask.current_app
@@ -199,12 +198,12 @@ def plot(process_uuid):
     # Make a Bokeh plot
     return flask.render_template(
         'plot.html',
+        process_uuid=process_uuid,
         # Bokeh results
     )
 
 def get_application(config_file, logging_level):
     application = WebLoomApplication(config_file, logging_level)
-    application.config.from_object(__name__)
     application.add_url_rule(
         '/', 'index', index, methods=['GET'],
     )
@@ -212,11 +211,11 @@ def get_application(config_file, logging_level):
         '/config', 'config', config, methods=['GET', 'POST'],
     )
     application.add_url_rule(
-        '/progress/<process_uuid>', 'progress', progress,
-        methods=['GET', 'POST'],
+        '/plot/<process_uuid>', 'plot', plot,
+        methods=['POST'],
     )
     application.add_url_rule(
-        '/plot/<process_uuid>', 'plot', plot,
+        '/logging_stream/<process_uuid>', 'logging_stream', logging_stream,
         methods=['GET'],
     )
     return application
