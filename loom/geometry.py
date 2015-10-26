@@ -159,11 +159,11 @@ class GData:
         v_j_ind = pair_0[1]
         ordered_weights = self.weights
         new_v_i = sum([
-            monodromy_matrix[v_i_ind][k] * v 
+            monodromy_matrix[k][v_i_ind] * v 
             for k, v in enumerate(ordered_weights)
         ])
         new_v_j = sum([
-            monodromy_matrix[v_j_ind][k] * v 
+            monodromy_matrix[k][v_j_ind] * v 
             for k, v in enumerate(ordered_weights)
         ]) 
 
@@ -190,11 +190,20 @@ class GData:
     def root_color(self, root):
         if self.root_color_map is None:
             self.root_color_map = self.create_root_color_map()
-        root_color_map = self.root_color_map
-        return (
-            [k for k, v in root_color_map.iteritems()
-             if numpy.array_equal(v, root)][0]
-        )
+
+        is_actual_root = False
+        for alpha in self.roots:
+            if numpy.array_equal(alpha, root):
+                is_actual_root = True
+
+        if is_actual_root:
+            root_color_map = self.root_color_map
+            return (
+                [k for k, v in root_color_map.iteritems()
+                 if numpy.array_equal(v, root)][0]
+            )
+        else:
+            return None
 
 
 class RamificationPoint:
@@ -655,6 +664,12 @@ class SWDataBase(object):
                     warn(("get_ordered_xs(): No pairing of x's in the D-type, "
                          "({}, {}) != (x, -x).").format(px_j, nx))
                     logger.info('positive xs : {}'.format(positive_xs))
+                if numpy.isclose(
+                    px_j, -nx, atol=SHEET_NULL_TOLERANCE
+                ) is False:
+                    warn(("get_ordered_xs(): No pairing of x's in the D-type,"
+                         " ({}, {}) != (x, -x).").format(px_j, nx))
+                    logger.info('positive xs : {}'.format(positive_xs))
                 else:
                     # Put the negative x at the same index
                     # as its positive pair.
@@ -968,7 +983,7 @@ def get_ramification_points_using_discriminant(
                     extraprec=polyroots_extra_precision,
                 )
             except NoConvergence:
-                logging.warning(
+                logger.warning(
                     'mpmath.polyroots failed; increase maxsteps & extraprec '
                     'by 10.'
                 )
@@ -1003,7 +1018,7 @@ def get_ramification_points_using_discriminant(
                         extraprec=polyroots_extra_precision
                     )
                 except NoConvergence:
-                    logging.warning(
+                    logger.warning(
                         'mpmath.polyroots failed; increase maxsteps & '
                         'extraprec by 10.'
                     )

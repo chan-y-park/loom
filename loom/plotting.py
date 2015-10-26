@@ -103,11 +103,13 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
 
             walls.append(segments)
             walls_roots.append(s_wall.local_roots)
-            walls_colors = [
-                [g_data.root_color(root) for root in w_roots]
-                for w_roots in walls_roots
-            ]
+            
             labels['walls'].append(seg_labels)
+
+        walls_colors = [
+            [g_data.root_color(root) for root in w_roots]
+            for w_roots in walls_roots
+        ]
 
         print('------------------------\n'
               'phase : {}\n'.format(spectral_network.phase) +
@@ -426,8 +428,21 @@ def print_spectral_network_data(
 
 
 def get_label(value, dictionary):
-    return [k for k, v in dictionary.iteritems() 
-            if numpy.array_equal(v, value)][0]
+    """
+    Returns the key of a dictionary entry.
+    Values of the dictionary must be numpy arrays.
+    """
+    is_in_dictionary = False
+    for v in dictionary.values():
+        if numpy.array_equal(v, value):
+            is_in_dictionary = True
+
+    if is_in_dictionary:
+        return [
+            k for k, v in dictionary.iteritems() if numpy.array_equal(v, value)
+        ][0]
+    else:
+        return 'Not a root: {}'.format(value)
 
 
 def print_legend(g_data):

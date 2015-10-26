@@ -618,7 +618,8 @@ class SWDataWithTrivialization(SWDataBase):
             new_sheet_index = sorted_sheets[i][0]
             perm_list.append(basis_e(new_sheet_index))
 
-        perm_matrix = numpy.array(perm_list).transpose()
+        # perm_matrix = numpy.array(perm_list).transpose()
+        perm_matrix = numpy.array(perm_list)
 
         logger.debug('Permutation matrix {}'.format(perm_matrix))
 
@@ -748,7 +749,7 @@ class SWDataWithTrivialization(SWDataBase):
             a = local_curve.n().coeff(Dz).coeff(Dx, 2)
             b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
         
-        logging.debug('\nThe ramification point at (z,x)={} is of {}'.format(
+        logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
             [rp.z, rp.x], rp_type)
         )
         rp.ramification_type = rp_type
