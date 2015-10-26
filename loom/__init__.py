@@ -1,4 +1,7 @@
-import os, sys, platform, logging
+import os
+import sys
+import platform
+import logging
 import matplotlib
 if matplotlib.rcParams['backend'] == 'nbAgg':
     print('Use IPython notebook backend for matplotlib.')

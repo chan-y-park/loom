@@ -1,11 +1,7 @@
 import ConfigParser
-import os
-import sys
 import logging
 import pdb
 
-from math import pi
-from sympy import oo
 
 class LoomConfigParser(ConfigParser.SafeConfigParser):
     """
@@ -37,10 +33,8 @@ class LoomConfig:
         self.parser = None
         self.logger_name = logger_name
 
-
     def __setitem__(self, option, value):
         self.data[option] = value
-
 
     def __getitem__(self, option):
         logger = logging.getLogger(self.logger_name)
@@ -48,7 +42,6 @@ class LoomConfig:
             value = self.data[option]
         except KeyError as e:
             logger.warning('Option {} not specified; use None.'.format(e))
-            #self.data[option] = None
             value = None
         return value
 
@@ -57,7 +50,6 @@ class LoomConfig:
 
     def iteritems(self):
         return self.data.iteritems()
-
 
     def read(self, config_file):
         """

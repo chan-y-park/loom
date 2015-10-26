@@ -100,7 +100,7 @@ class LoomDB(object):
             except (KeyboardInterrupt, SystemExit):
                 raise
             except:
-                import sys, traceback
+                import traceback
                 print >> sys.stderr, 'logging_listener_process:'
                 traceback.print_exc(file=sys.stderr)
 
@@ -129,8 +129,8 @@ class LoomDB(object):
                 logger.warning(
                     'Generating spectral networks failed: '
                     'pid = {}, exitcode = {}.'
-                    .format(generate_process.pid,
-                            generate_process.exitcode,)
+                    .format(loom_process.pid,
+                            loom_process.exitcode,)
                 )
 
         spectral_network_data = result_queue.get()
@@ -223,6 +223,12 @@ def plot(process_uuid):
         plot_legend=legend,
     )
 
+def admin():
+    # TODO: password-protect this page.
+    app = flask.current_app
+    loom_db = app.loom_db
+    pdb.set_trace()
+
 ###
 # Entry point
 ###
@@ -242,6 +248,10 @@ def get_application(config_file, logging_level):
     )
     application.add_url_rule(
         '/logging_stream/<process_uuid>', 'logging_stream', logging_stream,
+        methods=['GET'],
+    )
+    application.add_url_rule(
+        '/admin', 'admin', admin,
         methods=['GET'],
     )
     return application

@@ -3,12 +3,9 @@ import os
 import glob
 import zipfile
 import logging
-import Tkinter as tk
-import tkFileDialog
 import matplotlib
 import pdb
 
-from multiprocessing import Queue
 from logutils_queue import QueueHandler
 from config import LoomConfig
 from trivialization import SWDataWithTrivialization
@@ -27,6 +24,7 @@ class SpectralNetworkData:
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
 
+
 def get_logging_formatter(level):
     if level == logging.DEBUG:
         logging_format = '%(module)s@%(lineno)d: %(funcName)s: %(message)s'
@@ -35,6 +33,7 @@ def get_logging_formatter(level):
     else:
         logging_format = '%(message)s'
     return logging.Formatter(logging_format)
+
 
 def set_logging(
     logger_name='loom',
@@ -58,7 +57,7 @@ def set_logging(
         logger.handlers = []
 
     if logging_file_name is not None:
-    # Create a log file.
+        # Create a log file.
         fh = logging.FileHandler(logging_file_name, 'w')
         fh.setLevel(logging_level)
         fh.setFormatter(formatter)
@@ -79,6 +78,7 @@ def set_logging(
             )
         )
 
+
 def get_logging_handler(level, handler_class, buffer_object):
     h = handler_class(buffer_object)
     h.setLevel(level)
@@ -97,6 +97,7 @@ def load_config(file_path=None, logger_name='loom',):
 
     return config
 
+
 def save_config(config, file_path=None, logger_name='loom',):
     logger = logging.getLogger(logger_name)
     if file_path is None:
@@ -107,6 +108,7 @@ def save_config(config, file_path=None, logger_name='loom',):
     logger.info('Finished saving configuration to {}.'.format(file_path))
 
     return None
+
 
 def load_spectral_network(
     data_dir=None,
@@ -176,7 +178,7 @@ def save_spectral_network(
         data_file_path = os.path.join(
             data_dir,
             'data_{}.json'.format(
-                str(i).zfill(len(str(len(spectral_networks)-1)))
+                str(i).zfill(len(str(len(spectral_networks) - 1)))
             )
         )
         logger.info('Saving data to {}.'.format(data_file_path))
@@ -220,7 +222,7 @@ def generate_spectral_network(
 
     if(phase is not None):
         logger.info('Generate a single spectral network at theta = {}.'
-                     .format(phase))
+                    .format(phase))
         spectral_network = SpectralNetwork(
             phase=phase, 
             logger_name=logger_name,
@@ -258,6 +260,7 @@ def generate_spectral_network(
         result_queue.put(rv)
         return None
 
+
 def make_spectral_network_plot(
     spectral_network_data,
     master=None,
@@ -285,7 +288,7 @@ def make_spectral_network_plot(
 
     for spectral_network in spectral_networks:
         logger.info('Generating the plot of a spectral network '
-                     '@ theta = {}...'.format(spectral_network.phase))
+                    '@ theta = {}...'.format(spectral_network.phase))
         spectral_network_plot.draw(
             spectral_network, 
             sw_data.branch_points,

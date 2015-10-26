@@ -3,14 +3,12 @@ import numpy
 import logging
 import warnings
 import copy
-# import cmath
-# import pdb
+import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo
 from sympy.mpmath import mp
 from sympy.mpmath.libmp.libhyper import NoConvergence
-from pprint import pformat
 from itertools import combinations
 from cmath import phase
 from matplotlib import cm as mpl_color_map
@@ -64,7 +62,51 @@ class GData:
           representation from the other
         - For other algebras, the order is imposed by SAGE.
     """
-    def __init__(self, root_system=None, representation_str=None):
+    def __init__(self, root_system=None, representation_str=None,
+                 json_data=None):
+        if json_data is not None:
+            self.set_from_json_data(json_data)
+        else:
+            self.set_from_sage(root_system, representation_str)
+        self.root_color_map = self.create_root_color_map()
+
+    def get_json_data(self):
+        json_data = {
+            'root_system': self.root_system,
+            'type': self.type,
+            'rank': self.rank,
+            'fundamental_representation_index': (
+                self.fundamental_representation_index
+            ),
+            'highest_weight': self.highest_weight,
+            'ffr_weights': self.ffr_weights.tolist(),
+            'roots': self.roots.tolist(),
+            'positive_roots': self.positive_roots.tolist(),
+            'weights': self.weights.tolist(),
+            'multiplicities': self.multiplicities.tolist(),
+            'weight_basis': self.weight_basis.tolist(),
+            'weight_coefficients': self.weight_coefficients.tolist(),
+        }
+
+        return json_data
+
+    def set_from_json_data(self, json_data):
+        self.root_system = json_data['root_system']
+        self.type = json_data['type']
+        self.rank = json_data['rank']
+        self.fundamental_representation_index = (
+            json_data['fundamental_representation_index']
+        )
+        self.highest_weight = json_data['highest_weight']
+        self.ffr_weights = json_data['ffr_weights']
+        self.roots = json_data['roots']
+        self.positive_roots = json_data['positive_roots']
+        self.weights = json_data['weights']
+        self.multiplicities = json_data['multiplicities']
+        self.weight_basis = json_data['weight_basis']
+        self.weight_coefficients = json_data['weight_coefficients']
+
+    def set_from_sage(self, root_system, representation_str):
         self.root_system = root_system
         # type is 'A', 'D', or 'E'.
         self.type = root_system[0]
@@ -111,7 +153,6 @@ class GData:
         self.weight_coefficients = numpy.array(
             sage_data['weight_coefficients']
         )
-        self.root_color_map = self.create_root_color_map()
 
     def ordered_weight_pairs(self, root, ffr=False):
         """
@@ -182,7 +223,7 @@ class GData:
         #]
         colors = []
         for i in range(n_rts):
-            r, g, b, alpha = mpl_color_map.jet(i/float(n_rts), bytes=True)
+            r, g, b, alpha = mpl_color_map.jet((i / float(n_rts)), bytes=True)
             colors.append('#{:02x}{:02x}{:02x}'.format(r, g, b))
 
         return {colors[i]: rt for i, rt in enumerate(g_roots)}
@@ -208,23 +249,26 @@ class GData:
 
 class RamificationPoint:
     def __init__(
-        self, z=None, Ciz=None, x=None, i=None, label=None,
+        self, z=None, Ciz=None, x=None, i=None, label=None, json_data=None,
         #is_puncture=False,
     ):
-        # z is the numerical value of the PSL2C-transformed z-coordinate.
-        self.z = z
-        # Ciz is the value of the z-coordinate 
-        # before the PSL2C transformation.
-        self.Ciz = Ciz
-        self.x = x
-        self.i = i
-        self.label = label
-        # For explanations on the following two attributes, 
-        # see the function which analyzes ramification points
-        # in the trivializatio module.
-        self.ramification_type = None
-        self.sw_diff_coeff = None
-        # self.is_puncture = is_puncture
+        if json_data is None:
+            # z is the numerical value of the PSL2C-transformed z-coordinate.
+            self.z = z
+            # Ciz is the value of the z-coordinate 
+            # before the PSL2C transformation.
+            self.Ciz = Ciz
+            self.x = x
+            self.i = i
+            self.label = label
+            # For explanations on the following two attributes, 
+            # see the function which analyzes ramification points
+            # in the trivializatio module.
+            self.ramification_type = None
+            self.sw_diff_coeff = None
+            # self.is_puncture = is_puncture
+        else:
+            self.set_from_json_data(json_data)
 
     def __str__(self):
         return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
@@ -239,11 +283,13 @@ class RamificationPoint:
             'x': ctor2(self.x),
             'i': ctor2(self.i),
             'label': self.label,
+            'ramification_type': self.ramification_type,
+            'sw_diff_coeff': self.sw_diff_coeff,
             # 'is_puncture': self.is_puncture
         }
         return json_data
 
-    def set_json_data(self, json_data):
+    def set_from_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
         self.Ciz = r2toc(json_data['Ciz'])
         self.x = r2toc(json_data['x'])
@@ -253,16 +299,33 @@ class RamificationPoint:
 
 
 class Puncture:
-    def __init__(self, z=None, Ciz=None, cutoff=None, label=None):
-        # z is the numerical value of the PSL2C-transformed z-coordinate.
-        self.z = z
-        # Ciz is the value of the z-coordinate 
-        # before the PSL2C transformation.
-        self.Ciz = Ciz
-        self.label = label
+    def __init__(self, z=None, Ciz=None, cutoff=None, label=None,
+                 json_data=None):
+        if json_data is None:
+            # z is the numerical value of the PSL2C-transformed z-coordinate.
+            self.z = z
+            # Ciz is the value of the z-coordinate 
+            # before the PSL2C transformation.
+            self.Ciz = Ciz
+            self.label = label
+        else:
+            self.set_from_json_data(json_data)
 
     def __eq__(self, other):
         return self.label == other.label
+
+    def get_json_data(self):
+        json_data = {
+            'z': ctor2(self.z),
+            'Ciz': ctor2(self.Ciz),
+            'label': self.label,
+        }
+        return json_data
+
+    def set_from_json_data(self, json_data):
+        self.z = r2toc(json_data['z'])
+        self.Ciz = r2toc(json_data['Ciz'])
+        self.label = json_data['label']
 
 
 class SWCurve:
@@ -349,37 +412,137 @@ class SWDataBase(object):
     This is the base class of SWDataWithTrivialization, where 
     the trivialization data of the curve is contained.
     """
-    def __init__(self, config, logger_name='loom',):
+    def __init__(self, config, logger_name='loom', json_data=None,):
         self.logger_name = logger_name
         logger = logging.getLogger(self.logger_name)
 
         self.g_data = None
         self.punctures = []
-        self.ffr_curve = None
         self.ffr_ramification_points = None
-        self.curve = None
-        self.diff = None
+        self.z_plane_rotation = None
         self.accuracy = config['accuracy']
 
-        casimir_differentials = {}
-        for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
-            casimir_differentials[eval(k)] = phi_k
+        self.ffr_curve = None
+        self.curve = None
+        self.diff = None
 
         self.g_data = GData(config['root_system'], config['representation'])
-
-        diff_params = {}
-        for var, val in parse_sym_dict_str(config['differential_parameters']):
-            diff_params[var] = sympy.sympify(val)
 
         if config['mt_params'] is not None:
             mt_params = sympy.sympify(config['mt_params'])
         else:
             mt_params = None
 
+        casimir_differentials = {}
+        for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
+            casimir_differentials[eval(k)] = phi_k
+
+        diff_params = {}
+        for var, val in parse_sym_dict_str(config['differential_parameters']):
+            diff_params[var] = sympy.sympify(val)
+
+        punctures_string = None 
+        if config['punctures'] is not None:
+            punctures_string = (
+                config['punctures'].lstrip('[').rstrip(']')
+            )
+
+        if json_data is None:
+            self.set_from_config(
+                mt_params=mt_params,
+                casimir_differentials=casimir_differentials,
+                diff_params=diff_params,
+                punctures_string=punctures_string,
+                size_of_puncture_cutoff=config['size_of_puncture_cutoff'],
+                ramification_point_finding_method=(
+                    config['ramification_point_finding_method']
+                ),
+            )
+        else:
+            self.set_from_json_data(json_data)
+            self.ffr_curve = SWCurve(
+                casimir_differentials=casimir_differentials, 
+                g_data=self.g_data,
+                diff_params=diff_params,
+                mt_params=mt_params,
+                z_rotation=self.z_plane_rotation,
+                ffr=True,
+            )
+
+        logger.info(
+            'Seiberg-Witten curve in the 1st fundamental '
+            'representation:\n{} = 0\n(numerically\n{}=0\n)'
+            .format(sympy.latex(self.ffr_curve.sym_eq),
+                    sympy.latex(self.ffr_curve.num_eq))
+        )
+
+        # TODO: SWCurve in a general representation.
+        if self.g_data.fundamental_representation_index == 1:
+            self.curve = self.ffr_curve
+        else:
+            logger.warning(
+                'Seiberg-Witten curve in a general representation '
+                'is not implemented yet.'
+            )
+            self.curve = None
+
+        self.diff = SWDiff(
+            'x',
+            g_data=self.g_data,
+            diff_params=diff_params,
+            mt_params=mt_params,
+            z_rotation=self.z_plane_rotation,
+        )
+        logger.info(
+            'Seiberg-Witten differential:\n{} dz\n'
+            .format(sympy.latex(self.diff.num_v))
+        )
+
+        for rp in self.ffr_ramification_points:
+            logger.info("{}: z = {}, x = {}, i = {}."
+                        .format(rp.label, rp.z, rp.x, rp.i))
+
+        for pct in self.punctures:
+            logger.info('{} at z={}'.format(pct.label, pct.z))
+
+    def get_json_data(self):
+        json_data = {
+            'g_data': self.g_data.get_json_data(),
+            'punctures': [p.get_json_data() for p in self.punctures],
+            'ffr_ramification_points': [
+                rp.get_json_data() for rp in self.ffr_ramification_points
+            ],
+            'z_plane_rotation': self.z_plane_rotation,
+            'accuracy': self.accuracy,
+        }
+
+        return json_data
+
+    def set_from_json_data(self, json_data):
+        self.g_data = GData(json_data=json_data['g_data'])
+        self.punctures = [
+            Puncture(json_data=data) for data in json_data['punctures'] 
+        ]
+        self.ffr_ramification_points = [
+            RamificationPoint(json_data=data)
+            for data in json_data['ffr_ramification_points']
+        ]
+        self.z_plane_rotation = json_data['z_plane_rotation']
+        self.accuracy = json_data['accuracy']
+
+    def set_from_config(self, mt_params=None, casimir_differentials=None,
+                        diff_params=None, punctures_string=None,
+                        size_of_puncture_cutoff=None,
+                        ramification_point_finding_method=None,):
+        """
+        Set attributes by calculating the corresponding 
+        values using the configuration.
+        """
         # Introduce a clockwise rotation of the z-plane,
         # after the PSL2C transformation, by the following phase.
         # Try rotating by different increments, up to pi/max_pi_div 
 
+        logger = logging.getLogger(self.logger_name)
         max_pi_div = 10
         rotate_z_plane = True
         pi_div = 0
@@ -418,10 +581,11 @@ class SWDataBase(object):
                 # singularities.)
                 
                 punctures = []
-                if config['punctures'] is not None:
-                    punctures_string = (
-                        config['punctures'].lstrip('[').rstrip(']')
-                    )
+                #if config['punctures'] is not None:
+                #    punctures_string = (
+                #        config['punctures'].lstrip('[').rstrip(']')
+                #    )
+                if punctures_string is not None:
                     for p_n, p_str in enumerate(punctures_string.split(',')):
                         Cipz = sympy.sympify(p_str.strip()).subs(diff_params)
                         pz = PSL2C(mt_params, Cipz)
@@ -439,49 +603,18 @@ class SWDataBase(object):
                         punctures.append(
                             Puncture(
                                 z=npz, Ciz=Cipz,
-                                cutoff=config['size_of_puncture_cutoff'],
-                                label=('puncture #{}'
-                                       .format(p_n))
+                                cutoff=size_of_puncture_cutoff,
+                                label=('puncture #{}'.format(p_n))
                             )
                         )
-                self.punctures = punctures
 
-                self.ffr_curve = SWCurve(
+                ffr_curve = SWCurve(
                     casimir_differentials=casimir_differentials, 
                     g_data=self.g_data,
                     diff_params=diff_params,
                     mt_params=mt_params,
                     z_rotation=z_plane_rotation,
                     ffr=True,
-                )
-                logger.info(
-                    'Seiberg-Witten curve in the 1st fundamental '
-                    'representation:\n{} = 0\n(numerically\n{}=0\n)'
-                    .format(sympy.latex(self.ffr_curve.sym_eq),
-                            sympy.latex(self.ffr_curve.num_eq))
-                )
-                # TODO: SWCurve in a general representation.
-                if self.g_data.fundamental_representation_index == 1:
-                    self.curve = self.ffr_curve
-                else:
-                    logger.warning(
-                        'Seiberg-Witten curve in a general representation '
-                        'is not implemented yet.'
-                    )
-                    self.curve = None
-
-                # Seiberg-Witten differential
-                self.diff = SWDiff(
-                    'x',
-                    g_data=self.g_data,
-                    diff_params=diff_params,
-                    mt_params=mt_params,
-                    z_rotation=z_plane_rotation,
-                )
-
-                logger.info(
-                    'Seiberg-Witten differential:\n{} dz\n'
-                    .format(sympy.latex(self.diff.num_v))
                 )
 
                 logger.info(
@@ -490,31 +623,31 @@ class SWDataBase(object):
                     'in the first fundamental rep.'
                 )
             
-                self.ffr_ramification_points = get_ramification_points(
-                    curve=self.ffr_curve, 
+                ffr_ramification_points = get_ramification_points(
+                    curve=ffr_curve, 
                     diff_params=diff_params,
                     mt_params=mt_params,
                     z_rotation=z_plane_rotation,
-                    accuracy=config['accuracy'], 
-                    punctures=self.punctures,
-                    method=config['ramification_point_finding_method'],
+                    accuracy=self.accuracy, 
+                    punctures=punctures,
+                    method=ramification_point_finding_method,
                     g_data=self.g_data,
-                    logger_name=logger_name,
+                    logger_name=self.logger_name,
                 )
                 
-                logger.info('These are the punctures:')
-                for pct in self.punctures:
-                    logger.info('{} at z={}'.format(pct.label, pct.z))
+#                logger.info('These are the punctures:')
+#                for pct in punctures:
+#                    logger.info('{} at z={}'.format(pct.label, pct.z))
                 # Now check if the z-plane needs to be rotated
 
                 # z-coords of branch points.
                 bpzs = n_remove_duplicate(
-                    [r.z for r in self.ffr_ramification_points if r.z != oo],
+                    [r.z for r in ffr_ramification_points if r.z != oo],
                     self.accuracy,
                 )
                 # z-coords of punctures.
                 pctzs = n_remove_duplicate(
-                    [p.z for p in self.punctures if p.z != oo],
+                    [p.z for p in punctures if p.z != oo],
                     self.accuracy,
                 )
                 z_list = bpzs + pctzs
@@ -569,6 +702,11 @@ class SWDataBase(object):
             raise ValueError(
                 'Could not find a suitable rotation for the z-plane.'
             )
+
+        self.z_plane_rotation = z_plane_rotation
+        self.punctures = punctures
+        self.ffr_ramification_points = ffr_ramification_points
+        self.ffr_curve = ffr_curve
 
     def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
         """
@@ -661,14 +799,18 @@ class SWDataBase(object):
                 # Check the pairing of positive and negative x's.
                 px_j = positive_xs[j]
                 if numpy.isclose(px_j, -nx) is False:
-                    warn(("get_ordered_xs(): No pairing of x's in the D-type, "
-                         "({}, {}) != (x, -x).").format(px_j, nx))
+                    logger.warn(
+                        "get_ordered_xs(): No pairing of x's in the D-type, "
+                        "({}, {}) != (x, -x).".format(px_j, nx)
+                    )
                     logger.info('positive xs : {}'.format(positive_xs))
                 if numpy.isclose(
                     px_j, -nx, atol=SHEET_NULL_TOLERANCE
                 ) is False:
-                    warn(("get_ordered_xs(): No pairing of x's in the D-type,"
-                         " ({}, {}) != (x, -x).").format(px_j, nx))
+                    logger.warn(
+                        "get_ordered_xs(): No pairing of x's in the D-type,"
+                        " ({}, {}) != (x, -x).".format(px_j, nx)
+                    )
                     logger.info('positive xs : {}'.format(positive_xs))
                 else:
                     # Put the negative x at the same index
@@ -814,11 +956,7 @@ def get_ramification_points(
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
-    # FIXME: Why are we computing the ramification points
-    # in the non-PLS2C rotated curve?
-    # All the numerics of the Spectral Network happens
-    # after we do PLS2C, and we should probably study the 
-    # fibrartion in those coordinates too.
+
     if curve.sym_eq is None:
         raise NotImplementedError
 
@@ -852,8 +990,6 @@ def get_ramification_points(
     ramification_points = []
 
     for z_i, (x_j, m_x) in sols:
-        label = ('ramification point #{}'
-                 .format(len(ramification_points)))
         rp = RamificationPoint(
             # Note: if we substitute z' = c z in F(x,z)=0,
             # where c is a phase, the position of punctures 
@@ -866,8 +1002,8 @@ def get_ramification_points(
             label=('ramification point #{}'
                    .format(len(ramification_points)))
         )
-        logger.info("{}: z = {}, x = {}, i = {}."
-                    .format(label, rp.z, rp.x, rp.i))
+#        logger.info("{}: z = {}, x = {}, i = {}."
+#                    .format(label, rp.z, rp.x, rp.i))
         ramification_points.append(rp)
 
     return ramification_points

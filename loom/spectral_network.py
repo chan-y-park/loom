@@ -162,12 +162,12 @@ class SpectralNetwork:
 
         for s_wall_data in json_data['s_walls']:
             an_s_wall = SWall(logger_name=self.logger_name,)
-            an_s_wall.set_json_data(s_wall_data)
+            an_s_wall.set_from_json_data(s_wall_data)
             self.s_walls.append(an_s_wall)
 
         for joint_data in json_data['joints']:
             a_joint = Joint()
-            a_joint.set_json_data(joint_data)
+            a_joint.set_from_json_data(joint_data)
             self.joints.append(a_joint)
 
     def get_new_joints(self, new_s_wall_index, config, sw_data):

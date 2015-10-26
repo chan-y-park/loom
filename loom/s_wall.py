@@ -1,5 +1,4 @@
 import logging
-import warnings
 import numpy
 import sympy
 import pdb
@@ -122,7 +121,7 @@ class Joint:
         }
         return json_data
 
-    def set_json_data(self, json_data):
+    def set_from_json_data(self, json_data):
         # FIXME: Determine what data to load.
         self.z = r2toc(json_data['z'])
         self.M = r2toc(json_data['M'])
@@ -237,7 +236,7 @@ class SWall(object):
         }
         return json_data
 
-    def set_json_data(self, json_data):
+    def set_from_json_data(self, json_data):
         self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
         self.M = numpy.array([r2toc(M_t) for M_t in json_data['M']])
         self.x = numpy.array(
@@ -474,11 +473,12 @@ class SWall(object):
                         continue
 
                     # Add 
-                    # [the branch-point identifier(index), t,
+                    # [the branch-point, t,
                     #  the direction (either 'cw' or 'ccw')]
                     # to each intersection.
                     intersections.append(
-                        [branch_locus.label, t, clock(left_right(self.z, t))]
+#                        [branch_locus.label, t, clock(left_right(self.z, t))]
+                        [branch_locus, t, clock(left_right(self.z, t))]
                     )
                 _cuts_intersections += intersections
 
@@ -551,8 +551,9 @@ class SWall(object):
 
             # Fill in the root types that occur after the basepoint
             for k in range(len(intersections_after_t_0)):
-                br_loc_label, t, direction = intersections_after_t_0[k]
-                branch_locus = branch_locus_from_label(sw_data, br_loc_label)
+#                br_loc_label, t, direction = intersections_after_t_0[k]
+#                branch_locus = branch_locus_from_label(sw_data, br_loc_label)
+                br_loc, t, direction = intersections_after_t_0[k]
 
                 current_root = self.local_roots[-1]
                 new_root = g_data.weyl_monodromy(
@@ -567,8 +568,9 @@ class SWall(object):
             # recall that their time-ordering has already been reversed
             # so the first one in the list is the closest to t_0, and so on
             for k in range(len(intersections_before_t_0)):
-                br_loc_label, t, direction = intersections_before_t_0[k]
-                branch_locus = branch_locus_from_label(sw_data, br_loc_label)
+#                br_loc_label, t, direction = intersections_before_t_0[k]
+#                branch_locus = branch_locus_from_label(sw_data, br_loc_label)
+                br_loc, t, direction = intersections_after_t_0[k]
 
                 current_root = self.local_roots[0]
                 new_root = g_data.weyl_monodromy(
@@ -643,8 +645,9 @@ class SWall(object):
         # piece add the corresponding intersection point
         t_0 = 0
         for int_data in self.cuts_intersections:
-            br_loc_label, t, chi = int_data
-            br_loc = branch_locus_from_label(sw_data, br_loc_label)
+#            br_loc_label, t, chi = int_data
+#            br_loc = branch_locus_from_label(sw_data, br_loc_label)
+            br_loc, t, chi = int_data
 
             z_1 = self.z[t]
             z_2 = self.z[t + 1]
@@ -689,9 +692,10 @@ class SWall(object):
         # Update the intersection data.
         new_cuts_intersections = []
         for i, int_data in enumerate(self.cuts_intersections):
-            br_loc_label, t_old, chi = int_data
+#            br_loc_label, t_old, chi = int_data
+            br_loc, t_old, chi = int_data
             t_new = t_old + i + 1
-            new_cuts_intersections.append([br_loc_label, t_new, chi])
+            new_cuts_intersections.append([br_loc, t_new, chi])
         
         self.cuts_intersections = new_cuts_intersections
 

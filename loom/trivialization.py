@@ -1,7 +1,7 @@
 import numpy
 import logging
-# import pdb
 import sympy
+import pdb
 
 from cmath import exp, pi, phase
 from sympy import oo
@@ -11,8 +11,7 @@ from pprint import pprint
 from heapq import nsmallest
 
 from geometry import SWDataBase
-# from misc import n_unique
-from misc import n_remove_duplicate
+from misc import n_remove_duplicate, ctor2, r2toc
 
 x, z = sympy.symbols('x z')
 
@@ -111,19 +110,47 @@ class BranchPoint:
         lie in the fiber above the branch point.
 
     """
-    def __init__(self, z=None):
-        self.z = z
+    def __init__(self, z=None, json_data=None, ffr_ramification_points=None,):
+        if json_data is None:
+            self.z = z
+            self.label = None
+            self.monodromy = None
 
-        self.groups = None 
-        self.singles = None
-        self.enum_sh = None
-        self.positive_roots = None 
-        self.order = None
+            self.groups = None 
+            self.positive_roots = None 
+            self.order = None
 
-        self.monodromy = None
-        self.ffr_ramification_points = None
-        self.label = None
+            self.ffr_ramification_points = None
+        else:
+            self.set_from_json_data(json_data, ffr_ramification_points,)
 
+    def get_json_data(self):
+        json_data = {
+            'z': ctor2(self.z),
+            'label': self.label,
+            'monodromy': self.monodromy.tolist(),
+            'groups': self.groups,
+            'positive_roots': self.positive_roots.tolist(),
+            'order': self.order,
+            'ffr_ramification_points': [
+                rp.labels for rp in self.ffr_ramification_points
+            ],
+        }
+        return json_data
+
+    def set_from_json_data(self, json_data, ffr_ramification_points,):
+        self.z = r2toc(json_data['z'])
+        self.label = json_data['label']
+        self.monodromy = numpy.array(json_data['monodromy'])
+        self.groups = json_data['groups']
+        self.positive_roots = numpy.array(json_data['positive_roots'])
+        self.order = json_data['order']
+        self.ffr_ramification_points = []
+        for rp_label in json_data['ffr_ramification_points']:
+            for rp in ffr_ramification_points:
+                if rp_label == rp.label:
+                    self.ffr_ramification_points.append(rp)
+            
     def print_info(self):
         print(
             "---------------------------------------------------------\n"
@@ -142,10 +169,23 @@ class IrregularSingularity:
     Just a container of information.
     Strictly related to the first fundamental representation cover.
     """
-    def __init__(self, z=None, label=None):
-        self.z = z
-        self.label = label
-        self.monodromy = None
+    def __init__(self, z=None, label=None, json_data=None):
+        if json_data is None:
+            self.z = z
+            self.label = label
+            self.monodromy = None
+        else:
+            self.z = json_data['z']
+            self.label = json_data['label']
+            self.monodromy = numpy.array(json_data['monodromy'])
+
+    def get_json_data(self):
+        json_data = {
+            'z': ctor2(self.z),
+            'label': self.label,
+            'monodromy': self.monodromy.tolist(),
+        }
+        return json_data
         
     def print_info(self):
         print(
@@ -208,11 +248,12 @@ class SWDataWithTrivialization(SWDataBase):
     # overlap vertically.
     # This should be guaranteed by the automatic rotation of 
     # the z-plane which is performed before calling this class.
-    def __init__(self, config, logger_name='loom'):
+    def __init__(self, config, logger_name='loom', json_data=None,):
         super(SWDataWithTrivialization, self).__init__(
-            config, logger_name=logger_name
+            config, logger_name=logger_name, json_data=json_data,
         )
         logger = logging.getLogger(self.logger_name)
+
         self.branch_points = []
         # FIXME: Mark each puncture in the config.ini as being (ir)regular,
         # or analyze all punctures to determine the irregularity.
@@ -222,6 +263,60 @@ class SWDataWithTrivialization(SWDataBase):
         # vertically with a branch point or with each other, for 
         # trivialization purposes (even if regulars don't emanate cuts).
         self.irregular_singularities = []
+
+        self.min_distance = None 
+        self.min_horizontal_distance = None 
+        self.base_point = None 
+        self.reference_ffr_xs = None
+        self.reference_xs = None
+
+        if json_data is None:
+            self.set_trivialization()
+        else:
+            self.set_trivialization_from_json_data(json_data)
+
+    def get_json_data(self):
+        json_data = super(SWDataWithTrivialization, self).get_json_data()
+        json_data['branch_points'] = [
+            bp.get_json_data()
+            for bp in self.branch_points
+        ]
+        json_data['irregular_singularities'] = [
+            irs.get_json_data()
+            for irs in self.irregular_singulrarities
+        ]
+        json_data['min_distance'] = self.min_distance
+        json_data['min_horizontal_distance'] = self.min_horizontal_distance
+        json_data['base_point'] = ctor2(self.base_point)
+        json_data['reference_ffr_xs'] = [
+            ctor2(x) for x in self.reference_ffr_xs
+        ]
+        json_data['reference_xs'] = [
+            ctor2(x) for x in self.reference_xs
+        ]
+
+    def set_trivialization_from_json_data(self, json_data,):
+        self.branch_points = [
+            BranchPoint(json_data=data, 
+                        ffr_ramification_points=self.ffr_ramification_points,)
+            for data in json_data['branch_points']
+        ]
+        self.irregular_singulrarities = [
+            IrregularSingularity(json_data=data)
+            for data in json_data['irregular_singulrarities']
+        ]
+        self.min_distance = json_data['min_distance'] 
+        self.min_horizontal_distance = json_data['min_horizontal_distance']
+        self.base_point = r2toc(json_data['base_point']) 
+        self.reference_ffr_xs = [
+            r2toc(x) for x in json_data['reference_ffr_xs']
+        ]
+        self.reference_xs = [
+            r2toc(x) for x in json_data['reference_xs']
+        ]
+
+    def set_trivialization(self):
+        logger = logging.getLogger(self.logger_name)
 
         # z-coords of branch points.
         bpzs = n_remove_duplicate(
@@ -657,13 +752,9 @@ class SWDataWithTrivialization(SWDataBase):
             if is_single is True:
                 clusters.append([i])
 
-        bp.enum_sh = enum_sh
+        #bp.enum_sh = enum_sh
         bp.groups = [c for c in clusters if len(c) > 1]
-        bp.singles = [c[0] for c in clusters if len(c) == 1]
-
-        # print 'enum_sh {}'.format(enum_sh)
-        # print 'groups {}'.format(bp.groups)
-        # print 'singles {}'.format(bp.singles)
+        #bp.singles = [c[0] for c in clusters if len(c) == 1]
 
         bp.positive_roots = get_positive_roots_of_branch_point(
             bp, self.g_data, self.logger_name,
@@ -688,9 +779,7 @@ class SWDataWithTrivialization(SWDataBase):
             .format(irr_sing.z)
         )
         path_around_z = get_path_around(irr_sing.z, self.base_point, self)
-        irr_sing.monodromy = (
-            self.get_sheet_monodromy(path_around_z)
-        )
+        irr_sing.monodromy = self.get_sheet_monodromy(path_around_z)
     
     def analyze_ffr_ramification_point(self, rp):
         logger = logging.getLogger(self.logger_name)
@@ -1088,11 +1177,10 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
             else:
                 continue
     if vanishing_positive_roots == []:
-        logger.info(
+        raise NotImplementedError(
             "Branch point doesn't correspond "
             "to a positive root. May be an accidental branch point."
         )
-        return []
 
     # Finally, cleanup the duplicates, 
     # as well as the roots which are not linearly independent
@@ -1101,7 +1189,9 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
     # Pietro: the information of the branch point is the vector space
     # spanned by these roots. Therefore only linearly independent ones 
     # are needed.
-    return keep_linearly_independent_vectors(vanishing_positive_roots)
+    return numpy.array(
+        keep_linearly_independent_vectors(vanishing_positive_roots)
+    )
 
 
 def belongs_to_cluster(x, c, enum_sh):

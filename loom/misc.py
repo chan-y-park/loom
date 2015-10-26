@@ -84,14 +84,6 @@ def gather(a_list, compare):
     return group
 
 
-def gather_to_list(a_list, compare):
-    group = gather_to_dict(a_list, compare)
-    result = []
-    for key, value in group.iteritems():
-        result.append([key, len(value)])
-    return result
-
-
 def remove_duplicate(a_list, compare):
     return gather(a_list, compare).keys()
 

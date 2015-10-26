@@ -81,7 +81,6 @@ def get_spectral_network_bokeh_plot(
         source=bcds,
     )
 
-
     # Data source for the current plot
     cds = ColumnDataSource({
         'xs': [],
@@ -157,6 +156,5 @@ def get_spectral_network_bokeh_plot(
                     callback=callback)
 
     layout = vform(bokeh_figure, slider, width=plot_width,)
-
 
     return layout
