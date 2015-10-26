@@ -115,10 +115,10 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         print_legend(g_data)
 
         print_spectral_network_data(
-                spectral_network.s_walls, 
-                branch_points,
-                irregular_singularities,
-                g_data
+                s_walls=spectral_network.s_walls, 
+                branch_points=branch_points,
+                irregular_singularities=irregular_singularities,
+                g_data=g_data,
         )
 
         super(SpectralNetworkPlotBase, self).draw(
@@ -383,8 +383,11 @@ def make_weight_dictionary(g_data):
 
 
 def print_spectral_network_data(
-                    s_walls, branch_points, irregular_singularities, g_data
-                    ):
+    s_walls=None,
+    branch_points=None,
+    irregular_singularities=None,
+    g_data=None,
+):
     root_dictionary = make_root_dictionary(g_data)
 
     print('\t--- The S-Wall Data ---\n')
@@ -410,7 +413,7 @@ def print_spectral_network_data(
             bp.label + 
             '\tposition : {}\n'.format(bp.z) +
             '\t\troot type : {}\n'.format(rt_labels) +
-            '\t\monodromy matrix : \n{}\n'.format(bp.monodromy)
+            '\t\tmonodromy matrix : \n{}\n'.format(bp.monodromy)
         )
 
     print('\t--- The Irregular Singularities ---\n')
@@ -450,4 +453,3 @@ def print_legend(g_data):
     print('\t--- The Weight System ---\n')
     for i in range(len(weights)):
         print(weight_labels[i] + ' : {}\n'.format(list(weights[i])))
-    

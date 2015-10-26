@@ -5,6 +5,7 @@ import flask
 import sys
 import logging
 import uuid
+import numpy
 import bokeh
 
 from StringIO import StringIO
@@ -27,7 +28,11 @@ SECRET_KEY = 'web_loom_key'
 PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
 
+# TODO: kill an orphaned process gracefully.
 class LoomDB(object):
+    """
+    The internal DB to manage loom processes.
+    """
     def __init__(self):
         self.logging_queues = {}
         self.result_queues = {}
@@ -147,10 +152,14 @@ class LoomDB(object):
         # Call the plotting function.
         bokeh_layout = get_spectral_network_bokeh_plot(spectral_network_data)
         script, div = bokeh.embed.components(bokeh_layout)
-        return (script, div) 
+        legend = get_plot_legend(sw_data)
+        return (script, div, legend,) 
 
 
 class WebLoomApplication(flask.Flask):
+    """
+    A wrapper of Flask application containing an instance of LoomDB.
+    """
     def __init__(self, config_file, logging_level):
         super(WebLoomApplication, self).__init__(WEB_APP_NAME)
         set_logging(
@@ -160,7 +169,9 @@ class WebLoomApplication(flask.Flask):
         )
         self.loom_db = LoomDB()
 
-
+###
+# View functions
+###
 def index():
     return flask.render_template('index.html')
 
@@ -203,23 +214,22 @@ def logging_stream(process_uuid):
 def plot(process_uuid):
     # Finish loom_process
     app = flask.current_app
-    plot_script, plot_div = app.loom_db.finish_loom_process(process_uuid)
+    script, div, legend = app.loom_db.finish_loom_process(process_uuid)
     # Make a Bokeh plot
     return flask.render_template(
         'plot.html',
-        plot_script=plot_script,
-        plot_div=plot_div,
+        plot_script=script,
+        plot_div=div,
+        plot_legend=legend,
     )
 
-def get_logger_name(uuid):
-    return WEB_APP_NAME + '.' + uuid
-
-def get_loom_config(request_dict, logger_name):
-    loom_config = load_config('default.ini', logger_name=logger_name)
-    return loom_config
+###
+# Entry point
+###
 
 def get_application(config_file, logging_level):
     application = WebLoomApplication(config_file, logging_level)
+    application.config.from_object(__name__)
     application.add_url_rule(
         '/', 'index', index, methods=['GET'],
     )
@@ -235,5 +245,70 @@ def get_application(config_file, logging_level):
         methods=['GET'],
     )
     return application
+
+###
+# Misc. web UIs
+###
+
+def get_logger_name(uuid):
+    return WEB_APP_NAME + '.' + uuid
+
+def get_loom_config(request_dict, logger_name):
+    loom_config = load_config('default.ini', logger_name=logger_name)
+    return loom_config
+
+def get_plot_legend(sw_data):
+    legend = ''
+    g_data = sw_data.g_data
+    roots = g_data.roots
+    weights = g_data.weights
+    #root_dictionary = make_root_dictionary(g_data)
+    #weight_dictionary = make_weight_dictionary(g_data)
+    #root_labels = root_dictionary.keys()
+    #roots = root_dictionary.values()
+    weight_pairs=[
+        [str('(mu_'+str(p[0])+', mu_'+str(p[1])+')') 
+         for p in g_data.ordered_weight_pairs(rt)]
+        for rt in roots
+    ]
+    #weight_labels = weight_dictionary.keys()
+    #weights = weight_dictionary.values()
+
+    legend += ('\t--- The Root System ---\n')
+    for i in range(len(roots)):
+        legend += (
+            'alpha_' + str(i) + ' : {}\n'.format(list(roots[i])) +
+            'ordered weight pairs : {}\n'.format(weight_pairs[i])
+        )
+
+    legend += ('\t--- The Weight System ---\n')
+    for i in range(len(weights)):
+        legend += (
+            'nu_' + str(i) + ' : {}\n'.format(list(weights[i]))
+        )
+
+    legend += ('\t--- The Branch Points ---\n')
+    for bp in sw_data.branch_points:
+        root_labels = []
+        for pr in bp.positive_roots:
+            for i, r in enumerate(roots):
+                if numpy.array_equal(pr, r):
+                    root_labels.append('alpha_{}'.format(i)) 
+        legend += (
+            bp.label + 
+            '\tposition : {}\n'.format(bp.z) +
+            '\t\troot type : {}\n'.format(root_labels) +
+            '\t\tmonodromy matrix : \n{}\n'.format(bp.monodromy)
+        )
+
+    legend += ('\t--- The Irregular Singularities ---\n')
+    for irs in sw_data.irregular_singularities:
+        legend += (
+            irs.label + 
+            '\tposition : {}\n'.format(irs.z) + 
+            '\tmonodomry matrix : \n{}\n'.format(irs.monodromy)
+        )
+
+    return legend
 
 

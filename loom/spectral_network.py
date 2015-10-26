@@ -169,6 +169,10 @@ class SpectralNetwork:
 
     def get_new_joints(self, new_s_wall_index, config, sw_data):
         logger = logging.getLogger(self.logger_name)
+        if (config['root_system'] in ['A1', ]):
+            logger.info('There is no joint for the given root system {}.'
+                             .format(config['root_system']))
+            return [] 
         try:
             linux_distribution = platform.linux_distribution()[0]
             if linux_distribution != '':
@@ -193,10 +197,10 @@ class SpectralNetwork:
         """
         logger = logging.getLogger(self.logger_name)
         new_joints = []
-        if (config['root_system'] in ['A1', ]):
-            logger.info('There is no joint for the given root system {}.'
-                             .format(config['root_system']))
-            return new_joints
+#        if (config['root_system'] in ['A1', ]):
+#            logger.info('There is no joint for the given root system {}.'
+#                             .format(config['root_system']))
+#            return new_joints
         lib_name = 'libcgal_intersection'
         if linux_distribution == 'Ubuntu':
             lib_name += '_ubuntu'
@@ -321,10 +325,10 @@ class SpectralNetwork:
         """
         logger = logging.getLogger(self.logger_name)
         new_joints = []
-        if (config['root_system'] in ['A1', ]):
-            logger.info('There is no joint for the given root system {}.'
-                             .format(config['root_system']))
-            return new_joints
+#        if (config['root_system'] in ['A1', ]):
+#            logger.info('There is no joint for the given root system {}.'
+#                             .format(config['root_system']))
+#            return new_joints
 
         new_s_wall = self.s_walls[new_s_wall_index]
         new_tps = new_s_wall.get_turning_points()

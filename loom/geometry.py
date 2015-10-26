@@ -13,6 +13,7 @@ from sympy.mpmath.libmp.libhyper import NoConvergence
 from pprint import pformat
 from itertools import combinations
 from cmath import phase
+from matplotlib import cm as mpl_color_map
 
 import sage_subprocess
 from misc import (ctor2, r2toc, PSL2C,
@@ -172,13 +173,18 @@ class GData:
     def create_root_color_map(self):
         g_roots = list(self.roots)
         n_rts = len(g_roots)
-        x = numpy.random.random(size=n_rts) * 200
-        y = numpy.random.random(size=n_rts) * 200
-        z = numpy.random.random(size=n_rts) * 200
-        colors = [
-            "#%02x%02x%02x" % (r, g, b) 
-            for r, g, b in zip(numpy.floor(x), numpy.floor(y), numpy.floor(z))
-        ]
+        #x = numpy.random.random(size=n_rts) * 200
+        #y = numpy.random.random(size=n_rts) * 200
+        #z = numpy.random.random(size=n_rts) * 200
+        #colors = [
+        #    "#%02x%02x%02x" % (r, g, b) 
+        #    for r, g, b in zip(numpy.floor(x), numpy.floor(y), numpy.floor(z))
+        #]
+        colors = []
+        for i in range(n_rts):
+            r, g, b, alpha = mpl_color_map.jet(i/float(n_rts), bytes=True)
+            colors.append('#{:02x}{:02x}{:02x}'.format(r, g, b))
+
         return {colors[i]: rt for i, rt in enumerate(g_roots)}
 
     def root_color(self, root):
