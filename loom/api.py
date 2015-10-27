@@ -350,7 +350,7 @@ def get_loom_dir():
         os.path.dirname(os.path.realpath(__file__)),
         '..',
     )
-    return loom_dir
+    return os.path.realpath(loom_dir)
 
 
 def get_current_branch_version():
