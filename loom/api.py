@@ -346,8 +346,12 @@ def make_spectral_network_plot(
 
 
 def get_current_branch_version():
+    git_dir = os.path,join(
+        os.path.dirname(os.path.realpath(__file__)),
+        '..',
+    )
     version = subprocess.check_output(
-        ['git', 'rev-parse', 'HEAD']
+        ['git', '-C', git_dir, 'rev-parse', 'HEAD']
     )
 
     return version
