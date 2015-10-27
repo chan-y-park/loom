@@ -111,12 +111,13 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             for w_roots in walls_roots
         ]
 
-        print('------------------------\n'
-              'phase : {}\n'.format(spectral_network.phase) +
-              '------------------------\n')
-        print_legend(g_data)
+        plot_legend = ('\n'
+                       '------------------------\n'
+                       'phase : {}\n'.format(spectral_network.phase) +
+                       '------------------------\n')
+        plot_legend += get_legend(g_data)
 
-        print_spectral_network_data(
+        plot_legend += get_spectral_network_data_legend(
                 s_walls=spectral_network.s_walls, 
                 branch_points=branch_points,
                 irregular_singularities=irregular_singularities,
@@ -135,6 +136,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             plot_joints=plot_joints,
             plot_data_points=plot_data_points,
         )
+
+        return plot_legend
 
 
 class NetworkPlot(SpectralNetworkPlotBase):
@@ -384,7 +387,7 @@ def make_weight_dictionary(g_data):
     return weight_dictionary
 
 
-def print_spectral_network_data(
+def get_spectral_network_data_legend(
     s_walls=None,
     branch_points=None,
     irregular_singularities=None,
@@ -392,7 +395,7 @@ def print_spectral_network_data(
 ):
     root_dictionary = make_root_dictionary(g_data)
 
-    print('\t--- The S-Wall Data ---\n')
+    legend = ('\t--- The S-Wall Data ---\n')
     for s in s_walls:
         rt_labels = [get_label(rt, root_dictionary) for rt in s.local_roots]
         wt_labels = [
@@ -401,30 +404,32 @@ def print_spectral_network_data(
                 for pair in loc_wts
             ] for loc_wts in s.local_weight_pairs
         ]
-        print(
+        legend += (
             s.label + 
             '\troot types : {}\n'.format(rt_labels) +
             '\t\tsheet pairs : {}\n'.format(wt_labels)
         )
 
-    print('\t--- The Branch Points ---\n')
+    legend += ('\t--- The Branch Points ---\n')
     for bp in branch_points:
         rt_labels = [get_label(rt, root_dictionary)
                      for rt in bp.positive_roots]
-        print(
+        legend += (
             bp.label + 
             '\tposition : {}\n'.format(bp.z) +
             '\t\troot type : {}\n'.format(rt_labels) +
             '\t\tmonodromy matrix : \n{}\n'.format(bp.monodromy)
         )
 
-    print('\t--- The Irregular Singularities ---\n')
+    legend += ('\t--- The Irregular Singularities ---\n')
     for irs in irregular_singularities:
-        print(
+        legend += (
             irs.label + 
             '\tposition : {}\n'.format(irs.z) + 
             '\tmonodomry matrix : \n{}\n'.format(irs.monodromy)
         )
+
+    return legend
 
 
 def get_label(value, dictionary):
@@ -445,7 +450,7 @@ def get_label(value, dictionary):
         return 'Not a root: {}'.format(value)
 
 
-def print_legend(g_data):
+def get_legend(g_data):
     root_dictionary = make_root_dictionary(g_data)
     weight_dictionary = make_weight_dictionary(g_data)
     root_labels = root_dictionary.keys()
@@ -458,13 +463,15 @@ def print_legend(g_data):
     weight_labels = weight_dictionary.keys()
     weights = weight_dictionary.values()
 
-    print('\t--- The Root System ---\n')
+    legend = ('\t--- The Root System ---\n')
     for i in range(len(roots)):
-        print(
+        legend += (
             root_labels[i] + ' : {}\n'.format(list(roots[i])) +
             'ordered weight pairs : {}\n'.format(weight_pairs[i])
         )
 
-    print('\t--- The Weight System ---\n')
+    legend += ('\t--- The Weight System ---\n')
     for i in range(len(weights)):
-        print(weight_labels[i] + ' : {}\n'.format(list(weights[i])))
+        legend += (weight_labels[i] + ' : {}\n'.format(list(weights[i])))
+
+    return legend

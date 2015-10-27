@@ -328,7 +328,7 @@ def make_spectral_network_plot(
     for spectral_network in spectral_networks:
         logger.info('Generating the plot of a spectral network '
                     '@ theta = {}...'.format(spectral_network.phase))
-        spectral_network_plot.draw(
+        plot_legend = spectral_network_plot.draw(
             spectral_network, 
             sw_data.branch_points,
             punctures=sw_data.punctures,
@@ -336,6 +336,8 @@ def make_spectral_network_plot(
             g_data=sw_data.g_data,
             **kwargs
         )
+        
+        logger.info(plot_legend)
 
     if show_plot is True:
         spectral_network_plot.show()
