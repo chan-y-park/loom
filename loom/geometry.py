@@ -97,7 +97,7 @@ class GData:
         self.fundamental_representation_index = (
             json_data['fundamental_representation_index']
         )
-        self.highest_weight = numpy.array(json_data['highest_weight'])
+        self.highest_weight = json_data['highest_weight']
         self.ffr_weights = numpy.array(json_data['ffr_weights'])
         self.roots = numpy.array(json_data['roots'])
         self.positive_roots = numpy.array(json_data['positive_roots'])

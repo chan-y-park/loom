@@ -4,6 +4,7 @@ import json
 import glob
 import zipfile
 import logging
+import subprocess
 import matplotlib
 import pdb
 
@@ -119,7 +120,6 @@ def load_spectral_network(
 ):
     logger = logging.getLogger(logger_name)
     
-    # TODO: check version
 
     if data_dir is None:
         return (None, None)
@@ -128,7 +128,18 @@ def load_spectral_network(
     config = LoomConfig(logger_name=logger_name)
     config.read(os.path.join(data_dir, 'config.ini'))
 
-#    sw = SWDataWithTrivialization(config, logger_name=logger_name)
+    # Check the version of the saved data.
+    current_version = get_current_branch_version()
+    version_file_path = os.path.join(data_dir, 'version')
+    try:
+        with open(version_file_path, 'r') as fp:
+            data_version = fp.read()
+    except IOError:
+        data_version = None
+    if current_version != data_version:
+        logger.warning('The version of the data is different '
+                       'from the current version of loom.')
+
     sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
     with open(sw_data_file_path, 'r') as fp:
         json_data = json.load(fp)
@@ -167,8 +178,6 @@ def save_spectral_network(
 ):
     logger = logging.getLogger(logger_name)
 
-    # TODO: save version data
-
     sw_data = spectral_network_data.sw_data
     spectral_networks = spectral_network_data.spectral_networks
 
@@ -184,6 +193,12 @@ def save_spectral_network(
     logger.info('Make a directory {} to save data.'.format(data_dir))
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
+
+    # Save version data.
+    version_file_path = os.path.join(data_dir, 'version')
+    version = get_current_branch_version() 
+    with open(version_file_path, 'w') as fp:
+        fp.write(version)
 
     # Save configuration to a file.
     config_file_path = os.path.join(data_dir, 'config.ini')
@@ -326,3 +341,11 @@ def make_spectral_network_plot(
         spectral_network_plot.show()
 
     return spectral_network_plot
+
+
+def get_current_branch_version():
+    version = subprocess.check_output(
+        ['git', 'rev-parse', 'HEAD']
+    )
+
+    return version

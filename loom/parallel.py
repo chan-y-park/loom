@@ -18,7 +18,7 @@ def a_child_process(
     config,
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks,
-    logger_name='loom',
+    logger_name,
 ):
     logger = logging.getLogger(logger_name)
     theta_i, theta_f, theta_n = config['phase_range']
@@ -31,6 +31,7 @@ def a_child_process(
 
     spectral_network = SpectralNetwork(
         phase=phase, 
+        logger_name=logger_name,
     ) 
 
     spectral_network.grow(config, sw)
@@ -107,5 +108,8 @@ def parallel_get_spectral_network(
         logger.warning('Caught ^C; terminates processes...')
         pool.terminate()
         pool.join()
+
+    except SystemExit:
+        raise
 
     return spectral_network_list
