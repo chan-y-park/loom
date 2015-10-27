@@ -271,7 +271,8 @@ def get_logger_name(uuid):
     return WEB_APP_NAME + '.' + uuid
 
 def get_loom_config(request_dict, logger_name):
-    loom_config = load_config('default.ini', logger_name=logger_name)
+    default_config_file = os.path.join(get_loom_dir(), 'config/default.ini')
+    loom_config = load_config(default_config_file, logger_name=logger_name)
     return loom_config
 
 def get_plot_legend(sw_data):
@@ -312,18 +313,18 @@ def get_plot_legend(sw_data):
                 if numpy.array_equal(pr, r):
                     root_labels.append('alpha_{}'.format(i)) 
         legend += (
-            bp.label + 
-            '\tposition : {}\n'.format(bp.z) +
-            '\t\troot type : {}\n'.format(root_labels) +
-            '\t\tmonodromy matrix : \n{}\n'.format(bp.monodromy)
+            '\n{}\n'.format(bp.label) +
+            'position : {}\n'.format(bp.z) +
+            'root type : {}\n'.format(root_labels) +
+            'monodromy matrix : \n{}\n'.format(bp.monodromy)
         )
 
     legend += ('\t--- The Irregular Singularities ---\n')
     for irs in sw_data.irregular_singularities:
         legend += (
-            irs.label + 
-            '\tposition : {}\n'.format(irs.z) + 
-            '\tmonodomry matrix : \n{}\n'.format(irs.monodromy)
+            '\n{}\n'.format(irs.label) +
+            'position : {}\n'.format(irs.z) + 
+            'monodomry matrix : \n{}\n'.format(irs.monodromy)
         )
 
     return legend
