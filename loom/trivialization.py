@@ -1179,10 +1179,14 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
             else:
                 continue
     if vanishing_positive_roots == []:
-        raise NotImplementedError(
+        # TODO: Check if the situation is what we expect and is normal.
+        # If that's the case, don't print a message. 
+        # Otherwise print a warning instead of info.
+        logger.info(
             "Branch point doesn't correspond "
             "to a positive root. May be an accidental branch point."
         )
+        return []
 
     # Finally, cleanup the duplicates, 
     # as well as the roots which are not linearly independent

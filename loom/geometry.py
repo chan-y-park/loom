@@ -279,26 +279,36 @@ class RamificationPoint:
         return self.label == other.label
 
     def get_json_data(self):
+        if self.sw_diff_coeff is None:
+            sw_diff_coeff = None
+        else:
+            sw_diff_coeff = ctor2(self.sw_diff_coeff)
         json_data = {
             'z': ctor2(self.z),
-            'Ciz': ctor2(self.Ciz),
+            'Ciz': str(self.Ciz),
             'x': ctor2(self.x),
             'i': ctor2(self.i),
             'label': self.label,
             'ramification_type': self.ramification_type,
-            'sw_diff_coeff': ctor2(self.sw_diff_coeff),
+            'sw_diff_coeff': sw_diff_coeff,
             # 'is_puncture': self.is_puncture
         }
         return json_data
 
     def set_from_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
-        self.Ciz = r2toc(json_data['Ciz'])
+        self.Ciz = sympy.sympify(json_data['Ciz'])
         self.x = r2toc(json_data['x'])
         self.i = r2toc(json_data['i'])
         self.label = json_data['label']
         self.ramification_type = json_data['ramification_type']
-        self.sw_diff_coeff = r2toc(json_data['sw_diff_coeff'])
+
+        if json_data['sw_diff_coeff'] is not None:
+            sw_diff_coeff = r2toc(json_data['sw_diff_coeff'])
+        else:
+            sw_diff_coeff = None
+        self.sw_diff_coeff = sw_diff_coeff 
+
         # self.is_puncture = json_data['is_puncture']
 
 
@@ -320,6 +330,7 @@ class Puncture:
 
     def get_json_data(self):
         json_data = {
+            'Ciz': str(self.Ciz),
             'label': self.label,
         }
 
@@ -327,11 +338,6 @@ class Puncture:
             json_data['z'] = 'oo'
         else:
             json_data['z'] = ctor2(self.z)
-
-        if self.Ciz == oo:
-            json_data['Ciz'] = 'oo'
-        else:
-            json_data['Ciz'] = ctor2(self.Ciz)
 
         return json_data
 
@@ -341,11 +347,7 @@ class Puncture:
         else:
             self.z = r2toc(json_data['z'])
 
-        if json_data['Ciz'] == 'oo':
-            self.Ciz = oo
-        else:
-            self.Ciz = r2toc(json_data['Ciz'])
-            
+        self.Ciz = sympy.sympify(json_data['Ciz'])
         self.label = json_data['label']
 
 
@@ -516,7 +518,7 @@ class SWDataBase(object):
             z_rotation=self.z_plane_rotation,
         )
         logger.info(
-            'Seiberg-Witten differential:\n{} dz\n(numerically\n{}=0\n)'
+            'Seiberg-Witten differential:\n{} dz\n(numerically\n{} dz\n)'
             .format(sympy.latex(self.diff.sym_v),
                     sympy.latex(self.diff.num_v))
         )
