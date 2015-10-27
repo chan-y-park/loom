@@ -1,3 +1,4 @@
+import os
 import multiprocessing
 import time
 import pdb
@@ -14,6 +15,7 @@ from Queue import Empty as QueueEmpty
 
 
 from api import (
+    get_loom_dir,
     get_logging_handler,
     set_logging,
     load_config,
@@ -27,6 +29,11 @@ DEBUG = True
 SECRET_KEY = 'web_loom_key'
 PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
+LOGGING_FILE_PATH = os.path.join(
+    get_loom_dir(),
+    'logs/web_loom.log',
+)
+
 
 # TODO: kill an orphaned process gracefully.
 class LoomDB(object):
@@ -165,7 +172,7 @@ class WebLoomApplication(flask.Flask):
         set_logging(
             logger_name=WEB_APP_NAME,
             logging_level=logging_level,
-            logging_file_name='logs/web_loom.log',
+            logging_file_name=LOGGING_FILE_PATH,
         )
         self.loom_db = LoomDB()
 

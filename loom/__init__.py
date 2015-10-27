@@ -19,6 +19,7 @@ else:
     print('Use default backend defined in matplotlibrc: '
           '{}'.format(matplotlib.rcParams['backend']))
 
+from api import get_loom_dir
 from api import set_logging
 from api import generate_spectral_network as generate
 from api import load_spectral_network as load
@@ -26,11 +27,16 @@ from api import save_spectral_network as save
 from api import make_spectral_network_plot as plot
 from api import load_config, save_config
 
+LOGGING_FILE_PATH = os.path.join(
+    get_loom_dir(),
+    'logs/loom.log',
+)
+
 set_logging(
     logger_name='loom',
     logging_level=logging.INFO,
     logging_stream=sys.stdout,
-    logging_file_name='logs/loom.log',
+    logging_file_name=LOGGING_FILE_PATH,
 )
 
 __all__ = [

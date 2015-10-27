@@ -17,7 +17,11 @@ from api import (set_logging, get_logging_handler,
 from trivialization import SWDataWithTrivialization
 
 GUI_LOOP_DELAY = 100    # in millisec
-
+LOGGING_FILE_PATH = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    '..',
+    'logs/gui_loom.log',
+)
 
 class GUILoom:
     def __init__(self, config_file_path, logging_level,):
@@ -40,8 +44,7 @@ class GUILoom:
             logger_name=self.logger_name,
             logging_level=logging_level,
             logging_queue=self.logging_queue,
-            #logging_file_name='logs/loom.gui.log',
-            logging_file_name='logs/gui_loom.log',
+            logging_file_name=LOGGING_FILE_PATH,
         )
         self.logging_stream = StringIO()
         self.logging_stream_handler = get_logging_handler(
