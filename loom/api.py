@@ -118,6 +118,9 @@ def load_spectral_network(
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
+    
+    # TODO: check version
+
     if data_dir is None:
         return (None, None)
     logger.info('Opening data directory "{}"...'.format(data_dir))
@@ -163,6 +166,8 @@ def save_spectral_network(
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
+
+    # TODO: save version data
 
     sw_data = spectral_network_data.sw_data
     spectral_networks = spectral_network_data.spectral_networks

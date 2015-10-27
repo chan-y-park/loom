@@ -90,7 +90,7 @@ class SpectralNetwork:
                 )
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
-                logger.info('Determining the root type of  S-wall #{}...'
+                logger.info('Determining the root type of S-wall #{}...'
                             .format(i))
                 s_i.determine_root_types(sw_data)
                 new_joints += self.get_new_joints(i, config, sw_data)
