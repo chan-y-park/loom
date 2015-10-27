@@ -90,6 +90,8 @@ class SpectralNetwork:
                 )
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
+                logger.info('Determining the root type of  S-wall #{}...'
+                            .format(i))
                 s_i.determine_root_types(sw_data)
                 new_joints += self.get_new_joints(i, config, sw_data)
 
@@ -140,9 +142,9 @@ class SpectralNetwork:
             logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
 
-    def save_json_data(self, file_object, **kwargs):
+    def get_json_data(self):
         """
-        Save the spectral network data in a JSON-compatible file.
+        Prepare the spectral network data in a JSON-compatible file.
         """
         json_data = {}
         json_data['phase'] = self.phase
@@ -150,19 +152,19 @@ class SpectralNetwork:
                                 for s_wall in self.s_walls]
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
-        json.dump(json_data, file_object, **kwargs)
+        return json_data
 
-    def set_from_json_data(self, file_object, **kwargs):
+    def set_from_json_data(self, json_data, sw_data):
         """
         Load the spectral network data from a JSON-compatible file.
         """
-        json_data = json.load(file_object, **kwargs)
+        branch_points = sw_data.branch_points
 
         self.phase = json_data['phase']
 
         for s_wall_data in json_data['s_walls']:
             an_s_wall = SWall(logger_name=self.logger_name,)
-            an_s_wall.set_from_json_data(s_wall_data)
+            an_s_wall.set_from_json_data(s_wall_data, branch_points)
             self.s_walls.append(an_s_wall)
 
         for joint_data in json_data['joints']:

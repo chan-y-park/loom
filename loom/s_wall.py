@@ -230,13 +230,16 @@ class SWall(object):
             ).tolist(),
             'parents': [parent for parent in self.parents],
             'label': self.label,
-            'cuts_intersections': self.cuts_intersections,
+            'cuts_intersections': [
+                [bp.label, t, d]
+                for bp, t, d in self.cuts_intersections
+            ],
             'local_roots': [root.tolist() for root in self.local_roots],
             'local_weight_pairs': self.local_weight_pairs,
         }
         return json_data
 
-    def set_from_json_data(self, json_data):
+    def set_from_json_data(self, json_data, branch_points):
         self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
         self.M = numpy.array([r2toc(M_t) for M_t in json_data['M']])
         self.x = numpy.array(
@@ -244,7 +247,11 @@ class SWall(object):
         )
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
-        self.cuts_intersections = json_data['cuts_intersections']
+        self.cuts_intersections = []
+        for bp_label, t, d in json_data['cuts_intersections']:
+            for bp in branch_points:
+                if bp_label == bp.label:
+                    self.cuts_intersections.append([bp, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
         self.local_weight_pairs = json_data['local_weight_pairs']
 
@@ -570,7 +577,7 @@ class SWall(object):
             for k in range(len(intersections_before_t_0)):
 #                br_loc_label, t, direction = intersections_before_t_0[k]
 #                branch_locus = branch_locus_from_label(sw_data, br_loc_label)
-                br_loc, t, direction = intersections_after_t_0[k]
+                br_loc, t, direction = intersections_before_t_0[k]
 
                 current_root = self.local_roots[0]
                 new_root = g_data.weyl_monodromy(

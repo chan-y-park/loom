@@ -97,14 +97,16 @@ class GData:
         self.fundamental_representation_index = (
             json_data['fundamental_representation_index']
         )
-        self.highest_weight = json_data['highest_weight']
-        self.ffr_weights = json_data['ffr_weights']
-        self.roots = json_data['roots']
-        self.positive_roots = json_data['positive_roots']
-        self.weights = json_data['weights']
-        self.multiplicities = json_data['multiplicities']
-        self.weight_basis = json_data['weight_basis']
-        self.weight_coefficients = json_data['weight_coefficients']
+        self.highest_weight = numpy.array(json_data['highest_weight'])
+        self.ffr_weights = numpy.array(json_data['ffr_weights'])
+        self.roots = numpy.array(json_data['roots'])
+        self.positive_roots = numpy.array(json_data['positive_roots'])
+        self.weights = numpy.array(json_data['weights'])
+        self.multiplicities = numpy.array(json_data['multiplicities'])
+        self.weight_basis = numpy.array(json_data['weight_basis'])
+        self.weight_coefficients = numpy.array(
+            json_data['weight_coefficients']
+        )
 
     def set_from_sage(self, root_system, representation_str):
         self.root_system = root_system
@@ -147,7 +149,7 @@ class GData:
         self.positive_roots = numpy.array(sage_data['positive_roots'])
         self.weights = numpy.array(sage_data['weights'])
         self.multiplicities = numpy.array(sage_data['multiplicities'])
-        self.weight_basis = numpy.array(sage_data['weight_basis']),
+        self.weight_basis = numpy.array(sage_data['weight_basis'])
         # The i-th row of self.coefficients is the representation
         # of self.weights[i] in the self.basis.
         self.weight_coefficients = numpy.array(
@@ -284,7 +286,7 @@ class RamificationPoint:
             'i': ctor2(self.i),
             'label': self.label,
             'ramification_type': self.ramification_type,
-            'sw_diff_coeff': self.sw_diff_coeff,
+            'sw_diff_coeff': ctor2(self.sw_diff_coeff),
             # 'is_puncture': self.is_puncture
         }
         return json_data
@@ -295,6 +297,8 @@ class RamificationPoint:
         self.x = r2toc(json_data['x'])
         self.i = r2toc(json_data['i'])
         self.label = json_data['label']
+        self.ramification_type = json_data['ramification_type']
+        self.sw_diff_coeff = r2toc(json_data['sw_diff_coeff'])
         # self.is_puncture = json_data['is_puncture']
 
 
@@ -316,15 +320,32 @@ class Puncture:
 
     def get_json_data(self):
         json_data = {
-            'z': ctor2(self.z),
-            'Ciz': ctor2(self.Ciz),
             'label': self.label,
         }
+
+        if self.z == oo:
+            json_data['z'] = 'oo'
+        else:
+            json_data['z'] = ctor2(self.z)
+
+        if self.Ciz == oo:
+            json_data['Ciz'] = 'oo'
+        else:
+            json_data['Ciz'] = ctor2(self.Ciz)
+
         return json_data
 
     def set_from_json_data(self, json_data):
-        self.z = r2toc(json_data['z'])
-        self.Ciz = r2toc(json_data['Ciz'])
+        if json_data['z'] == 'oo':
+            self.z = oo
+        else:
+            self.z = r2toc(json_data['z'])
+
+        if json_data['Ciz'] == 'oo':
+            self.Ciz = oo
+        else:
+            self.Ciz = r2toc(json_data['Ciz'])
+            
         self.label = json_data['label']
 
 
@@ -426,7 +447,6 @@ class SWDataBase(object):
         self.curve = None
         self.diff = None
 
-        self.g_data = GData(config['root_system'], config['representation'])
 
         if config['mt_params'] is not None:
             mt_params = sympy.sympify(config['mt_params'])
@@ -448,6 +468,8 @@ class SWDataBase(object):
             )
 
         if json_data is None:
+            self.g_data = GData(config['root_system'],
+                                config['representation'])
             self.set_from_config(
                 mt_params=mt_params,
                 casimir_differentials=casimir_differentials,
@@ -494,8 +516,9 @@ class SWDataBase(object):
             z_rotation=self.z_plane_rotation,
         )
         logger.info(
-            'Seiberg-Witten differential:\n{} dz\n'
-            .format(sympy.latex(self.diff.num_v))
+            'Seiberg-Witten differential:\n{} dz\n(numerically\n{}=0\n)'
+            .format(sympy.latex(self.diff.sym_v),
+                    sympy.latex(self.diff.num_v))
         )
 
         for rp in self.ffr_ramification_points:
@@ -512,7 +535,7 @@ class SWDataBase(object):
             'ffr_ramification_points': [
                 rp.get_json_data() for rp in self.ffr_ramification_points
             ],
-            'z_plane_rotation': self.z_plane_rotation,
+            'z_plane_rotation': str(self.z_plane_rotation),
             'accuracy': self.accuracy,
         }
 
@@ -527,7 +550,7 @@ class SWDataBase(object):
             RamificationPoint(json_data=data)
             for data in json_data['ffr_ramification_points']
         ]
-        self.z_plane_rotation = json_data['z_plane_rotation']
+        self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
         self.accuracy = json_data['accuracy']
 
     def set_from_config(self, mt_params=None, casimir_differentials=None,

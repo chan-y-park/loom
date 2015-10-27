@@ -133,7 +133,7 @@ class BranchPoint:
             'positive_roots': self.positive_roots.tolist(),
             'order': self.order,
             'ffr_ramification_points': [
-                rp.labels for rp in self.ffr_ramification_points
+                rp.label for rp in self.ffr_ramification_points
             ],
         }
         return json_data
@@ -283,7 +283,7 @@ class SWDataWithTrivialization(SWDataBase):
         ]
         json_data['irregular_singularities'] = [
             irs.get_json_data()
-            for irs in self.irregular_singulrarities
+            for irs in self.irregular_singularities
         ]
         json_data['min_distance'] = self.min_distance
         json_data['min_horizontal_distance'] = self.min_horizontal_distance
@@ -295,6 +295,8 @@ class SWDataWithTrivialization(SWDataBase):
             ctor2(x) for x in self.reference_xs
         ]
 
+        return json_data
+
     def set_trivialization_from_json_data(self, json_data,):
         self.branch_points = [
             BranchPoint(json_data=data, 
@@ -303,7 +305,7 @@ class SWDataWithTrivialization(SWDataBase):
         ]
         self.irregular_singulrarities = [
             IrregularSingularity(json_data=data)
-            for data in json_data['irregular_singulrarities']
+            for data in json_data['irregular_singularities']
         ]
         self.min_distance = json_data['min_distance'] 
         self.min_horizontal_distance = json_data['min_horizontal_distance']

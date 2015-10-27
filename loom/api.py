@@ -1,5 +1,6 @@
 import time
 import os
+import json
 import glob
 import zipfile
 import logging
@@ -124,8 +125,14 @@ def load_spectral_network(
     config = LoomConfig(logger_name=logger_name)
     config.read(os.path.join(data_dir, 'config.ini'))
 
-    sw = SWDataWithTrivialization(config, logger_name=logger_name)
-    spectral_network_list = []
+#    sw = SWDataWithTrivialization(config, logger_name=logger_name)
+    sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
+    with open(sw_data_file_path, 'r') as fp:
+        json_data = json.load(fp)
+        sw_data = SWDataWithTrivialization(config, logger_name=logger_name,
+                                           json_data=json_data,)
+
+    spectral_networks = []
 
     data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
     data_file_list.sort()
@@ -133,10 +140,11 @@ def load_spectral_network(
         logger.info('Loading {}...'.format(data_file))
         spectral_network = SpectralNetwork(logger_name=logger_name)
         with open(data_file, 'r') as fp:
-            spectral_network.set_from_json_data(fp)
-            spectral_network_list.append(spectral_network)
+            json_data = json.load(fp)
+            spectral_network.set_from_json_data(json_data, sw_data)
+            spectral_networks.append(spectral_network)
 
-    data = SpectralNetworkData(sw, spectral_network_list)
+    data = SpectralNetworkData(sw_data, spectral_networks)
     logger.info('Finished loading data from {}.'.format(data_dir))
 
     rv = (config, data)
@@ -155,7 +163,10 @@ def save_spectral_network(
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
+
+    sw_data = spectral_network_data.sw_data
     spectral_networks = spectral_network_data.spectral_networks
+
     if data_dir is None:
         # Prepare to save spectral network data to files.
         timestamp = str(int(time.time()))
@@ -173,6 +184,13 @@ def save_spectral_network(
     config_file_path = os.path.join(data_dir, 'config.ini')
     save_config(config, file_path=config_file_path, logger_name=logger_name)
 
+    # Save geometric & trivialization data.
+    sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
+    logger.info('Saving data to {}.'.format(sw_data_file_path))
+    with open(sw_data_file_path, 'wb') as fp:
+        json_data = sw_data.get_json_data()
+        json.dump(json_data, fp,)
+
     # Save spectral network data.
     for i, spectral_network in enumerate(spectral_networks):
         data_file_path = os.path.join(
@@ -183,11 +201,12 @@ def save_spectral_network(
         )
         logger.info('Saving data to {}.'.format(data_file_path))
         with open(data_file_path, 'wb') as fp:
-            spectral_network.save_json_data(fp,)
+            json_data = spectral_network.get_json_data()
+            json.dump(json_data, fp,)
 
     if make_zipped_file is True:
-        file_list = [config_file_path]
         # Make a compressed data file.
+        file_list = [config_file_path, sw_data_file_path]
         file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
         zipped_file_path = data_dir + '.zip'
         logger.info('Save compressed data to {}.'.format(zipped_file_path))
