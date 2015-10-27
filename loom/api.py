@@ -138,7 +138,7 @@ def load_spectral_network(
 #        data_version = None
 #    if current_version != data_version:
 #        logger.warning('The version of the data is different '
-                       'from the current version of loom.')
+#                       'from the current version of loom.')
 
     sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
     with open(sw_data_file_path, 'r') as fp:

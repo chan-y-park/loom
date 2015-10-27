@@ -281,7 +281,7 @@ class RamificationPoint:
     def get_json_data(self):
         json_data = {
             'z': ctor2(self.z),
-            'Ciz': ctor2(self.Ciz),
+            'Ciz': str(self.Ciz),
             'x': ctor2(self.x),
             'i': ctor2(self.i),
             'label': self.label,
@@ -293,7 +293,7 @@ class RamificationPoint:
 
     def set_from_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
-        self.Ciz = r2toc(json_data['Ciz'])
+        self.Ciz = sympy.sympify(json_data['Ciz'])
         self.x = r2toc(json_data['x'])
         self.i = r2toc(json_data['i'])
         self.label = json_data['label']
@@ -516,7 +516,7 @@ class SWDataBase(object):
             z_rotation=self.z_plane_rotation,
         )
         logger.info(
-            'Seiberg-Witten differential:\n{} dz\n(numerically\n{}=0\n)'
+            'Seiberg-Witten differential:\n{} dz\n(numerically\n{} dz\n)'
             .format(sympy.latex(self.diff.sym_v),
                     sympy.latex(self.diff.num_v))
         )
