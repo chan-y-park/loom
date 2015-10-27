@@ -129,15 +129,15 @@ def load_spectral_network(
     config.read(os.path.join(data_dir, 'config.ini'))
 
     # Check the version of the saved data.
-    current_version = get_current_branch_version()
-    version_file_path = os.path.join(data_dir, 'version')
-    try:
-        with open(version_file_path, 'r') as fp:
-            data_version = fp.read()
-    except IOError:
-        data_version = None
-    if current_version != data_version:
-        logger.warning('The version of the data is different '
+#    current_version = get_current_branch_version()
+#    version_file_path = os.path.join(data_dir, 'version')
+#    try:
+#        with open(version_file_path, 'r') as fp:
+#            data_version = fp.read()
+#    except IOError:
+#        data_version = None
+#    if current_version != data_version:
+#        logger.warning('The version of the data is different '
                        'from the current version of loom.')
 
     sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
@@ -195,10 +195,10 @@ def save_spectral_network(
         os.makedirs(data_dir)
 
     # Save version data.
-    version_file_path = os.path.join(data_dir, 'version')
-    version = get_current_branch_version() 
-    with open(version_file_path, 'w') as fp:
-        fp.write(version)
+#    version_file_path = os.path.join(data_dir, 'version')
+#    version = get_current_branch_version() 
+#    with open(version_file_path, 'w') as fp:
+#        fp.write(version)
 
     # Save configuration to a file.
     config_file_path = os.path.join(data_dir, 'config.ini')
