@@ -8,33 +8,69 @@
     {% for message in get_flashed_messages() %}
     <div class=flash><p>Error: {{ message }}</p></div>
     {% endfor %}
-    <form action="" id="config_form" method="post">
+    <form action="" class="form-horizontal" id="config_form" method="post">
         <div class="form-group">
-            <label for="type_radio">Type</label>
-            <label class="radio-inline">
-                <input type="radio" name="type" id="type_radio" value="A">A
-            </label>
-            <label class="radio-inline">
-                <input type="radio" name="type" id="type_radio" value="D">D
-            </label>
-            <label class="radio-inline">
-                <input type="radio" name="type" id="type_radio" value="E" 
-                 checked="checked">E
-            </label>
+            <div class="col-sm-2">
+                <label for="type_radio" class="control-label">
+                    Root system type
+                </label>
+            </div>
+            <div class="col-sm-2">
+                <label class="radio-inline">
+                    <input type="radio" 
+                     name="type" id="type_radio" value="A"
+                     >A
+                </label>
+                <label class="radio-inline">
+                    <input type="radio" name="type" id="type_radio" value="D"
+                     checked="checked">D
+                </label>
+                <label class="radio-inline">
+                    <input type="radio" name="type" id="type_radio" value="E" 
+                     checked="">E
+                </label>
+            </div>
+            <div class="col-sm-1">
+                <label for="rank_text" class="control-label">rank</label>
+            </div>
+            <div class="col-sm-1">
+                <input type="text" class="form-control"
+                 name="rank" id="rank_text" value="6">
+            </div>
+        </div>
+    {% for item in config_items %}
+        {% for (label, option) in item %}
+        <div class="form-group">
+            <div class="col-sm-3">
+                <label for="{{ option }}_text" class="control-label">
+                    {{ label }}
+                </label>
+            </div>
+            <div class="col-sm-5">
+                <input type="text" class="form-control"
+                 name="{{ option }}" id="{{ option }}_text"
+                 value="{{ loom_config[option] }}">
+            </div>
+        </div>
+        {% endfor %}
+    {% endfor %}
+        <div class="form-group">
+            <div class="col-sm-3">
+                <label for="phase_text" class="control-label">Phase</label>
+            </div>
+            <div class="col-sm-5">
+                <input type="text" class="form-control"
+                 name="phase" id="phase_text" value="1.0">
+            </div>
         </div>
         <div class="form-group">
-            <label for="rank_text">Rank</label>
-            <input type="text" name="rank" id="rank_text" value="6">
-        </div>
-        <div class="form-group">
-            <label for="phase_text">Phase</label>
-            <input type="text" name="phase" id="phase_text" value="1.0">
-        </div>
-        <div class="form-group">
-            <label for="config_file">
-                Or choose a configuration file to load.
-            </label>
-            <input type="file" name="config_file" id="config_file">
+            <div class="col-sm-6">
+                <label for="config_file">
+                    Or choose a configuration file to load.
+                </label>
+                <input type="file" class="form-control"
+                 name="config_file" id="config_file">
+            </div>
         </div>
     </form>
     <form class="form-inline">

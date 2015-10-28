@@ -183,10 +183,39 @@ def index():
     return flask.render_template('index.html')
 
 def config():
-    loom_config = None
+    # Array of ('entry label', 'config option') pairs. 
+    # Entries that will be placed in the same row
+    # are in the same row of this array.
+    config_items = [
+        #[('Root System', 'root_system'),
+        # ('Representation', 'representation')],
+        [('Casimir differentials', 'casimir_differentials')],
+        [('Parameters of differentials','differential_parameters')],
+        [('Punctures', 'punctures')],
+        [('Mobius transformation', 'mt_params')], 
+        [('Ramification point finding method', 
+          'ramification_point_finding_method'),],
+        [('Plot range', 'plot_range')],
+        [('Number of steps', 'num_of_steps')],
+        [('Number of iterations', 'num_of_iterations')],
+        [('Size of a small step', 'size_of_small_step')],
+        [('Size of a large step', 'size_of_large_step')],
+        [('Size of a branch point cutoff', 'size_of_neighborhood')],
+        [('Size of a puncture cutoff', 'size_of_puncture_cutoff')],
+        #[('Size of an intersection bin', 'size_of_bin')],
+        #[('', 'size_of_ramification_pt_cutoff')],
+        [('Accuracy', 'accuracy')],
+        [('Number of processes', 'n_processes')],
+        [('Mass limit', 'mass_limit')],
+        [('Range of phases', 'phase_range')],
+    ]
+
     if flask.request.method == 'GET':
+        loom_config=get_loom_config()
         return flask.render_template(
             'config.html',
+            config_items=config_items,
+            loom_config=loom_config,
             event_source_url = None,
         )
     elif flask.request.method == 'POST':
@@ -201,6 +230,8 @@ def config():
         )
         return flask.render_template(
             'config.html',
+            config_items=config_items,
+            loom_config=loom_config,
             event_source_url = flask.url_for(
                 'logging_stream', process_uuid=process_uuid,
             ),
@@ -270,9 +301,13 @@ def get_application(config_file, logging_level):
 def get_logger_name(uuid):
     return WEB_APP_NAME + '.' + uuid
 
-def get_loom_config(request_dict, logger_name):
-    default_config_file = os.path.join(get_loom_dir(), 'config/default.ini')
-    loom_config = load_config(default_config_file, logger_name=logger_name)
+def get_loom_config(request_dict=None, logger_name=WEB_APP_NAME):
+    if request_dict is None:
+        default_config_file = os.path.join(
+            get_loom_dir(),
+            'config/default.ini',
+        )
+        loom_config = load_config(default_config_file, logger_name=logger_name)
     return loom_config
 
 def get_plot_legend(sw_data):
