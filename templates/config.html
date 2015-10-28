@@ -8,33 +8,52 @@
     {% for message in get_flashed_messages() %}
     <div class=flash><p>Error: {{ message }}</p></div>
     {% endfor %}
-    <form action="{{ url_for('config') }}" method="post">
-        <dl>
-            <dt>Type
-            <dd>
-                <label class="radio-inline">
-                    <input type="radio" name="type" value="A">A
-                </label>
-                <label class="radio-inline">
-                    <input type="radio" name="type" value="D">D
-                </label>
-                <label class="radio-inline">
-                    <input type="radio" name="type" value="E" 
-                     checked="checked">E
-                </label>
-            <dt>Rank
-            <dd><input type=text name=rank value="6">
-            <dt>Index of the fundamental weight of the representation
-            <dd><input type=text name=n_of_v_0 value="1">
-            <dt>Phase
-            <dd><input type=text name=phase value="1.0">
-            <dt>Generate spectral networks
-            <dd><input type=submit class="btn btn-default" value=Start>
-        </dl>
+    <form action="" id="config_form" method="post">
+        <div class="form-group">
+            <label for="type_radio">Type</label>
+            <label class="radio-inline">
+                <input type="radio" name="type" id="type_radio" value="A">A
+            </label>
+            <label class="radio-inline">
+                <input type="radio" name="type" id="type_radio" value="D">D
+            </label>
+            <label class="radio-inline">
+                <input type="radio" name="type" id="type_radio" value="E" 
+                 checked="checked">E
+            </label>
+        </div>
+        <div class="form-group">
+            <label for="rank_text">Rank</label>
+            <input type="text" name="rank" id="rank_text" value="6">
+        </div>
+        <div class="form-group">
+            <label for="phase_text">Phase</label>
+            <input type="text" name="phase" id="phase_text" value="1.0">
+        </div>
+        <div class="form-group">
+            <label for="config_file">
+                Or choose a configuration file to load.
+            </label>
+            <input type="file" name="config_file" id="config_file">
+        </div>
     </form>
+    <form class="form-inline">
+        <div class="form-group">
+            <input type="submit" class="btn btn-default"
+             id="load_config_button" formaction="" value="Load configuration">
+            <input type="submit" class="btn btn-default"
+             id="save_config_button"
+             form="config_form" formaction="{{ save_config_url }}"
+             value="Save configuration">
+            <input type="submit" class="btn btn-default" form="config_form" 
+             value="Generate spectral networks">
+        </div>
+    </form>
+    <br/>
     <textarea id="logging_textarea" name="logging" rows=24 cols=80>
     {{ text_area_content }}
     </textarea>
+    <br/>
     <script>
         var box = $("textarea[name=logging]");
 
@@ -52,11 +71,12 @@
             source.close();
         }, false);
     </script>
+    <br/>
     <form action="{{ plot_url }}" method="post">
-        <dl>
-            <dt>Plot spectral networks
-            <dd><input id="plot_button" type=submit class="btn btn-default" value=Plot disabled=true>
-        </dl>
+        <div class="form-group">
+            <input id="plot_button" type="submit" class="btn btn-default" 
+             value="Plot spectral networks" disabled="true">
+        </div>
     </form>
     </div>
     </div>

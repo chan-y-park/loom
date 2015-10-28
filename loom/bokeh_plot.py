@@ -16,7 +16,7 @@ def get_spectral_network_bokeh_plot(
     spectral_networks = spectral_network_data.spectral_networks
     sw_data = spectral_network_data.sw_data
     plot_width = 800
-    plot_height = plot_width
+    #plot_height = plot_width
 
     x_min = min([min([min([z.real for z in s_wall.z]) 
                       for s_wall in sn.s_walls])
@@ -52,7 +52,7 @@ def get_spectral_network_bokeh_plot(
         tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(), 
                PreviewSaveTool(), hover],
         plot_width=plot_width,
-        plot_height=plot_height,
+        #plot_height=plot_height,
         title=None, 
         x_range=plot_x_range,
         y_range=plot_y_range,
