@@ -8,14 +8,23 @@
     {{ plot_script|safe }}
 {% endblock %}
 {% block body %}
-    <div style="width:900px; margin:20px; padding:10px; 
-                border:1px solid black;">
+<!--<div style="width:900px; margin:20px; padding:10px; 
+            border:1px solid black;">-->
+<div class="container">
     <h2>Plot</h2>
     {{ plot_div|safe }}
-    </div>
-    <div style="width:800px; margin:20px 20px 20px 20px">
+    <form action="" class="form-inline" id="download_form" method="post">
+        <div class="form-group">
+            <input type="submit" class="btn btn-default"
+             id="download_data_button" value="Download data">
+            <input type="submit" class="btn btn-default"
+             id="download_plot_button" value="Download plot">
+        </div>
+    </form>
+</div>
+<div style="width:800px; margin:20px 20px 20px 20px">
     <textarea rows="24" cols="80">
     {{ plot_legend|safe }}
     </textarea>
-    </div>
+</div>
 {% endblock %}

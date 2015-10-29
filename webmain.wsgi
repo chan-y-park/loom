@@ -27,7 +27,8 @@ if __name__ == '__main__':
             host=host,
             port=port,
             debug=True,
-            use_reloader=True,
+            #use_reloader=True,
+            use_reloader=False,
             threaded=True,
         )
     except (KeyboardInterrupt, SystemExit):

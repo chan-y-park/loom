@@ -7,9 +7,10 @@ from spectral_network import SpectralNetwork
 def init_process():
     """
     Initializer of each child process that generates a spectral network.
-    Take care of a keyboard interrupt.
+    Take care of a keyboard interrupt and a SIGTERM.
     """
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGINT, child_sigint_handler)
+    signal.signal(signal.SIGTERM, child_sigterm_handler)
 
 
 def a_child_process(
@@ -28,13 +29,19 @@ def a_child_process(
     logger.info('Start generating spectral network #{}/{}: theta = {}.'
                  .format(job_id, theta_n, phase)
     )
+   
+    try:
+        spectral_network = SpectralNetwork(
+            phase=phase, 
+            logger_name=logger_name,
+        ) 
 
-    spectral_network = SpectralNetwork(
-        phase=phase, 
-        logger_name=logger_name,
-    ) 
-
-    spectral_network.grow(config, sw)
+        spectral_network.grow(config, sw)
+    except Exception as e:
+        logger.warning("{}".format(e.value))
+        return None 
+    except (KeyboardInterrupt, SystemExit):
+        return None
 
     shared_n_finished_spectral_networks.value += 1
     logger.info('Finished generating spectral network #{}/{}.'
@@ -42,6 +49,12 @@ def a_child_process(
     )
 
     return spectral_network
+
+def child_sigint_handler(signum, frame):
+    raise Exception("SIGINT catched.")
+
+def child_sigterm_handler(signum, frame):
+    raise Exception("SIGTERM catched.")
 
 
 def parallel_get_spectral_network(

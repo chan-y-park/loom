@@ -69,6 +69,7 @@ class GUILoom:
         # Entries that will be placed in the same row
         # are in the same row of this array.
         self.entry_array = [
+            [('Description', 'description')],
             [('Root System', 'root_system'),
              ('Representation', 'representation')],
             [('Casimir differentials', 'casimir_differentials')],
@@ -137,6 +138,7 @@ class GUILoom:
 
                 grid_col += 1
                 if config_option in [
+                    'description',
                     'casimir_differentials',
                     'differential_parameters',
                 ]:
