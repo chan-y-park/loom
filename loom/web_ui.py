@@ -12,7 +12,7 @@ import zipfile
 import numpy
 import bokeh
 
-from StringIO import StringIO
+from cStringIO import StringIO
 from io import BytesIO
 from Queue import Empty as QueueEmpty
 #sys.stdout = sys.stderr
@@ -392,25 +392,28 @@ def plot():
 
     loom_config, spectral_network_data = rv
 
-    # Make a Bokeh plot
-    bokeh_layout = get_spectral_network_bokeh_plot(spectral_network_data)
-    script, div = bokeh.embed.components(bokeh_layout)
-    legend = get_plot_legend(spectral_network_data.sw_data)
-
     # Put data back into the queue for future use.
     loom_db.result_queues[process_uuid].put(rv)
 
-    return flask.render_template(
-        'plot.html',
-        process_uuid=process_uuid,
-        plot_script=script,
-        plot_div=div,
-        plot_legend=legend,
-        download_data_url=flask.url_for('download_data',
-                                        process_uuid=process_uuid,),
-        download_plot_url=flask.url_for('download_plot',
-                                        process_uuid=process_uuid,),
-    )
+    return render_plot_template(spectral_network_data,
+                                process_uuid=process_uuid,)
+
+#    # Make a Bokeh plot
+#    bokeh_layout = get_spectral_network_bokeh_plot(spectral_network_data)
+#    script, div = bokeh.embed.components(bokeh_layout)
+#    legend = get_plot_legend(spectral_network_data.sw_data)
+#
+#    return flask.render_template(
+#        'plot.html',
+#        process_uuid=process_uuid,
+#        plot_script=script,
+#        plot_div=div,
+#        plot_legend=legend,
+#        download_data_url=flask.url_for('download_data',
+#                                        process_uuid=process_uuid,),
+#        download_plot_url=flask.url_for('download_plot',
+#                                        process_uuid=process_uuid,),
+#    )
 
 def download_data(process_uuid):
     loom_db = flask.current_app.loom_db
@@ -442,13 +445,44 @@ def download_data(process_uuid):
             zip_info.external_attr = 0777 << 16L
             zfp.writestr(zip_info, data_str)
     data_zip_fp.seek(0)
+
+    loom_db.result_queues[process_uuid].put(rv)
+
     return flask.send_file(data_zip_fp,
                            attachment_filename='loom_data.zip',
                            as_attachment=True,)
 
 
 def download_plot(process_uuid):
-    pass
+    loom_db = flask.current_app.loom_db
+
+    rv = loom_db.result_queues[process_uuid].get()
+    loom_config, spectral_network_data = rv
+    loom_db.result_queues[process_uuid].put(rv)
+
+    plot_html_zip_fp = BytesIO()
+    with zipfile.ZipFile(plot_html_zip_fp, 'w') as zfp:
+        zip_info = zipfile.ZipInfo('loom_plot_{}.html'.format(process_uuid))
+        zip_info.date_time = time.localtime(time.time())[:6]
+        zip_info.compress_type = zipfile.ZIP_DEFLATED
+        zip_info.external_attr = 0777 << 16L
+        zfp.writestr(
+            zip_info,
+            render_plot_template(spectral_network_data, download=True,),
+        )
+    plot_html_zip_fp.seek(0)
+
+#    plot_html_fp.write(
+#        render_plot_template(spectral_network_data, download=True,)
+#    )
+#    plot_html_fp.seek(0)
+
+    return flask.send_file(
+        plot_html_zip_fp,
+        attachment_filename='loom_plot_{}.html.zip'.format(process_uuid),
+        as_attachment=True,
+    )
+
 
 def keep_alive(process_uuid):
     """
@@ -512,11 +546,13 @@ def get_application(config_file, logging_level):
 # Misc. web UIs
 ###
 
+
 def get_logger_name(uuid=None):
     logger_name = WEB_APP_NAME
     if uuid is not None:
         logger_name += '.' + uuid
     return logger_name
+
 
 def get_loom_config(request_dict=None, logger_name=get_logger_name()):
     logger = logging.getLogger(logger_name)
@@ -550,6 +586,35 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
                     pass
 
     return loom_config
+
+
+def render_plot_template(spectral_network_data, process_uuid=None,
+                         download=False,):
+
+    download_data_url = download_plot_url = None
+
+    # Make a Bokeh plot
+    bokeh_layout = get_spectral_network_bokeh_plot(spectral_network_data)
+    script, div = bokeh.embed.components(bokeh_layout)
+    legend = get_plot_legend(spectral_network_data.sw_data)
+
+    if download is False:
+        download_data_url = flask.url_for(
+            'download_data', process_uuid=process_uuid,
+        )
+        download_plot_url = flask.url_for(
+            'download_plot', process_uuid=process_uuid,
+        )
+
+    return flask.render_template(
+        'plot.html',
+        process_uuid=process_uuid,
+        plot_script=script,
+        plot_div=div,
+        plot_legend=legend,
+        download_data_url=download_data_url,
+        download_plot_url=download_plot_url,
+    )
 
 def get_plot_legend(sw_data):
     legend = ''
