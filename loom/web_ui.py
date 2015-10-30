@@ -20,6 +20,7 @@ from api import (
     get_logging_handler,
     set_logging,
     load_config,
+    load_spectral_network,
     generate_spectral_network,
 )
 from config import LoomConfig
@@ -297,7 +298,7 @@ def config():
     loom_config = None
     event_source_url = None
     text_area_content = '' 
-    plot_url = None
+    #plot_url = None
     n_processes = None 
     process_uuid = None
 
@@ -335,9 +336,7 @@ def config():
             text_area_content = (
                 "Start loom, uuid = {}".format(process_uuid)
             )
-            plot_url = flask.url_for(
-                'plot', process_uuid=process_uuid,
-            )
+            #plot_url = flask.url_for('plot')
 
     return flask.render_template(
         'config.html',
@@ -347,7 +346,7 @@ def config():
         process_uuid=process_uuid,
         event_source_url=event_source_url,
         text_area_content=text_area_content,
-        plot_url=plot_url,
+        #plot_url=plot_url,
     )
 
 def logging_stream(process_uuid):
@@ -370,22 +369,51 @@ def save_config():
     return rv
         
 
-def plot(process_uuid):
-    # Finish loom_process
-    app = flask.current_app
-    spectral_network_data = app.loom_db.get_result(process_uuid)
+def plot():
+    loom_db = flask.current_app.loom_db
+
+    if flask.request.method == 'POST':
+        process_uuid = flask.request.form['process_uuid']
+        # Finish loom_process
+        rv = loom_db.get_result(process_uuid)
+
+    elif flask.request.method == 'GET':
+        process_uuid = data_dir = flask.request.args['data']
+        full_data_dir = os.path.join(
+            get_loom_dir(), 'data', data_dir
+        )
+        rv = load_spectral_network(
+            full_data_dir, logger_name=get_logger_name()
+        )
+        loom_db.result_queues[data_dir] = multiprocessing.Queue()
+
+    loom_config, spectral_network_data = rv
+
+    # Make a Bokeh plot
     bokeh_layout = get_spectral_network_bokeh_plot(spectral_network_data)
     script, div = bokeh.embed.components(bokeh_layout)
     legend = get_plot_legend(spectral_network_data.sw_data)
-    # Make a Bokeh plot
+
+    # Put data back into the queue for future use.
+    loom_db.result_queues[process_uuid].put(rv)
+
     return flask.render_template(
         'plot.html',
         process_uuid=process_uuid,
         plot_script=script,
         plot_div=div,
         plot_legend=legend,
+        download_data_url=flask.url_for('download_data',
+                                        process_uuid=process_uuid,),
+        download_plot_url=flask.url_for('download_plot',
+                                        process_uuid=process_uuid,),
     )
 
+def download_data(process_uuid):
+    pass
+
+def download_plot(process_uuid):
+    pass
 
 def keep_alive(process_uuid):
     """
@@ -420,7 +448,15 @@ def get_application(config_file, logging_level):
         '/save_config', 'save_config', save_config, methods=['POST'],
     )
     application.add_url_rule(
-        '/plot/<process_uuid>', 'plot', plot,
+        '/plot', 'plot', plot,
+        methods=['GET', 'POST'],
+    )
+    application.add_url_rule(
+        '/download_data/<process_uuid>', 'download_data', download_data,
+        methods=['POST'],
+    )
+    application.add_url_rule(
+        '/download_plot/<process_uuid>', 'download_plot', download_plot,
         methods=['POST'],
     )
     application.add_url_rule(

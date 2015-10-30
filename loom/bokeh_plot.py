@@ -16,23 +16,25 @@ def get_spectral_network_bokeh_plot(
     spectral_networks = spectral_network_data.spectral_networks
     sw_data = spectral_network_data.sw_data
     plot_width = 800
-    #plot_height = plot_width
+    plot_height = plot_width
 
-    x_min = min([min([min([z.real for z in s_wall.z]) 
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    x_max = max([max([max([z.real for z in s_wall.z]) 
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    y_min = min([min([min([z.imag for z in s_wall.z]) 
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    y_max = max([max([max([z.imag for z in s_wall.z]) 
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
     if plot_range is None:
-        plot_x_range = (x_min, x_max)
-        plot_y_range = (y_min, y_max)
+        x_min = min([min([min([z.real for z in s_wall.z]) 
+                          for s_wall in sn.s_walls])
+                     for sn in spectral_networks])
+        x_max = max([max([max([z.real for z in s_wall.z]) 
+                          for s_wall in sn.s_walls])
+                     for sn in spectral_networks])
+        y_min = min([min([min([z.imag for z in s_wall.z]) 
+                          for s_wall in sn.s_walls])
+                     for sn in spectral_networks])
+        y_max = max([max([max([z.imag for z in s_wall.z]) 
+                          for s_wall in sn.s_walls])
+                     for sn in spectral_networks])
+        # Need to maintain the aspect ratio.
+        range_min = min(x_min, y_min)
+        range_max = max(x_max, y_max)
+        plot_x_range = plot_y_range = (range_min, range_max)
     else:
         plot_x_range, plot_y_range = plot_range
 
@@ -52,7 +54,7 @@ def get_spectral_network_bokeh_plot(
         tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(), 
                PreviewSaveTool(), hover],
         plot_width=plot_width,
-        #plot_height=plot_height,
+        plot_height=plot_height,
         title=None, 
         x_range=plot_x_range,
         y_range=plot_y_range,
@@ -151,7 +153,7 @@ def get_spectral_network_bokeh_plot(
         args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds}, 
         code=callback_code,
     )
-    slider = Slider(start=0, end=len(spectral_networks), 
+    slider = Slider(start=0, end=len(spectral_networks)-1, 
                     value=0, step=1, title="plot index",
                     callback=callback)
 

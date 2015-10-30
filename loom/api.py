@@ -284,7 +284,7 @@ def generate_spectral_network(
     logger.info('end cpu time: %.8f', end_time)
     logger.info('elapsed cpu time: %.8f', end_time - start_time)
 
-    rv = SpectralNetworkData(sw, spectral_networks)
+    spectral_network_data = SpectralNetworkData(sw, spectral_networks)
     if logging_queue is not None:
         # Put a mark that generating spectral networks is done.
         try:
@@ -294,8 +294,9 @@ def generate_spectral_network(
                         "in the logging queue.")
 
     if result_queue is None:
-        return rv
+        return spectral_network_data
     else:
+        rv = (config, spectral_network_data)
         result_queue.put(rv)
         return None
 
