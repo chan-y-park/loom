@@ -7,6 +7,8 @@ import flask
 import sys
 import logging
 import uuid
+import json
+import zipfile
 import numpy
 import bokeh
 
@@ -22,6 +24,7 @@ from api import (
     load_config,
     load_spectral_network,
     generate_spectral_network,
+    get_current_branch_version,
 )
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
@@ -410,7 +413,39 @@ def plot():
     )
 
 def download_data(process_uuid):
-    pass
+    loom_db = flask.current_app.loom_db
+    rv = loom_db.result_queues[process_uuid].get()
+    loom_config, spectral_network_data = rv
+    sw_data = spectral_network_data.sw_data
+    spectral_networks = spectral_network_data.spectral_networks
+    data = {}
+    
+    data['version'] = get_current_branch_version()
+
+    fp = StringIO()
+    loom_config.parser.write(fp)
+    fp.seek(0)
+    data['config.ini'] = fp.read()
+
+    data['sw_data.json'] = json.dumps(sw_data.get_json_data())
+
+    for i, spectral_network in enumerate(spectral_networks):
+        data['data_{}.json'.format(i)] = json.dumps(
+            spectral_network.get_json_data())
+
+    data_zip_fp = BytesIO()
+    with zipfile.ZipFile(data_zip_fp, 'w') as zfp:
+        for file_name, data_str in data.iteritems():
+            zip_info = zipfile.ZipInfo(file_name)
+            zip_info.date_time = time.localtime(time.time())[:6]
+            zip_info.compress_type = zipfile.ZIP_DEFLATED
+            zip_info.external_attr = 0777 << 16L
+            zfp.writestr(zip_info, data_str)
+    data_zip_fp.seek(0)
+    return flask.send_file(data_zip_fp,
+                           attachment_filename='loom_data.zip',
+                           as_attachment=True,)
+
 
 def download_plot(process_uuid):
     pass
