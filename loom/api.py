@@ -254,35 +254,42 @@ def generate_spectral_network(
 
     logger = logging.getLogger(logger_name)
     phase_range = config['phase_range']
-    sw = SWDataWithTrivialization(config, logger_name=logger_name)
+    try:
+        sw = SWDataWithTrivialization(config, logger_name=logger_name)
 
-    start_time = time.time()
-    logger.info('start cpu time: %s', start_time)
+        start_time = time.time()
+        logger.info('start cpu time: %s', start_time)
 
-    if(phase is not None):
-        logger.info('Generate a single spectral network at theta = {}.'
-                    .format(phase))
-        spectral_network = SpectralNetwork(
-            phase=phase, 
-            logger_name=logger_name,
-        ) 
+        if(phase is not None):
+            logger.info('Generate a single spectral network at theta = {}.'
+                        .format(phase))
+            spectral_network = SpectralNetwork(
+                phase=phase, 
+                logger_name=logger_name,
+            ) 
 
-        spectral_network.grow(config, sw)
+            spectral_network.grow(config, sw)
 
-        spectral_networks = [spectral_network]
+            spectral_networks = [spectral_network]
 
-    elif(phase_range is not None):
-        logger.info('Generate multiple spectral networks.')
-        logger.info('phase_range = {}.'.format(phase_range))
-        spectral_networks = parallel_get_spectral_network(
-            sw, 
-            config,
-            logger_name,
-        ) 
+        elif(phase_range is not None):
+            logger.info('Generate multiple spectral networks.')
+            logger.info('phase_range = {}.'.format(phase_range))
+            spectral_networks = parallel_get_spectral_network(
+                sw, 
+                config,
+                logger_name,
+            ) 
 
-    end_time = time.time()
-    logger.info('end cpu time: %.8f', end_time)
-    logger.info('elapsed cpu time: %.8f', end_time - start_time)
+        end_time = time.time()
+        logger.info('end cpu time: %.8f', end_time)
+        logger.info('elapsed cpu time: %.8f', end_time - start_time)
+
+    except (KeyboardInterrupt, SystemExit) as e:
+        logger.warning('loom.api caught {} while generating spectral networks.'
+                       .format(e.__class__))
+        sw = None
+        spectral_networks = None
 
     spectral_network_data = SpectralNetworkData(sw, spectral_networks)
     if logging_queue is not None:

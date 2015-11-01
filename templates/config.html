@@ -139,7 +139,7 @@
     {% endif %}
     <br/>
     <form action="{{ url_for('plot') }}" method="post">
-        <input type="hidden" value="{{ process_uuid }}">
+        <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
         <div class="form-group">
             <input id="plot_button" type="submit" class="btn btn-default" 
              value="Plot spectral networks" disabled="true">

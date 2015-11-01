@@ -1,4 +1,5 @@
 import os
+import signal
 import multiprocessing
 import threading
 import time
@@ -36,11 +37,13 @@ PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
 LOGGING_FILE_PATH = os.path.join(
     get_loom_dir(),
-    'logs/web_loom.log',
+    ('logs/web_loom_{}-{:02}-{:02} {:02}:{:02}:{:02}.log'
+     .format(*time.localtime(time.time())[:6])),
 )
 #MAX_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
+
 
 # TODO: kill an orphaned process gracefully.
 class LoomDB(object):
@@ -53,11 +56,27 @@ class LoomDB(object):
         self.loom_processes = {}
         self.is_alive = {}
 
+        signal.signal(signal.SIGINT, self.loom_db_sigint_handler)
+        signal.signal(signal.SIGTERM, self.loom_db_sigterm_handler)
+
         self.db_manager = threading.Thread(
             target=self.db_manager,
         )
-        self.db_manager.daemon = True
+        #self.db_manager.daemon = True
+        self.db_manager_stop = threading.Event()
+        self.db_manager_stop.clear()
         self.db_manager.start()
+
+    def loom_db_sigint_handler(self, signum, frame):
+        print 'test: loom_db got sigint'
+        self.db_manager_stop.set()
+        #raise KeyboardInterrupt
+        sys.exit()
+
+    def loom_db_sigterm_handler(self, signum, frame):
+        print 'test: loom_db got sigterm'
+        #raise SystemExit
+        sys.exit()
 
     def db_manager(self):
         """
@@ -67,7 +86,9 @@ class LoomDB(object):
         logger_name = get_logger_name()
         logger = logging.getLogger(logger_name)
 
-        while True:
+
+        #while self.db_manager_stop.is_set():
+        while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
             try:
                 for process_uuid, alive in self.is_alive.iteritems():
                     if alive is True:
@@ -92,9 +113,11 @@ class LoomDB(object):
                             ) 
                             pass
 
-                time.sleep(DB_CLEANUP_CYCLE_SECS)
+                #time.sleep(DB_CLEANUP_CYCLE_SECS)
+                #self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS)
             except (KeyboardInterrupt, SystemExit):
                 break
+        print 'thread finished'
 
     def start_loom_process(
         self, process_uuid, logging_level, loom_config, phase=None,
@@ -148,6 +171,11 @@ class LoomDB(object):
             logging.StreamHandler,
             logging_stream,
         )
+
+        try:
+            result_queue = self.result_queues[process_uuid]
+        except KeyError:
+            yield 'event: finish\ndata: \n\n'
 
         while self.result_queues[process_uuid].empty() is True:
             try:
@@ -352,6 +380,7 @@ def config():
         #plot_url=plot_url,
     )
 
+
 def logging_stream(process_uuid):
     if flask.request.headers.get('accept') == 'text/event-stream':
         app = flask.current_app
@@ -398,22 +427,6 @@ def plot():
     return render_plot_template(spectral_network_data,
                                 process_uuid=process_uuid,)
 
-#    # Make a Bokeh plot
-#    bokeh_layout = get_spectral_network_bokeh_plot(spectral_network_data)
-#    script, div = bokeh.embed.components(bokeh_layout)
-#    legend = get_plot_legend(spectral_network_data.sw_data)
-#
-#    return flask.render_template(
-#        'plot.html',
-#        process_uuid=process_uuid,
-#        plot_script=script,
-#        plot_div=div,
-#        plot_legend=legend,
-#        download_data_url=flask.url_for('download_data',
-#                                        process_uuid=process_uuid,),
-#        download_plot_url=flask.url_for('download_plot',
-#                                        process_uuid=process_uuid,),
-#    )
 
 def download_data(process_uuid):
     loom_db = flask.current_app.loom_db
@@ -471,11 +484,6 @@ def download_plot(process_uuid):
             render_plot_template(spectral_network_data, download=True,),
         )
     plot_html_zip_fp.seek(0)
-
-#    plot_html_fp.write(
-#        render_plot_template(spectral_network_data, download=True,)
-#    )
-#    plot_html_fp.seek(0)
 
     return flask.send_file(
         plot_html_zip_fp,
@@ -665,3 +673,5 @@ def get_plot_legend(sw_data):
     return legend
 
 
+def get_time_str():
+    return '{}-{}-{} {}:{}:{}'.format(*time.localtime(time.time())[:6])

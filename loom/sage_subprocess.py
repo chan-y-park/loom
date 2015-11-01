@@ -18,25 +18,34 @@ def solve_system_of_eqs(eqs, precision=None):
         mp.dps = precision
     else:
         precision = 15
-    sols_str_list_str = subprocess.check_output(
-        ['sage', sage_script_dir + 'solve_system_of_eqs.sage'] +
-        [str(precision)] +
-        [str(eq) for eq in eqs]
-    )
+    try:
+        sols_str_list_str = subprocess.check_output(
+            ['sage', sage_script_dir + 'solve_system_of_eqs.sage'] +
+            [str(precision)] +
+            [str(eq) for eq in eqs]
+        )
+    except (KeyboardInterrupt, SystemExit) as e:
+        raise
+
     sols_str_list = eval(sols_str_list_str)
     for sols_str in sols_str_list:
         (z_re, z_im), (x_re, x_im) = sols_str
         sols.append(
             (mpc(z_re, z_im), mpc(x_re, x_im))
         )
+
     return sols
 
 
 def get_g_data(root_system, highest_weight):
-    g_data_str = subprocess.check_output(
-        ['sage', sage_script_dir + 'get_g_data.sage', root_system,
-         str(highest_weight)]
-    )
+    try:
+        g_data_str = subprocess.check_output(
+            ['sage', sage_script_dir + 'get_g_data.sage', root_system,
+             str(highest_weight)]
+        )
+    except (KeyboardInterrupt, SystemExit) as e:
+        raise
+
     g_data = eval(g_data_str)
     
     return g_data

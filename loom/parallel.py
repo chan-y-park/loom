@@ -51,10 +51,10 @@ def a_child_process(
     return spectral_network
 
 def child_sigint_handler(signum, frame):
-    raise Exception("SIGINT catched.")
+    raise Exception("SIGINT catched by loom.parallel.")
 
 def child_sigterm_handler(signum, frame):
-    raise Exception("SIGTERM catched.")
+    raise Exception("SIGTERM catched by loom.parallel.")
 
 
 def parallel_get_spectral_network(
@@ -117,12 +117,11 @@ def parallel_get_spectral_network(
         for result in results:
             spectral_network_list.append(result.get())
 
-    except KeyboardInterrupt:
-        logger.warning('Caught ^C; terminates processes...')
+    except (KeyboardInterrupt, SystemExit) as e:
+        logger.warning('loom.parallel caught {}; terminates processes...'
+                       .format(e.__class__))
         pool.terminate()
         pool.join()
-
-    except SystemExit:
         raise
 
     return spectral_network_list
