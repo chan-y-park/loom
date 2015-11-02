@@ -153,10 +153,14 @@ def get_spectral_network_bokeh_plot(
         args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds}, 
         code=callback_code,
     )
-    slider = Slider(start=0, end=len(spectral_networks)-1, 
-                    value=0, step=1, title="plot index",
-                    callback=callback)
 
-    layout = vform(bokeh_figure, slider, width=plot_width,)
+    if len(spectral_networks) > 1:
+        slider = Slider(start=0, end=len(spectral_networks)-1, 
+                        value=0, step=1, title="plot index",
+                        callback=callback)
 
-    return layout
+        layout = vform(bokeh_figure, slider, width=plot_width,)
+        return layout
+
+    else:
+        return bokeh_figure

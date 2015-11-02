@@ -10,26 +10,28 @@
 {% block body %}
 <!--<div style="width:900px; margin:20px; padding:10px; 
             border:1px solid black;">-->
-{% if download_data_url %}
-<div class="container">
-    <form class="form-inline" id="download_form" method="post">
-        <input type="hidden" value="{{ process_uuid }}">
-        <div class="form-group">
-            <input type="submit" class="btn btn-default"
-             id="download_data_button" value="Download data"
-             formaction="{{ download_data_url }}">
-            <input type="submit" class="btn btn-default"
-             id="download_plot_button" value="Download plot"
-             formaction="{{ download_plot_url }}">
-        </div>
-    </form>
-</div>
-{% endif %}
+
 <div style="width:800px; margin:20px 20px 20px 20px">
     <h2>Plot</h2>
     {{ plot_div|safe }}
-    <textarea rows="24" cols="80">
-    {{ plot_legend|safe }}
-    </textarea>
+{% if download_data_url %}
+    <div class="container">
+        <form class="form-inline" id="download_form" method="post">
+            <input type="hidden" value="{{ process_uuid }}">
+            <div class="form-group">
+                <input type="submit" class="btn btn-default"
+                 id="download_data_button" value="Download data"
+                 formaction="{{ download_data_url }}">
+                <input type="submit" class="btn btn-default"
+                 id="download_plot_button" value="Download plot"
+                 formaction="{{ download_plot_url }}">
+            </div>
+        </form>
+        <br/>
+{% endif %}
+        <textarea rows="24" cols="80">
+{{ plot_legend|safe }}
+        </textarea>
+    </div>
 </div>
 {% endblock %}

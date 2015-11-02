@@ -133,29 +133,27 @@ class LoomDB(object):
                        'finishes the manager.'.format(type(e)))
                 logger.warning(msg)
                 raise e(msg)
-
-        process_uuids = self.loom_processes.keys()
         
         # Received a stop event; finish all the processes.
+        process_uuids = self.loom_processes.keys()
         for process_uuid in process_uuids:
             logger.info('Finishing process {}...'.format(process_uuid))
-            self.loom_processes[process_uuid].terminate()
-#            self.finish_loom_process(process_uuid, join_timeout=0)
-#            try:
-#                # Flush the result queue.
-#                result_queue = self.result_queues[process_uuid]
-#                while result_queue.empty() is False:
-#                    result_queue.get_nowait()
-#                # Remove the result queue
-#                del self.result_queues[process_uuid]
-#            except KeyError:
-#                logger.warning(
-#                    "Removing result queue {} failed: "
-#                    "no such a queue exists."
-#                    .format(process_uuid)
-#                ) 
-#                pass
-#        logger.info('LoomDB manager thread is finished.')
+            self.finish_loom_process(process_uuid, join_timeout=0)
+            try:
+                # Flush the result queue.
+                result_queue = self.result_queues[process_uuid]
+                while result_queue.empty() is False:
+                    result_queue.get_nowait()
+                # Remove the result queue
+                del self.result_queues[process_uuid]
+            except KeyError:
+                logger.warning(
+                    "Removing result queue {} failed: "
+                    "no such a queue exists."
+                    .format(process_uuid)
+                ) 
+                pass
+        logger.info('LoomDB manager thread is finished.')
 
     def start_loom_process(
         self, process_uuid, logging_level, loom_config, phase=None,
@@ -560,6 +558,17 @@ def admin():
     pdb.set_trace()
     return ('', 204)
 
+def shutdown():
+    app = flask.current_app
+    app.loom_db.db_manager_stop.set()
+
+    f = flask.request.environ.get('werkzeug.server.shutdown')
+    if f is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    f()
+    return 'Server shutting down...'
+
+
 ###
 # Entry point
 ###
@@ -598,6 +607,10 @@ def get_application(config_file, logging_level):
     )
     application.add_url_rule(
         '/admin', 'admin', admin,
+        methods=['GET'],
+    )
+    application.add_url_rule(
+        '/shutdown', 'shutdown', shutdown,
         methods=['GET'],
     )
     return application
