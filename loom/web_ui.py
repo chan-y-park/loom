@@ -101,7 +101,7 @@ class LoomDB(object):
                         self.is_alive[process_uuid] = False
                     else:
                         to_delete.append(process_uuid)
-                        self.finish_loom_process(process_uuid)
+                        #self.finish_loom_process(process_uuid)
 
                         try:
                             # Flush the result queue.
@@ -398,9 +398,13 @@ def config():
             uploaded_config_file = None
 
         if uploaded_config_file is not None:
-            loom_config = LoomConfig(logger_name=logger_name)
-            loom_config.read(uploaded_config_file)
-            
+            if uploaded_config_file.filename == '':
+                # Load button clicked without a selected file.
+                # Load the default configuration.
+                loom_config = get_loom_config()
+            else:
+                loom_config = LoomConfig(logger_name=get_logger_name())
+                loom_config.read(uploaded_config_file)
         else:
             phase = eval(flask.request.form['phase'])
             process_uuid = str(uuid.uuid4())
@@ -546,8 +550,18 @@ def keep_alive(process_uuid):
     """
     Receive heartbeats from clients.
     """
+    logger = logging.getLogger(get_logger_name())
     app = flask.current_app
-    app.loom_db.is_alive[process_uuid] = True
+    try:
+        is_alive = app.loom_db.is_alive
+        if is_alive[process_uuid] == False:
+            is_alive[process_uuid] = True
+        logger.debug(
+            'is_alive[{}] = {}'
+            .format(process_uuid, app.loom_db.is_alive[process_uuid])
+        )
+    except KeyError:
+        pass
     return ('', 204)
         
 

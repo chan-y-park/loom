@@ -95,7 +95,8 @@ def load_config(file_path=None, logger_name='loom',):
         return None
     config = LoomConfig(logger_name=logger_name)
     logger.info('Loading configuration from {}...'.format(file_path))
-    config.read(file_path)
+    with open(file_path, 'r') as fp:
+        config.read(fp)
     logger.info('Finished loading configuration from {}.'.format(file_path))
 
     return config

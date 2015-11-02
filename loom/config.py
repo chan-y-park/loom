@@ -57,8 +57,7 @@ class LoomConfig:
         """
         config_parser = LoomConfigParser()
 
-        with open(config_file, 'r') as fp:
-            config_parser.readfp(fp)
+        config_parser.readfp(config_file)
 
         for section in config_parser.sections():
             for option in config_parser.options(section):
