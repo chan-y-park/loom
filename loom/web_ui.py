@@ -409,6 +409,7 @@ def config():
             else:
                 loom_config = LoomConfig(logger_name=get_logger_name())
                 loom_config.read(uploaded_config_file)
+                n_processes = loom_config['n_processes']
         else:
             phase = eval(flask.request.form['phase'])
             process_uuid = str(uuid.uuid4())
