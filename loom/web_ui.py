@@ -45,6 +45,33 @@ DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
 
 
+config_items = [
+    [('Description', 'description')],
+    #[('Root System', 'root_system'),
+    # ('Representation', 'representation')],
+    [('Casimir differentials', 'casimir_differentials')],
+    [('Parameters of differentials','differential_parameters')],
+    [('Regular punctures', 'regular_punctures')],
+    [('Irregular punctures', 'irregular_punctures')],
+    [('Mobius transformation', 'mt_params')], 
+    [('Ramification point finding method', 
+      'ramification_point_finding_method'),],
+    [('Plot range', 'plot_range')],
+    [('Number of steps', 'num_of_steps')],
+    [('Number of iterations', 'num_of_iterations')],
+    [('Size of a small step', 'size_of_small_step')],
+    [('Size of a large step', 'size_of_large_step')],
+    [('Size of a branch point cutoff', 'size_of_neighborhood')],
+    [('Size of a puncture cutoff', 'size_of_puncture_cutoff')],
+    #[('Size of an intersection bin', 'size_of_bin')],
+    #[('', 'size_of_ramification_pt_cutoff')],
+    [('Accuracy', 'accuracy')],
+    #[('Number of processes', 'n_processes')],
+    [('Mass limit', 'mass_limit')],
+    [('Range of phases', 'phase_range')],
+]
+
+
 # TODO: kill an orphaned process gracefully.
 class LoomDB(object):
     """
@@ -352,30 +379,7 @@ def config():
     # Array of ('entry label', 'config option') pairs. 
     # Entries that will be placed in the same row
     # are in the same row of this array.
-    config_items = [
-        [('Description', 'description')],
-        #[('Root System', 'root_system'),
-        # ('Representation', 'representation')],
-        [('Casimir differentials', 'casimir_differentials')],
-        [('Parameters of differentials','differential_parameters')],
-        [('Punctures', 'punctures')],
-        [('Mobius transformation', 'mt_params')], 
-        [('Ramification point finding method', 
-          'ramification_point_finding_method'),],
-        [('Plot range', 'plot_range')],
-        [('Number of steps', 'num_of_steps')],
-        [('Number of iterations', 'num_of_iterations')],
-        [('Size of a small step', 'size_of_small_step')],
-        [('Size of a large step', 'size_of_large_step')],
-        [('Size of a branch point cutoff', 'size_of_neighborhood')],
-        [('Size of a puncture cutoff', 'size_of_puncture_cutoff')],
-        #[('Size of an intersection bin', 'size_of_bin')],
-        #[('', 'size_of_ramification_pt_cutoff')],
-        [('Accuracy', 'accuracy')],
-        #[('Number of processes', 'n_processes')],
-        [('Mass limit', 'mass_limit')],
-        [('Range of phases', 'phase_range')],
-    ]
+
     loom_config = None
     event_source_url = None
     text_area_content = '' 
@@ -478,8 +482,9 @@ def plot():
     # Put data back into the queue for future use.
     loom_db.result_queues[process_uuid].put(rv)
 
-    return render_plot_template(spectral_network_data,
-                                process_uuid=process_uuid,)
+    return render_plot_template(
+        loom_config, spectral_network_data, process_uuid=process_uuid,
+    )
 
 
 def download_data(process_uuid):
@@ -535,7 +540,8 @@ def download_plot(process_uuid):
         zip_info.external_attr = 0777 << 16L
         zfp.writestr(
             zip_info,
-            render_plot_template(spectral_network_data, download=True,),
+            render_plot_template(loom_config, spectral_network_data,
+                                 download=True,),
         )
     plot_html_zip_fp.seek(0)
 
@@ -675,13 +681,16 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
     return loom_config
 
 
-def render_plot_template(spectral_network_data, process_uuid=None,
+def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
                          download=False,):
 
     download_data_url = download_plot_url = None
 
     # Make a Bokeh plot
-    bokeh_layout = get_spectral_network_bokeh_plot(spectral_network_data)
+    bokeh_layout = get_spectral_network_bokeh_plot(
+        spectral_network_data,
+        plot_range=loom_config['plot_range'],
+    )
     script, div = bokeh.embed.components(bokeh_layout)
     legend = get_plot_legend(spectral_network_data.sw_data)
 
@@ -701,6 +710,8 @@ def render_plot_template(spectral_network_data, process_uuid=None,
         plot_legend=legend,
         download_data_url=download_data_url,
         download_plot_url=download_plot_url,
+        loom_config=loom_config,
+        config_items=config_items,
     )
 
 def get_plot_legend(sw_data):

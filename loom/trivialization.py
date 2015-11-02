@@ -255,13 +255,6 @@ class SWDataWithTrivialization(SWDataBase):
         logger = logging.getLogger(self.logger_name)
 
         self.branch_points = []
-        # FIXME: Mark each puncture in the config.ini as being (ir)regular,
-        # or analyze all punctures to determine the irregularity.
-        # Very important: once we do this, we must make sure that the algorithm
-        # of automatic z-rotation checks BOTH irregulars and regulars,
-        # because we don't want either of them to be aligned 
-        # vertically with a branch point or with each other, for 
-        # trivialization purposes (even if regulars don't emanate cuts).
         self.irregular_singularities = []
 
         self.min_distance = None 
@@ -326,15 +319,15 @@ class SWDataWithTrivialization(SWDataBase):
             self.accuracy,
         )
 
-        # z-coords of irregular singularities.
-        iszs = n_remove_duplicate(
-            [p.z for p in self.punctures if p.z != oo],
+        # z-coords of irregular punctures.
+        ipzs = n_remove_duplicate(
+            [p.z for p in self.irregular_punctures if p.z != oo],
             self.accuracy,
         )
         
         # Automatically choose a basepoint, based on the positions of
         # both branch points and irregular singularities
-        all_points_z = bpzs + iszs
+        all_points_z = bpzs + ipzs
         n_critical_loci = len(all_points_z)
         
         if n_critical_loci > 1:
@@ -399,7 +392,7 @@ class SWDataWithTrivialization(SWDataBase):
                 self.branch_points.append(bp)
 
         # Construct the list of irregular singularities
-        for j, z_irr_sing in enumerate(iszs):
+        for j, z_irr_sing in enumerate(ipzs):
             irr_sing = IrregularSingularity(
                 z=z_irr_sing, label='Irr.Sing. #{}'.format(j)
             )

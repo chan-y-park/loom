@@ -1,6 +1,7 @@
 import numpy
 
 from cmath import phase, pi, exp
+from sympy import oo
 from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
 from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
@@ -18,19 +19,19 @@ def get_spectral_network_bokeh_plot(
     plot_width = 800
     plot_height = plot_width
 
+    x_min = min([min([min([z.real for z in s_wall.z]) 
+                      for s_wall in sn.s_walls])
+                 for sn in spectral_networks])
+    x_max = max([max([max([z.real for z in s_wall.z]) 
+                      for s_wall in sn.s_walls])
+                 for sn in spectral_networks])
+    y_min = min([min([min([z.imag for z in s_wall.z]) 
+                      for s_wall in sn.s_walls])
+                 for sn in spectral_networks])
+    y_max = max([max([max([z.imag for z in s_wall.z]) 
+                      for s_wall in sn.s_walls])
+                 for sn in spectral_networks])
     if plot_range is None:
-        x_min = min([min([min([z.real for z in s_wall.z]) 
-                          for s_wall in sn.s_walls])
-                     for sn in spectral_networks])
-        x_max = max([max([max([z.real for z in s_wall.z]) 
-                          for s_wall in sn.s_walls])
-                     for sn in spectral_networks])
-        y_min = min([min([min([z.imag for z in s_wall.z]) 
-                          for s_wall in sn.s_walls])
-                     for sn in spectral_networks])
-        y_max = max([max([max([z.imag for z in s_wall.z]) 
-                          for s_wall in sn.s_walls])
-                     for sn in spectral_networks])
         # Need to maintain the aspect ratio.
         range_min = min(x_min, y_min)
         range_max = max(x_max, y_max)
@@ -40,12 +41,10 @@ def get_spectral_network_bokeh_plot(
 
     # Setup tools.
     hover = HoverTool(
-        #tooltips=[('label', '@label'),]
         tooltips=[
             ('name', '@label'),
             ('root', '@root'),
         ]
-        #tooltips='@label'
     )
 
     # Prepare a bokeh Figure.
@@ -61,13 +60,29 @@ def get_spectral_network_bokeh_plot(
     )
     bokeh_figure.grid.grid_line_color = None
 
+    # Data source for punctures.
+    ppds = ColumnDataSource({'x': [], 'y': [], 'label': [], 'root': []})
+    for pp in (sw_data.regular_punctures + sw_data.irregular_punctures):
+        if pp.z == oo:
+            continue
+        ppds.data['x'].append(pp.z.real)
+        ppds.data['y'].append(pp.z.imag)
+        ppds.data['label'].append(str(pp.label))
+        ppds.data['root'].append('')
+    bokeh_figure.circle(
+        'x', 'y', size=10, color="#e6550D", fill_color=None,
+        line_width=3, source=ppds,
+    )
+
     # Data source for branch points & cuts.
     bpds = ColumnDataSource({'x': [], 'y': [], 'label': [], 'root': []})
     bcds = ColumnDataSource({'xs': [], 'ys': []})
     for bp in sw_data.branch_points:
+        if bp.z == oo:
+            continue
         bpds.data['x'].append(bp.z.real)
         bpds.data['y'].append(bp.z.imag)
-        bpds.data['label'].append(bp.label)
+        bpds.data['label'].append(str(bp.label))
         root_label = ''
         for root in bp.positive_roots:
             root_label += str(root.tolist()) + ', '
@@ -128,8 +143,7 @@ def get_spectral_network_bokeh_plot(
                 sn_data['arrow_y'].append(z_i[a_i])
                 sn_data['arrow_angle'].append(a_angle)
             for root in s_wall.local_roots:
-                #sn_data['label'].append(s_wall.label + '\n' + str(root))
-                sn_data['label'].append(s_wall.label)
+                sn_data['label'].append(str(s_wall.label))
                 sn_data['root'].append(str(root.tolist()))
                 sn_data['color'].append(sw_data.g_data.root_color(root))
 
@@ -164,3 +178,4 @@ def get_spectral_network_bokeh_plot(
 
     else:
         return bokeh_figure
+

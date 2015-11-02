@@ -41,7 +41,7 @@ class LoomConfig:
         try:
             value = self.data[option]
         except KeyError as e:
-            logger.warning('Option {} not specified; use None.'.format(e))
+            logger.debug('Option {} not specified; use None.'.format(e))
             value = None
         return value
 

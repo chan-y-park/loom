@@ -252,7 +252,7 @@ class GData:
 class RamificationPoint:
     def __init__(
         self, z=None, Ciz=None, x=None, i=None, label=None, json_data=None,
-        #is_puncture=False,
+        is_puncture=False,
     ):
         if json_data is None:
             # z is the numerical value of the PSL2C-transformed z-coordinate.
@@ -268,7 +268,7 @@ class RamificationPoint:
             # in the trivializatio module.
             self.ramification_type = None
             self.sw_diff_coeff = None
-            # self.is_puncture = is_puncture
+            self.is_puncture = is_puncture
         else:
             self.set_from_json_data(json_data)
 
@@ -291,7 +291,7 @@ class RamificationPoint:
             'label': self.label,
             'ramification_type': self.ramification_type,
             'sw_diff_coeff': sw_diff_coeff,
-            # 'is_puncture': self.is_puncture
+            'is_puncture': self.is_puncture
         }
         return json_data
 
@@ -309,7 +309,7 @@ class RamificationPoint:
             sw_diff_coeff = None
         self.sw_diff_coeff = sw_diff_coeff 
 
-        # self.is_puncture = json_data['is_puncture']
+        self.is_puncture = json_data['is_puncture']
 
 
 class Puncture:
@@ -440,7 +440,8 @@ class SWDataBase(object):
         logger = logging.getLogger(self.logger_name)
 
         self.g_data = None
-        self.punctures = []
+        self.regular_punctures = []
+        self.irregular_punctures = []
         self.ffr_ramification_points = None
         self.z_plane_rotation = None
         self.accuracy = config['accuracy']
@@ -463,11 +464,12 @@ class SWDataBase(object):
         for var, val in parse_sym_dict_str(config['differential_parameters']):
             diff_params[var] = sympy.sympify(val)
 
-        punctures_string = None 
         if config['punctures'] is not None:
-            punctures_string = (
-                config['punctures'].lstrip('[').rstrip(']')
+            logger.warning(
+                "Configuration option 'punctures' is deprecated; "
+                "Use 'regular_punctures' and 'irregular_punctures'."
             )
+            config['irregulr_punctures'] = config['punctures']
 
         if json_data is None:
             self.g_data = GData(config['root_system'],
@@ -476,7 +478,8 @@ class SWDataBase(object):
                 mt_params=mt_params,
                 casimir_differentials=casimir_differentials,
                 diff_params=diff_params,
-                punctures_string=punctures_string,
+                regular_punctures_string=config['regular_punctures'],
+                irregular_punctures_string=config['irregular_punctures'],
                 size_of_puncture_cutoff=config['size_of_puncture_cutoff'],
                 ramification_point_finding_method=(
                     config['ramification_point_finding_method']
@@ -527,13 +530,16 @@ class SWDataBase(object):
             logger.info("{}: z = {}, x = {}, i = {}."
                         .format(rp.label, rp.z, rp.x, rp.i))
 
-        for pct in self.punctures:
+        for pct in self.regular_punctures + self.irregular_punctures:
             logger.info('{} at z={}'.format(pct.label, pct.z))
 
     def get_json_data(self):
         json_data = {
             'g_data': self.g_data.get_json_data(),
-            'punctures': [p.get_json_data() for p in self.punctures],
+            'regular_punctures': [p.get_json_data() 
+                                  for p in self.regular_punctures],
+            'irregular_punctures': [p.get_json_data() 
+                                    for p in self.irregular_punctures],
             'ffr_ramification_points': [
                 rp.get_json_data() for rp in self.ffr_ramification_points
             ],
@@ -545,8 +551,13 @@ class SWDataBase(object):
 
     def set_from_json_data(self, json_data):
         self.g_data = GData(json_data=json_data['g_data'])
-        self.punctures = [
-            Puncture(json_data=data) for data in json_data['punctures'] 
+        self.regular_punctures = [
+            Puncture(json_data=data)
+            for data in json_data['regular_punctures'] 
+        ]
+        self.irregular_punctures = [
+            Puncture(json_data=data)
+            for data in json_data['irregular_punctures'] 
         ]
         self.ffr_ramification_points = [
             RamificationPoint(json_data=data)
@@ -556,7 +567,8 @@ class SWDataBase(object):
         self.accuracy = json_data['accuracy']
 
     def set_from_config(self, mt_params=None, casimir_differentials=None,
-                        diff_params=None, punctures_string=None,
+                        diff_params=None, regular_punctures_string=None,
+                        irregular_punctures_string=None,
                         size_of_puncture_cutoff=None,
                         ramification_point_finding_method=None,):
         """
@@ -605,33 +617,16 @@ class SWDataBase(object):
                 # parameters such as masses, and stokes data for irregular 
                 # singularities.)
                 
-                punctures = []
-                #if config['punctures'] is not None:
-                #    punctures_string = (
-                #        config['punctures'].lstrip('[').rstrip(']')
-                #    )
-                if punctures_string is not None:
-                    for p_n, p_str in enumerate(punctures_string.split(',')):
-                        Cipz = sympy.sympify(p_str.strip()).subs(diff_params)
-                        pz = PSL2C(mt_params, Cipz)
-                        if pz == oo:
-                            npz = oo
-                        else:
-                            # Note: if we substitute z' = c z in F(x,z)=0,
-                            # where c is a phase, the position of punctures 
-                            # and branch points will rotate contravariantly
-                            # z_pt -> c^{-1} z_pt
-                            npz = complex(
-                                (pz / z_plane_rotation)
-                                .evalf(n=ROOT_FINDING_PRECISION, chop=True)
-                            )
-                        punctures.append(
-                            Puncture(
-                                z=npz, Ciz=Cipz,
-                                cutoff=size_of_puncture_cutoff,
-                                label=('puncture #{}'.format(p_n))
-                            )
-                        )
+                regular_punctures = get_punctures_from_config(
+                    regular_punctures_string, 'Regular puncture',
+                    size_of_puncture_cutoff, diff_params, mt_params,
+                    z_plane_rotation,
+                )
+                irregular_punctures = get_punctures_from_config(
+                    irregular_punctures_string, 'Irregular puncture',
+                    size_of_puncture_cutoff, diff_params, mt_params,
+                    z_plane_rotation,
+                )
 
                 ffr_curve = SWCurve(
                     casimir_differentials=casimir_differentials, 
@@ -648,6 +643,8 @@ class SWDataBase(object):
                     'in the first fundamental rep.'
                 )
             
+                punctures = regular_punctures + irregular_punctures
+
                 ffr_ramification_points = get_ramification_points(
                     curve=ffr_curve, 
                     diff_params=diff_params,
@@ -660,9 +657,10 @@ class SWDataBase(object):
                     logger_name=self.logger_name,
                 )
                 
-#                logger.info('These are the punctures:')
-#                for pct in punctures:
-#                    logger.info('{} at z={}'.format(pct.label, pct.z))
+                logger.debug('These are the punctures:')
+                for pct in punctures:
+                    logger.debug('{} at z={}'.format(pct.label, pct.z))
+
                 # Now check if the z-plane needs to be rotated
 
                 # z-coords of branch points.
@@ -729,7 +727,8 @@ class SWDataBase(object):
             )
 
         self.z_plane_rotation = z_plane_rotation
-        self.punctures = punctures
+        self.regular_punctures = regular_punctures
+        self.irregular_punctures = irregular_punctures
         self.ffr_ramification_points = ffr_ramification_points
         self.ffr_curve = ffr_curve
 
@@ -880,6 +879,40 @@ class SWDataBase(object):
 
         return list(xs)
 
+
+def get_punctures_from_config(config_punctures_string, label_prefix,
+                              size_of_puncture_cutoff, diff_params, 
+                              mt_params, z_plane_rotation,):
+    punctures = []
+    punctures_str = [
+        p_raw_str.strip() for p_raw_str 
+        in config_punctures_string.lstrip('[').rstrip(']').split(',')
+    ]
+    for p_n, p_str in enumerate(punctures_str):
+        if len(p_str) == 0:
+            continue
+        Cipz = sympy.sympify(p_str.strip()).subs(diff_params)
+        pz = PSL2C(mt_params, Cipz)
+        if pz == oo:
+            npz = oo
+        else:
+            # Note: if we substitute z' = c z in F(x,z)=0,
+            # where c is a phase, the position of punctures 
+            # and branch points will rotate contravariantly
+            # z_pt -> c^{-1} z_pt
+            npz = complex(
+                (pz / z_plane_rotation)
+                .evalf(n=ROOT_FINDING_PRECISION, chop=True)
+            )
+        punctures.append(
+            Puncture(
+                z=npz, Ciz=Cipz,
+                cutoff=size_of_puncture_cutoff,
+                label=(label_prefix + ' #{}'.format(p_n))
+            )
+        )
+    return punctures
+
 # E_6 curve strings
 tau_str = 't + 1/t + {u_6}'
 q_1_str = (
@@ -995,8 +1028,12 @@ def get_ramification_points(
             g_data=g_data,
             logger_name=logger_name,
         )
-    # elif method == 'system_of_eqs':
     else:
+        if method != 'system_of_eqs':
+            logger.warning(
+                'Unknown or no method set to find ramification points.\n'
+                'Use system_of_eqs by default.'
+            )
         sols = get_ramification_points_using_system_of_eqs(
             curve=curve, 
             diff_params=diff_params, 
@@ -1005,12 +1042,6 @@ def get_ramification_points(
             punctures=punctures,
             logger_name=logger_name,
         )
-    # else:
-    #    raise ValueError(
-    #        'Unknown or no method set to find ramification points.\n'
-    #        'Set ramification_point_finding_method = '
-    #        '[discriminant|system_of_eqs] in the configuration.'
-    #    )
 
     ramification_points = []
 
@@ -1027,8 +1058,6 @@ def get_ramification_points(
             label=('ramification point #{}'
                    .format(len(ramification_points)))
         )
-#        logger.info("{}: z = {}, x = {}, i = {}."
-#                    .format(label, rp.z, rp.x, rp.i))
         ramification_points.append(rp)
 
     return ramification_points

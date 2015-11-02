@@ -74,7 +74,8 @@ class GUILoom:
              ('Representation', 'representation')],
             [('Casimir differentials', 'casimir_differentials')],
             [('Parameters of differentials','differential_parameters')],
-            [('Punctures', 'punctures')],
+            [('Regular punctures', 'regular_punctures')],
+            [('Irregular punctures', 'irregular_punctures')],
             [('Mobius transformation', 'mt_params')], 
             [('Ramification point finding method', 
               'ramification_point_finding_method'),],
@@ -459,7 +460,7 @@ class GUILoom:
                 )
                 self.change_gui_state('on')
                 return None
-        spectral_network_data = result_queue.get()
+        config, spectral_network_data = result_queue.get()
         generate_process.join()
         self.sw_data = spectral_network_data.sw_data
         self.spectral_networks = spectral_network_data.spectral_networks

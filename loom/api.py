@@ -55,7 +55,7 @@ def set_logging(
 
     if remove_handlers is True:
         # Remove root log handlers.
-        logging.getLogger().handlers = []
+        #logging.getLogger().handlers = []
         # Remove other handlers.
         logger.handlers = []
 
@@ -128,7 +128,8 @@ def load_spectral_network(
     logger.info('Opening data directory "{}"...'.format(data_dir))
 
     config = LoomConfig(logger_name=logger_name)
-    config.read(os.path.join(data_dir, 'config.ini'))
+    with open(os.path.join(data_dir, 'config.ini')) as fp:
+        config.read(fp)
 
     # Check the version of the saved data.
     current_version = get_current_branch_version()
@@ -347,7 +348,8 @@ def make_spectral_network_plot(
         plot_legend = spectral_network_plot.draw(
             spectral_network, 
             sw_data.branch_points,
-            punctures=sw_data.punctures,
+            punctures=(sw_data.regular_punctures + 
+                       sw_data.irregular_punctures),
             irregular_singularities=sw_data.irregular_singularities,
             g_data=sw_data.g_data,
             **kwargs
