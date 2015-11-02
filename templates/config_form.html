@@ -1,0 +1,112 @@
+    <h2>Configuration</h2>
+    <form action="" class="form-horizontal" id="config_form" method="post">
+        <div class="form-group">
+            <div class="col-xs-2">
+                <label for="type_radio" class="control-label">
+                    Lie algebra type
+                </label>
+            </div>
+            <div class="col-xs-2">
+                <label class="radio-inline">
+                    <input type="radio" 
+                     name="type" id="type_radio" value="A"
+                     {% if loom_config['root_system'][0] == 'A' %}
+                     checked
+                     {% endif %}
+                     >A
+                </label>
+                <label class="radio-inline">
+                    <input type="radio" name="type" id="type_radio" value="D"
+                     {% if loom_config['root_system'][0] == 'D' %}
+                     checked
+                     {% endif %}
+                     >D
+                </label>
+                <label class="radio-inline">
+                    <input type="radio" name="type" id="type_radio" value="E" 
+                     {% if loom_config['root_system'][0] == 'E' %}
+                     checked
+                     {% endif %}
+                     >E
+                </label>
+            </div>
+            <div class="col-xs-1">
+                <label for="rank_text" class="control-label">rank</label>
+            </div>
+            <div class="col-xs-1">
+                <input type="text" class="form-control"
+                 name="rank" id="rank_text"
+                 value="{{ loom_config['root_system'][1:] }}">
+            </div>
+            <div class="col-xs-2">
+                <label for="representation_text" class="control-label">
+                    representation
+                </label>
+            </div>
+            <div class="col-xs-1">
+                <input type="text" class="form-control"
+                 name="representation" id="representation_text"
+                 value="{{ loom_config['representation']}}">
+            </div>
+        </div>
+    {% for item in config_items %}
+        {% for (label, option) in item %}
+        <div class="form-group">
+            <div class="col-xs-3">
+                <label for="{{ option }}_text" class="control-label">
+                    {{ label }}
+                </label>
+            </div>
+            <div class="col-xs-5">
+                <input type="text" class="form-control"
+                 name="{{ option }}" id="{{ option }}_text"
+                 value="{{ loom_config[option] }}">
+            </div>
+        </div>
+        {% endfor %}
+    {% endfor %}
+        <input type="hidden" name="n_processes" 
+        {% if n_processes is not none %}
+         value="{{ n_processes }}"
+        {% else %}
+         value="4"
+        {% endif %}
+        >
+        <div class="form-group">
+            <div class="col-xs-3">
+                <label for="phase_text" class="control-label">Phase</label>
+            </div>
+            <div class="col-xs-5">
+                <input type="text" class="form-control"
+                 name="phase" id="phase_text" value="1.0">
+            </div>
+        </div>
+    </form>
+    <form action="" class="form-horizontal" 
+     method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <div class="col-xs-3">
+                <label for="config_file" class="control-label">
+                    Or choose a configuration file to load.
+                </label>
+                <input type="file" 
+                 name="config_file" id="config_file">
+            </div>
+            <div class="col-xs-4">
+                <input type="submit" class="btn btn-default"
+                 id="load_config_button"
+                 formaction="" value="Load configuration">
+                <input type="submit" class="btn btn-default"
+                 id="save_config_button"
+                 form="config_form" formaction="{{ url_for('save_config') }}"
+                 value="Save configuration">
+            </div>
+        </div>
+    </form>
+    <form class="form-horizontal">
+        <div class="col-xs-2">
+            <input type="submit" class="btn btn-default" form="config_form" 
+             value="Generate spectral networks">
+        </div>
+    </form>
+
