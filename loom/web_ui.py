@@ -56,27 +56,32 @@ class LoomDB(object):
         self.loom_processes = {}
         self.is_alive = {}
 
-        signal.signal(signal.SIGINT, self.loom_db_sigint_handler)
-        signal.signal(signal.SIGTERM, self.loom_db_sigterm_handler)
+        signal.signal(signal.SIGINT, self.loom_db_stop_signal_handler)
+        signal.signal(signal.SIGTERM, self.loom_db_stop_signal_handler)
 
         self.db_manager = threading.Thread(
             target=self.db_manager,
         )
-        #self.db_manager.daemon = True
         self.db_manager_stop = threading.Event()
         self.db_manager_stop.clear()
         self.db_manager.start()
 
-    def loom_db_sigint_handler(self, signum, frame):
-        print 'test: loom_db got sigint'
-        self.db_manager_stop.set()
-        #raise KeyboardInterrupt
-        sys.exit()
+    def loom_db_stop_signal_handler(self, signum, frame):
+        logger_name = get_logger_name()
+        logger = logging.getLogger(logger_name)
 
-    def loom_db_sigterm_handler(self, signum, frame):
-        print 'test: loom_db got sigterm'
-        #raise SystemExit
-        sys.exit()
+        if signum == signal.SIGINT:
+            msg = 'LoomDB caught SIGINT; raises KeyboardInterrrupt.'
+            #e = KeyboardInterrupt(msg)
+            e = KeyboardInterrupt
+        elif signum == signal.SIGTERM:
+            msg = 'LoomDB caught SIGTERM; raises SystemExit.'
+            #e = SystemExit(msg)
+            e = SystemExit
+
+        logger.warning(msg)
+        self.db_manager_stop.set()
+        raise e
 
     def db_manager(self):
         """
@@ -86,9 +91,8 @@ class LoomDB(object):
         logger_name = get_logger_name()
         logger = logging.getLogger(logger_name)
 
-
-        #while self.db_manager_stop.is_set():
         while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
+            to_delete = []
             try:
                 for process_uuid, alive in self.is_alive.iteritems():
                     if alive is True:
@@ -96,6 +100,7 @@ class LoomDB(object):
                         # it can be cleaned up later.
                         self.is_alive[process_uuid] = False
                     else:
+                        to_delete.append(process_uuid)
                         self.finish_loom_process(process_uuid)
 
                         try:
@@ -113,11 +118,44 @@ class LoomDB(object):
                             ) 
                             pass
 
-                #time.sleep(DB_CLEANUP_CYCLE_SECS)
-                #self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS)
-            except (KeyboardInterrupt, SystemExit):
-                break
-        print 'thread finished'
+                for process_uuid in to_delete:
+                    try:
+                        del self.is_alive[process_uuid]
+                    except KeyError:
+                        logger.warning(
+                            "Deleting is_alive[{}] failed."
+                            .format(process_uuid)
+                        ) 
+                        pass
+
+            except (KeyboardInterrupt, SystemExit) as e:
+                msg = ('LoomDB manager thread caught {}; '
+                       'finishes the manager.'.format(type(e)))
+                logger.warning(msg)
+                raise e(msg)
+
+        process_uuids = self.loom_processes.keys()
+        
+        # Received a stop event; finish all the processes.
+        for process_uuid in process_uuids:
+            logger.info('Finishing process {}...'.format(process_uuid))
+            self.loom_processes[process_uuid].terminate()
+#            self.finish_loom_process(process_uuid, join_timeout=0)
+#            try:
+#                # Flush the result queue.
+#                result_queue = self.result_queues[process_uuid]
+#                while result_queue.empty() is False:
+#                    result_queue.get_nowait()
+#                # Remove the result queue
+#                del self.result_queues[process_uuid]
+#            except KeyError:
+#                logger.warning(
+#                    "Removing result queue {} failed: "
+#                    "no such a queue exists."
+#                    .format(process_uuid)
+#                ) 
+#                pass
+#        logger.info('LoomDB manager thread is finished.')
 
     def start_loom_process(
         self, process_uuid, logging_level, loom_config, phase=None,
@@ -175,9 +213,10 @@ class LoomDB(object):
         try:
             result_queue = self.result_queues[process_uuid]
         except KeyError:
-            yield 'event: finish\ndata: \n\n'
+            yield 'event: key_error\ndata: \n\n'
+            raise StopIteration
 
-        while self.result_queues[process_uuid].empty() is True:
+        while result_queue.empty() is True:
             try:
                 logs = self.get_log_message(process_uuid, logging_stream,
                                             logging_stream_handler,)
@@ -186,6 +225,9 @@ class LoomDB(object):
                 pass 
             except (KeyboardInterrupt, SystemExit):
                 raise
+            except KeyError:
+                yield 'event: key_error\ndata: \n\n'
+                raise StopIteration
             except:
                 import traceback
                 print >> sys.stderr, 'logging_listener_process:'
@@ -201,7 +243,13 @@ class LoomDB(object):
                 break 
             except (KeyboardInterrupt, SystemExit):
                 raise
+            except KeyError:
+                yield 'event: finish\ndata: \n\n'
+                raise StopIteration
+
+        # Recevied all the logs, finish the SSE stream.
         yield 'event: finish\ndata: \n\n'
+        raise StopIteration
 
     def get_result(self, process_uuid):
         logger_name = get_logger_name(process_uuid)
@@ -231,7 +279,8 @@ class LoomDB(object):
             self.finish_loom_process(process_uuid)
             return rv 
 
-    def finish_loom_process(self, process_uuid):
+    def finish_loom_process(self, process_uuid,
+                            join_timeout=LOOM_PROCESS_JOIN_TIMEOUT_SECS):
         logger_name = get_logger_name(process_uuid)
         logger = logging.getLogger(logger_name)
         web_loom_logger = logging.getLogger(get_logger_name())
@@ -240,7 +289,7 @@ class LoomDB(object):
             # Terminate the loom_process.
             loom_process = self.loom_processes[process_uuid]
 
-            loom_process.join(LOOM_PROCESS_JOIN_TIMEOUT_SECS)
+            loom_process.join(join_timeout)
             if loom_process.is_alive():
                 loom_process.terminate()
 
@@ -268,7 +317,10 @@ class LoomDB(object):
             # Flush the logging queue.
             logging_queue = self.logging_queues[process_uuid]
             while logging_queue.empty() is True:
-                logging_queue.get_nowait()
+                try:
+                    logging_queue.get_nowait()
+                except QueueEmpty:
+                    break
             # Remove the logging queue.
             del self.logging_queues[process_uuid]
         except KeyError:

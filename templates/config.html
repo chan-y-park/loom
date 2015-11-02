@@ -122,8 +122,6 @@
     <script>
         var box = $("textarea[name=logging]");
         
-        var source = new EventSource("{{ event_source_url }}");
-
         source.onmessage = function(e) {
             var logs = box.val();
             box.val(logs + '\n' + e.data);

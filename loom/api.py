@@ -5,6 +5,7 @@ import glob
 import zipfile
 import logging
 import subprocess
+import signal
 import matplotlib
 import pdb
 
@@ -239,6 +240,11 @@ def save_spectral_network(
     return None
 
 
+def stop_signal_handler(signum, frame):
+    if signum == signal.SIGTERM:
+        raise SystemExit('SIGTERM catched by generate_spectral_network.')
+
+
 def generate_spectral_network(
     config,
     phase=None,
@@ -273,6 +279,7 @@ def generate_spectral_network(
             spectral_networks = [spectral_network]
 
         elif(phase_range is not None):
+            #signal.signal(signal.SIGTERM, stop_signal_handler) 
             logger.info('Generate multiple spectral networks.')
             logger.info('phase_range = {}.'.format(phase_range))
             spectral_networks = parallel_get_spectral_network(
@@ -287,7 +294,7 @@ def generate_spectral_network(
 
     except (KeyboardInterrupt, SystemExit) as e:
         logger.warning('loom.api caught {} while generating spectral networks.'
-                       .format(e.__class__))
+                       .format(type(e)))
         sw = None
         spectral_networks = None
 

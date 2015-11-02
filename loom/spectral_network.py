@@ -41,6 +41,9 @@ class SpectralNetwork:
         if the depth of the joint is too deep.
         """
         logger = logging.getLogger(self.logger_name)
+        
+        # Add a signal handler
+
         accuracy = config['accuracy']
         num_of_iterations = config['num_of_iterations']
         n_steps = config['num_of_steps']

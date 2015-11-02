@@ -4,6 +4,16 @@ import logging
 
 from spectral_network import SpectralNetwork
 
+def child_sigint_handler(signum, frame):
+    print("SIGINT catched by a child of loom.parallel.")
+    raise KeyboardInterrupt("SIGINT catched by a child of loom.parallel.")
+
+
+def child_sigterm_handler(signum, frame):
+    print("SIGTERM catched by a child of loom.parallel.")
+    raise SystemExit("SIGTERM catched by a child of loom.parallel.")
+
+
 def init_process():
     """
     Initializer of each child process that generates a spectral network.
@@ -37,11 +47,14 @@ def a_child_process(
         ) 
 
         spectral_network.grow(config, sw)
-    except Exception as e:
-        logger.warning("{}".format(e.value))
-        return None 
-    except (KeyboardInterrupt, SystemExit):
+    except (KeyboardInterrupt, SystemExit) as e:
+        logger.warning('A child process calculating phase = {} '
+                       'caught {}'.format(phase, type(e)))
         return None
+    except Exception as e:
+        logger.warning('A child process calculating phase = {} '
+                       'caught an exception: {}'.format(phase, e.args))
+        return None 
 
     shared_n_finished_spectral_networks.value += 1
     logger.info('Finished generating spectral network #{}/{}.'
@@ -49,12 +62,6 @@ def a_child_process(
     )
 
     return spectral_network
-
-def child_sigint_handler(signum, frame):
-    raise Exception("SIGINT catched by loom.parallel.")
-
-def child_sigterm_handler(signum, frame):
-    raise Exception("SIGTERM catched by loom.parallel.")
 
 
 def parallel_get_spectral_network(
@@ -118,8 +125,8 @@ def parallel_get_spectral_network(
             spectral_network_list.append(result.get())
 
     except (KeyboardInterrupt, SystemExit) as e:
-        logger.warning('loom.parallel caught {}; terminates processes...'
-                       .format(e.__class__))
+        logger.warning('loom.parallel caught {}: {}; terminates processes...'
+                       .format(type(e), e.args,))
         pool.terminate()
         pool.join()
         raise
