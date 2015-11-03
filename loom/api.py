@@ -250,6 +250,7 @@ def stop_signal_handler(signum, frame):
 def generate_spectral_network(
     config,
     phase=None,
+    n_processes=0,
     result_queue=None,
     logging_queue=None,
     logger_name='loom',
@@ -261,14 +262,15 @@ def generate_spectral_network(
     """
 
     logger = logging.getLogger(logger_name)
-    phase_range = config['phase_range']
+    if phase is None:
+        phase = config['phase']
     try:
         sw = SWDataWithTrivialization(config, logger_name=logger_name)
 
         start_time = time.time()
         logger.info('start cpu time: %s', start_time)
 
-        if(phase is not None):
+        if(isinstance(phase, float)):
             logger.info('Generate a single spectral network at theta = {}.'
                         .format(phase))
             spectral_network = SpectralNetwork(
@@ -280,14 +282,14 @@ def generate_spectral_network(
 
             spectral_networks = [spectral_network]
 
-        elif(phase_range is not None):
-            #signal.signal(signal.SIGTERM, stop_signal_handler) 
+        elif(isinstance(phase, list)):
             logger.info('Generate multiple spectral networks.')
-            logger.info('phase_range = {}.'.format(phase_range))
+            logger.info('phases = {}.'.format(phase))
             spectral_networks = parallel_get_spectral_network(
                 sw, 
                 config,
-                logger_name,
+                n_processes,
+                logger_name=logger_name,
             ) 
 
         end_time = time.time()

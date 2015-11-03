@@ -40,11 +40,14 @@ LOGGING_FILE_PATH = os.path.join(
     ('logs/web_loom_{}-{:02}-{:02} {:02}:{:02}:{:02}.log'
      .format(*time.localtime(time.time())[:6])),
 )
-#MAX_NUM_PROCESSES = 4
+DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
 
 
+# Array of ('entry label', 'config option') pairs. 
+# Entries that will be placed in the same row
+# are in the same row of this array.
 config_items = [
     [('Description', 'description')],
     #[('Root System', 'root_system'),
@@ -63,12 +66,10 @@ config_items = [
     [('Size of a large step', 'size_of_large_step')],
     [('Size of a branch point cutoff', 'size_of_neighborhood')],
     [('Size of a puncture cutoff', 'size_of_puncture_cutoff')],
-    #[('Size of an intersection bin', 'size_of_bin')],
     #[('', 'size_of_ramification_pt_cutoff')],
     [('Accuracy', 'accuracy')],
-    #[('Number of processes', 'n_processes')],
     [('Mass limit', 'mass_limit')],
-    [('Range of phases', 'phase_range')],
+    [('Phase (single value or range)', 'phase')],
 ]
 
 
@@ -183,8 +184,11 @@ class LoomDB(object):
         logger.info('LoomDB manager thread is finished.')
 
     def start_loom_process(
-        self, process_uuid, logging_level, loom_config, phase=None,
+        self, process_uuid, logging_level, loom_config, n_processes=None,
     ):
+        if n_processes is None:
+            n_processes = DEFAULT_NUM_PROCESSES
+
         logging_queue = multiprocessing.Queue()
         self.logging_queues[process_uuid] = logging_queue
         logger_name = get_logger_name(process_uuid)
@@ -203,7 +207,7 @@ class LoomDB(object):
                 loom_config,
             ),
             kwargs=dict(
-                phase=phase,
+                n_processes=n_processes,
                 result_queue=result_queue,
                 logging_queue=logging_queue,
                 logger_name=logger_name,
@@ -375,25 +379,21 @@ class WebLoomApplication(flask.Flask):
 def index():
     return flask.render_template('index.html')
 
-def config():
-    # Array of ('entry label', 'config option') pairs. 
-    # Entries that will be placed in the same row
-    # are in the same row of this array.
+def config(n_processes=None):
 
     loom_config = None
     event_source_url = None
     text_area_content = '' 
-    #plot_url = None
-    n_processes = None 
+#    n_processes = None 
     process_uuid = None
 
     if flask.request.method == 'GET':
         # Load the default configuration.
         loom_config = get_loom_config()
-        try:
-            n_processes = flask.request.args['n']
-        except KeyError:
-            pass
+#        try:
+#            n_processes = flask.request.args['n']
+#        except KeyError:
+#            pass
 
     elif flask.request.method == 'POST':
         try:
@@ -409,16 +409,14 @@ def config():
             else:
                 loom_config = LoomConfig(logger_name=get_logger_name())
                 loom_config.read(uploaded_config_file)
-                n_processes = loom_config['n_processes']
         else:
-            phase = eval(flask.request.form['phase'])
             process_uuid = str(uuid.uuid4())
             logger_name = get_logger_name(process_uuid)
             loom_config = get_loom_config(flask.request.form, logger_name) 
             #app = flask.current_app._get_current_object()
             app = flask.current_app
             app.loom_db.start_loom_process(
-                process_uuid, logging.INFO, loom_config, phase,
+                process_uuid, logging.INFO, loom_config, n_processes,
             )
             event_source_url = flask.url_for(
                 'logging_stream', process_uuid=process_uuid,
@@ -426,7 +424,6 @@ def config():
             text_area_content = (
                 "Start loom, uuid = {}".format(process_uuid)
             )
-            #plot_url = flask.url_for('plot')
 
     return flask.render_template(
         'config.html',
@@ -436,7 +433,6 @@ def config():
         process_uuid=process_uuid,
         event_source_url=event_source_url,
         text_area_content=text_area_content,
-        #plot_url=plot_url,
     )
 
 
@@ -506,8 +502,10 @@ def download_data(process_uuid):
     data['sw_data.json'] = json.dumps(sw_data.get_json_data())
 
     for i, spectral_network in enumerate(spectral_networks):
-        data['data_{}.json'.format(i)] = json.dumps(
-            spectral_network.get_json_data())
+        file_name_idx = str(i).zfill(len(str(len(spectral_networks) - 1)))
+        data['data_{}.json'.format(file_name_idx)] = json.dumps(
+            spectral_network.get_json_data()
+        )
 
     data_zip_fp = BytesIO()
     with zipfile.ZipFile(data_zip_fp, 'w') as zfp:
@@ -599,6 +597,9 @@ def get_application(config_file, logging_level):
     application.config.from_object(__name__)
     application.add_url_rule(
         '/', 'index', index, methods=['GET'],
+    )
+    application.add_url_rule(
+        '/config/<n_processes>', 'config', config, methods=['GET', 'POST'],
     )
     application.add_url_rule(
         '/config', 'config', config, methods=['GET', 'POST'],

@@ -32,7 +32,7 @@ def a_child_process(
     logger_name,
 ):
     logger = logging.getLogger(logger_name)
-    theta_i, theta_f, theta_n = config['phase_range']
+    theta_i, theta_f, theta_n = config['phase']
 
     shared_n_started_spectral_networks.value += 1
     job_id = shared_n_started_spectral_networks.value
@@ -67,13 +67,14 @@ def a_child_process(
 def parallel_get_spectral_network(
     sw, 
     config,
+    n_processes,
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
     spectral_network_list = []
-    n_processes = config['n_processes']
+    #n_processes = config['n_processes']
 
-    theta_i, theta_f, theta_n = config['phase_range']
+    theta_i, theta_f, theta_n = config['phase']
     phases = [(float(theta_i) + i * float(theta_f - theta_i) / (theta_n-1))
               for i in range(theta_n)]
 

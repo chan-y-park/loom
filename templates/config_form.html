@@ -1,4 +1,7 @@
     <h2>Configuration</h2>
+    {% if n_processes %}
+    <h3>n_processes = {{ n_processes }}</h3>
+    {% endif %}
     <form action="" class="form-horizontal" id="config_form" method="post">
         <div class="form-group">
             <div class="col-xs-2">
@@ -72,6 +75,7 @@
          value="4"
         {% endif %}
         >
+<!--
         <div class="form-group">
             <div class="col-xs-3">
                 <label for="phase_text" class="control-label">Phase</label>
@@ -81,6 +85,7 @@
                  name="phase" id="phase_text" value="1.0">
             </div>
         </div>
+-->
     </form>
     <form action="" class="form-horizontal" 
      method="post" enctype="multipart/form-data">

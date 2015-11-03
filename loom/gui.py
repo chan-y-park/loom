@@ -89,9 +89,10 @@ class GUILoom:
             [('Size of an intersection bin', 'size_of_bin')],
             #[('', 'size_of_ramification_pt_cutoff')],
             [('Accuracy', 'accuracy')],
-            [('Number of processes', 'n_processes')],
+            #[('Number of processes', 'n_processes')],
             [('Mass limit', 'mass_limit')],
-            [('Range of phases', 'phase_range')],
+            #[('Range of phases', 'phase_range')],
+            [('Phase (single value or range)', 'phase')],
         ]
     
     def create_widgets(self):
@@ -153,17 +154,30 @@ class GUILoom:
                     )
 
         # phase is not a config option, treated separately here.
-        self.entry_phase_var = tk.StringVar()
-        self.entry_phase_var.set('1.0')
-        self.entry_phase = tk.Entry(
+#        self.entry_phase_var = tk.StringVar()
+#        self.entry_phase_var.set('1.0')
+#        self.entry_phase = tk.Entry(
+#            self.root,
+#            textvariable=self.entry_phase_var
+#        )
+#        grid_col += 1
+#        tk.Label(self.root,
+#                 text='phase').grid(row=grid_row, column=grid_col)
+#        grid_col += 1
+#        self.entry_phase.grid(row=grid_row, column=grid_col)
+
+        # n_processes is not a config option, treated separately here.
+        self.entry_n_processes_var = tk.StringVar()
+        self.entry_n_processes_var.set('4')
+        self.entry_n_processes = tk.Entry(
             self.root,
-            textvariable=self.entry_phase_var
+            textvariable=self.entry_n_processes_var
         )
         grid_col += 1
         tk.Label(self.root,
-                 text='phase').grid(row=grid_row, column=grid_col)
+                 text='n_processes').grid(row=grid_row, column=grid_col)
         grid_col += 1
-        self.entry_phase.grid(row=grid_row, column=grid_col)
+        self.entry_n_processes.grid(row=grid_row, column=grid_col)
 
         self.update_entries_from_config()
 
@@ -427,7 +441,8 @@ class GUILoom:
                 self.config,
             ),
             kwargs=dict(
-                phase=eval(self.entry_phase_var.get()),
+                #phase=eval(self.entry_phase_var.get()),
+                n_processes=eval(self.entry_n_processes_var.get()),
                 result_queue=result_queue,
                 logger_name=self.logger_name,
             ),
