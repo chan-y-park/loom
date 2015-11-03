@@ -276,7 +276,8 @@ class SpectralNetwork:
                     elif num_of_intersections > buffer_size:
                         logger.info('Number of intersections larger than '
                                     'the buffer size; increase its size '
-                                    'and run intersection finding again.')
+                                    'to {} and find intersections again.'
+                                    .format(num_of_intersections))
                         buffer_size = num_of_intersections
                     else:
                         intersections.resize((num_of_intersections, 2))
