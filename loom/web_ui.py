@@ -291,7 +291,7 @@ class LoomDB(object):
 
         if result_queue.empty() is True:
             if loom_process.is_alive():
-                logger.warning('Process {} still alive.'.format(name))
+                logger.warning('Process {} still alive.'.format(process_uuid))
                 return rv 
             else:
                 logger.warning(

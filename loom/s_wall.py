@@ -291,10 +291,10 @@ class SWall(object):
         puncture_point_zs,
         config,
         clipping_radius=None,
+        z_range_limits=None,
     ):
         rpzs = ramification_point_zs
         ppzs = puncture_point_zs
-        # z_range_limits = config['z_range_limits']
         num_of_steps = config['num_of_steps']
         size_of_small_step = config['size_of_small_step']
         size_of_large_step = config['size_of_large_step']
@@ -309,12 +309,6 @@ class SWall(object):
         y_i = self[0]
         ode.set_initial_value(y_i)
 
-        # if z_range_limits is not None:
-        #     (
-        #         [z_real_min, z_real_max], [z_imag_min, z_imag_max] 
-        #         = z_range_limits
-        #     )
-
         while ode.successful() and step < num_of_steps:
             step += 1
             # Stop if z is inside a cutoff of a puncture.
@@ -325,13 +319,16 @@ class SWall(object):
                     break
 
             # Stop if z is ouside the range limit.
-            # if z_range_limits is not None:
-            #     if (z_i.real < z_real_min or
-            #         z_i.real > z_real_max or
-            #         z_i.imag < z_imag_min or
-            #         z_i.imag > z_imag_max):
-            #         self.resize(step)
-            #         break
+            if z_range_limits is not None:
+                z_real_range, z_imag_range = z_range_limits
+                z_real_min, z_real_max = z_real_range
+                z_imag_min, z_imag_max = z_imag_range
+                if (z_i.real < z_real_min or
+                    z_i.real > z_real_max or
+                    z_i.imag < z_imag_min or
+                    z_i.imag > z_imag_max):
+                    self.resize(step)
+                    break
 
             # Stop if M exceeds mass limit.
             if mass_limit is not None:
@@ -484,7 +481,6 @@ class SWall(object):
                     #  the direction (either 'cw' or 'ccw')]
                     # to each intersection.
                     intersections.append(
-#                        [branch_locus.label, t, clock(left_right(self.z, t))]
                         [branch_locus, t, clock(left_right(self.z, t))]
                     )
                 _cuts_intersections += intersections
@@ -558,8 +554,6 @@ class SWall(object):
 
             # Fill in the root types that occur after the basepoint
             for k in range(len(intersections_after_t_0)):
-#                br_loc_label, t, direction = intersections_after_t_0[k]
-#                branch_locus = branch_locus_from_label(sw_data, br_loc_label)
                 br_loc, t, direction = intersections_after_t_0[k]
 
                 current_root = self.local_roots[-1]
@@ -575,8 +569,6 @@ class SWall(object):
             # recall that their time-ordering has already been reversed
             # so the first one in the list is the closest to t_0, and so on
             for k in range(len(intersections_before_t_0)):
-#                br_loc_label, t, direction = intersections_before_t_0[k]
-#                branch_locus = branch_locus_from_label(sw_data, br_loc_label)
                 br_loc, t, direction = intersections_before_t_0[k]
 
                 current_root = self.local_roots[0]
@@ -652,8 +644,6 @@ class SWall(object):
         # piece add the corresponding intersection point
         t_0 = 0
         for int_data in self.cuts_intersections:
-#            br_loc_label, t, chi = int_data
-#            br_loc = branch_locus_from_label(sw_data, br_loc_label)
             br_loc, t, chi = int_data
 
             z_1 = self.z[t]
@@ -699,7 +689,6 @@ class SWall(object):
         # Update the intersection data.
         new_cuts_intersections = []
         for i, int_data in enumerate(self.cuts_intersections):
-#            br_loc_label, t_old, chi = int_data
             br_loc, t_old, chi = int_data
             t_new = t_old + i + 1
             new_cuts_intersections.append([br_loc, t_new, chi])

@@ -204,11 +204,9 @@ class SpectralNetwork:
         Find new wall-wall intersections using CGAL 2d curve intersection.
         """
         logger = logging.getLogger(self.logger_name)
+        accuracy = config['accuracy']
         new_joints = []
-#        if (config['root_system'] in ['A1', ]):
-#            logger.info('There is no joint for the given root system {}.'
-#                             .format(config['root_system']))
-#            return new_joints
+
         lib_name = 'libcgal_intersection'
         if linux_distribution == 'Ubuntu':
             lib_name += '_ubuntu'
@@ -277,8 +275,8 @@ class SpectralNetwork:
                         raise NoIntersection
                     elif num_of_intersections > buffer_size:
                         logger.info('Number of intersections larger than '
-                                         'the buffer size; increase its size '
-                                         'and run intersection finding again.')
+                                    'the buffer size; increase its size '
+                                    'and run intersection finding again.')
                         buffer_size = num_of_intersections
                     else:
                         intersections.resize((num_of_intersections, 2))
@@ -288,10 +286,16 @@ class SpectralNetwork:
                     ip_z = ip_x + 1j * ip_y
 
                     # t_n: index of new_s_wall.z nearest to ip_z
-                    t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
+                    #t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
+                    t_n = get_nearest_point_index(
+                        new_s_wall.z, ip_z, sw_data.branch_points, accuracy,
+                    )
 
                     # t_p: index of z_seg_p nearest to ip_z
-                    t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
+                    #t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
+                    t_p = get_nearest_point_index(
+                        prev_s_wall.z, ip_z, sw_data.branch_points, accuracy,
+                    )
 
                     # TODO: need to put the joint into the parent
                     # S-walls?
@@ -333,10 +337,6 @@ class SpectralNetwork:
         """
         logger = logging.getLogger(self.logger_name)
         new_joints = []
-#        if (config['root_system'] in ['A1', ]):
-#            logger.info('There is no joint for the given root system {}.'
-#                             .format(config['root_system']))
-#            return new_joints
 
         new_s_wall = self.s_walls[new_s_wall_index]
         new_tps = new_s_wall.get_turning_points()
@@ -428,3 +428,49 @@ def get_ode(sw, phase, accuracy):
     )
 
     return ode
+
+
+def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
+                            logger_name='loom',):
+    """
+    Get the index of the point on the S-wall that is nearest to 
+    the given point on the z-plane.
+
+    When the point found is within the accuracy limit from a branch cut,
+    look fot the next nearest point and return its index.
+    """
+    logger = logging.getLogger(logger_name)
+
+    ts = n_nearest_indices(s_wall_z, p_z, 3)
+    zs = [s_wall_z[t] for t in ts]
+
+    t = ts[0]
+
+    for bp in branch_points:
+        if abs(zs[0].real - bp.z.real) < accuracy:
+            logger.info(
+                'The nearest point is too close to a branch cut, '
+                'find the next nearest point.'
+            )
+            if (p_z.real - bp.z.real)*(zs[1].real - bp.z.real) > 0:
+                t = ts[1]
+                break
+            elif (p_z.real - bp.z.real)*(zs[2].real - bp.z.real) > 0:
+                t = ts[2]
+                break
+            else:
+                logger.warning(
+                    'Unable to find the next nearest point '
+                    'that is on the same side from the branch cut '
+                    'as the reference point.'
+                )
+                break
+
+    # Final check.
+    for bp in branch_points:
+        if abs(s_wall_z[t].real - bp.z.real) < accuracy:
+            logger.warning('Unable to find the nearest point on the S-wall '
+                           'that is outside the accuracy limit '
+                           'from branch cuts of {}.'.format(bp.label))
+    return t
+
