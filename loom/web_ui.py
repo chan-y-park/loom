@@ -380,7 +380,7 @@ def index():
     return flask.render_template('index.html')
 
 def config(n_processes=None):
-
+    # XXX: n_processes is a string.
     loom_config = None
     event_source_url = None
     text_area_content = '' 
@@ -416,7 +416,7 @@ def config(n_processes=None):
             #app = flask.current_app._get_current_object()
             app = flask.current_app
             app.loom_db.start_loom_process(
-                process_uuid, logging.INFO, loom_config, n_processes,
+                process_uuid, logging.INFO, loom_config, eval(n_processes),
             )
             event_source_url = flask.url_for(
                 'logging_stream', process_uuid=process_uuid,
