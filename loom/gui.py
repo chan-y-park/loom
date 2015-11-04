@@ -436,7 +436,7 @@ class GUILoom:
         result_queue = multiprocessing.Queue()
 
         generate_process = multiprocessing.Process(
-            target = generate_spectral_network,
+            target=generate_spectral_network,
             args=(
                 self.config,
             ),

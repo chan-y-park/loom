@@ -140,9 +140,6 @@ class GData:
             root_system, 
             self.highest_weight,
         )
-#        logging.info("Representation data of ({}, {}) retrieved from SAGE:\n"
-#                     "{}".format(root_system, representation_str,
-#                                 pformat(sage_data)))
 
         self.ffr_weights = numpy.array(sage_data['ffr_weights'])
         self.roots = numpy.array(sage_data['roots'])
@@ -216,13 +213,6 @@ class GData:
     def create_root_color_map(self):
         g_roots = list(self.roots)
         n_rts = len(g_roots)
-        #x = numpy.random.random(size=n_rts) * 200
-        #y = numpy.random.random(size=n_rts) * 200
-        #z = numpy.random.random(size=n_rts) * 200
-        #colors = [
-        #    "#%02x%02x%02x" % (r, g, b) 
-        #    for r, g, b in zip(numpy.floor(x), numpy.floor(y), numpy.floor(z))
-        #]
         colors = []
         for i in range(n_rts):
             r, g, b, alpha = mpl_color_map.jet((i / float(n_rts)), bytes=True)
@@ -308,8 +298,10 @@ class RamificationPoint:
         else:
             sw_diff_coeff = None
         self.sw_diff_coeff = sw_diff_coeff 
-
-        self.is_puncture = json_data['is_puncture']
+        try:
+            self.is_puncture = json_data['is_puncture']
+        except KeyError:
+            self.is_puncture = False
 
 
 class Puncture:
@@ -550,15 +542,32 @@ class SWDataBase(object):
         return json_data
 
     def set_from_json_data(self, json_data):
+        logger = logging.getLogger(self.logger_name)
+
         self.g_data = GData(json_data=json_data['g_data'])
-        self.regular_punctures = [
-            Puncture(json_data=data)
-            for data in json_data['regular_punctures'] 
-        ]
-        self.irregular_punctures = [
-            Puncture(json_data=data)
-            for data in json_data['irregular_punctures'] 
-        ]
+        # XXX: Remove the following check after deprecating
+        # using older data.
+        try:
+            self.regular_punctures = [
+                Puncture(json_data=data)
+                for data in json_data['regular_punctures'] 
+            ]
+            self.irregular_punctures = [
+                Puncture(json_data=data)
+                for data in json_data['irregular_punctures'] 
+            ]
+        except KeyError:
+            logger.warning(
+                'Loading a JSON data of an older version: '
+                'no (ir)regular_punctures data, '
+                'use punctures data instead.'
+            )
+            self.regular_punctures = []
+            self.irregular_punctures = [
+                Puncture(json_data=data)
+                for data in json_data['punctures'] 
+            ]
+
         self.ffr_ramification_points = [
             RamificationPoint(json_data=data)
             for data in json_data['ffr_ramification_points']

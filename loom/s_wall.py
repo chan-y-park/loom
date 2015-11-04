@@ -8,7 +8,8 @@ from math import floor
 from scipy import interpolate
 
 from geometry import find_xs_at_z_0
-from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,)
+from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,
+                  is_root,)
 
 x, z = sympy.symbols('x z')
 
@@ -33,7 +34,7 @@ PUNCTURE_RADIUS = 0.001
 
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
-                 t_1=None, t_2=None, label=None, sw_data=None, 
+                 t_1=None, t_2=None, sw_data=None, 
                  logger_name='loom',):
         self.z = None
         self.M = None
@@ -41,7 +42,7 @@ class Joint:
         self.label = None
         self.root = None
         self.ode_xs = None
-        self.combos = None
+#        self.combos = None
 
         if z is None:
             # Return without setting attributes.
@@ -55,22 +56,9 @@ class Joint:
         alpha_1 = s_wall_1.get_root_at_t(t_1)
         alpha_2 = s_wall_2.get_root_at_t(t_2) 
         self.root = alpha_1 + alpha_2
-        # self.indices = [t_1, t_2]
-
-        # FIXME: Erase the following if we decide not to use
-        # x-coords in calculating joints of S-walls.
-        # Probably this will not be additional information because
-        # x's are calculated from the x's of the ffr cover.
-        # xs_at_z = find_xs_at_z_0(sw_data, z)
-        new_wall_weight_pairs = sw_data.g_data.ordered_weight_pairs(self.root)
-        # ### w_p_0 = new_wall_weight_pairs[0]
-        # x_i_s = [xs_at_z[w_p[0]] for w_p in new_wall_weight_pairs]
-        # x_j_s = [xs_at_z[w_p[1]] for w_p in new_wall_weight_pairs]
-        # self.x_s = [[x_i_s[k], x_j_s[k]] for k in range(len(x_i_s))]
 
         # FIXME: The following, including self.ode_xs, can be removed
         # once the seeding of an S-wall is done by using a root.
-        # ffr_xs_at_z = find_xs_at_z_0(sw_data, z, ffr=True)
         ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
         ffr_new_wall_weight_pairs = (
             sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
@@ -80,30 +68,32 @@ class Joint:
         ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
         self.ode_xs = [ode_x1, ode_x2]
 
-        # For each pair of pairs: [i, j] from the first wall
-        # and [j, k] from the second wall, we build 
-        # the list of 'combos'.
-        # This is a list [..., [[i, j], [j, k]],...]
-        combos = []
-        weight_pairs_1 = s_wall_1.get_weight_pairs_at_t(t_1)
-        weight_pairs_2 = s_wall_2.get_weight_pairs_at_t(t_2)
-        for w_p in new_wall_weight_pairs:
-            w_i = w_p[0]
-            w_k = w_p[1]
-            ij_in_1 = [pair for pair in weight_pairs_1 if (pair[0] == w_i)]
-            ij_in_2 = [pair for pair in weight_pairs_2 if (pair[0] == w_i)]
-            jk_in_1 = [pair for pair in weight_pairs_1 if (pair[1] == w_k)]
-            jk_in_2 = [pair for pair in weight_pairs_2 if (pair[1] == w_k)]
-            if len(ij_in_1) > 0 and len(jk_in_2) > 0:
-                combos.append([ij_in_1[0], jk_in_2[0]])
-            elif len(ij_in_2) > 0 and len(jk_in_1) > 0:
-                combos.append([ij_in_2[0], jk_in_1[0]])
-            else:
-                raise ValueError(
-                    'Cannot pick ij, jk pairs from colliding S-walls\n{}\n{}'
-                    .format(weight_pairs_1, weight_pairs_2)
-                )
-        self.combos = combos
+        # FIXME: Remove the following if not needed.
+#        # For each pair of pairs: [i, j] from the first wall
+#        # and [j, k] from the second wall, we build 
+#        # the list of 'combos'.
+#        # This is a list [..., [[i, j], [j, k]],...]
+#        combos = []
+#        new_wall_weight_pairs = sw_data.g_data.ordered_weight_pairs(self.root)
+#        weight_pairs_1 = s_wall_1.get_weight_pairs_at_t(t_1)
+#        weight_pairs_2 = s_wall_2.get_weight_pairs_at_t(t_2)
+#        for w_p in new_wall_weight_pairs:
+#            w_i = w_p[0]
+#            w_k = w_p[1]
+#            ij_in_1 = [pair for pair in weight_pairs_1 if (pair[0] == w_i)]
+#            ij_in_2 = [pair for pair in weight_pairs_2 if (pair[0] == w_i)]
+#            jk_in_1 = [pair for pair in weight_pairs_1 if (pair[1] == w_k)]
+#            jk_in_2 = [pair for pair in weight_pairs_2 if (pair[1] == w_k)]
+#            if len(ij_in_1) > 0 and len(jk_in_2) > 0:
+#                combos.append([ij_in_1[0], jk_in_2[0]])
+#            elif len(ij_in_2) > 0 and len(jk_in_1) > 0:
+#                combos.append([ij_in_2[0], jk_in_1[0]])
+#            else:
+#                raise ValueError(
+#                    'Cannot pick ij, jk pairs from colliding S-walls\n{}\n{}'
+#                    .format(weight_pairs_1, weight_pairs_2)
+#                )
+#        self.combos = combos
 
     def __eq__(self, other):
         return self.label == other.label
@@ -117,7 +107,7 @@ class Joint:
             'label': self.label,
             'root': self.root.tolist(),
             'ode_xs': [ctor2(x) for x in self.ode_xs],
-            'combos': self.combos,
+#            'combos': self.combos,
         }
         return json_data
 
@@ -129,7 +119,7 @@ class Joint:
         self.label = json_data['label']
         self.root = numpy.array(json_data['root'])
         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
-        self.combos = json_data['combos']
+#        self.combos = json_data['combos']
 
     def is_equal_to(self, other, accuracy):
         if(abs(self.z - other.z) > accuracy):
@@ -258,31 +248,60 @@ class SWall(object):
     def get_splittings(self):
         return [t for bp, t, d in self.cuts_intersections]
 
-    def get_turning_points(self):
+    def get_z_segs(self):
         """
-        Return a list of indices of turning points of SWall.z,
-        i.e. dx/dy = 0 or dy/dx = 0, where x = z[t].real and y = z[t].imag.
+        Return the segments of z-coordinates 
+        as a list of splitted numpy 1d array
+        with an overlapping element.
         """
-        tps = []
+        a = self.z 
+        ss = self.get_splittings()
+        n_segs = len(ss) + 1
 
-        if len(self.z) < 3:
-            return tps
+        if n_segs == 1:
+            return [a]
 
-        x_0 = self.z[0].real
-        y_0 = self.z[0].imag
+        # Start with an initial piece.
+        segs = [a[:ss[0] + 1]]
+        for i in range(len(ss) - 1):
+            s_0 = ss[i]
+            s_1 = ss[i + 1] + 1
+            if s_0 < 0 or s_1 < 0:
+                raise ValueError("SWall.get_z_segs(): overlap is too large.")
+            segs.append(a[s_0:s_1])
+        # Add the last piece.
+        s_f = ss[-1]
+        if s_f < 0:
+            raise ValueError("SWall.get_z_segs: overlap is too large.")
+        segs.append(a[s_f:])
 
-        for t in range(1, len(self.z) - 1):
-            x_1 = self.z[t].real
-            y_1 = self.z[t].imag
-            x_2 = self.z[t + 1].real
-            y_2 = self.z[t + 1].imag
-            if (
-                (x_1 - x_0) * (x_2 - x_1) < 0 or (y_1 - y_0) * (y_2 - y_1) < 0
-            ): 
-                tps.append(t)
-            x_0 = x_1
-            y_0 = y_1
-        return tps
+        return segs
+
+#    def get_turning_points(self):
+#        """
+#        Return a list of indices of turning points of SWall.z,
+#        i.e. dx/dy = 0 or dy/dx = 0, where x = z[t].real and y = z[t].imag.
+#        """
+#        tps = []
+#
+#        if len(self.z) < 3:
+#            return tps
+#
+#        x_0 = self.z[0].real
+#        y_0 = self.z[0].imag
+#
+#        for t in range(1, len(self.z) - 1):
+#            x_1 = self.z[t].real
+#            y_1 = self.z[t].imag
+#            x_2 = self.z[t + 1].real
+#            y_2 = self.z[t + 1].imag
+#            if (
+#                (x_1 - x_0) * (x_2 - x_1) < 0 or (y_1 - y_0) * (y_2 - y_1) < 0
+#            ): 
+#                tps.append(t)
+#            x_0 = x_1
+#            y_0 = y_1
+#        return tps
 
     def grow(
         self,
@@ -1005,28 +1024,28 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     return seeds
 
 
-def is_root(np_array, g_data):
-    ans = False
-    for rt in list(g_data.roots):
-        if (np_array == rt).all():
-            ans = True
-            break
-        else:
-            pass
-    return ans
+#def is_root(np_array, g_data):
+#    ans = False
+#    for rt in list(g_data.roots):
+#        if (np_array == rt).all():
+#            ans = True
+#            break
+#        else:
+#            pass
+#    return ans
 
 
-def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data, label=None):
-    """
-    Return a joint if formed, otherwise return None.
-    """
-    alpha_1 = s_wall_1.get_root_at_t(t_1)
-    alpha_2 = s_wall_2.get_root_at_t(t_2)
-
-    if is_root(alpha_1 + alpha_2, sw_data.g_data):
-        return Joint(z, s_wall_1, s_wall_2, t_1, t_2, label, sw_data)
-    else:
-        return None
+#def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data, label=None):
+#    """
+#    Return a joint if formed, otherwise return None.
+#    """
+#    alpha_1 = s_wall_1.get_root_at_t(t_1)
+#    alpha_2 = s_wall_2.get_root_at_t(t_2)
+#
+#    if is_root(alpha_1 + alpha_2, sw_data.g_data):
+#        return Joint(z, s_wall_1, s_wall_2, t_1, t_2, label, sw_data)
+#    else:
+#        return None
 
 
 def z_r_distance_from_ramification_loci(z, sw_data):

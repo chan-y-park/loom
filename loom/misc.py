@@ -208,32 +208,32 @@ def delete_duplicates(l, key=None, accuracy=False):
             
     return uniq
 
-def split_with_overlap(np_1d_array, splittings):
-    """
-    Return a list of splitted numpy 1d array with an overlapping element.
-    """
-    a = np_1d_array
-    ss = splittings
-    n_segs = len(ss) + 1
-
-    if n_segs == 1:
-        return [a]
-
-    # start with initial piece
-    segs = [a[:ss[0]+1]]
-    for i in range(len(ss)-1):
-        s_0 = ss[i]
-        s_1 = ss[i+1] + 1
-        if s_0 < 0 or s_1 < 0:
-            raise ValueError("split_with_overlap(): overlap is too large.")
-        segs.append(a[s_0:s_1])
-    # add the last piece
-    s_f = ss[-1]
-    if s_f < 0:
-        raise ValueError("split_with_overlap(): overlap is too large.")
-    segs.append(a[s_f:])
-
-    return segs
+#def split_with_overlap(np_1d_array, splittings):
+#    """
+#    Return a list of splitted numpy 1d array with an overlapping element.
+#    """
+#    a = np_1d_array
+#    ss = splittings
+#    n_segs = len(ss) + 1
+#
+#    if n_segs == 1:
+#        return [a]
+#
+#    # start with initial piece
+#    segs = [a[:ss[0]+1]]
+#    for i in range(len(ss)-1):
+#        s_0 = ss[i]
+#        s_1 = ss[i+1] + 1
+#        if s_0 < 0 or s_1 < 0:
+#            raise ValueError("split_with_overlap(): overlap is too large.")
+#        segs.append(a[s_0:s_1])
+#    # add the last piece
+#    s_f = ss[-1]
+#    if s_f < 0:
+#        raise ValueError("split_with_overlap(): overlap is too large.")
+#    segs.append(a[s_f:])
+#
+#    return segs
  
 
 def parse_sym_dict_str(string):
@@ -248,4 +248,15 @@ def parse_sym_dict_str(string):
         k_str, v_str = k_v_str.split(':')
         result.append((k_str.strip(), v_str.strip()))
     return result
+
+
+def is_root(np_array, g_data):
+    ans = False
+    for rt in list(g_data.roots):
+        if (np_array == rt).all():
+            ans = True
+            break
+        else:
+            pass
+    return ans
 

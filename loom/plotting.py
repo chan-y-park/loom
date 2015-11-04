@@ -14,7 +14,7 @@ from math import pi
 from sympy import oo
 
 from network_plot import NetworkPlotBase
-from misc import put_on_cylinder, split_with_overlap
+from misc import put_on_cylinder
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
@@ -93,7 +93,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                         split_at.append(j)
                 z_segs = numpy.split(zs_on_cylinder, split_at)
             else:
-                z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
+                #z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
+                z_segs = s_wall.get_z_segs()
                 
             seg_labels = [s_wall.label + '\n' + lab
                           for lab in map(str, s_wall.local_roots)]

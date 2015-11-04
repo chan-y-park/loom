@@ -265,10 +265,14 @@ def generate_spectral_network(
     if phase is None:
         phase = config['phase']
     try:
-        sw = SWDataWithTrivialization(config, logger_name=logger_name)
-
         start_time = time.time()
-        logger.info('start cpu time: %s', start_time)
+        start_date_time = (
+            '{:02}-{:02}-{:02} {:02}:{:02}:{:02}'
+            .format(*time.localtime(start_time)[:6])
+        )
+        logger.info('Started @ {}'.format(start_date_time))
+
+        sw = SWDataWithTrivialization(config, logger_name=logger_name)
 
         if(isinstance(phase, float)):
             logger.info('Generate a single spectral network at theta = {}.'
@@ -293,8 +297,12 @@ def generate_spectral_network(
             ) 
 
         end_time = time.time()
-        logger.info('end cpu time: %.8f', end_time)
-        logger.info('elapsed cpu time: %.8f', end_time - start_time)
+        end_date_time = (
+            '{:02}-{:02}-{:02} {:02}:{:02}:{:02}'
+            .format(*time.localtime(end_time)[:6])
+        )
+        logger.info('Finished @ {}'.format(end_date_time))
+        logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
     except (KeyboardInterrupt, SystemExit) as e:
         logger.warning('loom.api caught {} while generating spectral networks.'

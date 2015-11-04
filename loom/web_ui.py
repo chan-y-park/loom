@@ -410,6 +410,8 @@ def config(n_processes=None):
                 loom_config = LoomConfig(logger_name=get_logger_name())
                 loom_config.read(uploaded_config_file)
         else:
+            if n_processes is None:
+                n_processes = flask.request.form['n_processes']
             process_uuid = str(uuid.uuid4())
             logger_name = get_logger_name(process_uuid)
             loom_config = get_loom_config(flask.request.form, logger_name) 

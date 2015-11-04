@@ -8,7 +8,7 @@ from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
                           ResetTool, PreviewSaveTool)
 from bokeh.plotting import figure, output_file, show
 
-from misc import split_with_overlap
+#from misc import split_with_overlap
 
 def get_spectral_network_bokeh_plot(
     spectral_network_data, plot_range=None,
@@ -127,7 +127,8 @@ def get_spectral_network_bokeh_plot(
         sn_data['root'] = []
 
         for s_wall in sn.s_walls:
-            z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
+            #z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
+            z_segs = s_wall.get_z_segs()
             for z_seg in z_segs:
                 z_r = z_seg.real
                 z_i = z_seg.imag
