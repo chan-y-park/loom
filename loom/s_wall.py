@@ -34,8 +34,7 @@ PUNCTURE_RADIUS = 0.001
 
 class Joint:
     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
-                 t_1=None, t_2=None, sw_data=None, 
-                 logger_name='loom',):
+                 t_1=None, t_2=None, sw_data=None, logger_name='loom',):
         self.z = None
         self.M = None
         self.parents = None

@@ -348,16 +348,19 @@ class SpectralNetwork:
 
                     logger.debug('Joint at z = {}'.format(ip_z))
 
-                    new_joints.append(
-                        Joint(
-                            z=ip_z, 
-                            s_wall_1=prev_s_wall,
-                            s_wall_2=new_s_wall,                         
-                            t_1=t_p, 
-                            t_2=t_n,
-                            sw_data=sw_data,
+                    if is_root(prev_s_wall.get_root_at_t(t_p) +
+                               new_s_wall.get_root_at_t(t_n), 
+                               sw_data.g_data,) is True:
+                        new_joints.append(
+                            Joint(
+                                z=ip_z, 
+                                s_wall_1=prev_s_wall,
+                                s_wall_2=new_s_wall,                         
+                                t_1=t_p, 
+                                t_2=t_n,
+                                sw_data=sw_data,
+                            )
                         )
-                    )
 
         return new_joints
 
@@ -618,24 +621,37 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
     """
     logger = logging.getLogger(logger_name)
 
-    ts = n_nearest_indices(s_wall_z, p_z, 3)
-    zs = [s_wall_z[t] for t in ts]
+    t_0 = n_nearest_indices(s_wall_z, p_z, 1)[0]
 
-    t = ts[0]
+    t = t_0
+
+    t_max = len(s_wall_z) - 1
 
     for bp in branch_points:
-        if abs(zs[0].real - bp.z.real) < accuracy:
+        if abs(s_wall_z[t].real - bp.z.real) < accuracy:
             logger.info(
                 'The nearest point is too close to a branch cut, '
                 'find the next nearest point.'
             )
-            if (p_z.real - bp.z.real)*(zs[1].real - bp.z.real) > 0:
-                t = ts[1]
-                break
-            elif (p_z.real - bp.z.real)*(zs[2].real - bp.z.real) > 0:
-                t = ts[2]
-                break
-            else:
+            # Check the points before & after the given point
+            t_m = t_p = t
+            while t_m > 0 or t_p < t_max:
+                t_m -= 1
+                if t_m >= 0:
+                    z_m = s_wall_z[t_m]
+                    if (p_z.real - bp.z.real)*(z_m.real - bp.z.real) > 0:
+                        t = t_m
+                        break
+
+                t_p += 1
+                if t_p <= t_max:
+                    z_p = s_wall_z[t_p]
+                    if (p_z.real - bp.z.real)*(z_p.real - bp.z.real) > 0:
+                        t = t_p
+                        break
+
+            if t_m == 0 and t_p == t_max:
+                pdb.set_trace()
                 logger.warning(
                     'Unable to find the next nearest point '
                     'that is on the same side from the branch cut '
