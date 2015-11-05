@@ -8,8 +8,7 @@ from math import floor
 from scipy import interpolate
 
 from geometry import find_xs_at_z_0
-from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,
-                  is_root,)
+from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,)
 
 x, z = sympy.symbols('x z')
 
@@ -938,30 +937,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     return seeds
 
 
-#def is_root(np_array, g_data):
-#    ans = False
-#    for rt in list(g_data.roots):
-#        if (np_array == rt).all():
-#            ans = True
-#            break
-#        else:
-#            pass
-#    return ans
-
-
-#def get_joint(z, s_wall_1, s_wall_2, t_1, t_2, sw_data, label=None):
-#    """
-#    Return a joint if formed, otherwise return None.
-#    """
-#    alpha_1 = s_wall_1.get_root_at_t(t_1)
-#    alpha_2 = s_wall_2.get_root_at_t(t_2)
-#
-#    if is_root(alpha_1 + alpha_2, sw_data.g_data):
-#        return Joint(z, s_wall_1, s_wall_2, t_1, t_2, label, sw_data)
-#    else:
-#        return None
-
-
 def z_r_distance_from_ramification_loci(z, sw_data):
     critical_loci = sw_data.branch_points + sw_data.irregular_singularities
     return [abs(z.real - c_l.z.real) for c_l in critical_loci]
@@ -976,6 +951,7 @@ def branch_locus_from_label(sw_data, br_loc_label):
         'Could not find any branching locus labeled {}'.format(br_loc_label)
     )
 
+
 def clock(direction):
     if direction == 'left':
         return 'ccw'
@@ -983,6 +959,7 @@ def clock(direction):
         return 'cw'
     else:
         raise ValueError('Cannot read direction!')
+
 
 def left_right(l, point):
     """

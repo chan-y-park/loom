@@ -1,5 +1,4 @@
 import os
-import sys
 import platform
 import logging
 import matplotlib

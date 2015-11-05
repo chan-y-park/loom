@@ -252,7 +252,6 @@ class SWDataWithTrivialization(SWDataBase):
         super(SWDataWithTrivialization, self).__init__(
             config, logger_name=logger_name, json_data=json_data,
         )
-        logger = logging.getLogger(self.logger_name)
 
         self.branch_points = []
         self.irregular_singularities = []

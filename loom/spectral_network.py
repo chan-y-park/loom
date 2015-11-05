@@ -4,7 +4,6 @@ import numpy
 import sympy
 import ctypes
 import logging
-import json
 import pdb
 import itertools
 

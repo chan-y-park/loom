@@ -1,6 +1,5 @@
 # Force integer division to give a float, i.e. 1/2 = 0.5.
 from __future__ import division
-import sympy.mpmath as mpmath
 from sympy.mpmath import mp, mpc
 import logging
 import os
@@ -26,7 +25,7 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
             [str(precision)] +
             [str(eq) for eq in eqs]
         )
-    except (KeyboardInterrupt, SystemExit) as e:
+    except (KeyboardInterrupt, SystemExit):
         raise
     
     rv = eval(rv_str)
@@ -51,7 +50,7 @@ def get_g_data(root_system, highest_weight):
             ['sage', sage_script_dir + 'get_g_data.sage', root_system,
              str(highest_weight)]
         )
-    except (KeyboardInterrupt, SystemExit) as e:
+    except (KeyboardInterrupt, SystemExit):
         raise
 
     g_data = eval(g_data_str)

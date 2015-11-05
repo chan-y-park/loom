@@ -1,6 +1,5 @@
 import sys
 import pdb
-import logging
 
 z, x = var('z x')
 eqs = []

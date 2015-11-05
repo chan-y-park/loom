@@ -43,19 +43,14 @@ def set_logging(
     logging_level=logging.INFO, 
     logging_queue=None, 
     logging_stream=None,
-    #logging_file_name='logs/log.loom.txt',
     logging_file_name=None,
     remove_handlers=True,
 ):
-    #print('Setting logging level to "{}".'.format(level))
-
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging_level)
     formatter = get_logging_formatter(logging_level)
 
     if remove_handlers is True:
-        # Remove root log handlers.
-        #logging.getLogger().handlers = []
         # Remove other handlers.
         logger.handlers = []
 

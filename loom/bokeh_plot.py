@@ -1,12 +1,12 @@
 import numpy
 
-from cmath import phase, pi, exp
+from cmath import phase, pi
 from sympy import oo
 from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
 from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
                           ResetTool, PreviewSaveTool)
-from bokeh.plotting import figure, output_file, show
+from bokeh.plotting import figure
 
 from misc import get_splits_with_overlap
 
