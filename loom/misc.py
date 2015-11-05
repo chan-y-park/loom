@@ -208,33 +208,6 @@ def delete_duplicates(l, key=None, accuracy=False):
             
     return uniq
 
-#def split_with_overlap(np_1d_array, splittings):
-#    """
-#    Return a list of splitted numpy 1d array with an overlapping element.
-#    """
-#    a = np_1d_array
-#    ss = splittings
-#    n_segs = len(ss) + 1
-#
-#    if n_segs == 1:
-#        return [a]
-#
-#    # start with initial piece
-#    segs = [a[:ss[0]+1]]
-#    for i in range(len(ss)-1):
-#        s_0 = ss[i]
-#        s_1 = ss[i+1] + 1
-#        if s_0 < 0 or s_1 < 0:
-#            raise ValueError("split_with_overlap(): overlap is too large.")
-#        segs.append(a[s_0:s_1])
-#    # add the last piece
-#    s_f = ss[-1]
-#    if s_f < 0:
-#        raise ValueError("split_with_overlap(): overlap is too large.")
-#    segs.append(a[s_f:])
-#
-#    return segs
- 
 
 def parse_sym_dict_str(string):
     """
@@ -259,4 +232,53 @@ def is_root(np_array, g_data):
         else:
             pass
     return ans
+
+
+def get_turning_points(zs):
+    """
+    Return a list of indices of turning points of a curve on the z-plane,
+    i.e. dx/dy = 0 or dy/dx = 0, where x = z[t].real and y = z[t].imag.
+    """
+    tps = []
+
+    if len(zs) < 3:
+        return tps
+
+    x_0 = zs[0].real
+    y_0 = zs[0].imag
+
+    for t in range(1, len(zs) - 1):
+        x_1 = zs[t].real
+        y_1 = zs[t].imag
+        x_2 = zs[t + 1].real
+        y_2 = zs[t + 1].imag
+        if (
+            (x_1 - x_0) * (x_2 - x_1) < 0 or (y_1 - y_0) * (y_2 - y_1) < 0
+        ): 
+            tps.append(t)
+        x_0 = x_1
+        y_0 = y_1
+    return tps
+
+
+def get_splits_with_overlap(splits):
+    """
+    Get the start & the end indicies of a list according to the splits.
+
+    When the given split is [i_0, i_1, ...], this returns
+    [
+        [0, i_0 + 1],
+        [i_0, i_1 + 1],
+        ...
+    ]
+    """
+    new_splits = []
+    start = 0
+    for split in splits:
+        stop = split + 1
+        new_splits.append((start, stop))
+        start = split
+    new_splits.append((start, None))
+    return new_splits
+
 

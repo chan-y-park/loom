@@ -16,17 +16,19 @@ class NetworkPlotBase(object):
     
     def draw(
         self, phase=None, branch_points=None, joints=None, punctures=None,
-        irregular_singularities=None, walls=None, walls_colors=None, 
-        labels=None, plot_joints=False, plot_data_points=False,
+        irregular_singularities=None, walls=None, wall_segments=None, 
+        wall_colors=None, labels=None, plot_joints=False,
+        plot_data_points=False,
     ):
         """
         branch_points = [[bpx, bpy], ...]
         joints = [[jpx, jpy], ...]
         punctures = [[px, py], ...]
-        walls = [[wall.get_xs(), wall.get_ys(), ...]
+        walls = [s_wall[0].z, s_wall[1].z, ...]
+        wall_segments = [[[wall_i_seg_j_start, wall_i_seg_j_stop], ...], ...]
         labels = {'branch_points': [bp1_label, ...],
                   'joints': [jp1_label, ...],
-                  'walls': [wall1_label, ...]}
+                  'walls': [[wall_i_seg_j_label], ...]}
         """
         
         rect = [.1, 0.15, .8, .8]
@@ -50,22 +52,18 @@ class NetworkPlotBase(object):
         axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
 
         # Plot wall segments.
-        for i, wall in enumerate(walls):
+        for i, wall in enumerate(wall_segments):
             for j, segment in enumerate(wall):
-                seg_xs, seg_ys = segment
+                start, stop = segment
+                zs = walls[i][start:stop]
 
                 if plot_data_points is True:
-                    axes.plot(seg_xs, seg_ys, 'o', color='k')
+                    axes.plot(zs.real, zs.imag, 'o', color='k')
 
-                seg_color = walls_colors[i][j]
-                if seg_color is not None:
-                    axes.plot(seg_xs, seg_ys, '-',
-                              color=seg_color,
-                              label=labels['walls'][i][j],)
-                else:
-                    axes.plot(seg_xs, seg_ys, '+',
-                              color=seg_color,
-                              label=labels['walls'][i][j],)
+                seg_color = wall_colors[i][j]
+                axes.plot(zs.real, zs.imag, '-',
+                          color=seg_color,
+                          label=labels['walls'][i][j],)
 
         # Plot branch points.
         for i, bp in enumerate(branch_points):

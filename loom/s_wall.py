@@ -17,6 +17,7 @@ x, z = sympy.symbols('x z')
 # Number of x's at a fixed z
 NUM_ODE_XS_OVER_Z = 2
 
+# FIXME: Use the configuration data 'branch_point_cutoff'
 # within a disc of such radius from any branch point,
 # the intersection of a S-wall originating from there
 # with the corresponding cut, will be ignored.
@@ -28,6 +29,7 @@ BRANCH_POINT_RADIUS = 0.01
 SEED_PHASE_PRECISION = 0.001
 SEED_PRECISION_MAX_DEPTH = 5
 
+# FIXME: Use the configuration data 'puncture_cutoff'
 # cut S-walls if they get too close to punctures
 PUNCTURE_RADIUS = 0.001
 
@@ -41,7 +43,6 @@ class Joint:
         self.label = None
         self.root = None
         self.ode_xs = None
-#        self.combos = None
 
         if z is None:
             # Return without setting attributes.
@@ -67,38 +68,10 @@ class Joint:
         ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
         self.ode_xs = [ode_x1, ode_x2]
 
-        # FIXME: Remove the following if not needed.
-#        # For each pair of pairs: [i, j] from the first wall
-#        # and [j, k] from the second wall, we build 
-#        # the list of 'combos'.
-#        # This is a list [..., [[i, j], [j, k]],...]
-#        combos = []
-#        new_wall_weight_pairs = sw_data.g_data.ordered_weight_pairs(self.root)
-#        weight_pairs_1 = s_wall_1.get_weight_pairs_at_t(t_1)
-#        weight_pairs_2 = s_wall_2.get_weight_pairs_at_t(t_2)
-#        for w_p in new_wall_weight_pairs:
-#            w_i = w_p[0]
-#            w_k = w_p[1]
-#            ij_in_1 = [pair for pair in weight_pairs_1 if (pair[0] == w_i)]
-#            ij_in_2 = [pair for pair in weight_pairs_2 if (pair[0] == w_i)]
-#            jk_in_1 = [pair for pair in weight_pairs_1 if (pair[1] == w_k)]
-#            jk_in_2 = [pair for pair in weight_pairs_2 if (pair[1] == w_k)]
-#            if len(ij_in_1) > 0 and len(jk_in_2) > 0:
-#                combos.append([ij_in_1[0], jk_in_2[0]])
-#            elif len(ij_in_2) > 0 and len(jk_in_1) > 0:
-#                combos.append([ij_in_2[0], jk_in_1[0]])
-#            else:
-#                raise ValueError(
-#                    'Cannot pick ij, jk pairs from colliding S-walls\n{}\n{}'
-#                    .format(weight_pairs_1, weight_pairs_2)
-#                )
-#        self.combos = combos
-
     def __eq__(self, other):
         return self.label == other.label
 
     def get_json_data(self):
-        # FIXME: Determine what data to save.
         json_data = {
             'z': ctor2(self.z),
             'M': ctor2(self.M),
@@ -106,41 +79,34 @@ class Joint:
             'label': self.label,
             'root': self.root.tolist(),
             'ode_xs': [ctor2(x) for x in self.ode_xs],
-#            'combos': self.combos,
         }
         return json_data
 
     def set_from_json_data(self, json_data):
-        # FIXME: Determine what data to load.
         self.z = r2toc(json_data['z'])
         self.M = r2toc(json_data['M'])
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
         self.root = numpy.array(json_data['root'])
         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
-#        self.combos = json_data['combos']
 
     def is_equal_to(self, other, accuracy):
         if(abs(self.z - other.z) > accuracy):
             return False
+
         if numpy.array_equal(self.root, other.root) is not True:
             return False
+
         if(abs(self.M - other.M) > accuracy):
             return False
+
         # FIXME: Probably the following comparison is not needed 
         # after comparing the roots of two S-walls.
         # Decide whether to do the comparison or not.
         for i in range(NUM_ODE_XS_OVER_Z):
             if abs(self.ode_xs[i] - other.ode_xs[i]) > accuracy:
                 return False
-        # FIXME: Erase the following if we decide not to carry
-        # ``x_s`` as an attribute of ``Joint``.
-        # if(len(self.x_s) != len(other.x_s)):
-        #     return False
-        # for i in range(len(self.x_s)):
-        #     if ((abs(self.x_s[i][0] - other.x_s[i][0]) > accuracy)
-        #         or (abs(self.x_s[i][1] - other.x_s[i][1]) > accuracy)):
-        #         return False
+
         return True
 
 
@@ -250,61 +216,6 @@ class SWall(object):
             return [0] + splits + [len(self.z) - 1]
         else:
             return splits
-
-#    def get_z_segs(self):
-#        """
-#        Return the segments of z-coordinates 
-#        as a list of splitted numpy 1d array
-#        with an overlapping element.
-#        """
-#        a = self.z 
-#        ss = self.get_splits()
-#        n_segs = len(ss) + 1
-#
-#        if n_segs == 1:
-#            return [a]
-#
-#        # Start with an initial piece.
-#        segs = [a[:ss[0] + 1]]
-#        for i in range(len(ss) - 1):
-#            s_0 = ss[i]
-#            s_1 = ss[i + 1] + 1
-#            if s_0 < 0 or s_1 < 0:
-#                raise ValueError("SWall.get_z_segs(): overlap is too large.")
-#            segs.append(a[s_0:s_1])
-#        # Add the last piece.
-#        s_f = ss[-1]
-#        if s_f < 0:
-#            raise ValueError("SWall.get_z_segs: overlap is too large.")
-#        segs.append(a[s_f:])
-#
-#        return segs
-
-#    def get_turning_points(self):
-#        """
-#        Return a list of indices of turning points of SWall.z,
-#        i.e. dx/dy = 0 or dy/dx = 0, where x = z[t].real and y = z[t].imag.
-#        """
-#        tps = []
-#
-#        if len(self.z) < 3:
-#            return tps
-#
-#        x_0 = self.z[0].real
-#        y_0 = self.z[0].imag
-#
-#        for t in range(1, len(self.z) - 1):
-#            x_1 = self.z[t].real
-#            y_1 = self.z[t].imag
-#            x_2 = self.z[t + 1].real
-#            y_2 = self.z[t + 1].imag
-#            if (
-#                (x_1 - x_0) * (x_2 - x_1) < 0 or (y_1 - y_0) * (y_2 - y_1) < 0
-#            ): 
-#                tps.append(t)
-#            x_0 = x_1
-#            y_0 = y_1
-#        return tps
 
     def grow(
         self,

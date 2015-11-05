@@ -12,7 +12,7 @@ from cmath import exp
 from scipy import integrate
 from s_wall import SWall, Joint, get_s_wall_seeds
 from misc import (
-    n_nearest_indices, is_root,
+    n_nearest_indices, is_root, get_turning_points, get_splits_with_overlap
 )
 from intersection import (
     NoIntersection, find_intersection_of_segments,
@@ -364,216 +364,6 @@ class SpectralNetwork:
 
         return new_joints
 
-#    def get_new_joints_using_cgal(self, new_s_wall_index, config,
-#                                  sw_data, linux_distribution=None):
-#        """
-#        Find new wall-wall intersections using CGAL 2d curve intersection.
-#        """
-#        logger = logging.getLogger(self.logger_name)
-#        accuracy = config['accuracy']
-#        new_joints = []
-#
-#        lib_name = 'libcgal_intersection'
-#        if linux_distribution == 'Ubuntu':
-#            lib_name += '_ubuntu'
-#        elif linux_distribution == 'debian':
-#            # FIXME: Anaconda Python returns 'debian' instead of 'Ubuntu'.
-#            lib_name += '_ubuntu'
-#        elif linux_distribution == 'Scientific Linux':
-#            lib_name += '_het-math2'
-#        else:
-#            raise OSError
-#
-#        # Load CGAL shared library.
-#        libcgal_intersection = numpy.ctypeslib.load_library(
-#            lib_name, 
-#            os.path.dirname(os.path.realpath(__file__)) + '/cgal_intersection/'
-#        )
-#        cgal_find_intersections_of_curves = (libcgal_intersection.
-#                                             find_intersections_of_curves)
-#        # Prepare types for CGAL library.
-#        array_2d_float = numpy.ctypeslib.ndpointer(
-#            dtype=numpy.float64,
-#            ndim=2,
-#            flags=['C_CONTIGUOUS', 'ALIGNED'],
-#        )
-#        array_2d_complex = numpy.ctypeslib.ndpointer(
-#            dtype=numpy.complex128,
-#            ndim=1,
-#            flags=['C_CONTIGUOUS', 'ALIGNED'],
-#        )
-#
-#        cgal_find_intersections_of_curves.restype = ctypes.c_int
-#        cgal_find_intersections_of_curves.argtypes = [
-#            # array_2d_float,
-#            array_2d_complex,
-#            ctypes.c_long,
-#            # array_2d_float, 
-#            array_2d_complex,
-#            ctypes.c_long,
-#            array_2d_float, ctypes.c_int,
-#        ]
-#
-#        new_s_wall = self.s_walls[new_s_wall_index]
-#
-#        for prev_s_wall in self.s_walls[:new_s_wall_index]:
-#
-#            # First check if the two S-walls are compatible
-#            # for forming a joint.
-#
-#            # 1. Check if the new S-wall is a descendant
-#            # of an existing S-wall. 
-#            if prev_s_wall.label in new_s_wall.parents:
-#                continue
-#            
-#            # 2. Split the two S-walls into segments 
-#            # according to the trivialization, then
-#            # check the compatibility of a pair
-#            # of segments.
-#            new_z_segs = new_s_wall.get_z_segs()
-#            num_new_z_segs = len(new_z_segs)
-#            prev_z_segs = prev_s_wall.get_z_segs()
-#            num_prev_z_segs = len(prev_z_segs)
-#                
-#            for n_i, p_i in itertools.product(
-#                range(num_new_z_segs), range(num_prev_z_segs)
-#            ):
-#                n_seg_zs = new_z_segs[n_i]
-#                n_seg_root = new_s_wall.local_roots[n_i]
-#                p_seg_zs = prev_z_segs[p_i]
-#                p_seg_root = prev_s_wall.local_roots[p_i]
-#
-#                if not is_root(p_seg_root + n_seg_root, sw_data.g_data):
-#                    # The two segments are not compatible for
-#                    # forming a joint.
-#                    continue
-#                # Find an intersection of the two segments on the z-plane.
-#                buffer_size = 10
-#                intersection_search_finished = False
-#                while not intersection_search_finished:
-#                    intersections = numpy.empty((buffer_size, 2), 
-#                                                dtype=numpy.float64)
-#                    num_of_intersections = cgal_find_intersections_of_curves(
-#                        n_seg_zs,
-#                        ctypes.c_long(len(n_seg_zs)), 
-#                        p_seg_zs,
-#                        ctypes.c_long(len(p_seg_zs)), 
-#                        intersections, buffer_size
-#                    )
-#                    if num_of_intersections == 0:
-#                        intersection_search_finished = True
-#                    elif num_of_intersections > buffer_size:
-#                        logger.info('Number of intersections larger than '
-#                                    'the buffer size; increase its size '
-#                                    'to {} and find intersections again.'
-#                                    .format(num_of_intersections))
-#                        buffer_size = num_of_intersections
-#                    else:
-#                        intersection_search_finished = True
-#
-#                for ip_x, ip_y in intersections:
-#                    ip_z = ip_x + 1j * ip_y
-#
-#                    # t_n: index of new_s_wall.z nearest to ip_z
-#                    t_n = get_nearest_point_index(
-#                        new_s_wall.z, ip_z, sw_data.branch_points, accuracy,
-#                    )
-#
-#                    # t_p: index of z_seg_p nearest to ip_z
-#                    t_p = get_nearest_point_index(
-#                        prev_s_wall.z, ip_z, sw_data.branch_points, accuracy,
-#                    )
-#
-#                    # TODO: need to put the joint into the parent
-#                    # S-walls?
-#
-#                    logger.debug('Joint at z = {}'.format(ip_z))
-#
-#                    new_joints.append(
-#                        Joint(
-#                            z=ip_z, 
-#                            s_wall_1=prev_s_wall,
-#                            s_wall_2=new_s_wall,                         
-#                            t_1=t_p, 
-#                            t_2=t_n,
-#                            sw_data=sw_data,
-#                        )
-#                    )
-#
-#        return new_joints
-#
-#    def get_new_joints_using_interpolation(
-#        self, new_s_wall_index, config, sw_data, 
-#    ):
-#        """
-#        Find joints between the newly grown segment of the given S-wall
-#        and the other S-walls by interpolating S-walls with functions and
-#        finding roots of the pairwise differences of the functions.
-#
-#        This checks joints that are formed by two
-#        S-walls only, not considering the possibility of a joint of three
-#        S-walls, which in principle can happen but is unlikely in a numerical
-#        setup.
-#        """
-#        logger = logging.getLogger(self.logger_name)
-#        new_joints = []
-#
-#        new_s_wall = self.s_walls[new_s_wall_index]
-#        new_tps = new_s_wall.get_turning_points()
-#        new_z_segs = numpy.split(new_s_wall.z, new_tps, axis=0,)
-#
-#        # NOTE: Here we find only a single joint between two S-walls.
-#        # Use CGAL to find multiple z-intersections.
-#        for prev_s_wall in self.s_walls[:new_s_wall_index]:
-#            prev_tps = prev_s_wall.get_turning_points()
-#            prev_z_segs = numpy.split(prev_s_wall.z, prev_tps, axis=0,)
-#
-#            for i_n in range(len(new_tps) + 1):
-#                z_seg_n = new_z_segs[i_n]
-#                for i_p in range(len(prev_tps) + 1):
-#                    z_seg_p = prev_z_segs[i_p]
-#                    # Find an intersection on the z-plane.
-#                    try:
-#                        ip_x, ip_y = find_intersection_of_segments(
-#                            (z_seg_n.real, z_seg_n.imag),
-#                            (z_seg_p.real, z_seg_p.imag),
-#                            config['accuracy'],
-#                        )
-#                        ip_z = ip_x + 1j * ip_y
-#
-#                        # t_n: index of z_seg_n nearest to ip_z
-#                        t_n = n_nearest_indices(new_s_wall.z, ip_z, 1)[0]
-#
-#                        # t_p: index of z_seg_p nearest to ip_z
-#                        t_p = n_nearest_indices(prev_s_wall.z, ip_z, 1)[0]
-#
-#                        # TODO: need to put the joint into the parent
-#                        # S-walls?
-#
-#                        # find mass of parent S-walls: this is approximate,
-#                        # since we don't interpolate precisely to the joint
-#                        # TODO: improve by doing precise interpolation
-#                        logger.debug(
-#                            'evaluating possible joint at z = {}'.format(ip_z)
-#                        )
-#                        a_joint = get_joint(
-#                            ip_z, 
-#                            prev_s_wall,
-#                            new_s_wall, 
-#                            t_p,
-#                            t_n,
-#                            sw_data,
-#                        )
-#
-#                        if(a_joint is None):
-#                            continue
-#                        else:
-#                            new_joints.append(a_joint)
-#
-#                    except NoIntersection:
-#                        pass
-#        return new_joints
-
 
 def get_ode(sw, phase, accuracy):
     x, z = sympy.symbols('x z')
@@ -671,23 +461,22 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
 def find_intersections_of_curves(a_zs, b_zs, accuracy):
 
     a_tps = get_turning_points(a_zs)
-    a_z_segs = numpy.split(a_zs, a_tps, axis=0,)
+    a_z_segs = get_splits_with_overlap(a_tps)
 
     b_tps = get_turning_points(b_zs)
-    b_z_segs = numpy.split(b_zs, b_tps, axis=0,)
+    b_z_segs = get_splits_with_overlap(b_tps)
 
     intersections = []
 
-    for i_a in range(len(a_tps) + 1):
-        z_seg_a = a_z_segs[i_a]
-        for i_b in range(len(b_tps) + 1):
-            z_seg_b = b_z_segs[i_b]
-
+    for a_start, a_stop in a_z_segs:
+        a_seg = a_zs[a_start:a_stop]
+        for b_start, b_stop in b_z_segs:
+            b_seg = a_zs[b_start:b_stop]
             # Find an intersection on the z-plane.
             try:
                 ip_x, ip_y = find_intersection_of_segments(
-                    (z_seg_a.real, z_seg_a.imag),
-                    (z_seg_b.real, z_seg_b.imag),
+                    (a_seg.real, a_seg.imag),
+                    (b_seg.real, b_seg.imag),
                     accuracy,
                 )
                 intersections.append((ip_x, ip_y))
@@ -696,32 +485,3 @@ def find_intersections_of_curves(a_zs, b_zs, accuracy):
                 pass
 
     return intersections
-
-
-def get_turning_points(zs):
-    """
-    Return a list of indices of turning points of a curve on the z-plane,
-    i.e. dx/dy = 0 or dy/dx = 0, where x = z[t].real and y = z[t].imag.
-    """
-    tps = []
-
-    if len(zs) < 3:
-        return tps
-
-    x_0 = zs[0].real
-    y_0 = zs[0].imag
-
-    for t in range(1, len(zs) - 1):
-        x_1 = zs[t].real
-        y_1 = zs[t].imag
-        x_2 = zs[t + 1].real
-        y_2 = zs[t + 1].imag
-        if (
-            (x_1 - x_0) * (x_2 - x_1) < 0 or (y_1 - y_0) * (y_2 - y_1) < 0
-        ): 
-            tps.append(t)
-        x_0 = x_1
-        y_0 = y_1
-    return tps
-
-

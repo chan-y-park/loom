@@ -14,7 +14,7 @@ from math import pi
 from sympy import oo
 
 from network_plot import NetworkPlotBase
-from misc import put_on_cylinder
+from misc import put_on_cylinder, get_splits_with_overlap
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
@@ -77,40 +77,45 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             labels['irregular_singularities'].append(irs.label)        
 
         walls = []
-        walls_roots = []
+        wall_segments = []
+        wall_roots = []
+
         for i, s_wall in enumerate(spectral_network.s_walls):
-            segments = []
             seg_labels = []
-            split_at = []
 
             if plot_on_cylinder is True:
+                # XXX: Incomplete
+                # Need to include local root data.
+                raise NotImplementedError
+
                 zs_on_cylinder = numpy.fromfunction(
                     lambda i: put_on_cylinder(s_wall.z[i], C),
                     (len(s_wall.z)),
                 )
+                walls.append(zs_on_cylinder)
+
+                splits = []
                 for j, delta_z in enumerate(numpy.diff(zs_on_cylinder)):
                     if abs(delta_z) > pi:
-                        split_at.append(j)
-                z_segs = numpy.split(zs_on_cylinder, split_at)
+                        splits.append(j)
+
+                wall_segments.append(get_splits_with_overlap(splits))
+
             else:
-                #z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
-                #z_segs = s_wall.get_z_segs()
-                z_segs = numpy.split(s_wall.z, s_wall.get_splits(), axis=0,)
+                walls.append(s_wall.z)
+                wall_segments.append(
+                    get_splits_with_overlap(s_wall.get_splits())
+                )
+                wall_roots.append(s_wall.local_roots)
                 
-            seg_labels = [s_wall.label + '\n' + lab
-                          for lab in map(str, s_wall.local_roots)]
-
-            for z_seg in z_segs:
-                segments.append([z_seg.real, z_seg.imag])
-
-            walls.append(segments)
-            walls_roots.append(s_wall.local_roots)
+                seg_labels = [s_wall.label + '\n' + root_str 
+                              for root_str in map(str, s_wall.local_roots)]
             
-            labels['walls'].append(seg_labels)
+                labels['walls'].append(seg_labels)
 
-        walls_colors = [
-            [g_data.root_color(root) for root in w_roots]
-            for w_roots in walls_roots
+        wall_colors = [
+            [g_data.root_color(root) for root in seg_roots]
+            for seg_roots in wall_roots
         ]
 
         plot_legend = ('\n'
@@ -133,7 +138,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             punctures=punctures_z,
             irregular_singularities=irregular_singularities_z,
             walls=walls,
-            walls_colors=walls_colors,
+            wall_segments=wall_segments,
+            wall_colors=wall_colors,
             labels=labels,
             plot_joints=plot_joints,
             plot_data_points=plot_data_points,

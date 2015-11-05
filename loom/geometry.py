@@ -1095,6 +1095,7 @@ def get_ramification_points_using_system_of_eqs(
     z_x_s = sage_subprocess.solve_system_of_eqs(
         [eq_1, eq_2],
         precision=ROOT_FINDING_PRECISION,
+        logger_name=logger_name,
     )
     # TODO: Consider calculating the discriminant D(z)
     # and double-check if all the z_i's are found.
