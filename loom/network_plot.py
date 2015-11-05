@@ -52,7 +52,6 @@ class NetworkPlotBase(object):
         axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
 
         # Plot wall segments.
-        pdb.set_trace()
         for i, wall in enumerate(wall_segments):
             for j, segment in enumerate(wall):
                 start, stop = segment

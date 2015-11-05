@@ -440,7 +440,6 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                         break
 
             if t_m == 0 and t_p == t_max:
-                pdb.set_trace()
                 logger.warning(
                     'Unable to find the next nearest point '
                     'that is on the same side from the branch cut '
