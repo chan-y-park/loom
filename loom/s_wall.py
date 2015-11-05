@@ -245,37 +245,41 @@ class SWall(object):
         self.local_roots = numpy.array(json_data['local_roots'])
         self.local_weight_pairs = json_data['local_weight_pairs']
 
-    def get_splittings(self):
-        return [t for bp, t, d in self.cuts_intersections]
+    def get_splits(self, endpoints=False):
+        splits = [t for bp, t, d in self.cuts_intersections]
+        if endpoints is True:
+            return [0] + splits + [len(self.z) - 1]
+        else:
+            return splits
 
-    def get_z_segs(self):
-        """
-        Return the segments of z-coordinates 
-        as a list of splitted numpy 1d array
-        with an overlapping element.
-        """
-        a = self.z 
-        ss = self.get_splittings()
-        n_segs = len(ss) + 1
-
-        if n_segs == 1:
-            return [a]
-
-        # Start with an initial piece.
-        segs = [a[:ss[0] + 1]]
-        for i in range(len(ss) - 1):
-            s_0 = ss[i]
-            s_1 = ss[i + 1] + 1
-            if s_0 < 0 or s_1 < 0:
-                raise ValueError("SWall.get_z_segs(): overlap is too large.")
-            segs.append(a[s_0:s_1])
-        # Add the last piece.
-        s_f = ss[-1]
-        if s_f < 0:
-            raise ValueError("SWall.get_z_segs: overlap is too large.")
-        segs.append(a[s_f:])
-
-        return segs
+#    def get_z_segs(self):
+#        """
+#        Return the segments of z-coordinates 
+#        as a list of splitted numpy 1d array
+#        with an overlapping element.
+#        """
+#        a = self.z 
+#        ss = self.get_splits()
+#        n_segs = len(ss) + 1
+#
+#        if n_segs == 1:
+#            return [a]
+#
+#        # Start with an initial piece.
+#        segs = [a[:ss[0] + 1]]
+#        for i in range(len(ss) - 1):
+#            s_0 = ss[i]
+#            s_1 = ss[i + 1] + 1
+#            if s_0 < 0 or s_1 < 0:
+#                raise ValueError("SWall.get_z_segs(): overlap is too large.")
+#            segs.append(a[s_0:s_1])
+#        # Add the last piece.
+#        s_f = ss[-1]
+#        if s_f < 0:
+#            raise ValueError("SWall.get_z_segs: overlap is too large.")
+#        segs.append(a[s_f:])
+#
+#        return segs
 
 #    def get_turning_points(self):
 #        """
@@ -401,7 +405,7 @@ class SWall(object):
         from branch points or singularities, and determine 
         the root there. Finally, extend the determination 
         of the root type to other segments by following
-        the wall across the various splittings induced by cuts,
+        the wall across the various splits induced by cuts,
         both forward and backwards, using the Weyl monodromy.
         """
         logger = logging.getLogger(self.logger_name)
@@ -608,8 +612,8 @@ class SWall(object):
         if t < 0 or t > (len(self.z) - 1):
             raise ValueError
         else:
-            closed_splittings = self.get_splittings() + [len(self.z) - 1]
-            for i, sp in enumerate(closed_splittings):
+            closed_splits = self.get_splits() + [len(self.z) - 1]
+            for i, sp in enumerate(closed_splits):
                 if t <= sp:
                     return self.local_roots[i]
                     break
@@ -625,8 +629,8 @@ class SWall(object):
         if t < 0 or t > (len(self.z) - 1):
             raise ValueError
         else:
-            closed_splittings = self.get_splittings() + [len(self.z) - 1]
-            for i, sp in enumerate(closed_splittings):
+            closed_splits = self.get_splits() + [len(self.z) - 1]
+            for i, sp in enumerate(closed_splits):
                 if t <= sp:
                     return self.local_weight_pairs[i]
                     break

@@ -94,7 +94,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                 z_segs = numpy.split(zs_on_cylinder, split_at)
             else:
                 #z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
-                z_segs = s_wall.get_z_segs()
+                #z_segs = s_wall.get_z_segs()
+                z_segs = numpy.split(s_wall.z, s_wall.get_splits(), axis=0,)
                 
             seg_labels = [s_wall.label + '\n' + lab
                           for lab in map(str, s_wall.local_roots)]

@@ -70,8 +70,8 @@ class SpectralNetwork:
                  '/cgal_intersection/'),
             )
             
-            self.get_intersections = (libcgal_intersection.
-                                      find_intersections_of_curves)
+            get_intersections = (libcgal_intersection.
+                                 find_intersections_of_curves)
 
             # Prepare types for CGAL library.
             array_2d_float = numpy.ctypeslib.ndpointer(
@@ -85,8 +85,8 @@ class SpectralNetwork:
                 flags=['C_CONTIGUOUS', 'ALIGNED'],
             )
 
-            self.get_intersections.restype = ctypes.c_int
-            self.get_intersections.argtypes = [
+            get_intersections.restype = ctypes.c_int
+            get_intersections.argtypes = [
                 # array_2d_float,
                 array_2d_complex,
                 ctypes.c_long,
@@ -97,13 +97,13 @@ class SpectralNetwork:
             ]
 
             logger.info('Use CGAL to find intersections.')
-            self.use_cgal = True
+            use_cgal = True
 
         except OSError:
             logger.warning('CGAL not available; use interpolation '
                            'to find intersections.')
-            self.get_intersections = find_intersections_of_curves
-            self.use_cgal = False
+            get_intersections = find_intersections_of_curves
+            use_cgal = False
 
         logger.info('Start growing a new spectral network...')
 
@@ -157,7 +157,9 @@ class SpectralNetwork:
                 s_i.determine_root_types(sw_data)
 
                 logger.info('Finding new joints from S-wall #{}...'.format(i))
-                new_joints += self.get_new_joints(i, config, sw_data)
+                new_joints += self.get_new_joints(i, config, sw_data,
+                                                  get_intersections,
+                                                  use_cgal,)
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
@@ -206,9 +208,6 @@ class SpectralNetwork:
             logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
 
-        # Remove the function pointer that cannot be pickled.
-        self.get_intersections = None
-        self.use_cgal = None
 
     def get_json_data(self):
         """
@@ -240,7 +239,8 @@ class SpectralNetwork:
             a_joint.set_from_json_data(joint_data)
             self.joints.append(a_joint)
 
-    def get_new_joints(self, new_s_wall_index, config, sw_data):
+    def get_new_joints(self, new_s_wall_index, config, sw_data,
+                       get_intersections, use_cgal,):
         """
         Find intersections between the new S-wall and 
         previoulsy existing S-walls using 
@@ -274,18 +274,21 @@ class SpectralNetwork:
             # according to the trivialization, then
             # check the compatibility of a pair
             # of segments.
-            new_z_segs = new_s_wall.get_z_segs()
-            num_new_z_segs = len(new_z_segs)
-            prev_z_segs = prev_s_wall.get_z_segs()
-            num_prev_z_segs = len(prev_z_segs)
+            n_z_splits =  new_s_wall.get_splits(endpoints=True)
+            num_n_z_segs = len(new_s_wall.local_roots)
+            p_z_splits = prev_s_wall.get_splits(endpoints=True)
+            num_p_z_segs = len(prev_s_wall.local_roots)
                 
-            for n_i, p_i in itertools.product(
-                range(num_new_z_segs), range(num_prev_z_segs)
+            for n_z_seg_i, p_z_seg_i in itertools.product(
+                range(num_n_z_segs), range(num_p_z_segs)
             ):
-                n_seg_zs = new_z_segs[n_i]
-                n_seg_root = new_s_wall.local_roots[n_i]
-                p_seg_zs = prev_z_segs[p_i]
-                p_seg_root = prev_s_wall.local_roots[p_i]
+                n_z_i = n_z_splits[n_z_seg_i]
+                n_z_f = n_z_splits[n_z_seg_i + 1]
+                p_z_i = p_z_splits[p_z_seg_i]
+                p_z_f = p_z_splits[p_z_seg_i + 1]
+
+                n_seg_root = new_s_wall.local_roots[n_z_seg_i]
+                p_seg_root = prev_s_wall.local_roots[p_z_seg_i]
 
                 if not is_root(p_seg_root + n_seg_root, sw_data.g_data):
                     # The two segments are not compatible for
@@ -293,21 +296,22 @@ class SpectralNetwork:
                     continue
 
                 # Find an intersection of the two segments on the z-plane.
-                if self.use_cgal is True:
+                if use_cgal is True:
                     buffer_size = 10
                     intersection_search_finished = False
 
                     while not intersection_search_finished:
                         intersections = numpy.empty((buffer_size, 2), 
                                                     dtype=numpy.float64)
-                        num_of_intersections = self.get_intersections(
-                            n_seg_zs,
-                            ctypes.c_long(len(n_seg_zs)), 
-                            p_seg_zs,
-                            ctypes.c_long(len(p_seg_zs)), 
+                        num_of_intersections = get_intersections(
+                            new_s_wall.z[n_z_i:n_z_f + 1],
+                            ctypes.c_long(n_z_f + 1 - n_z_i), 
+                            prev_s_wall.z[p_z_i:p_z_f + 1],
+                            ctypes.c_long(p_z_f + 1 - p_z_i), 
                             intersections, buffer_size
                         )
                         if num_of_intersections == 0:
+                            intersections = []
                             intersection_search_finished = True
                         elif num_of_intersections > buffer_size:
                             logger.info('Number of intersections larger than '
@@ -316,12 +320,14 @@ class SpectralNetwork:
                                         .format(num_of_intersections))
                             buffer_size = num_of_intersections
                         else:
+                            intersections.resize((num_of_intersections, 2))
                             intersection_search_finished = True
 
-                        intersections.resize((num_of_intersections, 2))
                 else:
-                    intersections = self.get_intersections(
-                        n_seg_zs, p_seg_zs, accuracy
+                    intersections = get_intersections(
+                        new_s_wall.z[n_z_i:n_z_f + 1],
+                        prev_s_wall.z[p_z_i:p_z_f + 1],
+                        accuracy,
                     )
 
                 for ip_x, ip_y in intersections:

@@ -128,7 +128,8 @@ def get_spectral_network_bokeh_plot(
 
         for s_wall in sn.s_walls:
             #z_segs = split_with_overlap(s_wall.z, s_wall.get_splittings())
-            z_segs = s_wall.get_z_segs()
+            #z_segs = s_wall.get_z_segs()
+            z_segs = numpy.split(s_wall.z, s_wall.get_splits(), axis=0,)
             for z_seg in z_segs:
                 z_r = z_seg.real
                 z_i = z_seg.imag
