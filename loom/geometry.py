@@ -730,13 +730,13 @@ class SWDataBase(object):
             min_abs_distance = DEFAULT_LARGE_STEP_SIZE
 
         if config['size_of_small_step'] is None:
-            config['size_of_small_step'] = min_abs_distance / 10.0
+            config['size_of_small_step'] = min_abs_distance / 100.0
 
         if config['size_of_large_step'] is None:
-            config['size_of_large_step'] = min_abs_distance
+            config['size_of_large_step'] = min_abs_distance / 10.0
 
         if config['size_of_bp_neighborhood'] is None:
-            config['size_of_bp_neighborhood'] = min_abs_distance / 10.0
+            config['size_of_bp_neighborhood'] = min_abs_distance / 2.0
 
         if config['size_of_puncture_cutoff'] is None:
             config['size_of_puncture_cutoff'] = min_abs_distance / 100.0
