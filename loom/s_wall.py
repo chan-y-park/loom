@@ -20,7 +20,7 @@ NUM_ODE_XS_OVER_Z = 2
 # within a disc of such radius from any branch point,
 # the intersection of a S-wall originating from there
 # with the corresponding cut, will be ignored.
-BRANCH_POINT_RADIUS = 0.01 
+#BRANCH_POINT_RADIUS = 0.01 
 
 # Desired precision on the phase of seeds
 # Warning: setting it too small will bring the seeding point
@@ -30,7 +30,7 @@ SEED_PRECISION_MAX_DEPTH = 5
 
 # FIXME: Use the configuration data 'puncture_cutoff'
 # cut S-walls if they get too close to punctures
-PUNCTURE_RADIUS = 0.001
+#PUNCTURE_RADIUS = 0.001
 
 
 class Joint:
@@ -219,18 +219,18 @@ class SWall(object):
     def grow(
         self,
         ode,
-        ramification_point_zs,
+        branch_point_zs,
         puncture_point_zs,
         config,
-        clipping_radius=None,
-        z_range_limits=None,
+#        clipping_radius=None,
+#        z_range_limits=None,
     ):
-        rpzs = ramification_point_zs
+        bpzs = branch_point_zs
         ppzs = puncture_point_zs
         num_of_steps = config['num_of_steps']
         size_of_small_step = config['size_of_small_step']
         size_of_large_step = config['size_of_large_step']
-        size_of_neighborhood = config['size_of_neighborhood']
+        size_of_bp_neighborhood = config['size_of_bp_neighborhood']
         size_of_puncture_cutoff = config['size_of_puncture_cutoff']
         mass_limit = config['mass_limit']
 
@@ -251,16 +251,16 @@ class SWall(object):
                     break
 
             # Stop if z is ouside the range limit.
-            if z_range_limits is not None:
-                z_real_range, z_imag_range = z_range_limits
-                z_real_min, z_real_max = z_real_range
-                z_imag_min, z_imag_max = z_imag_range
-                if (z_i.real < z_real_min or
-                    z_i.real > z_real_max or
-                    z_i.imag < z_imag_min or
-                    z_i.imag > z_imag_max):
-                    self.resize(step)
-                    break
+#            if z_range_limits is not None:
+#                z_real_range, z_imag_range = z_range_limits
+#                z_real_min, z_real_max = z_real_range
+#                z_imag_min, z_imag_max = z_imag_range
+#                if (z_i.real < z_real_min or
+#                    z_i.real > z_real_max or
+#                    z_i.imag < z_imag_min or
+#                    z_i.imag > z_imag_max):
+#                    self.resize(step)
+#                    break
 
             # Stop if M exceeds mass limit.
             if mass_limit is not None:
@@ -269,10 +269,9 @@ class SWall(object):
                     break
 
             # Adjust the step size if z is near a branch point.
-            if (
-                len(rpzs) > 0 and
-                min([abs(z_i - rpz) for rpz in rpzs]) < size_of_neighborhood
-            ):
+            if (len(bpzs) > 0 and
+                (min([abs(z_i - bpz) for bpz in bpzs])
+                 < size_of_bp_neighborhood)):
                 dt = size_of_small_step
             else:
                 dt = size_of_large_step
@@ -283,29 +282,29 @@ class SWall(object):
             self[step] = y_i
 
         # cut near punctures
-        i_clip = None
-        for i, z_i in enumerate(self.z):
-            for ppz in puncture_point_zs:
-                if abs(z_i - ppz) < PUNCTURE_RADIUS:
-                    i_clip = i
-                    break
-        if i_clip is not None:
-            self.z = self.z[:i_clip]
-            self.x = self.x[:i_clip]
+#        i_clip = None
+#        for i, z_i in enumerate(self.z):
+#            for ppz in puncture_point_zs:
+#                if abs(z_i - ppz) < size_of_puncture_cutoff:
+#                    i_clip = i
+#                    break
+#        if i_clip is not None:
+#            self.z = self.z[:i_clip]
+#            self.x = self.x[:i_clip]
 
-        # cut far away on C
-        if clipping_radius is not None:
-            i_clip = None
-            for i, z_i in enumerate(self.z):
-                if abs(z_i) > clipping_radius:
-                    i_clip = i
-                    break
-            if i_clip is not None:
-                self.z = self.z[:i_clip]
-                self.x = self.x[:i_clip]
+#        # cut far away on C
+#        if clipping_radius is not None:
+#            i_clip = None
+#            for i, z_i in enumerate(self.z):
+#                if abs(z_i) > clipping_radius:
+#                    i_clip = i
+#                    break
+#            if i_clip is not None:
+#                self.z = self.z[:i_clip]
+#                self.x = self.x[:i_clip]
 
 
-    def determine_root_types(self, sw_data):
+    def determine_root_types(self, sw_data, bp_cutoff_radius,):
         """
         Determine at which points the wall crosses a cut, 
         for instance [55, 107, 231] would mean that 
@@ -381,13 +380,9 @@ class SWall(object):
                         # branch cut emanating from its parent branch-point
                         # if such intersections happens within a short 
                         # distance from the starting point
-                        if (
-                            branch_locus.label == self.parents[0] and 
-                            # t<6):
-                            abs(branch_locus.z - self.z[t]) 
-                            < BRANCH_POINT_RADIUS
-                        ):
-                            # abs(branch_locus.z - self.z[t]) < accuracy):
+                        if (branch_locus.label == self.parents[0] and 
+                            (abs(branch_locus.z - self.z[t]) 
+                             < bp_cutoff_radius)):
                             continue
 
                     # Check that the intersection actually happens

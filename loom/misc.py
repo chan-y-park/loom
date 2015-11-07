@@ -213,12 +213,19 @@ def parse_sym_dict_str(string):
     """
     Get a string of the form
         {k_str: v_str, ...}
+    or
+        {k_str = v_str, ...}
     and return a list of
         [(k_str, v_str), ...]
     """
     result = []
     for k_v_str in string.lstrip('{').rstrip('}').split(','):
-        k_str, v_str = k_v_str.split(':')
+        item = k_v_str.split(':')
+        if len(item) != 2:
+            item = k_v_str.split('=')
+        if len(item) != 2:
+            raise SyntaxError('Require {var = val,} or {var : val,}.')
+        k_str, v_str = item
         result.append((k_str.strip(), v_str.strip()))
     return result
 

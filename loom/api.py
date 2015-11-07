@@ -257,6 +257,7 @@ def generate_spectral_network(
     """
 
     logger = logging.getLogger(logger_name)
+
     if phase is None:
         phase = config['phase']
     try:

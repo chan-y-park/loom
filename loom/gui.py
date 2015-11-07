@@ -62,32 +62,29 @@ class GUILoom:
         self.sw_data = None
         self.spectral_networks = [] 
 
-        # Array of ('entry label', 'config option') pairs. 
+        # Array of config options. 
         # Entries that will be placed in the same row
         # are in the same row of this array.
         self.entry_array = [
-            [('Description', 'description')],
-            [('Root System', 'root_system'),
-             ('Representation', 'representation')],
-            [('Casimir differentials', 'casimir_differentials')],
-            [('Parameters of differentials','differential_parameters')],
-            [('Regular punctures', 'regular_punctures')],
-            [('Irregular punctures', 'irregular_punctures')],
-            [('Mobius transformation', 'mt_params')], 
-            [('Ramification point finding method', 
-              'ramification_point_finding_method'),],
-            [('Plot range', 'plot_range')],
-            [('Number of steps', 'num_of_steps')],
-            [('Number of iterations', 'num_of_iterations')],
-            [('Size of a small step', 'size_of_small_step')],
-            [('Size of a large step', 'size_of_large_step')],
-            [('Size of a branch point cutoff', 'size_of_neighborhood')],
-            [('Size of a puncture cutoff', 'size_of_puncture_cutoff')],
-            [('Size of an intersection bin', 'size_of_bin')],
-            #[('', 'size_of_ramification_pt_cutoff')],
-            [('Accuracy', 'accuracy')],
-            [('Mass limit', 'mass_limit')],
-            [('Phase (single value or range)', 'phase')],
+            ['description'],
+            ['root_system', 'representation'],
+            ['casimir_differentials'],
+            ['differential_parameters'],
+            ['regular_punctures'],
+            ['irregular_punctures'],
+            ['mt_params'], 
+            ['ramification_point_finding_method'],
+            ['plot_range'],
+            ['num_of_steps'],
+            ['num_of_iterations'],
+            ['size_of_small_step'],
+            ['size_of_large_step'],
+            ['size_of_bp_neighborhood'],
+            ['size_of_puncture_cutoff'],
+            #['size_of_ramification_pt_cutoff'],
+            ['accuracy'],
+            ['mass_limit'],
+            ['phase'],
         ]
     
     def create_widgets(self):
@@ -119,11 +116,11 @@ class GUILoom:
         
         # Entry & Label layout
         # TODO: display config file name.
-        for entry_list in self.entry_array:
+        for entry_row in self.entry_array:
             grid_row += 1
-            for column, entry in enumerate(entry_list):
+            for column, config_option in enumerate(entry_row):
                 grid_col = column * 2
-                entry_label_text, config_option = entry
+                entry_label_text = self.config.get_label(config_option)
                 label = tk.Label(self.root, text=entry_label_text)
                 label.grid(row=grid_row, column=grid_col)
                 
@@ -530,11 +527,11 @@ class GUILoom:
         """
         logger = logging.getLogger(self.logger_name)
         config_options = self.config.keys()
-        for entry_list in self.entry_array:
-            for entry_label, config_option in entry_list:
+        for entry_row in self.entry_array:
+            for config_option in entry_row:
+                entry_label = self.config.get_label(config_option)
                 value = self.config[config_option]
-                if value is not None:
-                    config_options.remove(config_option)
+                config_options.remove(config_option)
                 self.entry_var[config_option].set(value)
         if len(config_options) > 0:
             logger.warning(
@@ -559,7 +556,7 @@ class GUILoom:
                     self.config.parser.set(section, option, value)
                 except KeyError:
                     logger.warning(
-                        'No entry for option = {}, skip it.'
+                        "No entry for option '{}', skip it."
                         .format(option)
                     )
                     pass

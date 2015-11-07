@@ -31,6 +31,8 @@ ROOT_FINDING_PRECISION = 20
 
 mp.dps = ROOT_FINDING_PRECISION
 
+DEFAULT_LARGE_STEP_SIZE = 0.01
+
 
 class GData:
     """
@@ -456,26 +458,14 @@ class SWDataBase(object):
         for var, val in parse_sym_dict_str(config['differential_parameters']):
             diff_params[var] = sympy.sympify(val)
 
-        if config['punctures'] is not None:
-            logger.warning(
-                "Configuration option 'punctures' is deprecated; "
-                "Use 'regular_punctures' and 'irregular_punctures'."
-            )
-            config['irregulr_punctures'] = config['punctures']
-
         if json_data is None:
             self.g_data = GData(config['root_system'],
                                 config['representation'])
             self.set_from_config(
+                config,
                 mt_params=mt_params,
                 casimir_differentials=casimir_differentials,
                 diff_params=diff_params,
-                regular_punctures_string=config['regular_punctures'],
-                irregular_punctures_string=config['irregular_punctures'],
-                size_of_puncture_cutoff=config['size_of_puncture_cutoff'],
-                ramification_point_finding_method=(
-                    config['ramification_point_finding_method']
-                ),
             )
         else:
             self.set_from_json_data(json_data)
@@ -575,11 +565,8 @@ class SWDataBase(object):
         self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
         self.accuracy = json_data['accuracy']
 
-    def set_from_config(self, mt_params=None, casimir_differentials=None,
-                        diff_params=None, regular_punctures_string=None,
-                        irregular_punctures_string=None,
-                        size_of_puncture_cutoff=None,
-                        ramification_point_finding_method=None,):
+    def set_from_config(self, config, mt_params=None,
+                        casimir_differentials=None, diff_params=None,):
         """
         Set attributes by calculating the corresponding 
         values using the configuration.
@@ -589,6 +576,8 @@ class SWDataBase(object):
         # Try rotating by different increments, up to pi/max_pi_div 
 
         logger = logging.getLogger(self.logger_name)
+
+        min_abs_distance = None
         max_pi_div = 10
         rotate_z_plane = True
         pi_div = 0
@@ -627,14 +616,12 @@ class SWDataBase(object):
                 # singularities.)
                 
                 regular_punctures = get_punctures_from_config(
-                    regular_punctures_string, 'Regular puncture',
-                    size_of_puncture_cutoff, diff_params, mt_params,
-                    z_plane_rotation,
+                    config['regular_punctures'], 'Regular puncture',
+                    diff_params, mt_params, z_plane_rotation,
                 )
                 irregular_punctures = get_punctures_from_config(
-                    irregular_punctures_string, 'Irregular puncture',
-                    size_of_puncture_cutoff, diff_params, mt_params,
-                    z_plane_rotation,
+                    config['irregular_punctures'], 'Irregular puncture',
+                    diff_params, mt_params, z_plane_rotation,
                 )
 
                 ffr_curve = SWCurve(
@@ -661,7 +648,7 @@ class SWDataBase(object):
                     z_rotation=z_plane_rotation,
                     accuracy=self.accuracy, 
                     punctures=punctures,
-                    method=ramification_point_finding_method,
+                    method=config['ramification_point_finding_method'],
                     g_data=self.g_data,
                     logger_name=self.logger_name,
                 )
@@ -683,7 +670,7 @@ class SWDataBase(object):
                     self.accuracy,
                 )
                 z_list = bpzs + pctzs
-                z_r_list = map(float, [z.real for z in (bpzs + pctzs)])
+                z_r_list = [z.real for z in z_list]
                 if len(z_r_list) > 1:
                     min_x_distance = min([
                         abs(x - y) for i, x in enumerate(z_r_list) 
@@ -695,18 +682,14 @@ class SWDataBase(object):
                     ])
                     
                 elif len(z_r_list) == 1:
-                    logger.info(
-                        'All branch points and punctures '
-                        'are sufficiently separated horizontally.\n'
-                        'Will not rotate z-plane any more.\n'
-                    )
+                    # No need for the rotation.
                     rotate_z_plane = False
                     break
 
                 elif len(z_r_list) == 0:
                     raise Exception(
-                        'Could not find any punctures' + 
-                        ' or branch points'
+                        'Could not find any punctures ' 
+                        'or branch points'
                     )
 
                 if min_x_distance > min_abs_distance / len(z_list):
@@ -740,6 +723,23 @@ class SWDataBase(object):
         self.irregular_punctures = irregular_punctures
         self.ffr_ramification_points = ffr_ramification_points
         self.ffr_curve = ffr_curve
+
+        # Automatically configure various sizes 
+        # if not configured manually.
+        if min_abs_distance is None:
+            min_abs_distance = DEFAULT_LARGE_STEP_SIZE
+
+        if config['size_of_small_step'] is None:
+            config['size_of_small_step'] = min_abs_distance / 10.0
+
+        if config['size_of_large_step'] is None:
+            config['size_of_large_step'] = min_abs_distance
+
+        if config['size_of_bp_neighborhood'] is None:
+            config['size_of_bp_neighborhood'] = min_abs_distance / 10.0
+
+        if config['size_of_puncture_cutoff'] is None:
+            config['size_of_puncture_cutoff'] = min_abs_distance / 100.0
 
     def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
         """
@@ -889,10 +889,15 @@ class SWDataBase(object):
         return list(xs)
 
 
-def get_punctures_from_config(config_punctures_string, label_prefix,
-                              size_of_puncture_cutoff, diff_params, 
-                              mt_params, z_plane_rotation,):
+def get_punctures_from_config(
+    config_punctures_string, label_prefix,
+    diff_params, mt_params, z_plane_rotation,
+):
     punctures = []
+
+    if config_punctures_string is None:
+        return punctures
+
     punctures_str = [
         p_raw_str.strip() for p_raw_str 
         in config_punctures_string.lstrip('[').rstrip(']').split(',')
@@ -916,7 +921,6 @@ def get_punctures_from_config(config_punctures_string, label_prefix,
         punctures.append(
             Puncture(
                 z=npz, Ciz=Cipz,
-                cutoff=size_of_puncture_cutoff,
                 label=(label_prefix + ' #{}'.format(p_n))
             )
         )

@@ -17,7 +17,7 @@ from intersection import (
     NoIntersection, find_intersection_of_segments,
 )
 
-CLIPPING_RADIUS = 30.0
+#CLIPPING_RADIUS = 30.0
 
 class SpectralNetwork:
     def __init__(
@@ -147,13 +147,13 @@ class SpectralNetwork:
                 logger.info('Growing S-wall #{}...'.format(i))
                 s_i.grow(
                     ode, bpzs, ppzs, config,
-                    clipping_radius=CLIPPING_RADIUS,
+                    #clipping_radius=CLIPPING_RADIUS,
                 )
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
                 logger.info('Determining the root type of S-wall #{}...'
                             .format(i))
-                s_i.determine_root_types(sw_data)
+                s_i.determine_root_types(sw_data, config['size_of_small_step'])
 
                 logger.info('Finding new joints from S-wall #{}...'.format(i))
                 new_joints += self.get_new_joints(i, config, sw_data,
