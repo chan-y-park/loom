@@ -67,9 +67,11 @@ class LoomConfig:
         # {deprecated option: option,}
         self.deprecated_options = {
             'phase_range': 'phase',
-            'puncture': 'irregular_puncture',
+            'punctures': 'irregular_punctures',
             'size_of_neighborhood': 'size_of_bp_neighborhood',
             'size_of_bin': None,
+            'size_of_ramification_pt_cutoff': None,
+            'n_processes': None,
         }
 
     def __setitem__(self, option, value):

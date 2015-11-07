@@ -549,11 +549,13 @@ class GUILoom:
             for option in self.config.parser.options(section):
                 try:
                     value = self.entry_var[option].get()
+                    self.config.parser.set(section, option, value)
                     if (section == 'numerical parameters'):
                         self.config[option] = eval(value)
                     else:
+                        if value == 'None':
+                            value = None
                         self.config[option] = value
-                    self.config.parser.set(section, option, value)
                 except KeyError:
                     logger.warning(
                         "No entry for option '{}', skip it."

@@ -582,6 +582,24 @@ class SWDataBase(object):
         rotate_z_plane = True
         pi_div = 0
 
+        method = config['ramification_point_finding_method'],
+        if method == 'discriminant':
+            get_ramification_points = (
+                get_ramification_points_using_discriminant
+            )
+        elif method == 'system_of_eqs':
+            get_ramification_points = (
+                get_ramification_points_using_system_of_eqs
+            )
+        else:
+            logger.warning(
+                'Unknown or no method set to find ramification points.\n'
+                'Use system_of_eqs by default.'
+            )
+            get_ramification_points = (
+                get_ramification_points_using_system_of_eqs
+            )
+
         for pi_div in range(max_pi_div + 1):
             if pi_div == 0:
                 # we study the case of no rotations at all.
@@ -641,18 +659,33 @@ class SWDataBase(object):
             
                 punctures = regular_punctures + irregular_punctures
 
-                ffr_ramification_points = get_ramification_points(
+                ffr_ramification_points = []
+                sols = get_ramification_points(
                     curve=ffr_curve, 
                     diff_params=diff_params,
                     mt_params=mt_params,
-                    z_rotation=z_plane_rotation,
                     accuracy=self.accuracy, 
                     punctures=punctures,
-                    method=config['ramification_point_finding_method'],
                     g_data=self.g_data,
                     logger_name=self.logger_name,
                 )
-                
+                for z_i, (x_j, m_x) in sols:
+                    rp = RamificationPoint(
+                        # Note: if we substitute z' = c z in F(x,z)=0,
+                        # where c is a phase, the position of punctures 
+                        # and branch points will rotate contravariantly
+                        # z_pt -> c^{-1} z_pt
+                        z=(PSL2C(mt_params, z_i, numerical=True) /
+                           complex(z_plane_rotation)),
+                        Ciz=z_i, 
+                        x=x_j, 
+                        i=m_x, 
+                        label=('ramification point #{}'
+                               .format(len(ffr_ramification_points)))
+                    )
+                    ffr_ramification_points.append(rp)
+
+
                 logger.debug('These are the punctures:')
                 for pct in punctures:
                     logger.debug('{} at z={}'.format(pct.label, pct.z))
@@ -1015,65 +1048,65 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     return curve_str
 
 
-def get_ramification_points(
-    curve=None, 
-    diff_params=None, 
-    mt_params=None,
-    z_rotation=None,
-    accuracy=None, 
-    punctures=None,
-    method=None,
-    g_data=None,
-    logger_name='loom',
-):
-    logger = logging.getLogger(logger_name)
-
-    if curve.sym_eq is None:
-        raise NotImplementedError
-
-    if method == 'discriminant':
-        sols = get_ramification_points_using_discriminant(
-            curve=curve, 
-            diff_params=diff_params, 
-            mt_params=mt_params,
-            accuracy=accuracy, 
-            punctures=punctures,
-            g_data=g_data,
-            logger_name=logger_name,
-        )
-    else:
-        if method != 'system_of_eqs':
-            logger.warning(
-                'Unknown or no method set to find ramification points.\n'
-                'Use system_of_eqs by default.'
-            )
-        sols = get_ramification_points_using_system_of_eqs(
-            curve=curve, 
-            diff_params=diff_params, 
-            mt_params=mt_params,
-            accuracy=accuracy, 
-            punctures=punctures,
-            logger_name=logger_name,
-        )
-
-    ramification_points = []
-
-    for z_i, (x_j, m_x) in sols:
-        rp = RamificationPoint(
-            # Note: if we substitute z' = c z in F(x,z)=0,
-            # where c is a phase, the position of punctures 
-            # and branch points will rotate contravariantly
-            # z_pt -> c^{-1} z_pt
-            z=PSL2C(mt_params, z_i, numerical=True) / complex(z_rotation),
-            Ciz=z_i, 
-            x=x_j, 
-            i=m_x, 
-            label=('ramification point #{}'
-                   .format(len(ramification_points)))
-        )
-        ramification_points.append(rp)
-
-    return ramification_points
+#def get_ramification_points(
+#    curve=None, 
+#    diff_params=None, 
+#    mt_params=None,
+#    z_rotation=None,
+#    accuracy=None, 
+#    punctures=None,
+#    method=None,
+#    g_data=None,
+#    logger_name='loom',
+#):
+#    logger = logging.getLogger(logger_name)
+#
+#    if curve.sym_eq is None:
+#        raise NotImplementedError
+#
+#    if method == 'discriminant':
+#        sols = get_ramification_points_using_discriminant(
+#            curve=curve, 
+#            diff_params=diff_params, 
+#            mt_params=mt_params,
+#            accuracy=accuracy, 
+#            punctures=punctures,
+#            g_data=g_data,
+#            logger_name=logger_name,
+#        )
+#    else:
+#        if method != 'system_of_eqs':
+#            logger.warning(
+#                'Unknown or no method set to find ramification points.\n'
+#                'Use system_of_eqs by default.'
+#            )
+#        sols = get_ramification_points_using_system_of_eqs(
+#            curve=curve, 
+#            diff_params=diff_params, 
+#            mt_params=mt_params,
+#            accuracy=accuracy, 
+#            punctures=punctures,
+#            logger_name=logger_name,
+#        )
+#
+#    ramification_points = []
+#
+#    for z_i, (x_j, m_x) in sols:
+#        rp = RamificationPoint(
+#            # Note: if we substitute z' = c z in F(x,z)=0,
+#            # where c is a phase, the position of punctures 
+#            # and branch points will rotate contravariantly
+#            # z_pt -> c^{-1} z_pt
+#            z=PSL2C(mt_params, z_i, numerical=True) / complex(z_rotation),
+#            Ciz=z_i, 
+#            x=x_j, 
+#            i=m_x, 
+#            label=('ramification point #{}'
+#                   .format(len(ramification_points)))
+#        )
+#        ramification_points.append(rp)
+#
+#    return ramification_points
 
 
 def get_ramification_points_using_system_of_eqs(
@@ -1082,6 +1115,7 @@ def get_ramification_points_using_system_of_eqs(
     mt_params=None,
     accuracy=None, 
     punctures=None,
+    g_data=None,
     logger_name='loom',
 ):
     sols = []
