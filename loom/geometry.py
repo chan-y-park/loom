@@ -582,7 +582,7 @@ class SWDataBase(object):
         rotate_z_plane = True
         pi_div = 0
 
-        method = config['ramification_point_finding_method'],
+        method = config['ramification_point_finding_method']
         if method == 'discriminant':
             get_ramification_points = (
                 get_ramification_points_using_discriminant
