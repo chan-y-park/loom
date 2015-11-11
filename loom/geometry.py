@@ -65,12 +65,13 @@ class GData:
         - For other algebras, the order is imposed by SAGE.
     """
     def __init__(self, root_system=None, representation_str=None,
-                 json_data=None):
+                 json_data=None, logger_name='loom'):
+        self.logger_name = logger_name
         if json_data is not None:
             self.set_from_json_data(json_data)
         else:
             self.set_from_sage(root_system, representation_str)
-        self.root_color_map = self.create_root_color_map()
+        self.set_root_color_map()
 
     def get_json_data(self):
         json_data = {
@@ -111,6 +112,7 @@ class GData:
         )
 
     def set_from_sage(self, root_system, representation_str):
+        logger = logging.getLogger(self.logger_name)
         self.root_system = root_system
         # type is 'A', 'D', or 'E'.
         self.type = root_system[0]
@@ -135,8 +137,8 @@ class GData:
                     self.fundamental_representation_index = i + 1
             if height > 1:
                 self.fundamental_representation_index = None 
-                warnings.warn('{} is not a fundamental representation.'
-                              .format(representation_str))
+                logger.warning('{} is not a fundamental representation.'
+                               .format(representation_str))
                 
         sage_data = sage_subprocess.get_g_data(
             root_system, 
@@ -212,33 +214,73 @@ class GData:
         new_root = new_v_j - new_v_i
         return new_root
 
-    def create_root_color_map(self):
-        g_roots = list(self.roots)
-        n_rts = len(g_roots)
-        colors = []
-        for i in range(n_rts):
-            r, g, b, alpha = mpl_color_map.jet((i / float(n_rts)), bytes=True)
-            colors.append('#{:02x}{:02x}{:02x}'.format(r, g, b))
-
-        return {colors[i]: rt for i, rt in enumerate(g_roots)}
-
-    def root_color(self, root):
-        if self.root_color_map is None:
-            self.root_color_map = self.create_root_color_map()
-
-        is_actual_root = False
-        for alpha in self.roots:
-            if numpy.array_equal(alpha, root):
-                is_actual_root = True
-
-        if is_actual_root:
-            root_color_map = self.root_color_map
-            return (
-                [k for k, v in root_color_map.iteritems()
-                 if numpy.array_equal(v, root)][0]
+    def set_root_color_map(self):
+        """
+        Create a mapping between a positive root and a color.
+        A negative root will have the same color as the corresponding
+        positive root.
+        """
+        p_roots = self.positive_roots
+        num_p_roots = len(p_roots)
+        p_root_colors = []
+        for i in range(num_p_roots):
+            #r, g, b, alpha = mpl_color_map.jet((i / float(n_rts)), bytes=True)
+            r, g, b, alpha = mpl_color_map.viridis(
+                (i / float(num_p_roots)), bytes=True
             )
-        else:
-            return None
+            p_root_colors.append('#{:02x}{:02x}{:02x}'.format(r, g, b))
+
+        self.root_color_map = p_root_colors
+
+    def get_root_color(self, root):
+        logger = logging.getLogger(self.logger_name)
+        if self.root_color_map is None:
+            self.set_root_color_map()
+
+        for i, p_root in enumerate(self.positive_roots):
+            if (numpy.array_equal(p_root, root) or
+                numpy.array_equal(-p_root, root)):
+                return self.root_color_map[i]
+
+        logger.warning('No color mapped for the root {}'
+                       .format(root.tolist()))
+        return None
+            
+#    def create_root_color_map(self):
+#        """
+#        Create a mapping between a positive root and a color.
+#        A negative root will have the same color as the corresponding
+#        positive root.
+#        """
+#        g_roots = list(self.roots)
+#        n_rts = len(g_roots)
+#        colors = []
+#        for i in range(n_rts):
+#            #r, g, b, alpha = mpl_color_map.jet((i / float(n_rts)), bytes=True)
+#            r, g, b, alpha = mpl_color_map.viridis(
+#                (i / float(n_rts)), bytes=True
+#            )
+#            colors.append('#{:02x}{:02x}{:02x}'.format(r, g, b))
+#
+#        return {colors[i]: rt for i, rt in enumerate(g_roots)}
+#
+#    def root_color(self, root):
+#        if self.root_color_map is None:
+#            self.root_color_map = self.create_root_color_map()
+#
+#        is_actual_root = False
+#        for alpha in self.roots:
+#            if numpy.array_equal(alpha, root):
+#                is_actual_root = True
+#
+#        if is_actual_root:
+#            root_color_map = self.root_color_map
+#            return (
+#                [k for k, v in root_color_map.iteritems()
+#                 if numpy.array_equal(v, root)][0]
+#            )
+#        else:
+#            return None
 
 
 class RamificationPoint:
@@ -459,8 +501,9 @@ class SWDataBase(object):
             diff_params[var] = sympy.sympify(val)
 
         if json_data is None:
-            self.g_data = GData(config['root_system'],
-                                config['representation'])
+            self.g_data = GData(root_system=config['root_system'],
+                                representation_str=config['representation'],
+                                logger_name=self.logger_name,)
             self.set_from_config(
                 config,
                 mt_params=mt_params,
@@ -534,7 +577,8 @@ class SWDataBase(object):
     def set_from_json_data(self, json_data):
         logger = logging.getLogger(self.logger_name)
 
-        self.g_data = GData(json_data=json_data['g_data'])
+        self.g_data = GData(json_data=json_data['g_data'],
+                            logger_name=self.logger_name,)
         # XXX: Remove the following check after deprecating
         # using older data.
         try:

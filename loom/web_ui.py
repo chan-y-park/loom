@@ -45,31 +45,29 @@ DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
 
 
-# Array of ('entry label', 'config option') pairs. 
+# Array of config options. 
 # Entries that will be placed in the same row
 # are in the same row of this array.
-config_items = [
-    [('Description', 'description')],
-    #[('Root System', 'root_system'),
-    # ('Representation', 'representation')],
-    [('Casimir differentials', 'casimir_differentials')],
-    [('Parameters of differentials','differential_parameters')],
-    [('Regular punctures', 'regular_punctures')],
-    [('Irregular punctures', 'irregular_punctures')],
-    [('Mobius transformation', 'mt_params')], 
-    [('Ramification point finding method', 
-      'ramification_point_finding_method'),],
-    [('Plot range', 'plot_range')],
-    [('Number of steps', 'num_of_steps')],
-    [('Number of iterations', 'num_of_iterations')],
-    [('Size of a small step', 'size_of_small_step')],
-    [('Size of a large step', 'size_of_large_step')],
-    [('Size of a branch point cutoff', 'size_of_neighborhood')],
-    [('Size of a puncture cutoff', 'size_of_puncture_cutoff')],
-    #[('', 'size_of_ramification_pt_cutoff')],
-    [('Accuracy', 'accuracy')],
-    [('Mass limit', 'mass_limit')],
-    [('Phase (single value or range)', 'phase')],
+config_options = [
+    ['description'],
+    #['root_system', 'representation'],
+    ['casimir_differentials'],
+    ['differential_parameters'],
+    ['regular_punctures'],
+    ['irregular_punctures'],
+    ['mt_params'], 
+    ['ramification_point_finding_method'],
+    ['plot_range'],
+    ['num_of_steps'],
+    ['num_of_iterations'],
+    ['size_of_small_step'],
+    ['size_of_large_step'],
+    ['size_of_bp_neighborhood'],
+    ['size_of_puncture_cutoff'],
+    #['size_of_ramification_pt_cutoff'],
+    ['accuracy'],
+    ['mass_limit'],
+    ['phase'],
 ]
 
 
@@ -429,7 +427,7 @@ def config(n_processes=None):
 
     return flask.render_template(
         'config.html',
-        config_items=config_items,
+        config_options=config_options,
         loom_config=loom_config,
         n_processes=n_processes,
         process_uuid=process_uuid,
@@ -715,7 +713,7 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         download_data_url=download_data_url,
         download_plot_url=download_plot_url,
         loom_config=loom_config,
-        config_items=config_items,
+        config_options=config_options,
     )
 
 def get_plot_legend(sw_data):

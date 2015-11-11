@@ -52,12 +52,12 @@
                  value="{{ loom_config['representation']}}">
             </div>
         </div>
-    {% for item in config_items %}
-        {% for (label, option) in item %}
+    {% for row in config_options %}
+        {% for option in row %}
         <div class="form-group">
             <div class="col-xs-3">
                 <label for="{{ option }}_text" class="control-label">
-                    {{ label }}
+                    {{ loom_config.get_label(option) }}
                 </label>
             </div>
             <div class="col-xs-5">
