@@ -689,11 +689,15 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
     download_data_url = download_plot_url = None
 
     # Make a Bokeh plot
-    bokeh_layout = get_spectral_network_bokeh_plot(
+#    bokeh_layout = get_spectral_network_bokeh_plot(
+#        spectral_network_data,
+#        plot_range=loom_config['plot_range'],
+#    )
+#    script, div = bokeh.embed.components(bokeh_layout)
+    script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
     )
-    script, div = bokeh.embed.components(bokeh_layout)
     legend = get_plot_legend(spectral_network_data.sw_data)
 
     if download is False:
@@ -707,8 +711,8 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
     return flask.render_template(
         'plot.html',
         process_uuid=process_uuid,
-        plot_script=script,
-        plot_div=div,
+        script=script,
+        div=div,
         plot_legend=legend,
         download_data_url=download_data_url,
         download_plot_url=download_plot_url,

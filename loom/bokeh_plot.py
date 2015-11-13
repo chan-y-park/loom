@@ -1,4 +1,5 @@
 import numpy
+import bokeh
 
 from cmath import phase, pi
 from sympy import oo
@@ -112,6 +113,12 @@ def get_spectral_network_bokeh_plot(
         'root': [],
     })
 
+    # Data source for plotting data points
+    dpds = ColumnDataSource({
+        'x': [],
+        'y': [],
+    })
+
     # Data source containing all the spectral networks
     snds = ColumnDataSource({
         'spectral_networks': [],
@@ -160,6 +167,11 @@ def get_spectral_network_bokeh_plot(
     for key in cds.data.keys():
         cds.data[key] = snds.data['spectral_networks'][0][key]
 
+    #dpds.data['x'] = numpy.concatenate([x for x in cds.data['xs']]) 
+    #dpds.data['y'] = numpy.concatenate([y for y in cds.data['ys']]) 
+
+    bokeh_figure.scatter(x='x', y='y', alpha=0.5, source=dpds,)
+
     bokeh_figure.multi_line(
         xs='xs', ys='ys', color='color', line_width=1.5, source=cds,
     )
@@ -169,35 +181,56 @@ def get_spectral_network_bokeh_plot(
         size=8, source=cds,
     )
 
+    # Callbacks after resizing the plot.
+    #bokeh_figure.x_range.callback = bokeh_figure.y_range.callback
+
+    # 'Redraw arrows' button.
     callback_code = open('loom/javascripts/bokeh_redraw_arrows_callback.js',
                          'r').read()
-#    bokeh_figure.x_range.callback = bokeh_figure.y_range.callback = CustomJS(
     redraw_arrows_callback = CustomJS(
         args={'cds': cds, 'x_range': bokeh_figure.x_range,
               'y_range': bokeh_figure.y_range,},
         code=callback_code,
     )
     redraw_arrows_button = Button(
-        label="Redraw arrows",
+        label='Redraw arrows',
         callback=redraw_arrows_callback,
     )
 
+    # 'Show data points' button
+    callback_code = open('loom/javascripts/bokeh_show_data_points_callback.js',
+                         'r').read()
+    show_data_points_callback = CustomJS(
+        args={'cds': cds, 'dpds': dpds,},
+        code=callback_code,
+    )
+    show_data_points_button = Button(
+        label='Show data points',
+        callback=show_data_points_callback,
+    )
+
+
+    # Adding a slider.
     callback_code = open('loom/javascripts/bokeh_slider_callback.js',
                          'r').read()
     callback = CustomJS(
         args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds}, 
         code=callback_code,
     )
+    
+    bokeh_obj = {
+        'redraw_arrows_button': redraw_arrows_button,
+        'show_data_points_button': show_data_points_button,
+    } 
 
     if len(spectral_networks) > 1:
         slider = Slider(start=0, end=len(spectral_networks)-1, 
                         value=0, step=1, title="plot index",
                         callback=callback)
-
-        layout = vform(redraw_arrows_button, bokeh_figure, 
-                       slider, width=plot_width,)
-        return layout
-
+        plot = vform(bokeh_figure, slider, width=plot_width,)
     else:
-        return bokeh_figure
+        plot = bokeh_figure
 
+    bokeh_obj['plot'] = plot
+
+    return bokeh.embed.components(bokeh_obj)
