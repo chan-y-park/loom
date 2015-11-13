@@ -6,6 +6,7 @@ from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
 from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
                           ResetTool, PreviewSaveTool)
+from bokeh.models.widgets import Button
 from bokeh.plotting import figure
 
 from misc import get_splits_with_overlap
@@ -102,6 +103,7 @@ def get_spectral_network_bokeh_plot(
     cds = ColumnDataSource({
         'xs': [],
         'ys': [],
+        'ranges': [],
         'color': [],
         'arrow_x': [],
         'arrow_y': [],
@@ -119,6 +121,7 @@ def get_spectral_network_bokeh_plot(
         sn_data = {}
         sn_data['xs'] = []
         sn_data['ys'] = []
+        sn_data['ranges'] = []
         sn_data['color'] = []
         sn_data['arrow_x'] = []
         sn_data['arrow_y'] = []
@@ -132,6 +135,7 @@ def get_spectral_network_bokeh_plot(
                 z_r = s_wall.z[start:stop].real
                 z_i = s_wall.z[start:stop].imag
                 a_i = int(numpy.floor(len(z_r) / 2.0))
+                a_angle = pi
                 a_angle = (
                     phase((z_r[a_i] - z_r[a_i - 1]) + 
                           1j*(z_i[a_i] - z_i[a_i - 1]))
@@ -139,6 +143,9 @@ def get_spectral_network_bokeh_plot(
                 )
                 sn_data['xs'].append(z_r)
                 sn_data['ys'].append(z_i)
+                sn_data['ranges'].append(
+                    [z_r.min(), z_r.max(), z_i.min(), z_i.max()]
+                )
                 sn_data['arrow_x'].append(z_r[a_i])
                 sn_data['arrow_y'].append(z_i[a_i])
                 sn_data['arrow_angle'].append(a_angle)
@@ -162,7 +169,21 @@ def get_spectral_network_bokeh_plot(
         size=8, source=cds,
     )
 
-    callback_code = open('loom/bokeh_slider_callback.js', 'r').read()
+    callback_code = open('loom/javascripts/bokeh_redraw_arrows_callback.js',
+                         'r').read()
+#    bokeh_figure.x_range.callback = bokeh_figure.y_range.callback = CustomJS(
+    redraw_arrows_callback = CustomJS(
+        args={'cds': cds, 'x_range': bokeh_figure.x_range,
+              'y_range': bokeh_figure.y_range,},
+        code=callback_code,
+    )
+    redraw_arrows_button = Button(
+        label="Redraw arrows",
+        callback=redraw_arrows_callback,
+    )
+
+    callback_code = open('loom/javascripts/bokeh_slider_callback.js',
+                         'r').read()
     callback = CustomJS(
         args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds}, 
         code=callback_code,
@@ -173,7 +194,8 @@ def get_spectral_network_bokeh_plot(
                         value=0, step=1, title="plot index",
                         callback=callback)
 
-        layout = vform(bokeh_figure, slider, width=plot_width,)
+        layout = vform(redraw_arrows_button, bokeh_figure, 
+                       slider, width=plot_width,)
         return layout
 
     else:
