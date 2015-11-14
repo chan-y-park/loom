@@ -272,9 +272,9 @@ class SWall(object):
             if (len(bpzs) > 0 and
                 (min([abs(z_i - bpz) for bpz in bpzs])
                  < size_of_bp_neighborhood)):
-                dt = size_of_small_step
+                dt = size_of_small_step * abs(y_i[1] - y_i[2])
             else:
-                dt = size_of_large_step
+                dt = size_of_large_step * abs(y_i[1] - y_i[2])
 
             y_i = ode.integrate(ode.t + dt)
             z_i = y_i[0]
