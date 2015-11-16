@@ -1,7 +1,7 @@
 function show_data_points(cds, dpds, toggle) {
     var cd = cds.get('data');
     var dpd = dpds.get('data');
-    var active = toggle.get('active');
+    var active = toggle.attributes.active;
     dpd['x'] = [];
     dpd['y'] = [];
 
@@ -24,6 +24,7 @@ function slider(cb_obj, cds, snds, plot_idx_ds, dpds, toggle) {
     var dpd = dpds.get('data');
     var current_plot_idx = plot_idx_ds.get('data');
     var plot_idx = cb_obj.get('value');
+    var active = toggle.get('active');
 
     current_plot_idx['i'] = plot_idx;
 
@@ -33,9 +34,18 @@ function slider(cb_obj, cds, snds, plot_idx_ds, dpds, toggle) {
         }
     }
 
+    dpd['x'] = [];
+    dpd['y'] = [];
+    if (toggle.attributes.active == false) {
+        for (var i = 0, i_stop = cd['xs'].length; i < i_stop; i++) {
+            dpd['x'] = dpd['x'].concat(cd['xs'][i]);
+            dpd['y'] = dpd['y'].concat(cd['ys'][i]);
+        }
+    }
+
     cds.trigger('change');
     plot_idx_ds.trigger('change');
-    show_data_points(cds, dpds, toggle);
+    dpds.trigger('change');
 }
 
 function redraw_arrows(cds, x_range, y_range) {
