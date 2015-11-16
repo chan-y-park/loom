@@ -7,7 +7,7 @@ from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
 from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
                           ResetTool, PreviewSaveTool)
-from bokeh.models.widgets import Button
+from bokeh.models.widgets import Button, Toggle
 from bokeh.plotting import figure
 
 from misc import get_splits_with_overlap
@@ -194,39 +194,36 @@ def get_spectral_network_bokeh_plot(
     )
     redraw_arrows_button = Button(
         label='Redraw arrows',
-        callback=redraw_arrows_callback,
+        callback=CustomJS(
+            args={'cds': cds, 'x_range': bokeh_figure.x_range,
+                  'y_range': bokeh_figure.y_range,},
+            code='redraw_arrows(cds, x_range, y_range);',
+        ),
     )
 
     # 'Show data points' button
-    callback_code = open('loom/javascripts/bokeh_show_data_points_callback.js',
-                         'r').read()
-    show_data_points_callback = CustomJS(
-        args={'cds': cds, 'dpds': dpds,},
-        code=callback_code,
-    )
-    show_data_points_button = Button(
+    show_data_points_button = Toggle(
         label='Show data points',
-        callback=show_data_points_callback,
+    )
+    show_data_points_button.callback = CustomJS(
+        args={'cds': cds, 'dpds': dpds, 'toggle': show_data_points_button,},
+        code="show_data_points(cds, dpds, toggle);",
     )
 
-
-    # Adding a slider.
-    callback_code = open('loom/javascripts/bokeh_slider_callback.js',
-                         'r').read()
-    callback = CustomJS(
-        args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds}, 
-        code=callback_code,
-    )
-    
     bokeh_obj = {
         'redraw_arrows_button': redraw_arrows_button,
         'show_data_points_button': show_data_points_button,
     } 
 
     if len(spectral_networks) > 1:
+        # Add a slider.
         slider = Slider(start=0, end=len(spectral_networks)-1, 
-                        value=0, step=1, title="plot index",
-                        callback=callback)
+                        value=0, step=1, title="plot index",)
+        slider.callback = CustomJS(
+            args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds,
+                  'dpds': dpds, 'toggle': show_data_points_button,}, 
+            code="slider(cb_obj, cds, snds, plot_idx_ds, dpds, toggle);",
+        )
         plot = vform(bokeh_figure, slider, width=plot_width,)
     else:
         plot = bokeh_figure
