@@ -185,13 +185,6 @@ def get_spectral_network_bokeh_plot(
     #bokeh_figure.x_range.callback = bokeh_figure.y_range.callback
 
     # 'Redraw arrows' button.
-    callback_code = open('loom/javascripts/bokeh_redraw_arrows_callback.js',
-                         'r').read()
-    redraw_arrows_callback = CustomJS(
-        args={'cds': cds, 'x_range': bokeh_figure.x_range,
-              'y_range': bokeh_figure.y_range,},
-        code=callback_code,
-    )
     redraw_arrows_button = Button(
         label='Redraw arrows',
         callback=CustomJS(
