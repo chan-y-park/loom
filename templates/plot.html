@@ -14,37 +14,39 @@
             border:1px solid black;">-->
 
 <div class="container">
-    <div style="width:800px; margin:20px 20px 20px 20px">
-        <h2>Plot</h2>
+    <h2>Plot</h2>
+    <div class="row">
+        <div class="col-md-9" style="width:800px; margin:10px;">
+{{ div['plot']|safe }}
+        </div>
+        <div class="col-md-2" style="padding-top:80px;">
+{{ div['redraw_arrows_button']|safe }}
+{{ div['show_data_points_button']|safe }}
+        </div>
+    </div>
+</div>
 <!--
         <textarea id="plot_info_textarea" name="plot_info" rows=4 cols=80>
         </textarea>
 -->
-        <div class="col-xs-4">
-{{ div['redraw_arrows_button']|safe }}
-{{ div['show_data_points_button']|safe }}
-        </div>
-{{ div['plot']|safe }}
+<div class="container">
 {% if download_data_url %}
-        <div class="container">
-            <form class="form-inline" id="download_form" method="post">
-                <input type="hidden" value="{{ process_uuid }}">
-                <div class="form-group">
-                    <input type="submit" class="btn btn-default"
-                     id="download_data_button" value="Download data"
-                     formaction="{{ download_data_url }}">
-                    <input type="submit" class="btn btn-default"
-                     id="download_plot_button" value="Download plot"
-                     formaction="{{ download_plot_url }}">
-                </div>
-            </form>
-            <br/>
-{% endif %}
-            <textarea rows="24" cols="80">
-{{ plot_legend|safe }}
-            </textarea>
+    <form class="form-inline" id="download_form" method="post">
+        <input type="hidden" value="{{ process_uuid }}">
+        <div class="form-group">
+            <input type="submit" class="btn btn-default"
+             id="download_data_button" value="Download data"
+             formaction="{{ download_data_url }}">
+            <input type="submit" class="btn btn-default"
+             id="download_plot_button" value="Download plot"
+             formaction="{{ download_plot_url }}">
         </div>
-    </div>
+    </form>
+    <br/>
+{% endif %}
+    <textarea rows="24" cols="80">
+{{ plot_legend|safe }}
+    </textarea>
 {% include "config_form.html" %}
 </div>
 {% endblock %}
