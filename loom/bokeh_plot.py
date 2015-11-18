@@ -195,17 +195,26 @@ def get_spectral_network_bokeh_plot(
     )
 
     # 'Show data points' button
-    show_data_points_button = Toggle(
+    show_data_points_button = Button(
         label='Show data points',
     )
     show_data_points_button.callback = CustomJS(
-        args={'cds': cds, 'dpds': dpds, 'toggle': show_data_points_button,},
-        code="show_data_points(cds, dpds, toggle);",
+        args={'cds': cds, 'dpds': dpds, 'hover': hover,},
+        code="show_data_points(cds, dpds, hover);",
     )
 
+    # 'Hide data points' button
+    hide_data_points_button = Button(
+        label='Hide data points',
+    )
+    hide_data_points_button.callback = CustomJS(
+        args={'cds': cds, 'dpds': dpds, 'hover': hover,},
+        code="hide_data_points(cds, dpds, hover);",
+    )
     bokeh_obj = {
         'redraw_arrows_button': redraw_arrows_button,
         'show_data_points_button': show_data_points_button,
+        'hide_data_points_button': hide_data_points_button,
     } 
 
     if len(spectral_networks) > 1:
@@ -214,8 +223,8 @@ def get_spectral_network_bokeh_plot(
                         value=0, step=1, title="plot index",)
         slider.callback = CustomJS(
             args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds,
-                  'dpds': dpds, 'toggle': show_data_points_button,}, 
-            code="slider(cb_obj, cds, snds, plot_idx_ds, dpds, toggle);",
+                  'dpds': dpds, 'hover': hover,}, 
+            code="slider(cb_obj, cds, snds, plot_idx_ds, dpds, hover);",
         )
         plot = vform(bokeh_figure, slider, width=plot_width,)
     else:

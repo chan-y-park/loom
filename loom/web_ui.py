@@ -718,6 +718,7 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         download_plot_url=download_plot_url,
         loom_config=loom_config,
         config_options=config_options,
+        js_key=int(time.time()),
     )
 
 def get_plot_legend(sw_data):

@@ -1,32 +1,33 @@
-function show_data_points(cds, dpds, toggle) {
+function show_data_points(cds, dpds, hover) {
     var cd = cds.get('data');
     var dpd = dpds.get('data');
-    var active = toggle.attributes.active;
     dpd['x'] = [];
     dpd['y'] = [];
 
-    if (active == false) {
-        for (var i = 0, i_stop = cd['xs'].length; i < i_stop; i++) {
-            dpd['x'] = dpd['x'].concat(cd['xs'][i]);
-            dpd['y'] = dpd['y'].concat(cd['ys'][i]);
-        }
-        toggle.attributes.label = 'Hide data points';
-        active = true;
-    } else if (active == true) {
-        toggle.attributes.label = 'Show data points';
-        active = false;
+    for (var i = 0, i_stop = cd['xs'].length; i < i_stop; i++) {
+        dpd['x'] = dpd['x'].concat(cd['xs'][i]);
+        dpd['y'] = dpd['y'].concat(cd['ys'][i]);
     }
-    toggle.trigger('change');
+    hover.attributes.tooltips = null;
     dpds.trigger('change');
 }
 
-function slider(cb_obj, cds, snds, plot_idx_ds, dpds, toggle) {
+function hide_data_points(cds, dpds, hover) {
+    var cd = cds.get('data');
+    var dpd = dpds.get('data');
+    dpd['x'] = [];
+    dpd['y'] = [];
+
+    hover.attributes.tooltips = [['name', '@label'], ['root', '@root']];
+    dpds.trigger('change');
+}
+
+function slider(cb_obj, cds, snds, plot_idx_ds, dpds, hover) {
     var cd = cds.get('data');
     var snd = snds.get('data');
     var dpd = dpds.get('data');
     var current_plot_idx = plot_idx_ds.get('data');
     var plot_idx = cb_obj.get('value');
-    var active = toggle.get('active');
 
     current_plot_idx['i'] = plot_idx;
 
@@ -35,19 +36,9 @@ function slider(cb_obj, cds, snds, plot_idx_ds, dpds, toggle) {
             cd[key] = snd['spectral_networks'][plot_idx][key];
         }
     }
-
-    dpd['x'] = [];
-    dpd['y'] = [];
-    if (active == false) {
-        for (var i = 0, i_stop = cd['xs'].length; i < i_stop; i++) {
-            dpd['x'] = dpd['x'].concat(cd['xs'][i]);
-            dpd['y'] = dpd['y'].concat(cd['ys'][i]);
-        }
-    }
-
     cds.trigger('change');
     plot_idx_ds.trigger('change');
-    dpds.trigger('change');
+    hide_data_points(cds, dpds, hover);
 }
 
 function redraw_arrows(cds, x_range, y_range) {

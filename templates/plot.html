@@ -5,7 +5,8 @@
         rel="stylesheet" type="text/css">
     <script src="http://cdn.pydata.org/bokeh/release/bokeh-0.10.0.min.js">
     </script>
-    <script src="{{ url_for('static', filename='bokeh_callbacks.js') }}">
+    <script src="{{ url_for('static', filename='bokeh_callbacks.js',
+                            key=js_key,) }}">
     </script>
     {{ script|safe }}
 {% endblock %}
@@ -22,6 +23,7 @@
         <div class="col-md-2" style="padding-top:80px;">
 {{ div['redraw_arrows_button']|safe }}
 {{ div['show_data_points_button']|safe }}
+{{ div['hide_data_points_button']|safe }}
         </div>
     </div>
 </div>
