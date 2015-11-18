@@ -11,8 +11,10 @@ function show_data_points(cds, dpds, toggle) {
             dpd['y'] = dpd['y'].concat(cd['ys'][i]);
         }
         toggle.attributes.label = 'Hide data points';
+        active = true;
     } else if (active == true) {
         toggle.attributes.label = 'Show data points';
+        active = false;
     }
     toggle.trigger('change');
     dpds.trigger('change');
@@ -36,7 +38,7 @@ function slider(cb_obj, cds, snds, plot_idx_ds, dpds, toggle) {
 
     dpd['x'] = [];
     dpd['y'] = [];
-    if (toggle.attributes.active == false) {
+    if (active == false) {
         for (var i = 0, i_stop = cd['xs'].length; i < i_stop; i++) {
             dpd['x'] = dpd['x'].concat(cd['xs'][i]);
             dpd['y'] = dpd['y'].concat(cd['ys'][i]);
