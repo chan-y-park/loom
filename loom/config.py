@@ -96,9 +96,11 @@ class LoomConfig:
     def __delitem__(self, option):
         try:
             # Remove the option from the data dict.
-            del self.data[key]
+            del self.data[option]
             # Remove the option from the parser.
-            self.parser.remove_option(section, option)
+            for section in self.options:
+                if option in self.options[section]:
+                    self.parser.remove_option(section, option)
         except KeyError:
             raise KeyError('Unknown option \'{}\'.'.format(option))
 

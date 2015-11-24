@@ -245,42 +245,6 @@ class GData:
         logger.warning('No color mapped for the root {}'
                        .format(root.tolist()))
         return None
-            
-#    def create_root_color_map(self):
-#        """
-#        Create a mapping between a positive root and a color.
-#        A negative root will have the same color as the corresponding
-#        positive root.
-#        """
-#        g_roots = list(self.roots)
-#        n_rts = len(g_roots)
-#        colors = []
-#        for i in range(n_rts):
-#            #r, g, b, alpha = mpl_color_map.jet((i / float(n_rts)), bytes=True)
-#            r, g, b, alpha = mpl_color_map.viridis(
-#                (i / float(n_rts)), bytes=True
-#            )
-#            colors.append('#{:02x}{:02x}{:02x}'.format(r, g, b))
-#
-#        return {colors[i]: rt for i, rt in enumerate(g_roots)}
-#
-#    def root_color(self, root):
-#        if self.root_color_map is None:
-#            self.root_color_map = self.create_root_color_map()
-#
-#        is_actual_root = False
-#        for alpha in self.roots:
-#            if numpy.array_equal(alpha, root):
-#                is_actual_root = True
-#
-#        if is_actual_root:
-#            root_color_map = self.root_color_map
-#            return (
-#                [k for k, v in root_color_map.iteritems()
-#                 if numpy.array_equal(v, root)][0]
-#            )
-#        else:
-#            return None
 
 
 class RamificationPoint:
