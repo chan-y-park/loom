@@ -309,7 +309,7 @@ class SWall(object):
                 # based on the z-coordinate's real part.
                 t_zeros = interpolate.sproot(g).tolist()
 
-            elif num_of_zs > 1:
+            elif 1 < num_of_zs <= 3:
                 # There are two or three data points on the S-wall.
                 # Use a linear interpolation for every pair of data points.
                 t_zeros = []
@@ -376,7 +376,7 @@ class SWall(object):
         self.enhance_at_cuts(sw_data)
 
         # Choose the last point along the wall.
-        t_0 = num_of_zs
+        t_0 = num_of_zs - 1
         z_0 = self.z[t_0]
         xs_0 = self.x[t_0]
         self.root_basepoint = [t_0, z_0, xs_0]

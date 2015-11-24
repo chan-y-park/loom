@@ -15,6 +15,7 @@ from misc import get_splits_with_overlap
 def get_spectral_network_bokeh_plot(
     spectral_network_data, plot_range=None,
     plot_joints=False, plot_data_points=False, plot_on_cylinder=False,
+    notebook=False,
 ):
     spectral_networks = spectral_network_data.spectral_networks
     sw_data = spectral_network_data.sw_data
@@ -232,4 +233,7 @@ def get_spectral_network_bokeh_plot(
 
     bokeh_obj['plot'] = plot
 
-    return bokeh.embed.components(bokeh_obj)
+    if notebook is True:
+        return plot
+    else:
+        return bokeh.embed.components(bokeh_obj)
