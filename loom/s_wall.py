@@ -485,7 +485,7 @@ class SWall(object):
 
                 current_root = self.local_roots[-1]
                 new_root = g_data.weyl_monodromy(
-                    current_root, branch_locus, direction
+                    current_root, br_loc, direction
                 )
                 new_weight_pairs = g_data.ordered_weight_pairs(new_root)
 
@@ -500,7 +500,7 @@ class SWall(object):
 
                 current_root = self.local_roots[0]
                 new_root = g_data.weyl_monodromy(
-                    current_root, branch_locus, direction, reverse=True
+                    current_root, br_loc, direction, reverse=True
                 )
                 new_weight_pairs = g_data.ordered_weight_pairs(new_root)
 
