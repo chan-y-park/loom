@@ -225,11 +225,7 @@ class GData:
         p_root_colors = []
         for i in range(num_p_roots):
             #r, g, b, alpha = mpl_color_map.jet((i / float(n_rts)), bytes=True)
-            try:
-                color_map = mpl_color_map.viridis
-            except AttributeError:
-                color_map = mpl_color_map.jet
-            r, g, b, alpha = color_map(
+            r, g, b, alpha = mpl_color_map.viridis(
                 (i / float(num_p_roots)), bytes=True
             )
             p_root_colors.append('#{:02x}{:02x}{:02x}'.format(r, g, b))
