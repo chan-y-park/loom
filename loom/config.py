@@ -3,26 +3,6 @@ import logging
 import pdb
 
 
-#class LoomConfigParser(ConfigParser.SafeConfigParser):
-#    """
-#    A wrapper of SafeConfigParser.
-#    """
-#
-#    def get(self, section, option):
-#        """
-#        Returns a value of an option as a Python expression,
-#        whereas ConfigParser.get() returns a value as a string.
-#        """
-#        value = ConfigParser.SafeConfigParser.get(self, section, option)
-#        return eval(value)
-#
-#    def getstr(self, section, option):
-#        """
-#        Returns a value as a string.
-#        """
-#        return ConfigParser.SafeConfigParser.get(self, section, option)
-
-
 class LoomConfig:
     """
     A container class of the configuration data.

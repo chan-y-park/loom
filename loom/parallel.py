@@ -66,16 +66,14 @@ def a_child_process(
 
 def parallel_get_spectral_network(
     sw, 
-    phase,
     config,
     n_processes,
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
     spectral_network_list = []
-    #n_processes = config['n_processes']
 
-    theta_i, theta_f, theta_n = phase
+    theta_i, theta_f, theta_n = config['phase']
     phases = [(float(theta_i) + i * float(theta_f - theta_i) / (theta_n-1))
               for i in range(theta_n)]
 
