@@ -287,6 +287,7 @@ def generate_spectral_network(
             logger.info('phases = {}.'.format(phase))
             spectral_networks = parallel_get_spectral_network(
                 sw, 
+                phase,
                 config,
                 n_processes,
                 logger_name=logger_name,
