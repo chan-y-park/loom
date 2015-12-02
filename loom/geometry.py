@@ -1373,12 +1373,14 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
 
     # Start sorting
     sorted_sheets[0] = x_0
+    print "\nFirst sheet: {}".format(x_0)
 
     # The quintet of triples of \mu_0
     q_0 = get_quintets(0, n_w_triples)
 
     # The quintet of SHEET triples of x_0
     s_q_0 = get_quintets(x_0, n_s_triples)
+    print "\nquintet q_0: {}".format(s_q_0)
 
     # Get the list of sheets appearing in the quintet s_q_0
     # The weyl symmetry allows us to fix the these
