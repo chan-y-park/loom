@@ -972,7 +972,9 @@ def get_punctures_from_config(
     return punctures
 
 # E_6 curve strings
-tau_str = 't + 1/t + {u_6}'
+## CHECK ME: made some changes here
+# tau_str = 't + 1/t + {u_6}'
+phi_12_str = '{u_6}'
 q_1_str = (
     '270*x^(15) + 342*({u_1})*x^(13) + 162*({u_1})^2*x^(11)'  
     '- 252*({u_2})*x^(10) + (26*({u_1})^3 + 18*({u_3}))*x^9' 
@@ -1023,10 +1025,12 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
 
     elif g_type == 'E':
         phi = casimir_differentials
+        # print 'these are the casimirs {}'.format(casimir_differentials)
         # u_(1, 2, 3, 4, 5) = phi[2, 5, 6, 8, 9, 12]
         if g_rank == 6:
-            ## Temporarily working with a highly non generic curve
-            tau = tau_str.format(u_6=phi[12])
+            ## CHECK ME: made some changes here
+            # tau = tau_str.format(u_6=phi[12])
+            phi_12 = phi_12_str.format(u_6=phi[12])
             q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
                                 u_4=phi[8], u_5=phi[9])
             p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
@@ -1034,10 +1038,15 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
             p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
                                 u_4=phi[8], u_5=phi[9])
             q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
+            # curve_str = (
+            #    '(1/2)*x^3*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
+            #    .format(tau=tau, q_1=q_1, q_2=q_2)
+            # )
             curve_str = (
-               '(1/2)*x^3*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
-               .format(tau=tau, q_1=q_1, q_2=q_2)
+               '(1/2)*x^3*({phi_12})^2 - ({q_1})*({phi_12}) + ({q_2})'
+               .format(phi_12=phi_12, q_1=q_1, q_2=q_2)
             )
+            ## A highly non generic curve
             # curve_str = (
             #     'x^27 + x^15 * u_12 + x^3 * u_24'
             #     .format(u_12=phi[12], u_24=phi[24])
@@ -1317,7 +1326,7 @@ def null_weight_triples(weights):
         w_k = weights[k]
         # FIXME: weights are in general arrays of floats, so
         # there may be a numerical issue in the following comparison.
-        if (w_i + w_j + w_k == null_vec):
+        if (w_i + w_j + w_k == null_vec).all():
             null_triples.append([i, j, k])
 
     return sorted(null_triples)
