@@ -283,7 +283,12 @@ class SWall(object):
         g_data = sw_data.g_data
         # branching will occur at branch points or irregular singularities
         branch_loci = sw_data.branch_points + sw_data.irregular_singularities
-        
+        # Adding a minimal radius of 1.0 is necessary 
+        # in case there is only a single branch point at z=0,
+        # otherwise max_radius would be 0.
+        max_radius = 2 * max(
+            [abs(c_l.z) for c_l in branch_loci] + [1.0]
+        )
         # Parametrize the z-coordinate of the k-wall's coordinates
         # as a function of the index.
         num_of_zs = len(self.z)
@@ -375,18 +380,35 @@ class SWall(object):
         # then update the attribute SWall.cuts_intersections accordingly    
         self.enhance_at_cuts(sw_data)
 
-        # Choose the last point along the wall.
-        t_0 = num_of_zs - 1
+        # Choose a suitable point along the wall
+        # we pick the one whose z coordinate's real part is 
+        # farthest from critical loci of the fibration        
+        # Ideally, we would like this basepoint to be not too far away 
+        # on the C-plane, because getting close to infinity
+        # means colliding sheets usually.
+        # But some walls are born beyond the max_radius in general
+        # in that case, we just choose the t=0 coordinate
+        t_0 = sorted(
+            ([
+                [t_i, min(
+                    z_r_distance_from_ramification_loci(z_i, sw_data)
+                )]
+                for t_i, z_i in enumerate(self.z) if (
+                    abs(z_i) < max_radius or t_i == 0
+                )
+            ]), cmp=lambda a, b: cmp(a[1], b[1])
+        )[-1][0]
+
         z_0 = self.z[t_0]
         xs_0 = self.x[t_0]
         self.root_basepoint = [t_0, z_0, xs_0]
 
-        # Determine the initial root-type.
+        # Determine the initial root-type
         initial_root = get_s_wall_root(z_0, xs_0, sw_data,)
         # A list of ordered pairs [...[i, j]...]
-        # such that weights[j] - weights[i] = root.
-        initial_weight_pairs = sw_data.g_data.ordered_weight_pairs(
-            initial_root,
+        # such that weights[j] - weights[i] = root
+        initial_weight_pairs = (
+            sw_data.g_data.ordered_weight_pairs(initial_root,)
         )
             
         self.local_roots = [initial_root]
@@ -398,9 +420,26 @@ class SWall(object):
                 i_p for i_p in self.cuts_intersections if i_p[1] < t_0
             ][::-1]
 
-            # Fill in the root types that occur before the basepoint.
-            # Recall that their time-ordering has already been reversed
-            # so the first one in the list is the closest to t_0, and so on.
+            intersections_after_t_0 = [
+                i_p for i_p in self.cuts_intersections if i_p[1] > t_0
+            ]
+
+            # Fill in the root types that occur after the basepoint
+            for k in range(len(intersections_after_t_0)):
+                br_loc, t, direction = intersections_after_t_0[k]
+
+                current_root = self.local_roots[-1]
+                new_root = g_data.weyl_monodromy(
+                    current_root, br_loc, direction
+                )
+                new_weight_pairs = g_data.ordered_weight_pairs(new_root)
+
+                self.local_roots.append(new_root)
+                self.local_weight_pairs.append(new_weight_pairs)
+
+            # Fill in the root types that occur before the basepoint
+            # recall that their time-ordering has already been reversed
+            # so the first one in the list is the closest to t_0, and so on
             for k in range(len(intersections_before_t_0)):
                 br_loc, t, direction = intersections_before_t_0[k]
 

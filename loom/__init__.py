@@ -1,4 +1,5 @@
 import os
+import time
 import platform
 import logging
 import matplotlib
@@ -28,7 +29,8 @@ from api import load_config, save_config
 
 LOGGING_FILE_PATH = os.path.join(
     get_loom_dir(),
-    'logs/loom.log',
+    ('logs/loom_{}-{:02}-{:02} {:02}:{:02}:{:02}.log'
+     .format(*time.localtime(time.time())[:6])),
 )
 
 set_logging(
