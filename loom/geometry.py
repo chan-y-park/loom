@@ -1370,6 +1370,8 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
 
     n_w_triples = null_weight_triples(weights)
     n_s_triples = null_sheet_triples(sheets)
+    print "\nnull weight triples \n{}".format(n_w_triples)
+    print "\nnull sheet triples \n{}".format(n_s_triples)
 
     # Start sorting
     sorted_sheets[0] = x_0
