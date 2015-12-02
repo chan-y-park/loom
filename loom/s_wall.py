@@ -353,7 +353,7 @@ class SWall(object):
                 x_p = self.z[t - 1].real
                 x_n = self.z[t + 1].real
                 if not ((x_p < br_loc_x < x_n) or (x_n < br_loc_x < x_p)):
-                    logger.debug('Dropping a fake cut intersection.')
+                    logger.info('Drop a fake cut intersection.')
                     continue
 
                 # Add 
