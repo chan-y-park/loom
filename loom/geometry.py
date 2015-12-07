@@ -1445,88 +1445,131 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
     print '\n\nThe weights:\n{}'.format(weights)
     print '\n\nThe sheets:\n{}'.format(sheets)
 
-    for sheet_0_index in range(27):
-        print '\nstart sorting from sheet number {}\n'.format(sheet_0_index)
+    n_w_triples = null_weight_triples(weights)
+    n_s_triples = null_sheet_triples(sheets)
+
+    # Pick the first sheet and the first weight, 
+    # we will declare them to match
+    # These must be numbers between 0 and 26,
+    # any choice should be equivalent.
+    sheet_0_index = 0
+    weight_0_index = 0
+
+    # Start sorting 
+    x_0 = sheets[sheet_0_index]
+    # w_0 = weights[weight_0_index]
+    # sorted_sheets[weight_0_index] = x_0
+
+    # The quintet of triples of w_0
+    # Note: these are not actual weights, 
+    # but rather their integer labels
+    q_0 = get_quintets(weight_0_index, n_w_triples)
+
+    # The quintet of SHEET triples of x_0
+    # Note: these are the actual values of sheet coordinates
+    s_q_0 = get_quintets(x_0, n_s_triples)
+
+    # Get the list of sheets appearing in the quintet s_q_0
+    known_sheets = [x_0]
+    for i in range(NULL_TRIPLES_INDIVIDUAL):
+        # Get the (unordered) pair of sheets [x_i, x_j] 
+        # from each triple [x_0, x_i, x_j]
+        s_pair = [s for s in s_q_0[i] if s != x_0]
+
+        # REMOVE FOLLOWING
+        # # Get the (unordered) pair of weight-labels [i, j] 
+        # # from each triple [0, i, j]
+        # w_pair = [k for k in q_0[i] if k != 0]
+
+        # sorted_sheets[w_pair[0]] = s_pair[0]
+        # sorted_sheets[w_pair[1]] = s_pair[1]
+
+        known_sheets.append(s_pair[0])
+        known_sheets.append(s_pair[1])
+
+    # Get the list of weights appearing in the quintet q_0
+    known_weights = [weight_0_index]
+    for t in q_0:
+        for i in t:
+            if i in known_weights:
+                continue
+            else:
+                known_weights.append(i)
+
+    missing_weights = [
+        i for i in range(len(weights)) if i not in known_weights
+    ]
+    missing_sheets = [
+        x for x in sheets if x not in known_sheets
+    ]
+
+    # The ordering of the known weights is now the following:
+    # [i_0, j_1, j_2, k_1, k_2, ...]
+    # where i_0 + j_1 + j_2 = 0 = i_0 + k_1 + k_2 = ...
+    # (intended as a sum of the actual weights, not their labels)
+    # This ordering matters, as we will use it to catalogue the 
+    # remaining unknown weights, and we will do the same with the sheets.
+    # The overall ordering of the pairs [j_1, j_2], [k_1, k_2], ...
+    # is ALMOST free, because of the Weyl symmetry.
+    # More precisely, there are 5 pairs and we have a W(D_5)
+    # symmetry. So pairs can be permuted and an EVEN number of 
+    # 'flips' can be performed. I.e. W(D_5) ~ S_5 x (Z_2)^4
+    # This leaves us with two inequiavlent choices:
+    # eiher
+    # [i_0, j_1, j_2, k_1, k_2, ..., n_1, n_2]
+    # or
+    # [i_0, j_1, j_2, k_1, k_2, ..., n_2, n_1]
+    # We have to try both cases.
+
+    last_pair = known_weights[-2:]
+    last_pair_r = [last_pair[1], last_pair[0]]
+    known_weights_1 = known_weights
+    known_weights_2 = [k_s for k_s in known_weights[:-2]] + last_pair_r
+    print '\nknown weights 1: {}'.format(known_weights_1)
+    print '\nknown weights 2: {}'.format(known_weights_2)
+
+    # List all the combos of which SHEET quintets 
+    # must/must not contain all missing SHEETS
+    sheet_combos = [
+        [
+            quintet_contained(x, get_quintets(y, n_s_triples)) 
+            for y in known_sheets
+        ] for x in missing_sheets
+    ]
+
+    for known_weights_i in [known_weights_1, known_weights_2]:
+        # Will reorder the sheets according to the weights 
+        # they correspond to
+        # e.g. if 
+        # weights = [w_0, w_1, ...]
+        # then we aim for
+        # [x_0, x_1, ...] --> [x'_0, x'_1, ...]
+        # were on LHS is the list of sheets, and on RHS
+        # is the list of sorted_sheets.
         sorted_sheets = [None for w in weights]
-        x_0 = sheets[sheet_0_index]
 
-        n_w_triples = null_weight_triples(weights)
-        n_s_triples = null_sheet_triples(sheets)
-        # print "\nnull weight triples \n{}".format(n_w_triples)
-        # print "\nnull sheet triples \n{}".format(n_s_triples)
-
-        # Start sorting
-        sorted_sheets[sheet_0_index] = x_0
-        # print "\nFirst sheet: {}".format(x_0)
-
-        # The quintet of triples of \mu_0
-        q_0 = get_quintets(0, n_w_triples)
-
-        # The quintet of SHEET triples of x_0
-        s_q_0 = get_quintets(x_0, n_s_triples)
-        # print "\nquintet q_0: {}".format(s_q_0)
-        # print "\nlength {}".format(len(q_0))
-
-        # Get the list of sheets appearing in the quintet s_q_0
-        # The weyl symmetry allows us to fix the these
-        known_sheets = [x_0]
-        for i in range(NULL_TRIPLES_INDIVIDUAL):
-            # Get the (unordered) pair of sheets [x_i, x_j] 
-            # from each triple [x_0, x_i, x_j]
-            s_pair = [s for s in s_q_0[i] if s != x_0]
-            # Get the (unordered) pair of weight-labels [i, j] 
-            # from each triple [0, i, j]
-            w_pair = [k for k in q_0[i] if k != 0]
-
-            sorted_sheets[w_pair[0]] = s_pair[0]
-            sorted_sheets[w_pair[1]] = s_pair[1]
-
-            known_sheets.append(s_pair[0])
-            known_sheets.append(s_pair[1])
-
-        # Get the list of weights appearing in the quintet q_0
-        known_weights = [0]
-        for t in q_0:
-            for i in t:
-                if i in known_weights:
-                    continue
-                else:
-                    known_weights.append(i)
-
-        missing_weights = [
-            i for i in range(len(weights)) if i not in known_weights
-        ]
-        missing_sheets = [
-            x for x in sheets if x not in known_sheets
-        ]
-
-        # print "\nknown weights \n{}".format(known_weights)
-        # print "\nknown sheets \n{}".format(known_sheets)
-        # print "\nmissing weights \n{}".format(missing_weights)
-        # print "\nmissing sheets \n{}".format(missing_sheets)
-        # print "length = {}".format(len(missing_sheets))
-        
         # List all the combos of which WEIGHT quintets 
         # must/must not contain all missing WEIGHTS
         weight_combos = [
             [
                 quintet_contained(j, get_quintets(i, n_w_triples)) 
-                for i in known_weights
+                for i in known_weights_i
             ] for j in missing_weights
         ]
 
-        # List all the combos of which SHEET quintets 
-        # must/must not contain all missing SHEETS
-        sheet_combos = [
-            [
-                quintet_contained(x, get_quintets(y, n_s_triples)) 
-                for y in known_sheets
-            ] for x in missing_sheets
-        ]
-        print '\nweight combos\n{}'.format(weight_combos)
-        print '\nlenght {}'.format(len(weight_combos))
-        print '\nsheet combos\n{}'.format(sheet_combos)
-        print '\nlenght {}'.format(len(sheet_combos))
+        # Now place the known sheets in the corresponding position
+        # as dictated by the corresponding known weight.
+        for i in range(len(known_weights_i)):
+            k_w = known_weights_i[i]
+            k_s = known_sheets[i]
+            sorted_sheets[k_w] = k_s
+
+        print '\nthe known sheets :\n{}'.format(sorted_sheets)
+        
+        # print '\nweight combos\n{}'.format(weight_combos)
+        # print '\nlenght {}'.format(len(weight_combos))
+        # print '\nsheet combos\n{}'.format(sheet_combos)
+        # print '\nlenght {}'.format(len(sheet_combos))
 
         # Now match the patterns of inclusion in the quintets
         # between missing weights and missing sheets.
@@ -1537,21 +1580,24 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
             for j in range(len(missing_weights)):
                 w_combo = weight_combos[j]
                 if s_combo == w_combo:
-                    sorted_sheets[j] = missing_sheets[i]
+                    sorted_sheets[missing_weights[j]] = missing_sheets[i]
                 else:
                     pass
 
         print '\nthe sorted sheets\n{}'.format(sorted_sheets)
         
         if None in sorted_sheets:
-            # raise ValueError('Something is wrong with the sorting of sheets')
+            # this would mean that sorted_weights_i 
+            # is not the correct ordering
             pass
         else:
-            # A basic check that we didn't pick a sheet twice
-            if len(sorted_sheets) == len(delete_duplicates(sorted_sheets)):
-                pass
-            else:
-                raise ValueError('Something is wrong with the sorting of sheets')
+            break
 
+    if None in sorted_sheets:
+        raise ValueError('Cannot match all sheets with weights') 
+    elif len(sorted_sheets) != len(delete_duplicates(sorted_sheets)):
+        raise ValueError('Duplicate identification of sheets and weights')
+                
+    print '\nthe final sorted sheets\n{}'.format(sorted_sheets)
     return sorted_sheets
 
