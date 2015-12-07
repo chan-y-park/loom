@@ -401,7 +401,7 @@ class SWCurve:
         if self.num_eq is None:
             raise NotImplementedError
 
-        fx = self.num_eq.subs(z, z_0)
+        fx = sympy.simplify(self.num_eq.subs(z, z_0))
         sym_poly = sympy.Poly(fx, x, domain='CC')
         coeff_list = map(complex, sym_poly.all_coeffs())
         return numpy.roots(coeff_list)
@@ -429,9 +429,9 @@ class SWDataBase(object):
     """
     A class containing the geometric data of a Seiberg-Witten curve
     in the first fundamental representation,
-        \lambda^N + \sum_{k=2}^N a_k(z) dz^k \lambda^{N-k}, 
-    where \lambda is the Seiberg-Witten differential of the form 
-        \lambda = x dz.
+        x^N + \sum_{k=2}^N a_k(z) dz^k x^{N-k}, 
+    where x is the Seiberg-Witten differential of the form 
+        x = x dz.
 
     This class also includes ramification points of the curve, and 
     another curve in the representation given in the configuration.
@@ -681,6 +681,7 @@ class SWDataBase(object):
                     g_data=self.g_data,
                     logger_name=self.logger_name,
                 )
+                
                 for z_i, (x_j, m_x) in sols:
                     rp = RamificationPoint(
                         # Note: if we substitute z' = c z in F(x,z)=0,
@@ -972,27 +973,70 @@ def get_punctures_from_config(
     return punctures
 
 # E_6 curve strings
-## CHECK ME: made some changes here
-# tau_str = 't + 1/t + {u_6}'
-phi_12_str = '{u_6}'
+
+# The following is wrong, it didn't take into account 
+# the correct definition of the SW differential.
+# 
+# tau_str = 'z + 1/z + ({u_6})'
+# q_1_str = (
+#     '270*{x}^(15) + 342*(({u_1}))*{x}^(13) + 162*(({u_1}))^2*{x}^(11)'  
+#     '- 252*(({u_2}))*{x}^(10) + (26*(({u_1}))^3 + 18*(({u_3})))*{x}^9' 
+#     '- 162*(({u_1}))*(({u_2}))*{x}^8 + (6*(({u_1}))*(({u_3})) '
+#     '- 27*(({u_4})))*{x}^7' 
+#     '- (30*(({u_1}))^2*(({u_2})) - 36*(({u_5})))*{x}^6' 
+#     '+ (27*(({u_2}))^2 - 9*(({u_1}))*(({u_4})))*{x}^5' 
+#     '- (3*(({u_2}))*(({u_3})) - 6*(({u_1}))*(({u_5})))*{x}^4' 
+#     '- 3*(({u_1}))*(({u_2}))^2*{x}^3 - 3*(({u_2}))*(({u_5}))*{x} '
+#     '- (({u_2}))^3'
+# )
+# q_2_str = '1/(2*{x}^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
+# p_1_str = (
+#     '78*{x}^10 + 60*(({u_1}))*{x}^8 + 14*(({u_1}))^2*{x}^6 '
+#     '- 33*(({u_2}))*{x}^5' 
+#     '+ 2*(({u_3}))*{x}^4 - 5*(({u_1}))*(({u_2}))*{x}^3 - (({u_4}))*{x}^2 '
+#     '- (({u_5}))*{x} - (({u_2}))^2'
+# )
+# p_2_str = (
+#     '12*{x}^10 + 12*(({u_1}))*{x}^8 + 4*(({u_1}))^2*{x}^6 '
+#     '- 12*(({u_2}))*{x}^5 + (({u_3}))*{x}^4' 
+#     '- 4*(({u_1}))*(({u_2}))*{x}^3 - 2*(({u_4}))*{x}^2 + 4*(({u_5}))*{x} '
+#     '+ (({u_2}))^2'
+# )
+
+phi_12_str = '({u_6})'
 q_1_str = (
-    '270*x^(15) + 342*({u_1})*x^(13) + 162*({u_1})^2*x^(11)'  
-    '- 252*({u_2})*x^(10) + (26*({u_1})^3 + 18*({u_3}))*x^9' 
-    '- 162*({u_1})*({u_2})*x^8 + (6*({u_1})*({u_3}) - 27*({u_4}))*x^7' 
-    '- (30*({u_1})^2*({u_2}) - 36*({u_5}))*x^6' 
-    '+ (27*({u_2})^2 - 9*({u_1})*({u_4}))*x^5' 
-    '- (3*({u_2})*({u_3}) - 6*({u_1})*({u_5}))*x^4' 
-    '- 3*({u_1})*({u_2})^2*x^3 - 3*({u_2})*({u_5})*x - ({u_2})^3'
+    '-(13/256) * x^9 * ({u_1})^3 * z^9 '
+    '- 15/32 * x^6 * ({u_1})^2 * ({u_2}) * z^6'
+    '-(81 * x^(11) * ({u_1})^2 * z^(11))/(1024) '
+    '+ (3/8) * x^3 * ({u_1}) * ({u_2})^2 * z^3 '
+    '- (81/128) * x^8 * ({u_1}) * ({u_2}) * z^8'
+    '- (3/64) * x^7 * ({u_1}) * ({u_3}) * z^7 '
+    '+ (9 / 32) * x^5 * ({u_1}) * ({u_4}) * z^5'
+    '+ (3/8) * x^4 * ({u_1}) * ({u_5}) * z^4 '
+    '- (171 * x^(13) * ({u_1}) * z^(13))/(4096)'
+    '- ({u_2})^3 - (27/32) * x^5 * ({u_2})^2 * z^5 '
+    '- (3/16) * x^4 * ({u_2}) * ({u_3}) * z^4'
+    '+ (3/2) * x * ({u_2}) * ({u_5}) * z '
+    '- (63/256) * x^(10) * ({u_2}) * z^(10) '
+    '- (9/256) * x^9 * ({u_3}) * z^9 '
+    '+ (27/128) * x^7 * ({u_4}) * z^7 '
+    '+ (9/16) * x^6 * ({u_5}) * z^6 '
+    '- (135 * x^(15) * z^(15))/(16384)'
 )
-q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
+q_2_str = '1/2 * ((-2) / (x * z))^3 *(({q_1})^2 - ({p_1})^2*({p_2}))'
 p_1_str = (
-    '78*x^10 + 60*({u_1})*x^8 + 14*({u_1})^2*x^6 - 33*({u_2})*x^5' 
-    '+ 2*({u_3})*x^4 - 5*({u_1})*({u_2})*x^3 - ({u_4})*x^2 - ({u_5})*x'
-    '- ({u_2})^2'
+    '(7/32) * x^6 * ({u_1})^2 * z^6 + (5/8) * x^3 * ({u_1}) * ({u_2}) * z^3' 
+    '+ (15/64) * x^8 * ({u_1}) * z^8 - ({u_2})^2 '
+    '+ (33/32) * x^5 * ({u_2}) * z^5 + (1/8) * x^4 * ({u_3}) * z^4 '
+    '- (1/4) * x^2 * ({u_4}) * z^2 + (x * ({u_5}) * z)/2 '
+    '+ (39 * x^(10) * z^(10))/512'
 )
 p_2_str = (
-    '12*x^10 + 12*({u_1})*x^8 + 4*({u_1})^2*x^6 - 12*({u_2})*x^5 + ({u_3})*x^4' 
-    '- 4*({u_1})*({u_2})*x^3 - 2*({u_4})*x^2 + 4*({u_5})*x  + ({u_2})^2'
+    '(1/256) * x * z * (16 * x^5 * ({u_1})^2 * z^5 '
+    '+ 12 * x^7 * ({u_1}) * z^7 + 16 * x^3 * ({u_3}) * z^3 '
+    '- 128 * x * ({u_4}) * z - 512 * ({u_5}) + 3 * x^9 * z^9) '
+    '+ (1/8) * ({u_2}) * (4 * x^3 * ({u_1}) * z^3 + 3 * x^5 * z^5) '
+    '+ ({u_2})^2'
 )
 
 
@@ -1025,11 +1069,8 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
 
     elif g_type == 'E':
         phi = casimir_differentials
-        # print 'these are the casimirs {}'.format(casimir_differentials)
         # u_(1, 2, 3, 4, 5) = phi[2, 5, 6, 8, 9, 12]
         if g_rank == 6:
-            ## CHECK ME: made some changes here
-            # tau = tau_str.format(u_6=phi[12])
             phi_12 = phi_12_str.format(u_6=phi[12])
             q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
                                 u_4=phi[8], u_5=phi[9])
@@ -1038,18 +1079,22 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
             p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
                                 u_4=phi[8], u_5=phi[9])
             q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
-            # curve_str = (
-            #    '(1/2)*x^3*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
-            #    .format(tau=tau, q_1=q_1, q_2=q_2)
-            # )
             curve_str = (
-               '(1/2)*x^3*({phi_12})^2 - ({q_1})*({phi_12}) + ({q_2})'
+               '(1/2)*(-(1/2) *z *x)^3*({phi_12})^2 '
+               '- ({q_1})*({phi_12}) + ({q_2})'
                .format(phi_12=phi_12, q_1=q_1, q_2=q_2)
             )
-            ## A highly non generic curve
+            # tau = tau_str.format(u_6=phi[12])
+            # q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+            #                     u_4=phi[8], u_5=phi[9], x='(-2 * x / z)')
+            # p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+            #                     u_4=phi[8], u_5=phi[9], x='(-2 * x / z)')
+            # p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+            #                     u_4=phi[8], u_5=phi[9], x='(-2 * x / z)')
+            # q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2, x='(-2 * x / z)')
             # curve_str = (
-            #     'x^27 + x^15 * u_12 + x^3 * u_24'
-            #     .format(u_12=phi[12], u_24=phi[24])
+            #    '(1/2)*({x})^3*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
+            #    .format(tau=tau, q_1=q_1, q_2=q_2, x='(- 2 * x / z)')
             # )
             return curve_str
 
@@ -1199,12 +1244,27 @@ def get_ramification_points_using_discriminant(
     sols = []
     f = curve.sym_eq
     # Make f into the form of rf = f_n/f_d
-    rf = sympy.cancel(f)
-    f_n, f_d = rf.as_numer_denom()
+    # 
+    # Old way -- keep until testing is complete:
+    # rf = sympy.cancel(f)
+    # rf = sympy.cancel(f.subs(subs_dict))
+    # f_n, f_d = rf.as_numer_denom()
+    # subs_dict = copy.deepcopy(diff_params)
+    # 
+    # New way:
     subs_dict = copy.deepcopy(diff_params)
+    rf = sympy.cancel(f.subs(subs_dict))
+    f_n, f_d = rf.as_numer_denom()
+    
     # Find the roots of D(z), the discriminant of f(x, z)
     # as a polynomial of x. 
-    D_z = sympy.discriminant(f_n.subs(subs_dict), x)
+    # TODO: test if sage's discriminant works well also with
+    # A and D-types curves. Then evaluate whether to get rid of
+    # the sympy discriminant for them.
+    if g_data.type == 'E':
+        D_z = sage_subprocess.compute_discriminant(f_n.subs(subs_dict))
+    else:
+        D_z = sympy.discriminant(f_n.subs(subs_dict), x)
 
     if D_z == 0:
         logger.info('The discriminant of F(x,z) is identically zero')
@@ -1212,6 +1272,22 @@ def get_ramification_points_using_discriminant(
             D_z = sympy.discriminant(f_n.subs(subs_dict) / x, x)
         if g_data.type == 'D':
             D_z = sympy.discriminant(f_n.subs(subs_dict) / (x ** 2), x)
+        # NOTE: think through possible generalizations here,
+        # this is only handling certain special cases with E_6
+        if g_data.type == 'E':
+            logger.info(
+                'will work with renormalized curve {}'.format(
+                    f_n.subs(subs_dict) / (x ** 3)
+                )
+            )
+            logger.info(
+                'after simplification {}'.format(
+                    sympy.simplify(f_n.subs(subs_dict) / (x ** 3))
+                )
+            )
+            D_z = sympy.discriminant(
+                sympy.simplify(f_n.subs(subs_dict) / (x ** 3)), x
+            )
         logger.info(
             'Will work with the effective discriminant:\n{}'.format(D_z)
         )
@@ -1365,94 +1441,117 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
     Return the list of sheets sorted according to the list of weights.
     The output is a list such that sheets[i] will correspond to weights[i].
     """
-    sorted_sheets = [None for w in weights]
-    x_0 = sheets[0]
 
-    n_w_triples = null_weight_triples(weights)
-    n_s_triples = null_sheet_triples(sheets)
-    print "\nnull weight triples \n{}".format(n_w_triples)
-    print "\nnull sheet triples \n{}".format(n_s_triples)
+    print '\n\nThe weights:\n{}'.format(weights)
+    print '\n\nThe sheets:\n{}'.format(sheets)
 
-    # Start sorting
-    sorted_sheets[0] = x_0
-    print "\nFirst sheet: {}".format(x_0)
+    for sheet_0_index in range(27):
+        print '\nstart sorting from sheet number {}\n'.format(sheet_0_index)
+        sorted_sheets = [None for w in weights]
+        x_0 = sheets[sheet_0_index]
 
-    # The quintet of triples of \mu_0
-    q_0 = get_quintets(0, n_w_triples)
+        n_w_triples = null_weight_triples(weights)
+        n_s_triples = null_sheet_triples(sheets)
+        # print "\nnull weight triples \n{}".format(n_w_triples)
+        # print "\nnull sheet triples \n{}".format(n_s_triples)
 
-    # The quintet of SHEET triples of x_0
-    s_q_0 = get_quintets(x_0, n_s_triples)
-    print "\nquintet q_0: {}".format(s_q_0)
+        # Start sorting
+        sorted_sheets[sheet_0_index] = x_0
+        # print "\nFirst sheet: {}".format(x_0)
 
-    # Get the list of sheets appearing in the quintet s_q_0
-    # The weyl symmetry allows us to fix the these
-    known_sheets = [x_0]
-    for i in range(NULL_TRIPLES_INDIVIDUAL):
-        # Get the (unordered) pair of sheets [x_i, x_j] 
-        # from each triple [x_0, x_i, x_j]
-        s_pair = [s for s in s_q_0[i] if s != x_0]
-        # Get the (unordered) pair of weight-labels [i, j] 
-        # from each triple [0, i, j]
-        w_pair = [k for k in q_0[i] if k != 0]
+        # The quintet of triples of \mu_0
+        q_0 = get_quintets(0, n_w_triples)
 
-        sorted_sheets[w_pair[0]] = s_pair[0]
-        sorted_sheets[w_pair[1]] = s_pair[1]
+        # The quintet of SHEET triples of x_0
+        s_q_0 = get_quintets(x_0, n_s_triples)
+        # print "\nquintet q_0: {}".format(s_q_0)
+        # print "\nlength {}".format(len(q_0))
 
-        known_sheets.append(s_pair[0])
-        known_sheets.append(s_pair[1])
+        # Get the list of sheets appearing in the quintet s_q_0
+        # The weyl symmetry allows us to fix the these
+        known_sheets = [x_0]
+        for i in range(NULL_TRIPLES_INDIVIDUAL):
+            # Get the (unordered) pair of sheets [x_i, x_j] 
+            # from each triple [x_0, x_i, x_j]
+            s_pair = [s for s in s_q_0[i] if s != x_0]
+            # Get the (unordered) pair of weight-labels [i, j] 
+            # from each triple [0, i, j]
+            w_pair = [k for k in q_0[i] if k != 0]
 
-    # Get the list of weights appearing in the quintet q_0
-    known_weights = [0]
-    for t in q_0:
-        for i in t:
-            if i in known_weights:
-                continue
-            else:
-                known_weights.append(i)
+            sorted_sheets[w_pair[0]] = s_pair[0]
+            sorted_sheets[w_pair[1]] = s_pair[1]
 
-    missing_weights = [
-        i for i in range(len(weights)) if i not in known_weights
-    ]
-    missing_sheets = [
-        x for x in range(len(sheets)) if i not in known_sheets
-    ]
-    
-    # List all the combos of which WEIGHT quintets 
-    # must/must not contain all missing WEIGHTS
-    weight_combos = [
-        [
-            quintet_contained(j, get_quintets(i, n_w_triples)) 
-            for i in known_weights
-        ] for j in missing_weights
-    ]
+            known_sheets.append(s_pair[0])
+            known_sheets.append(s_pair[1])
 
-    # List all the combos of which SHEET quintets 
-    # must/must not contain all missing SHEETS
-    sheet_combos = [
-        [
-            quintet_contained(x, get_quintets(y, n_s_triples)) 
-            for y in known_sheets
-        ] for x in missing_sheets
-    ]
+        # Get the list of weights appearing in the quintet q_0
+        known_weights = [0]
+        for t in q_0:
+            for i in t:
+                if i in known_weights:
+                    continue
+                else:
+                    known_weights.append(i)
 
-    # Now match the patterns of inclusion in the quintets
-    # between missing weights and missing sheets.
-    # When the patterns match, assign the corresponding 
-    # sheet to the list of sorted ones.
-    for i in range(len(missing_sheets)):
-        s_combo = sheet_combos[i]
-        for j in range(len(missing_weights)):
-            w_combo = weight_combos[j]
-            if s_combo == w_combo:
-                sorted_sheets[j] = missing_sheets[i]
-            else:
+        missing_weights = [
+            i for i in range(len(weights)) if i not in known_weights
+        ]
+        missing_sheets = [
+            x for x in sheets if x not in known_sheets
+        ]
+
+        # print "\nknown weights \n{}".format(known_weights)
+        # print "\nknown sheets \n{}".format(known_sheets)
+        # print "\nmissing weights \n{}".format(missing_weights)
+        # print "\nmissing sheets \n{}".format(missing_sheets)
+        # print "length = {}".format(len(missing_sheets))
+        
+        # List all the combos of which WEIGHT quintets 
+        # must/must not contain all missing WEIGHTS
+        weight_combos = [
+            [
+                quintet_contained(j, get_quintets(i, n_w_triples)) 
+                for i in known_weights
+            ] for j in missing_weights
+        ]
+
+        # List all the combos of which SHEET quintets 
+        # must/must not contain all missing SHEETS
+        sheet_combos = [
+            [
+                quintet_contained(x, get_quintets(y, n_s_triples)) 
+                for y in known_sheets
+            ] for x in missing_sheets
+        ]
+        print '\nweight combos\n{}'.format(weight_combos)
+        print '\nlenght {}'.format(len(weight_combos))
+        print '\nsheet combos\n{}'.format(sheet_combos)
+        print '\nlenght {}'.format(len(sheet_combos))
+
+        # Now match the patterns of inclusion in the quintets
+        # between missing weights and missing sheets.
+        # When the patterns match, assign the corresponding 
+        # sheet to the list of sorted ones.
+        for i in range(len(missing_sheets)):
+            s_combo = sheet_combos[i]
+            for j in range(len(missing_weights)):
+                w_combo = weight_combos[j]
+                if s_combo == w_combo:
+                    sorted_sheets[j] = missing_sheets[i]
+                else:
+                    pass
+
+        print '\nthe sorted sheets\n{}'.format(sorted_sheets)
+        
+        if None in sorted_sheets:
+            # raise ValueError('Something is wrong with the sorting of sheets')
+            pass
+        else:
+            # A basic check that we didn't pick a sheet twice
+            if len(sorted_sheets) == len(delete_duplicates(sorted_sheets)):
                 pass
-
-    # A basic check that we didn't pick a sheet twice
-    if len(sorted_sheets) == len(delete_duplicates(sorted_sheets)):
-        pass
-    else:
-        raise ValueError('Something is wrong with the sorting of sheets')
+            else:
+                raise ValueError('Something is wrong with the sorting of sheets')
 
     return sorted_sheets
 

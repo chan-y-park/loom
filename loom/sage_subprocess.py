@@ -1,6 +1,8 @@
 # Force integer division to give a float, i.e. 1/2 = 0.5.
 from __future__ import division
+from sympy import sympify, poly
 from sympy.mpmath import mp, mpc
+# from sympy.parsing.sympy_parser import parse_expr
 import logging
 import os
 import subprocess
@@ -56,4 +58,23 @@ def get_g_data(root_system, highest_weight):
     g_data = eval(g_data_str)
     
     return g_data
+
+
+def compute_discriminant(f):
+    """
+    Use SAGE to compute the discriminant of a polynomial f.
+    f must be expressed in variables x, z.
+    The discriminant will be computed with respect to x.
+    """
+    
+    try:
+        disc_str = subprocess.check_output(
+            ['sage', sage_script_dir + 'compute_discriminant.sage'] +
+            [str(f)]
+        )
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    
+    return poly(sympify(disc_str))
+
 
