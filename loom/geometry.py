@@ -940,7 +940,9 @@ def get_punctures_from_config(
 ):
     punctures = []
 
-    if config_punctures_string is None:
+    if (config_punctures_string is None or
+        config_punctures_string == 'None' or
+        config_punctures_string == ''):
         return punctures
 
     punctures_str = [
