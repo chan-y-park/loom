@@ -1294,7 +1294,7 @@ def get_ramification_points_using_discriminant(
 
     if D_z == 0:
         logger.info(
-            'The discriminant of F(x,z) is identically zero '
+            'The discriminant of F(x,z) is identically zero. '
             'Will work with an effective discriminant.'
         )
         if g_data.type == 'A':
@@ -1311,7 +1311,7 @@ def get_ramification_points_using_discriminant(
                     f_n.subs(subs_dict) / (x ** 3)
                 )
             )
-            logger.info(
+            logger.debug(
                 'after simplification {}'.format(
                     sympy.simplify(f_n.subs(subs_dict) / (x ** 3))
                 )

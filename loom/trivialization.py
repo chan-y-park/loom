@@ -25,11 +25,15 @@ N_PATH_TO_PT = 100
 
 # number of steps for each SEGMENT of the path around a 
 # branching point (either branch-point, or irregular singularity)
-N_PATH_AROUND_PT = 60
-# N_PATH_AROUND_PT = 100
+# N_PATH_AROUND_PT = 60
+N_PATH_AROUND_PT = 100
 
 # Number of times the tracking of sheets is allowed to automatically zoom in.
-MAX_ZOOM_LEVEL = 3
+# Usual values
+# MAX_ZOOM_LEVEL = 3
+# ZOOM_FACTOR = 10
+# Tuned for E_6
+MAX_ZOOM_LEVEL = 0
 ZOOM_FACTOR = 10
 
 # Tolerance for recognizing colliding sheets at a branch-point
@@ -501,11 +505,18 @@ class SWDataWithTrivialization(SWDataBase):
                     'Encountered a problem with sheet tracking.'
                 )
                 if zoom_level > 0:
-                    delta_z = (z_path[i] - z_path[i - 1]) / ZOOM_FACTOR
-                    zoomed_path = [
-                        z_path[i - 1] + j * delta_z  
-                        for j in range(ZOOM_FACTOR + 1)
-                    ]
+                    if i > 0:
+                        delta_z = (z_path[i] - z_path[i - 1]) / ZOOM_FACTOR
+                        zoomed_path = [
+                            z_path[i - 1] + j * delta_z  
+                            for j in range(ZOOM_FACTOR + 1)
+                        ]
+                    else:
+                        delta_z = (z_path[1] - z_path[0]) / ZOOM_FACTOR
+                        zoomed_path = [
+                            z_path[0] + j * delta_z  
+                            for j in range(ZOOM_FACTOR + 1)
+                        ]
                     sheets_along_zoomed_path = self.get_sheets_along_path(
                         zoomed_path, 
                         is_path_to_bp=near_degenerate_branch_locus,
@@ -637,6 +648,8 @@ class SWDataWithTrivialization(SWDataBase):
             # When studying D-type covers there may be situations
             # where two sheets collide at x=0 everywhere
             # Do not raise an error in this case.
+            # Likewise for E-type
+            # TODO: Merge the handling of these two cases
             if (
                 self.g_data.type == 'D' and 
                 min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
@@ -690,6 +703,64 @@ class SWDataWithTrivialization(SWDataBase):
                 )
                 sorted_sheets = corrected_sheets
                 pass
+
+            elif (
+                self.g_data.type == 'E' and 
+                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
+                and len(sorted_sheets) - len(uniq) == 2
+            ):
+                # If THREE sheets are equal (and all zero) then the integer
+                # labels they got assigned in sorting above may be the same,
+                # this would lead to a singular permutation matrix
+                # and must be corrected, as follows.
+                int_labels = [s[0] for s in sorted_sheets]
+                uniq_labels = list(set(int_labels))
+                labels_multiplicities = [
+                    len([i for i, x in enumerate(int_labels) if x == u]) 
+                    for u in uniq_labels
+                ]
+                multiple_labels = []
+                for i, u in enumerate(uniq_labels):
+                    if labels_multiplicities[i] > 1:
+                        if labels_multiplicities[i] == 3:
+                            multiple_labels.append(u)
+                        else:
+                            logger.debug(
+                                'int labels = {}'.format(int_labels)
+                            )
+                            logger.debug(
+                                'multiple labels = {}'
+                                .format(multiple_labels)
+                            )
+                            raise Exception('Too many degenerate sheets')
+                if len(multiple_labels) != 1:
+                    raise Exception(
+                        'Cannot determine which sheets are' +
+                        'degenerate, tracking will fail.'
+                    )
+
+                # missing_label = [
+                #     i for i in range(len(int_labels)) if 
+                #     (i not in int_labels)
+                # ][0]
+                triple_sheets = [
+                    i for i, s in enumerate(sorted_sheets) 
+                    if s[0] == multiple_labels[0]
+                ]
+
+                corrected_sheets = sorted_sheets 
+                corrected_sheets[triple_sheets[0]] = (
+                    initial_sheets[triple_sheets[0]]
+                )
+                corrected_sheets[triple_sheets[1]] = (
+                    initial_sheets[triple_sheets[1]]
+                )
+                corrected_sheets[triple_sheets[2]] = (
+                    initial_sheets[triple_sheets[2]]
+                )
+                sorted_sheets = corrected_sheets
+                pass
+
             else:
                 raise ValueError(
                     '\nError in determination of monodromy!\n' +
@@ -953,7 +1024,7 @@ def get_path_around(z_pt, base_pt, sw):
     # if n_loci==None:
     #     n_loci = len(sw.branch_points + sw.irregular_singularities)
     # radius = min_distance / n_loci
-    radius = sw.min_horizontal_distance / 2.0
+    radius = sw.min_horizontal_distance / 3.0
     z_2 = z_pt - 1j * radius
 
     steps = N_PATH_AROUND_PT
@@ -1023,10 +1094,19 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
             # When studying D-type covers there may be situations
             # where two sheets collide at x=0 everywhere
             # Do not raise an error in this case.
+            # The same is true for E-type covers at the origin of the
+            # Coulomb branch
             if (
                 g_data.type == 'D' and min(map(abs, sorted_xs)) < accuracy
                 and len(sorted_xs) - len(unique_sorted_xs) == 1
+            ) or (
+                g_data.type == 'E' and min(map(abs, sorted_xs)) < accuracy
+                and len(sorted_xs) - len(unique_sorted_xs) == 2
             ):
+                logging.debug(
+                    'Warning: the checks on sheet traking will be disabled '
+                    'since this seems a degenerate curve.'
+                )
                 return sorted_xs
             else:
                 logger.debug(
@@ -1056,6 +1136,9 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
                           logger_name='loom'):
     # will only work if there are at most two sheets being 
     # too close two each other, not three or more.
+    # Unless there are three or more sheets all equal to zero
+    # In this case we assume it's a degenerate curve and we 
+    # sort those sheets accordingly.
     # TODO: generalize to handle more gneral cases (if we need it at all)
     logger = logging.getLogger(logger_name)
     logger.debug('Resorting to tracking sheets by their derivatives')
@@ -1090,7 +1173,13 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
 
     for x_pair in trouble_xs:
         if len(x_pair) != 2:
-            raise Exception('Cannot handle this kind of sheet degeneracy')
+            # Check if we are dealing with a set of 
+            # sheets which are all (approximately) 0.0
+            if max(map(abs, x_pair))<accuracy:
+                for x_pair_i in x_pair:
+                    correct_xy_pairs.update({x_pair_i: x_pair_i})
+            else:
+                raise Exception('Cannot handle this kind of sheet degeneracy')
         else:
             closest_ys_0 = nsmallest(
                 2, new_xs, key=lambda x: abs(x - x_pair[0])
