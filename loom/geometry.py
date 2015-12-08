@@ -10,7 +10,7 @@ from sympy import oo
 from sympy.mpmath import mp
 from sympy.mpmath.libmp.libhyper import NoConvergence
 from itertools import combinations
-from cmath import phase
+from cmath import phase, pi
 from matplotlib import cm as mpl_color_map
 
 import sage_subprocess
@@ -1329,7 +1329,6 @@ def get_ramification_points_using_discriminant(
         logger.debug('stuyding roots of factor {}'.format(fact))
         # separate the factor itself and the multiplicity
         f_multiplicity = fact[1]
-        print '\n multiplicity = {}'.format(f_multiplicity)
         f_P = sympy.Poly(fact[0], z)
         # f_m = fact[1]
         cs = [
@@ -1420,25 +1419,25 @@ def get_ramification_points_using_discriminant(
 
             subs_dict[z] = z_i
             f_x_eq = f.subs(subs_dict).evalf(n=ROOT_FINDING_PRECISION)
-            print '\n this is the f_x equation: {}'.format(f_x_eq)
+            # print '\n this is the f_x equation: {}'.format(f_x_eq)
             f_x_roots = sage_subprocess.solve_single_eq_x(
                 [f_x_eq],
                 precision=ROOT_FINDING_PRECISION,
                 logger_name=logger_name,
             )
-            print 'this is the equation for sage : {}'.format(f_x_eq)
-            print 'this is the solution {}'.format(f_x_roots)
+            # print 'this is the equation for sage : {}'.format(f_x_eq)
+            # print 'this is the solution {}'.format(f_x_roots)
 
             # In general x-roots have worse errors.
             is_same_x = lambda a, b: abs(a - b) < accuracy / 1e-2
             gathered_f_x_roots = gather(f_x_roots, is_same_x)
 
-            print '\nfound potential ramification point'
-            print [complex(z_i), gathered_f_x_roots]
+            # print '\nfound potential ramification point'
+            # print [complex(z_i), gathered_f_x_roots]
 
             for x_j, xs in gathered_f_x_roots.iteritems():
                 # m_x is the multiplicity of x_j.
-                m_x = len(xs)
+                m_x = len(xs) * f_multiplicity
                 if m_x == 1:
                     continue
 
@@ -1543,16 +1542,93 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
     )
     
     if n_sheets_at_origin >= 3:
-        print "There are {} sheets at the origin. ".format(n_sheets_at_origin)
-        have_same_r = lambda a, b: abs(abs(a) - abs(b)) < SHEET_NULL_TOLERANCE
+        # print "There are {} sheets at the origin. ".format(n_sheets_at_origin)
+        have_same_r = (
+            lambda a, b: abs(abs(complex(a)) - abs(complex(b))) 
+            < SHEET_NULL_TOLERANCE
+        )
         gathered_sheets = gather(sheets, have_same_r)  
         print 'the sheets'
         print sheets
         print 'gathered sheets {}'.format(gathered_sheets)
         print len(gathered_sheets)
+        print 'radii'
+        print map(abs, gathered_sheets.keys())
+
+        if len(gathered_sheets)!=3:
+            raise ValueError(
+                'In a degenerate E_6 curve, sheets should arrange into '
+                'three rings in the complex plane. '
+                '(One ring may shrink to the origin)'
+            )
+
+        # radii of the three circles
+        r_0, r_1, r_2 = map(abs, gathered_sheets.keys())
+
+        # build groups of sheets
+        g_0 = [x for x in sheets if abs(abs(x) - r_0) < SHEET_NULL_TOLERANCE]
+        g_1 = [x for x in sheets if abs(abs(x) - r_1) < SHEET_NULL_TOLERANCE]
+        g_2 = [x for x in sheets if abs(abs(x) - r_2) < SHEET_NULL_TOLERANCE]
+
+        # print 'groups of sheets'
+        # print g_0
+        # print g_1
+        # print g_2
+        
+        # normalize the phase to run from 0 to 2 \pi
+        norm_phase = lambda w: phase(w) % (2 * pi)
+        # sort sheets within each ring according to their
+        # phase, counter-clockwise starting from the real axis
+        g_0_sorted = g_0
+        g_1_sorted = sorted(g_1, key=norm_phase)
+        g_2_sorted = sorted(g_2, key=norm_phase)
+
+        # print 'sorted groups of sheets'
+        # print g_0_sorted
+        # print g_1_sorted
+        # print g_2_sorted
+
+        # Groups of sorted weights, according to the Coxeter 
+        # projection.
+        # The weights are represented by integer labels, 
+        # these are given in the paper on ADE networks and run 
+        # from 0 to 26. 
+        # Each group of weights is ordered clockwise as they 
+        # appear in the Coxeter diuagram, starting from the real axis.
+        # Note: using the Coxeter diagram from the program cproj
+        # gives a shift by 1 in the labels of all weights,
+        # but otherwise they coincide precisely with the weights
+        # used by loom.
+        g_0_weights = [8, 13, 17]
+        g_1_weights = [6, 3, 9, 5, 11, 16, 19, 20, 22, 21, 10, 15]
+        g_2_weights = [4, 2, 1, 0, 7, 14, 18, 26, 25, 24, 23, 12]
+
+        # Now start sorting the sheets
+        sorted_sheets = [None for w in weights]
+        # The center ring g_0 is easy
+        for i in range(len(g_0_weights)):
+            sorted_sheets[g_0_weights[i]] = g_0_sorted[i]
+        # In the Coxeter diagram, the phase of the 
+        # first weight from g_1 is larger than the phase of 
+        # the first weight from g_2 (this one lies precisely 
+        # on the positive real axis).
+        # Therefore, we have to match sheets to the weights accordingly.
+        if norm_phase(g_1[0]) > norm_phase(g_2[0]):
+            for i in range(len(g_1_weights)):
+                sorted_sheets[g_1_weights[i]] = g_1_sorted[i]
+            for i in range(len(g_2_weights)):
+                sorted_sheets[g_2_weights[i]] = g_2_sorted[i]
+        else:
+            # In this case we start from the 2nd sheet, not the first one
+            # we handle this by shifting cyclically the argument of
+            # g_1_sorted
+            for i in range(len(g_1_weights)):
+                sorted_sheets[g_1_weights[i]] = g_1_sorted[(i + 1) % len(g_1_weights)]
+            for i in range(len(g_2_weights)):
+                sorted_sheets[g_2_weights[i]] = g_2_sorted[i]
 
 
-        raise Exception("This is a degenerate case, cannot handle it yet!")
+        # raise Exception("This is a degenerate case, cannot handle it yet!")
     else:
         n_w_triples = null_weight_triples(weights)
         n_s_triples = null_sheet_triples(sheets)
@@ -1693,10 +1769,10 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
             else:
                 break
 
-        if None in sorted_sheets:
-            raise ValueError('Cannot match all sheets with weights') 
-        elif len(sorted_sheets) != len(delete_duplicates(sorted_sheets)):
-            raise ValueError('Duplicate identification of sheets and weights')
-                
+    if None in sorted_sheets:
+        raise ValueError('Cannot match all sheets with weights') 
+    elif len(sorted_sheets) != len(delete_duplicates(sorted_sheets)):
+        raise ValueError('Duplicate identification of sheets and weights')
+            
     return sorted_sheets
 
