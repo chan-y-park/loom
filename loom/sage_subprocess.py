@@ -46,6 +46,79 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
     return sols
 
 
+# TODO: Unify this and the next function 
+# with the above method for multi-equations
+# these were written in a rush to finish something else, 
+# apologies for the repetition of code :)
+def solve_single_eq(eqs, precision=None, logger_name='loom',):
+    """
+    Use sage to solve a single polynomial equation in z.
+    """
+    logger = logging.getLogger(logger_name)
+    sols = []
+    if precision is not None:
+        mp.dps = precision
+    else:
+        precision = 15
+    try:
+        rv_str = subprocess.check_output(
+            ['sage', sage_script_dir + 'solve_single_eq.sage'] +
+            [str(precision)] +
+            [str(eq) for eq in eqs]
+        )
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    
+    rv = eval(rv_str)
+    sols_str_list, messages = rv
+
+    for msg in messages:
+        logger.warning(msg)
+
+    #sols_str_list = eval(sols_str_list_str)
+    for sols_str in sols_str_list:
+        (z_re, z_im) = sols_str
+        sols.append(
+            mpc(z_re, z_im)
+        )
+
+    return sols
+
+def solve_single_eq_x(eqs, precision=None, logger_name='loom',):
+    """
+    Use sage to solve a single polynomial equation in z.
+    """
+    logger = logging.getLogger(logger_name)
+    sols = []
+    if precision is not None:
+        mp.dps = precision
+    else:
+        precision = 15
+    try:
+        rv_str = subprocess.check_output(
+            ['sage', sage_script_dir + 'solve_single_eq_x.sage'] +
+            [str(precision)] +
+            [str(eq) for eq in eqs]
+        )
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    
+    rv = eval(rv_str)
+    sols_str_list, messages = rv
+
+    for msg in messages:
+        logger.warning(msg)
+
+    #sols_str_list = eval(sols_str_list_str)
+    for sols_str in sols_str_list:
+        (z_re, z_im) = sols_str
+        sols.append(
+            mpc(z_re, z_im)
+        )
+
+    return sols
+
+
 def get_g_data(root_system, highest_weight):
     try:
         g_data_str = subprocess.check_output(

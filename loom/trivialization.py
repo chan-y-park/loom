@@ -318,6 +318,13 @@ class SWDataWithTrivialization(SWDataBase):
             self.accuracy,
         )
 
+        logger.info(
+                'Ramification points arrange into {} branch points '
+                'at positions {}'.format(
+                    len(bpzs), bpzs
+                )
+            )
+
         # z-coords of irregular punctures.
         ipzs = n_remove_duplicate(
             [p.z for p in self.irregular_punctures if p.z != oo],
@@ -381,6 +388,7 @@ class SWDataWithTrivialization(SWDataBase):
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
             bp.label = 'Branch point #{}'.format(i)
+
             self.analyze_branch_point(bp)
             if bp.order > 1:
                 # only add if there are any positive roots associated
@@ -448,10 +456,15 @@ class SWDataWithTrivialization(SWDataBase):
             near_degenerate_branch_locus = False
             if is_path_to_bp is True and abs(z - z_path[-1]) < self.accuracy:
                 near_degenerate_branch_locus = True
-            ffr_xs_1, xs_1 = self.get_aligned_xs(
-                z, 
-                near_degenerate_branch_locus=near_degenerate_branch_locus
-            )
+            # NOTE: Commenting this, since we don't need to bother
+            # with alignment for now. This saves a lot of problems 
+            # with numerics and make the code much faster.
+            # Delete the following commend after extensive testing.
+            # ffr_xs_1, xs_1 = self.get_aligned_xs(
+            #     z, 
+            #     near_degenerate_branch_locus=near_degenerate_branch_locus
+            # )
+            ffr_xs_1 = self.ffr_curve.get_xs(z) 
 
             # if it's not a path to branch point, check tracking
             if is_path_to_bp is False:
