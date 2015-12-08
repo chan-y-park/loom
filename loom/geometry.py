@@ -1548,12 +1548,12 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
             < SHEET_NULL_TOLERANCE
         )
         gathered_sheets = gather(sheets, have_same_r)  
-        print 'the sheets'
-        print sheets
-        print 'gathered sheets {}'.format(gathered_sheets)
-        print len(gathered_sheets)
-        print 'radii'
-        print map(abs, gathered_sheets.keys())
+        # print 'the sheets'
+        # print sheets
+        # print 'gathered sheets {}'.format(gathered_sheets)
+        # print len(gathered_sheets)
+        # print 'radii'
+        # print map(abs, gathered_sheets.keys())
 
         if len(gathered_sheets)!=3:
             raise ValueError(
@@ -1769,10 +1769,10 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
             else:
                 break
 
-    if None in sorted_sheets:
-        raise ValueError('Cannot match all sheets with weights') 
-    elif len(sorted_sheets) != len(delete_duplicates(sorted_sheets)):
-        raise ValueError('Duplicate identification of sheets and weights')
+        if None in sorted_sheets:
+            raise ValueError('Cannot match all sheets with weights') 
+        elif len(sorted_sheets) != len(delete_duplicates(sorted_sheets)):
+            raise ValueError('Duplicate identification of sheets and weights')
             
     return sorted_sheets
 
