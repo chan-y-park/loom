@@ -43,6 +43,7 @@ LOGGING_FILE_PATH = os.path.join(
 DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
+LOOM_SERVER_URL = 'http://het-math2.physics.rutgers.edu/loom'
 
 
 # Array of config options. 
@@ -689,17 +690,15 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
     download_data_url = download_plot_url = None
 
     # Make a Bokeh plot
-#    bokeh_layout = get_spectral_network_bokeh_plot(
-#        spectral_network_data,
-#        plot_range=loom_config['plot_range'],
-#    )
-#    script, div = bokeh.embed.components(bokeh_layout)
     script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
     )
     legend = get_plot_legend(spectral_network_data.sw_data)
 
+    bokeh_custom_js_url = flask.url_for(
+        'static', filename='bokeh_callbacks.js', key=int(time.time()),
+    )
     if download is False:
         download_data_url = flask.url_for(
             'download_data', process_uuid=process_uuid,
@@ -707,6 +706,8 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         download_plot_url = flask.url_for(
             'download_plot', process_uuid=process_uuid,
         )
+    else:
+        bokeh_custom_js_url = LOOM_SERVER_URL + bokeh_custom_js_url
 
     return flask.render_template(
         'plot.html',
@@ -714,11 +715,11 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         script=script,
         div=div,
         plot_legend=legend,
+        bokeh_custom_js_url=bokeh_custom_js_url,
         download_data_url=download_data_url,
         download_plot_url=download_plot_url,
         loom_config=loom_config,
         config_options=config_options,
-        js_key=int(time.time()),
     )
 
 def get_plot_legend(sw_data):

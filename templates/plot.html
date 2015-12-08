@@ -5,8 +5,7 @@
         rel="stylesheet" type="text/css">
     <script src="http://cdn.pydata.org/bokeh/release/bokeh-0.10.0.min.js">
     </script>
-    <script src="{{ url_for('static', filename='bokeh_callbacks.js',
-                            key=js_key,) }}">
+    <script src="{{ bokeh_custom_js_url }}">
     </script>
     {{ script|safe }}
 {% endblock %}
