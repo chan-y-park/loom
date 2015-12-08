@@ -45,6 +45,7 @@ def set_logging(
     logging_stream=None,
     logging_file_name=None,
     remove_handlers=True,
+    use_rotating_file_handler=False,
 ):
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging_level)
@@ -56,7 +57,15 @@ def set_logging(
 
     if logging_file_name is not None:
         # Create a log file.
-        fh = logging.FileHandler(logging_file_name, 'w')
+        if use_rotating_file_handler is True:
+            fh = logging.handlers.RotatingFileHandler(
+                logging_file_name,
+                mode='w',
+                maxBytes=10*1024*1024,
+                backupCount=10,
+            )
+        else:
+            fh = logging.FileHandler(logging_file_name, 'w')
         fh.setLevel(logging_level)
         fh.setFormatter(formatter)
         logger.addHandler(fh)

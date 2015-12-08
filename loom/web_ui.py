@@ -195,6 +195,7 @@ class LoomDB(object):
             logger_name=logger_name,
             logging_level=logging_level,
             logging_queue=logging_queue,
+            use_rotating_file_handler=True,
         )
 
         result_queue = multiprocessing.Queue()
