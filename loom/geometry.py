@@ -1451,7 +1451,7 @@ def get_ramification_points_using_discriminant(
         #         polyroots_extra_precision += 10
                 
         fact_eq = f_P.as_expr().evalf(n=ROOT_FINDING_PRECISION, chop=True) 
-        f_roots = sage_subprocess.solve_single_eq(
+        f_roots = sage_subprocess.solve_single_eq_z(
             [fact_eq],
             precision=ROOT_FINDING_PRECISION,
             logger_name=logger_name,
@@ -1521,12 +1521,13 @@ def get_ramification_points_using_discriminant(
             is_same_x = lambda a, b: abs(a - b) < accuracy / 1e-2
             gathered_f_x_roots = gather(f_x_roots, is_same_x)
 
-            # print '\nfound potential ramification point'
-            # print [complex(z_i), gathered_f_x_roots]
+            print '\nfound potential ramification point'
+            print [complex(z_i), gathered_f_x_roots]
 
             for x_j, xs in gathered_f_x_roots.iteritems():
                 # m_x is the multiplicity of x_j.
-                m_x = len(xs) * f_multiplicity
+                # m_x = len(xs) * f_multiplicity
+                m_x = len(xs)
                 if m_x == 1:
                     continue
 

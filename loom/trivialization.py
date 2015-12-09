@@ -30,11 +30,11 @@ N_PATH_AROUND_PT = 60
 
 # Number of times the tracking of sheets is allowed to automatically zoom in.
 # Usual values
-# MAX_ZOOM_LEVEL = 3
-# ZOOM_FACTOR = 10
-# Tuned for E_6
-MAX_ZOOM_LEVEL = 0
+MAX_ZOOM_LEVEL = 3
 ZOOM_FACTOR = 10
+# Tuned for E_6
+# MAX_ZOOM_LEVEL = 0
+# ZOOM_FACTOR = 10
 
 # Tolerance for recognizing colliding sheets at a branch-point
 BP_PROXIMITY_THRESHOLD = 0.05
@@ -872,6 +872,10 @@ class SWDataWithTrivialization(SWDataBase):
     
     def analyze_ffr_ramification_point(self, rp):
         logger = logging.getLogger(self.logger_name)
+        logger.info(
+            "Analyzing a ramification point at z = {}, x={}."
+            .format(rp.z, rp.x)
+        )
         rp_type = None
         num_eq = self.ffr_curve.num_eq
 
@@ -918,6 +922,14 @@ class SWDataWithTrivialization(SWDataBase):
             rp_type = 'type_IV'
         else:
             rp_type = 'type_V'
+            logger.info(
+                'Lie algebra {}'.format(self.g_data.type, self.g_data.rank)
+            )
+            logger.info('ramification index {}'.format(rp.i))
+            logger.info(
+                'local curve {}'
+                .format(abs(local_curve.n().subs(Dx, 0).coeff(Dz)))
+            )
             raise Exception(
                 'Cannot handle this type of ramification point'.format(
                     local_curve
@@ -936,12 +948,7 @@ class SWDataWithTrivialization(SWDataBase):
             print 'This is the local curve'
             print local_curve.n()
             a = local_curve.n().coeff(Dz).coeff(Dx, 15)
-            # FIXME: the value of rp.i should be 27
-            # but somehow it's not computed correctly by the 
-            # discriminant, so we ahve to plug it in by hand now.
-            #
-            # b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx ** 27)
+            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
             print 'a = {}'.format(a)
             print 'b = {}'.format(b)
         
@@ -1164,7 +1171,7 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
     # Unless there are three or more sheets all equal to zero
     # In this case we assume it's a degenerate curve and we 
     # sort those sheets accordingly.
-    # TODO: generalize to handle more gneral cases (if we need it at all)
+    # TODO: generalize to handle more general cases (if we need it at all)
     logger = logging.getLogger(logger_name)
     logger.debug('Resorting to tracking sheets by their derivatives')
 
