@@ -521,9 +521,11 @@ def download_data(process_uuid):
 
     loom_db.result_queues[process_uuid].put(rv)
 
-    return flask.send_file(data_zip_fp,
-                           attachment_filename='loom_data.zip',
-                           as_attachment=True,)
+    return flask.send_file(
+        data_zip_fp,
+        attachment_filename='loom_data_{}.zip'.format(process_uuid),
+        as_attachment=True,
+    )
 
 
 def download_plot(process_uuid):

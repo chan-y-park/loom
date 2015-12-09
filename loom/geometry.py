@@ -1132,11 +1132,26 @@ def get_ramification_points_using_system_of_eqs(
     g_data=None,
     logger_name='loom',
 ):
+    logger = logging.getLogger(logger_name)
+
     sols = []
     f = curve.sym_eq
     # Make f into the form of f_n/f_d
     f_n, f_d = sympy.cancel(f).as_numer_denom()
     eq_1 = f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True)
+
+    # Check the curve if it has the D-type factorization.
+    num_factor, eq_1_factors = sympy.factor_list(eq_1)
+    if len(eq_1_factors) > 1:
+        # TODO: check Casimir differentials too?
+        if (g_data.type == 'D' and
+            len(eq_1_factors) == 2 and
+            (x, 2) in eq_1_factors):
+            eq_1 = sympy.simplify(eq_1 / x**2)
+        else:
+            logger.warning('The curve to find ramification points'
+                           'has an unknown factorization: {} = {}.'
+                           .format(eq_1, eq_1.factor()))
 
     d_x_f_n, d_x_f_d = sympy.cancel(f.diff(x)).as_numer_denom()
     eq_2 = d_x_f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True) 
