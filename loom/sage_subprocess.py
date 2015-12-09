@@ -50,6 +50,7 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
 # with the above method for multi-equations
 # these were written in a rush to finish something else, 
 # apologies for the repetition of code :)
+# But Careful for the subtle differences, not just relabelings..
 def solve_single_eq(eqs, precision=None, logger_name='loom',):
     """
     Use sage to solve a single polynomial equation in z.
@@ -104,14 +105,22 @@ def solve_single_eq_x(eqs, precision=None, logger_name='loom',):
         raise
     
     rv = eval(rv_str)
+    # sols_str_list, mult_str_list, messages = rv
     sols_str_list, messages = rv
 
     for msg in messages:
         logger.warning(msg)
 
     #sols_str_list = eval(sols_str_list_str)
-    for sols_str in sols_str_list:
-        (z_re, z_im) = sols_str
+    
+    # for i, sols_str in enumerate(sols_str_list):
+    #     (z_re, z_im) = sols_str
+    #     for j in range(mult_str_list[i]):
+    #         sols.append(
+    #             mpc(z_re, z_im)
+    #         )
+    for i, sols_str in enumerate(sols_str_list):
+        (z_re, z_im) = sols_str    
         sols.append(
             mpc(z_re, z_im)
         )

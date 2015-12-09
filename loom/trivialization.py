@@ -25,8 +25,8 @@ N_PATH_TO_PT = 100
 
 # number of steps for each SEGMENT of the path around a 
 # branching point (either branch-point, or irregular singularity)
-# N_PATH_AROUND_PT = 60
-N_PATH_AROUND_PT = 100
+N_PATH_AROUND_PT = 60
+# N_PATH_AROUND_PT = 100
 
 # Number of times the tracking of sheets is allowed to automatically zoom in.
 # Usual values
@@ -453,6 +453,10 @@ class SWDataWithTrivialization(SWDataBase):
         # Each element is a sheet, which is a list of x's along the path.
         # Initialized with reference_xs.
         # TODO: set each element to an integer rather than a float.
+        
+        # print '\n\nthe z_path'
+        # print z_path
+        # print '\n\nthe sheets along the path are'
         if ffr_sheets_along_path is None:
             ffr_sheets_along_path = [[x] for x in ffr_xs_0]
         
@@ -469,6 +473,7 @@ class SWDataWithTrivialization(SWDataBase):
             #     near_degenerate_branch_locus=near_degenerate_branch_locus
             # )
             ffr_xs_1 = self.ffr_curve.get_xs(z) 
+            # print ffr_xs_1
 
             # if it's not a path to branch point, check tracking
             if is_path_to_bp is False:
@@ -544,6 +549,12 @@ class SWDataWithTrivialization(SWDataBase):
                         logger_name=self.logger_name,
                     )
                     if sorted_ffr_xs == 'sorting failed':
+                        print '\nstudying sheets near z = {}'.format(z)
+                        print '\nwe get sheets'
+                        print 'ffr_xs_0'
+                        print ffr_xs_0
+                        print 'ffr_xs_1'
+                        print ffr_xs_1
                         raise Exception(
                             '\nCannot track the sheets!\n'
                             'Probably passing too close to a branch point '
@@ -1024,7 +1035,7 @@ def get_path_around(z_pt, base_pt, sw):
     # if n_loci==None:
     #     n_loci = len(sw.branch_points + sw.irregular_singularities)
     # radius = min_distance / n_loci
-    radius = sw.min_horizontal_distance / 3.0
+    radius = sw.min_horizontal_distance / 2.0
     z_2 = z_pt - 1j * radius
 
     steps = N_PATH_AROUND_PT
@@ -1103,10 +1114,6 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 g_data.type == 'E' and min(map(abs, sorted_xs)) < accuracy
                 and len(sorted_xs) - len(unique_sorted_xs) == 2
             ):
-                logging.debug(
-                    'Warning: the checks on sheet traking will be disabled '
-                    'since this seems a degenerate curve.'
-                )
                 return sorted_xs
             else:
                 logger.debug(
@@ -1175,10 +1182,15 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
         if len(x_pair) != 2:
             # Check if we are dealing with a set of 
             # sheets which are all (approximately) 0.0
-            if max(map(abs, x_pair))<accuracy:
+            if max(map(abs, x_pair)) < accuracy:
                 for x_pair_i in x_pair:
                     correct_xy_pairs.update({x_pair_i: x_pair_i})
             else:
+                print 'x_pair = {}'.format(x_pair)
+                print 'reference xs '
+                print ref_xs
+                print 'new xs'
+                print new_xs
                 raise Exception('Cannot handle this kind of sheet degeneracy')
         else:
             closest_ys_0 = nsmallest(

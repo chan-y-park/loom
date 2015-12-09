@@ -369,6 +369,7 @@ class SWCurve:
                  z_rotation=None, ffr=False):
         self.sym_eq = None
         self.num_eq = None
+        self.g_data = g_data
 
         if ffr is True:
             # Build a cover in the first fundamental representation.
@@ -403,8 +404,74 @@ class SWCurve:
 
         fx = sympy.simplify(self.num_eq.subs(z, z_0))
         sym_poly = sympy.Poly(fx, x, domain='CC')
+
+        # print 'the polynomial at z = {}'.format(z_0)
+        # print sym_poly
+        
+        sheets = []
+
+        # This should work now, but keep the fix below until 
+        # debugging E6 is done
         coeff_list = map(complex, sym_poly.all_coeffs())
-        return numpy.roots(coeff_list)
+        x_s = numpy.roots(coeff_list)
+        sheets = x_s
+
+        # # This fails sometimes to get all the roots. 
+        # # Need something better. Adding a hotfix with 
+        # # with Sage for now.
+        # #
+        # coeff_list = map(complex, sym_poly.all_coeffs())
+        # x_s = numpy.roots(coeff_list)
+
+        # if len(x_s) < 27:
+        #     print '\n\nNOT AL SHEETS FOUND!!!'
+        # # Sage method for computing sheets
+        # #
+        # if (
+        #     self.g_data.type == 'E' and self.g_data.rank == 6 
+        #     and len(x_s) < 27
+        # ):
+        #     print '\n\nWILL ENHANCE SHEETS!!!'
+        #     f_eqn = sym_poly.as_expr().evalf(n=ROOT_FINDING_PRECISION, chop=True) 
+        #     y_s = map(
+        #         complex, sage_subprocess.solve_single_eq_x(
+        #             [f_eqn],
+        #             precision=ROOT_FINDING_PRECISION,
+        #         )
+        #     )
+        #     print 'at z = {}'.format(z_0)
+        #     print 'the equation to solve is '
+        #     print f_eqn
+        #     print 'the solutions'
+        #     print y_s
+        #     # FIXME: The following is an extra fix needed because SAGE won't
+        #     # give the correct multiplicities of the roots in some cases.
+        #     # In particular in the E6 curve there should be three roots 
+        #     # with x=0, but sage returns 25 roots, with only one x=0.0
+        #     # the other two are discarded, and the algorithm doesn't
+        #     # correctly account for the multiplicity.
+        #     # Need to figure out a better way to handle this issue
+        #     # meanwhile, this is the hotfix
+        #     if (
+        #         self.g_data.type == 'E' and self.g_data.rank == 6 
+        #         and len(x_s) == 25
+        #     ):
+        #         y_s.append(0j)
+        #         y_s.append(0j)
+        #     if len(y_s) < 27:
+        #         raise Exception(
+        #             'Cannot get the correct number of sheets '
+        #             'at z = '.format(z_0)
+        #         )
+        #     sheets = y_s 
+
+        # else:
+        #     # print 'NO PROBLEM, ALL SHEETS FOUND'    
+        #     sheets = x_s
+
+        # # print 'the sheets!'
+        # # print x_s
+        return sheets
 
 
 class SWDiff:
@@ -621,6 +688,11 @@ class SWDataBase(object):
             elif pi_div == 1:
                 # there are no nontrivial rotations when this is 1.
                 continue
+            # elif pi_div == 2 and self.g_data.type == 'E':
+            #     # For numerical reasons, it's best to avoid this 
+            #     # kind of rotation ot the z-plane for the pure E_6
+            #     # SYM curve at the origin of the coulomb branch
+            #     continue
             else: 
                 z_r = sympy.sympify('exp(pi* I / {})'.format(pi_div))
                 n_r = 1
@@ -816,6 +888,14 @@ class SWDataBase(object):
         #       We need that one for that algebra
         ffr_xs = self.ffr_curve.get_xs(z_0) 
 
+        ### MUST REMOVE: this is temporary
+        # if len(ffr_xs) != 27:
+        #     print '\n\nNot enough sheets! '
+        #     print 'at z = {}'.format(z_0)
+        #     print 'ffr xs = '
+        #     print ffr_xs
+        ###
+
         if algebra_type == 'A':
             # Can consider ffr_xs to be aligned according to ffr_weights,
             # [(1, 0, 0, 0, 0, 0),
@@ -916,7 +996,9 @@ class SWDataBase(object):
             if algebra_rank == 6:
                 ffr_weights_list = list(self.g_data.ffr_weights)
                 aligned_ffr_xs = sort_sheets_for_e_6_ffr(
-                    ffr_xs, ffr_weights_list
+                    ffr_xs, 
+                    ffr_weights_list,
+                    near_degenerate_branch_locus=near_degenerate_branch_locus,
                 )
                 if fund_rep_index == 1:
                     xs = aligned_ffr_xs
@@ -987,72 +1069,72 @@ def get_punctures_from_config(
 
 # E_6 curve strings
 #
-# tau_str = 'z + 1/z + ({u_6})'
-# q_1_str = (
-#     '270*x^(15) + 342*(({u_1}))*x^(13) + 162*(({u_1}))^2*x^(11)'  
-#     '- 252*(({u_2}))*x^(10) + (26*(({u_1}))^3 + 18*(({u_3})))*x^9' 
-#     '- 162*(({u_1}))*(({u_2}))*x^8 + (6*(({u_1}))*(({u_3})) '
-#     '- 27*(({u_4})))*x^7' 
-#     '- (30*(({u_1}))^2*(({u_2})) - 36*(({u_5})))*x^6' 
-#     '+ (27*(({u_2}))^2 - 9*(({u_1}))*(({u_4})))*x^5' 
-#     '- (3*(({u_2}))*(({u_3})) - 6*(({u_1}))*(({u_5})))*x^4' 
-#     '- 3*(({u_1}))*(({u_2}))^2*x^3 - 3*(({u_2}))*(({u_5}))*x '
-#     '- (({u_2}))^3'
-# )
-# q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
-# p_1_str = (
-#     '78*x^10 + 60*(({u_1}))*x^8 + 14*(({u_1}))^2*x^6 '
-#     '- 33*(({u_2}))*x^5' 
-#     '+ 2*(({u_3}))*x^4 - 5*(({u_1}))*(({u_2}))*x^3 - (({u_4}))*x^2 '
-#     '- (({u_5}))*x - (({u_2}))^2'
-# )
-# p_2_str = (
-#     '12*x^10 + 12*(({u_1}))*x^8 + 4*(({u_1}))^2*x^6 '
-#     '- 12*(({u_2}))*x^5 + (({u_3}))*x^4' 
-#     '- 4*(({u_1}))*(({u_2}))*x^3 - 2*(({u_4}))*x^2 + 4*(({u_5}))*x '
-#     '+ (({u_2}))^2'
-# )
+tau_str = 'z + 1/z + ({u_6})'
+q_1_str = (
+    '270*x^(15) + 342*(({u_1}))*x^(13) + 162*(({u_1}))^2*x^(11)'  
+    '- 252*(({u_2}))*x^(10) + (26*(({u_1}))^3 + 18*(({u_3})))*x^9' 
+    '- 162*(({u_1}))*(({u_2}))*x^8 + (6*(({u_1}))*(({u_3})) '
+    '- 27*(({u_4})))*x^7' 
+    '- (30*(({u_1}))^2*(({u_2})) - 36*(({u_5})))*x^6' 
+    '+ (27*(({u_2}))^2 - 9*(({u_1}))*(({u_4})))*x^5' 
+    '- (3*(({u_2}))*(({u_3})) - 6*(({u_1}))*(({u_5})))*x^4' 
+    '- 3*(({u_1}))*(({u_2}))^2*x^3 - 3*(({u_2}))*(({u_5}))*x '
+    '- (({u_2}))^3'
+)
+q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
+p_1_str = (
+    '78*x^10 + 60*(({u_1}))*x^8 + 14*(({u_1}))^2*x^6 '
+    '- 33*(({u_2}))*x^5' 
+    '+ 2*(({u_3}))*x^4 - 5*(({u_1}))*(({u_2}))*x^3 - (({u_4}))*x^2 '
+    '- (({u_5}))*x - (({u_2}))^2'
+)
+p_2_str = (
+    '12*x^10 + 12*(({u_1}))*x^8 + 4*(({u_1}))^2*x^6 '
+    '- 12*(({u_2}))*x^5 + (({u_3}))*x^4' 
+    '- 4*(({u_1}))*(({u_2}))*x^3 - 2*(({u_4}))*x^2 + 4*(({u_5}))*x '
+    '+ (({u_2}))^2'
+)
 
 
 # Another version of the SW curve, obtained after replacing 
 # x -> - z x / 2
 # so that now x ~ \lambda_{SW}
 #
-phi_12_str = '({u_6})'
-q_1_str = (
-    '-(13/256) * x^9 * ({u_1})^3 * z^9 '
-    '- 15/32 * x^6 * ({u_1})^2 * ({u_2}) * z^6'
-    '-(81 * x^(11) * ({u_1})^2 * z^(11))/(1024) '
-    '+ (3/8) * x^3 * ({u_1}) * ({u_2})^2 * z^3 '
-    '- (81/128) * x^8 * ({u_1}) * ({u_2}) * z^8'
-    '- (3/64) * x^7 * ({u_1}) * ({u_3}) * z^7 '
-    '+ (9 / 32) * x^5 * ({u_1}) * ({u_4}) * z^5'
-    '+ (3/8) * x^4 * ({u_1}) * ({u_5}) * z^4 '
-    '- (171 * x^(13) * ({u_1}) * z^(13))/(4096)'
-    '- ({u_2})^3 - (27/32) * x^5 * ({u_2})^2 * z^5 '
-    '- (3/16) * x^4 * ({u_2}) * ({u_3}) * z^4'
-    '+ (3/2) * x * ({u_2}) * ({u_5}) * z '
-    '- (63/256) * x^(10) * ({u_2}) * z^(10) '
-    '- (9/256) * x^9 * ({u_3}) * z^9 '
-    '+ (27/128) * x^7 * ({u_4}) * z^7 '
-    '+ (9/16) * x^6 * ({u_5}) * z^6 '
-    '- (135 * x^(15) * z^(15))/(16384)'
-)
-q_2_str = '1/2 * ((-2) / (x * z))^3 *(({q_1})^2 - ({p_1})^2*({p_2}))'
-p_1_str = (
-    '(7/32) * x^6 * ({u_1})^2 * z^6 + (5/8) * x^3 * ({u_1}) * ({u_2}) * z^3' 
-    '+ (15/64) * x^8 * ({u_1}) * z^8 - ({u_2})^2 '
-    '+ (33/32) * x^5 * ({u_2}) * z^5 + (1/8) * x^4 * ({u_3}) * z^4 '
-    '- (1/4) * x^2 * ({u_4}) * z^2 + (x * ({u_5}) * z)/2 '
-    '+ (39 * x^(10) * z^(10))/512'
-)
-p_2_str = (
-    '(1/256) * x * z * (16 * x^5 * ({u_1})^2 * z^5 '
-    '+ 12 * x^7 * ({u_1}) * z^7 + 16 * x^3 * ({u_3}) * z^3 '
-    '- 128 * x * ({u_4}) * z - 512 * ({u_5}) + 3 * x^9 * z^9) '
-    '+ (1/8) * ({u_2}) * (4 * x^3 * ({u_1}) * z^3 + 3 * x^5 * z^5) '
-    '+ ({u_2})^2'
-)
+# phi_12_str = '({u_6})'
+# q_1_str = (
+#     '-(13/256) * x^9 * ({u_1})^3 * z^9 '
+#     '- 15/32 * x^6 * ({u_1})^2 * ({u_2}) * z^6'
+#     '-(81 * x^(11) * ({u_1})^2 * z^(11))/(1024) '
+#     '+ (3/8) * x^3 * ({u_1}) * ({u_2})^2 * z^3 '
+#     '- (81/128) * x^8 * ({u_1}) * ({u_2}) * z^8'
+#     '- (3/64) * x^7 * ({u_1}) * ({u_3}) * z^7 '
+#     '+ (9 / 32) * x^5 * ({u_1}) * ({u_4}) * z^5'
+#     '+ (3/8) * x^4 * ({u_1}) * ({u_5}) * z^4 '
+#     '- (171 * x^(13) * ({u_1}) * z^(13))/(4096)'
+#     '- ({u_2})^3 - (27/32) * x^5 * ({u_2})^2 * z^5 '
+#     '- (3/16) * x^4 * ({u_2}) * ({u_3}) * z^4'
+#     '+ (3/2) * x * ({u_2}) * ({u_5}) * z '
+#     '- (63/256) * x^(10) * ({u_2}) * z^(10) '
+#     '- (9/256) * x^9 * ({u_3}) * z^9 '
+#     '+ (27/128) * x^7 * ({u_4}) * z^7 '
+#     '+ (9/16) * x^6 * ({u_5}) * z^6 '
+#     '- (135 * x^(15) * z^(15))/(16384)'
+# )
+# q_2_str = '1/2 * ((-2) / (x * z))^3 *(({q_1})^2 - ({p_1})^2*({p_2}))'
+# p_1_str = (
+#     '(7/32) * x^6 * ({u_1})^2 * z^6 + (5/8) * x^3 * ({u_1}) * ({u_2}) * z^3' 
+#     '+ (15/64) * x^8 * ({u_1}) * z^8 - ({u_2})^2 '
+#     '+ (33/32) * x^5 * ({u_2}) * z^5 + (1/8) * x^4 * ({u_3}) * z^4 '
+#     '- (1/4) * x^2 * ({u_4}) * z^2 + (x * ({u_5}) * z)/2 '
+#     '+ (39 * x^(10) * z^(10))/512'
+# )
+# p_2_str = (
+#     '(1/256) * x * z * (16 * x^5 * ({u_1})^2 * z^5 '
+#     '+ 12 * x^7 * ({u_1}) * z^7 + 16 * x^3 * ({u_3}) * z^3 '
+#     '- 128 * x * ({u_4}) * z - 512 * ({u_5}) + 3 * x^9 * z^9) '
+#     '+ (1/8) * ({u_2}) * (4 * x^3 * ({u_1}) * z^3 + 3 * x^5 * z^5) '
+#     '+ ({u_2})^2'
+# )
 
 
 def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
@@ -1088,21 +1170,7 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
         if g_rank == 6:
             # The following goes with the other presentation of the SW curve.
             # 
-            phi_12 = phi_12_str.format(u_6=phi[12])
-            q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-                                u_4=phi[8], u_5=phi[9])
-            p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-                                u_4=phi[8], u_5=phi[9])
-            p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-                                u_4=phi[8], u_5=phi[9])
-            q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
-            curve_str = (
-               '(1/2)*(-(1/2) *z *x)^3*({phi_12})^2 '
-               '- ({q_1})*({phi_12}) + ({q_2})'
-               .format(phi_12=phi_12, q_1=q_1, q_2=q_2)
-            )
-            
-            # tau = tau_str.format(u_6=phi[12])
+            # phi_12 = phi_12_str.format(u_6=phi[12])
             # q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
             #                     u_4=phi[8], u_5=phi[9])
             # p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
@@ -1111,9 +1179,23 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
             #                     u_4=phi[8], u_5=phi[9])
             # q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
             # curve_str = (
-            #    '(1/2)*(x^3)*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
-            #    .format(tau=tau, q_1=q_1, q_2=q_2)
+            #    '(1/2)*(-(1/2) *z *x)^3*({phi_12})^2 '
+            #    '- ({q_1})*({phi_12}) + ({q_2})'
+            #    .format(phi_12=phi_12, q_1=q_1, q_2=q_2)
             # )
+            
+            tau = tau_str.format(u_6=phi[12])
+            q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+                                u_4=phi[8], u_5=phi[9])
+            p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+                                u_4=phi[8], u_5=phi[9])
+            p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+                                u_4=phi[8], u_5=phi[9])
+            q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
+            curve_str = (
+               '(1/2)*(x^3)*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
+               .format(tau=tau, q_1=q_1, q_2=q_2)
+            )
 
             # print '\nthe curve string'
             # print curve_str
@@ -1290,6 +1372,13 @@ def get_ramification_points_using_discriminant(
     # else:
     #     D_z = sympy.discriminant(f_n.subs(subs_dict), x)
 
+    # print 'f_n'
+    # print f_n
+    # print 'subs_dict'
+    # print subs_dict
+    # print 'f_n.subs(subs_dict)'
+    # print f_n.subs(subs_dict)
+
     D_z = sympy.discriminant(f_n.subs(subs_dict), x)
 
     if D_z == 0:
@@ -1307,12 +1396,12 @@ def get_ramification_points_using_discriminant(
         # at the origin of the coulomb branch of pure E_6 SYM
         if g_data.type == 'E':
             logger.info(
-                'will work with renormalized curve {}'.format(
+                'will work with renormalized curve \n{}'.format(
                     f_n.subs(subs_dict) / (x ** 3)
                 )
             )
             logger.debug(
-                'after simplification {}'.format(
+                'after simplification \n{}'.format(
                     sympy.simplify(f_n.subs(subs_dict) / (x ** 3))
                 )
             )
@@ -1531,17 +1620,26 @@ def quintet_contained(e, quintet):
     return ans
 
 
-def sort_sheets_for_e_6_ffr(sheets, weights):
+def sort_sheets_for_e_6_ffr(
+    sheets, 
+    weights, 
+    near_degenerate_branch_locus=None,
+):
     """
     Return the list of sheets sorted according to the list of weights.
     The output is a list such that sheets[i] will correspond to weights[i].
     """
+    if len(sheets) != 27:
+        raise Exception('Missing some sheets of the E_6 cover.')
 
     n_sheets_at_origin = len(
         [x for x in sheets if abs(x) < SHEET_NULL_TOLERANCE]
     )
     
-    if n_sheets_at_origin >= 3:
+    if n_sheets_at_origin == 27 and near_degenerate_branch_locus:
+        sorted_sheets = sheets
+
+    elif n_sheets_at_origin == 3:
         # print "There are {} sheets at the origin. ".format(n_sheets_at_origin)
         have_same_r = (
             lambda a, b: abs(abs(complex(a)) - abs(complex(b))) 
@@ -1556,6 +1654,8 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
         # print map(abs, gathered_sheets.keys())
 
         if len(gathered_sheets)!=3:
+            print 'The following sheets appear: '
+            print sheets
             raise ValueError(
                 'In a degenerate E_6 curve, sheets should arrange into '
                 'three rings in the complex plane. '
@@ -1563,7 +1663,12 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
             )
 
         # radii of the three circles
-        r_0, r_1, r_2 = map(abs, gathered_sheets.keys())
+        r_0, r_1, r_2 = sorted(map(abs, gathered_sheets.keys()))
+        # print 'radii'
+        # print r_0
+        # print r_1
+        # print r_2
+
 
         # build groups of sheets
         g_0 = [x for x in sheets if abs(abs(x) - r_0) < SHEET_NULL_TOLERANCE]
@@ -1622,7 +1727,17 @@ def sort_sheets_for_e_6_ffr(sheets, weights):
             # In this case we start from the 2nd sheet, not the first one
             # we handle this by shifting cyclically the argument of
             # g_1_sorted
+            #
+            # print '\n g_1_weights'
+            # print g_1_weights
+            # print '\n g_1_sorted'
+            # print g_1_sorted
             for i in range(len(g_1_weights)):
+                #
+                # print 'i = {}'.format(i)
+                # print 'i+1 mod len(g_1_weights) = {}'.format((i + 1) % len(g_1_weights))
+                # print 'g_1_weights[i] = {}'.format(g_1_weights[i])
+                # print 'g_1_sorted[(i + 1) % len(g_1_weights)] = {}'.format(g_1_sorted[(i + 1) % len(g_1_weights)])
                 sorted_sheets[g_1_weights[i]] = g_1_sorted[(i + 1) % len(g_1_weights)]
             for i in range(len(g_2_weights)):
                 sorted_sheets[g_2_weights[i]] = g_2_sorted[i]
