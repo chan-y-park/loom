@@ -205,7 +205,7 @@ class SWall(object):
         for br_loc_label, t, d in json_data['cuts_intersections']:
             for br_loc in branch_loci:
                 if br_loc_label == br_loc.label:
-                    self.cuts_intersections.append([bp, t, d])
+                    self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
         self.local_weight_pairs = json_data['local_weight_pairs']
 
