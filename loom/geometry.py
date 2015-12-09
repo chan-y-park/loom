@@ -1147,27 +1147,26 @@ def get_ramification_points_using_system_of_eqs(
     logger = logging.getLogger(logger_name)
 
     sols = []
-    f = curve.sym_eq
+    f = (curve.sym_eq.subs(diff_params)
+         .evalf(n=ROOT_FINDING_PRECISION, chop=True))
     # Make f into the form of f_n/f_d
     f_n, f_d = sympy.cancel(f).as_numer_denom()
-    eq_1 = f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True)
-
+    eq_1 = f_n
 
     # Check the curve if it has the D-type factorization.
-    num_factor, eq_1_factors = sympy.factor_list(eq_1)
-    if len(eq_1_factors) > 1:
+    num_factor, f_n_factors = sympy.factor_list(f_n)
+    if len(f_n_factors) > 1:
         # TODO: check Casimir differentials too?
         if (g_data.type == 'D' and
-            len(eq_1_factors) == 2 and
-            (x, 2) in eq_1_factors):
-            eq_1 = sympy.simplify(eq_1 / x**2)
+            len(f_n_factors) == 2 and
+            (x, 2) in f_n_factors):
+            eq_1 = sympy.simplify(f_n / x**2)
         else:
             logger.warning('The curve to find ramification points'
                            'has an unknown factorization: {} = {}.'
-                           .format(eq_1, eq_1.factor()))
+                           .format(f_n, f_n.factor()))
 
-    d_x_f_n, d_x_f_d = sympy.cancel(f.diff(x)).as_numer_denom()
-    eq_2 = d_x_f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True) 
+    eq_2 = f_n.diff(x)
 
     # NOTE: solve_poly_system vs. solve
     # sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
