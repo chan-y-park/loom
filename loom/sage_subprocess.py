@@ -19,6 +19,8 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
         mp.dps = precision
     else:
         precision = 15
+    logger.info('Use SAGE to solve {} @ precision = {}.'
+                 .format(eqs, precision))
     try:
         rv_str = subprocess.check_output(
             ['sage', sage_script_dir + 'solve_system_of_eqs.sage'] +
