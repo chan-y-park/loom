@@ -366,8 +366,7 @@ class SWCurve:
     """
     def __init__(self, casimir_differentials=None, g_data=None, 
                  diff_params=None, mt_params=None, 
-                 #z_rotation=sympy.sympify('1'), ffr=False):
-                 ffr=False):
+                 z_rotation=sympy.sympify('1'), ffr=False):
         self.sym_eq = None
         self.num_eq = None
 
