@@ -289,7 +289,7 @@ class RamificationPoint:
             'z': ctor2(self.z),
             'Ciz': str(self.Ciz),
             'x': ctor2(self.x),
-            'i': ctor2(self.i),
+            'i': self.i,
             'label': self.label,
             'ramification_type': self.ramification_type,
             'sw_diff_coeff': sw_diff_coeff,
@@ -301,7 +301,7 @@ class RamificationPoint:
         self.z = r2toc(json_data['z'])
         self.Ciz = sympy.sympify(json_data['Ciz'])
         self.x = r2toc(json_data['x'])
-        self.i = r2toc(json_data['i'])
+        self.i = json_data['i']
         self.label = json_data['label']
         self.ramification_type = json_data['ramification_type']
 
