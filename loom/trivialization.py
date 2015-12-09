@@ -911,8 +911,13 @@ class SWDataWithTrivialization(SWDataBase):
             and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
         ):
             rp_type = 'type_III'
-        else:
+        elif (
+            self.g_data.type == 'E' and self.g_data.rank == 6
+            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
+        ):
             rp_type = 'type_IV'
+        else:
+            rp_type = 'type_V'
             raise Exception(
                 'Cannot handle this type of ramification point'.format(
                     local_curve
@@ -926,6 +931,19 @@ class SWDataWithTrivialization(SWDataBase):
         elif rp_type == 'type_III':
             a = local_curve.n().coeff(Dz).coeff(Dx, 2)
             b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
+
+        elif rp_type == 'type_IV':
+            print 'This is the local curve'
+            print local_curve.n()
+            a = local_curve.n().coeff(Dz).coeff(Dx, 15)
+            # FIXME: the value of rp.i should be 27
+            # but somehow it's not computed correctly by the 
+            # discriminant, so we ahve to plug it in by hand now.
+            #
+            # b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
+            b = local_curve.n().subs(Dz, 0).coeff(Dx ** 27)
+            print 'a = {}'.format(a)
+            print 'b = {}'.format(b)
         
         logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
             [rp.z, rp.x], rp_type)
