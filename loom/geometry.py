@@ -1073,33 +1073,35 @@ def get_punctures_from_config(
 
 # E_6 curve strings
 #
-tau_str = 'z + 1/z + ({u_6})'
-q_1_str = (
-    '270*x^(15) + 342*(({u_1}))*x^(13) + 162*(({u_1}))^2*x^(11)'  
-    '- 252*(({u_2}))*x^(10) + (26*(({u_1}))^3 + 18*(({u_3})))*x^9' 
-    '- 162*(({u_1}))*(({u_2}))*x^8 + (6*(({u_1}))*(({u_3})) '
-    '- 27*(({u_4})))*x^7' 
-    '- (30*(({u_1}))^2*(({u_2})) - 36*(({u_5})))*x^6' 
-    '+ (27*(({u_2}))^2 - 9*(({u_1}))*(({u_4})))*x^5' 
-    '- (3*(({u_2}))*(({u_3})) - 6*(({u_1}))*(({u_5})))*x^4' 
-    '- 3*(({u_1}))*(({u_2}))^2*x^3 - 3*(({u_2}))*(({u_5}))*x '
-    '- (({u_2}))^3'
-)
-q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
-p_1_str = (
-    '78*x^10 + 60*(({u_1}))*x^8 + 14*(({u_1}))^2*x^6 '
-    '- 33*(({u_2}))*x^5' 
-    '+ 2*(({u_3}))*x^4 - 5*(({u_1}))*(({u_2}))*x^3 - (({u_4}))*x^2 '
-    '- (({u_5}))*x - (({u_2}))^2'
-)
-p_2_str = (
-    '12*x^10 + 12*(({u_1}))*x^8 + 4*(({u_1}))^2*x^6 '
-    '- 12*(({u_2}))*x^5 + (({u_3}))*x^4' 
-    '- 4*(({u_1}))*(({u_2}))*x^3 - 2*(({u_4}))*x^2 + 4*(({u_5}))*x '
-    '+ (({u_2}))^2'
-)
+# The 1st representation
+# tau_str = 'z + 1/z + ({u_6})'
+# q_1_str = (
+#     '270*x^(15) + 342*(({u_1}))*x^(13) + 162*(({u_1}))^2*x^(11)'  
+#     '- 252*(({u_2}))*x^(10) + (26*(({u_1}))^3 + 18*(({u_3})))*x^9' 
+#     '- 162*(({u_1}))*(({u_2}))*x^8 + (6*(({u_1}))*(({u_3})) '
+#     '- 27*(({u_4})))*x^7' 
+#     '- (30*(({u_1}))^2*(({u_2})) - 36*(({u_5})))*x^6' 
+#     '+ (27*(({u_2}))^2 - 9*(({u_1}))*(({u_4})))*x^5' 
+#     '- (3*(({u_2}))*(({u_3})) - 6*(({u_1}))*(({u_5})))*x^4' 
+#     '- 3*(({u_1}))*(({u_2}))^2*x^3 - 3*(({u_2}))*(({u_5}))*x '
+#     '- (({u_2}))^3'
+# )
+# q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
+# p_1_str = (
+#     '78*x^10 + 60*(({u_1}))*x^8 + 14*(({u_1}))^2*x^6 '
+#     '- 33*(({u_2}))*x^5' 
+#     '+ 2*(({u_3}))*x^4 - 5*(({u_1}))*(({u_2}))*x^3 - (({u_4}))*x^2 '
+#     '- (({u_5}))*x - (({u_2}))^2'
+# )
+# p_2_str = (
+#     '12*x^10 + 12*(({u_1}))*x^8 + 4*(({u_1}))^2*x^6 '
+#     '- 12*(({u_2}))*x^5 + (({u_3}))*x^4' 
+#     '- 4*(({u_1}))*(({u_2}))*x^3 - 2*(({u_4}))*x^2 + 4*(({u_5}))*x '
+#     '+ (({u_2}))^2'
+# )
 
 
+# The 2nd representation
 # Another version of the SW curve, obtained after replacing 
 # x -> - z x / 2
 # so that now x ~ \lambda_{SW}
@@ -1141,6 +1143,38 @@ p_2_str = (
 # )
 
 
+# The 3rd representation
+# The E_6 curve in Class S form
+# NOTE: here x really stands for \lambda 
+# NOTE: this being said, it's just a relabeling because \lambda = x dz/z
+# this is terribly cofusing notation, should switch to writing 
+# curves entirely in terms of \lambda
+
+q_1_str = (
+    '270*x^(15) + 342*(({phi_2}))*x^(13) + 162*(({phi_2}))^2*x^(11)'  
+    '- 252*(({phi_5}))*x^(10) + (26*(({phi_2}))^3 + 18*(({phi_6})))*x^9' 
+    '- 162*(({phi_2}))*(({phi_5}))*x^8 + (6*(({phi_2}))*(({phi_6})) '
+    '- 27*(({phi_8})))*x^7' 
+    '- (30*(({phi_2}))^2*(({phi_5})) - 36*(({phi_9})))*x^6' 
+    '+ (27*(({phi_5}))^2 - 9*(({phi_2}))*(({phi_8})))*x^5' 
+    '- (3*(({phi_5}))*(({phi_6})) - 6*(({phi_2}))*(({phi_9})))*x^4' 
+    '- 3*(({phi_2}))*(({phi_5}))^2*x^3 - 3*(({phi_5}))*(({phi_9}))*x '
+    '- (({phi_5}))^3'
+)
+q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
+p_1_str = (
+    '78*x^10 + 60*(({phi_2}))*x^8 + 14*(({phi_2}))^2*x^6 '
+    '- 33*(({phi_5}))*x^5' 
+    '+ 2*(({phi_6}))*x^4 - 5*(({phi_2}))*(({phi_5}))*x^3 - (({phi_8}))*x^2 '
+    '- (({phi_9}))*x - (({phi_5}))^2'
+)
+p_2_str = (
+    '12*x^10 + 12*(({phi_2}))*x^8 + 4*(({phi_2}))^2*x^6 '
+    '- 12*(({phi_5}))*x^5 + (({phi_6}))*x^4' 
+    '- 4*(({phi_2}))*(({phi_5}))*x^3 - 2*(({phi_8}))*x^2 + 4*(({phi_9}))*x '
+    '+ (({phi_5}))^2'
+)
+
 def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     """
     Construct a Seiberg-Witten curve in the 1st fundamental representation
@@ -1172,7 +1206,22 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
         phi = casimir_differentials
         # u_(1, 2, 3, 4, 5) = phi[2, 5, 6, 8, 9, 12]
         if g_rank == 6:
-            # The following goes with the other presentation of the SW curve.
+
+            # # The following goes with the 1st presentation of the SW curve.
+            # tau = tau_str.format(u_6=phi[12])
+            # q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+            #                     u_4=phi[8], u_5=phi[9])
+            # p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+            #                     u_4=phi[8], u_5=phi[9])
+            # p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
+            #                     u_4=phi[8], u_5=phi[9])
+            # q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
+            # curve_str = (
+            #    '(1/2)*(x^3)*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
+            #    .format(tau=tau, q_1=q_1, q_2=q_2)
+            # )
+
+            # The following goes with the 2nd presentation of the SW curve.
             # 
             # phi_12 = phi_12_str.format(u_6=phi[12])
             # q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
@@ -1188,17 +1237,17 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
             #    .format(phi_12=phi_12, q_1=q_1, q_2=q_2)
             # )
             
-            tau = tau_str.format(u_6=phi[12])
-            q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-                                u_4=phi[8], u_5=phi[9])
-            p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-                                u_4=phi[8], u_5=phi[9])
-            p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-                                u_4=phi[8], u_5=phi[9])
+            # The following goes with the 3rd presentation of the SW curve.
+            q_1 = q_1_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
+                                phi_8=phi[8], phi_9=phi[9])
+            p_1 = p_1_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
+                                phi_8=phi[8], phi_9=phi[9])
+            p_2 = p_2_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
+                                phi_8=phi[8], phi_9=phi[9])
             q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
             curve_str = (
-               '(1/2)*(x^3)*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
-               .format(tau=tau, q_1=q_1, q_2=q_2)
+               '(1/2)*(x^3)*({phi_12})^2 - ({q_1})*({phi_12}) + ({q_2})'
+               .format(phi_12=phi[12], q_1=q_1, q_2=q_2)
             )
 
             # print '\nthe curve string'
