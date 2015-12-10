@@ -402,77 +402,17 @@ class SWCurve:
         if self.num_eq is None:
             raise NotImplementedError
 
-        fx = sympy.simplify(self.num_eq.subs(z, z_0))
+        fx = self.num_eq.subs(z, z_0)
         sym_poly = sympy.Poly(fx, x, domain='CC')
-
-        # print 'the polynomial at z = {}'.format(z_0)
-        # print sym_poly
+        coeff_list = map(complex, sym_poly.all_coeffs())
+        return numpy.roots(coeff_list)
         
         sheets = []
 
-        # This should work now, but keep the fix below until 
-        # debugging E6 is done
         coeff_list = map(complex, sym_poly.all_coeffs())
         x_s = numpy.roots(coeff_list)
         sheets = x_s
 
-        # # This fails sometimes to get all the roots. 
-        # # Need something better. Adding a hotfix with 
-        # # with Sage for now.
-        # #
-        # coeff_list = map(complex, sym_poly.all_coeffs())
-        # x_s = numpy.roots(coeff_list)
-
-        # if len(x_s) < 27:
-        #     print '\n\nNOT AL SHEETS FOUND!!!'
-        # # Sage method for computing sheets
-        # #
-        # if (
-        #     self.g_data.type == 'E' and self.g_data.rank == 6 
-        #     and len(x_s) < 27
-        # ):
-        #     print '\n\nWILL ENHANCE SHEETS!!!'
-        #     f_eqn = sym_poly.as_expr().evalf(
-        #         n=ROOT_FINDING_PRECISION, chop=True
-        #     ) 
-        #     y_s = map(
-        #         complex, sage_subprocess.solve_single_eq_x(
-        #             [f_eqn],
-        #             precision=ROOT_FINDING_PRECISION,
-        #         )
-        #     )
-        #     print 'at z = {}'.format(z_0)
-        #     print 'the equation to solve is '
-        #     print f_eqn
-        #     print 'the solutions'
-        #     print y_s
-        #     # FIXME: The following is an extra fix needed because SAGE won't
-        #     # give the correct multiplicities of the roots in some cases.
-        #     # In particular in the E6 curve there should be three roots 
-        #     # with x=0, but sage returns 25 roots, with only one x=0.0
-        #     # the other two are discarded, and the algorithm doesn't
-        #     # correctly account for the multiplicity.
-        #     # Need to figure out a better way to handle this issue
-        #     # meanwhile, this is the hotfix
-        #     if (
-        #         self.g_data.type == 'E' and self.g_data.rank == 6 
-        #         and len(x_s) == 25
-        #     ):
-        #         y_s.append(0j)
-        #         y_s.append(0j)
-        #     if len(y_s) < 27:
-        #         raise Exception(
-        #             'Cannot get the correct number of sheets '
-        #             'at z = '.format(z_0)
-        #         )
-        #     sheets = y_s 
-
-        # else:
-        #     # print 'NO PROBLEM, ALL SHEETS FOUND'    
-        #     sheets = x_s
-
-        # # print 'the sheets!'
-        # # print x_s
         return sheets
 
 
@@ -523,7 +463,6 @@ class SWDataBase(object):
         self.curve = None
         self.diff = None
 
-
         if config['mt_params'] is not None:
             mt_params = sympy.sympify(config['mt_params'])
         else:
@@ -560,10 +499,17 @@ class SWDataBase(object):
 
         logger.info(
             'Seiberg-Witten curve in the 1st fundamental '
-            'representation:\n{} = 0\n(numerically\n{}=0\n)'
+            'representation:\n(note: here x really stands for \lambda)'
+            '\n{} = 0\n(numerically\n{}=0\n)'
             .format(sympy.latex(self.ffr_curve.sym_eq),
                     sympy.latex(self.ffr_curve.num_eq))
         )
+        # z_0 = 0.136188373742-0.257456561838j
+        # print 'at z = {} the curve is \n{}\n{}'.format(
+        #     z_0, 
+        #     self.ffr_curve.num_eq.subs(z, z_0), 
+        #     sympy.simplify(self.ffr_curve.num_eq.subs(z, z_0))
+        # )
 
         # TODO: SWCurve in a general representation.
         if self.g_data.fundamental_representation_index == 1:
@@ -1504,7 +1450,7 @@ def get_ramification_points_using_discriminant(
         #         )
         #         polyroots_maxsteps += 10
         #         polyroots_extra_precision += 10
-                
+
         fact_eq = f_P.as_expr().evalf(n=ROOT_FINDING_PRECISION, chop=True) 
         f_roots = sage_subprocess.solve_single_eq_z(
             [fact_eq],

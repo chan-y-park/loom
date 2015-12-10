@@ -942,12 +942,8 @@ class SWDataWithTrivialization(SWDataBase):
             b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
 
         elif rp_type == 'type_IV':
-            print 'This is the local curve'
-            print local_curve.n()
             a = local_curve.n().coeff(Dz).coeff(Dx, 15)
             b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-            print 'a = {}'.format(a)
-            print 'b = {}'.format(b)
         
         logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
             [rp.z, rp.x], rp_type)
