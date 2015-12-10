@@ -759,6 +759,34 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             zetas = remove_duplicate(
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < accuracy
             )
+
+        elif rp_type == 'type_IV':
+            phases = [
+                exp(2 * pi * 1j * float(i) / (12.0)) 
+                for i in range(12)
+            ] + [0.0]
+            phi = [[
+                phases[i] - phases[j] for i in range(13) 
+            ] for j in range(13)]
+
+            # print 'phi = {}'.format(phi)
+            omega = exp(
+                2.0 * pi * 1j / 13.0
+            )
+            dz_phases = ([
+                (1.0 / cpow(sw_diff_coeff, 12, 13)) *
+                exp(1j * theta * 12.0 / 13.0) *
+                ((1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
+                (omega ** s)
+                for i in range(13) for j in range(13) 
+                for s in range(13) if (i !=j and e_6_compatible(i, j))
+            ])
+            norm_dz_phases = [d / abs(d) for d in dz_phases]
+            # these are the normalized phases of the seeds
+            # with respect to the branch point:
+            zetas = remove_duplicate(
+                norm_dz_phases, lambda p1, p2: abs(p1 - p2) < accuracy
+            )
         
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0
@@ -779,7 +807,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 # z_1 = z_0 + accuracy * zeta
                 z_1 = z_0 + dt * zeta
 
-                if rp_type == 'type_I':
+                if rp_type == 'type_I' or rp_type == 'type_IV':
                     x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                     # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
                     # a list of the type
@@ -794,12 +822,16 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                 v_j = complex(
                                     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
                                 )
-                                ij_factor = (
-                                    -1.0 * exp(1j * theta) / (v_j - v_i)
-                                )
-                                x_i_x_j_phases.append(
-                                    [(ij_factor) / abs(ij_factor), [x_i, x_j]]
-                                )
+                                if (v_j - v_i) != 0:
+                                    ij_factor = (
+                                        -1.0 * exp(1j * theta) / (v_j - v_i)
+                                    )
+                                    x_i_x_j_phases.append(
+                                        [
+                                            (ij_factor) / abs(ij_factor), 
+                                            [x_i, x_j]
+                                        ]
+                                    )
 
                 elif rp_type == 'type_II' or rp_type == 'type_III':
                     # we assume that the ramification index is maximal
@@ -923,4 +955,26 @@ def left_right(l, point):
             return 'right'
         else:
             return 'left'
+
+
+def e_6_compatible(i, j):
+    """
+    Given two integers i,j =0, ..., 12
+    determine whether the corresponding phases
+    in the E_6 seeds can be paired together.
+    This accounts for which sheets actually differ 
+    by a root, or not. The following prescription
+    is derived from the Coxeter projection diagram 
+    of E_6, and looking for roots that connect
+    a given weight with other weights.
+    """
+    dist = abs(i - j) % 12
+    if ((0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
+        (i == 12 or j == 12)
+    ):
+        return True
+    else:
+        return False
+
+
 
