@@ -546,12 +546,11 @@ class SWDataWithTrivialization(SWDataBase):
                         logger_name=self.logger_name,
                     )
                     if sorted_ffr_xs == 'sorting failed':
-                        # print '\nstudying sheets near z = {}'.format(z)
-                        # print '\nwe get sheets'
-                        # print 'ffr_xs_0'
-                        # print ffr_xs_0
-                        # print 'ffr_xs_1'
-                        # print ffr_xs_1
+                        logger.info(
+                                'Studying sheets near z = {} found sheets'
+                                '\n ffr_xs_0 = {} \n ffr_xs_0 = {}'
+                                .format(z, ffr_xs_0, ffr_xs_1)
+                            )
                         raise Exception(
                             '\nCannot track the sheets!\n'
                             'Probably passing too close to a branch point '
