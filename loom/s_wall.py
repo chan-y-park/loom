@@ -740,7 +740,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 ((1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
                 (omega ** s)
                 for i in range(13) for j in range(13) 
-                for s in range(13) if e_6_compatible(i, j)
+                for s in range(13) if (i !=j and e_6_compatible(i, j))
             ])
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
@@ -783,12 +783,16 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                 v_j = complex(
                                     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
                                 )
-                                ij_factor = (
-                                    -1.0 * exp(1j * theta) / (v_j - v_i)
-                                )
-                                x_i_x_j_phases.append(
-                                    [(ij_factor) / abs(ij_factor), [x_i, x_j]]
-                                )
+                                if (v_j - v_i) != 0:
+                                    ij_factor = (
+                                        -1.0 * exp(1j * theta) / (v_j - v_i)
+                                    )
+                                    x_i_x_j_phases.append(
+                                        [
+                                            (ij_factor) / abs(ij_factor), 
+                                            [x_i, x_j]
+                                        ]
+                                    )
 
                 elif rp_type == 'type_II' or rp_type == 'type_III':
                     # we assume that the ramification index is maximal

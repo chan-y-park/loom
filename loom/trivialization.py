@@ -454,9 +454,6 @@ class SWDataWithTrivialization(SWDataBase):
         # Initialized with reference_xs.
         # TODO: set each element to an integer rather than a float.
         
-        # print '\n\nthe z_path'
-        # print z_path
-        # print '\n\nthe sheets along the path are'
         if ffr_sheets_along_path is None:
             ffr_sheets_along_path = [[x] for x in ffr_xs_0]
         
@@ -467,7 +464,7 @@ class SWDataWithTrivialization(SWDataBase):
             # NOTE: Commenting this, since we don't need to bother
             # with alignment for now. This saves a lot of problems 
             # with numerics and make the code much faster.
-            # Delete the following commend after extensive testing.
+            # Delete the following commend after EXTENSIVE testing.
             # ffr_xs_1, xs_1 = self.get_aligned_xs(
             #     z, 
             #     near_degenerate_branch_locus=near_degenerate_branch_locus
@@ -549,12 +546,12 @@ class SWDataWithTrivialization(SWDataBase):
                         logger_name=self.logger_name,
                     )
                     if sorted_ffr_xs == 'sorting failed':
-                        print '\nstudying sheets near z = {}'.format(z)
-                        print '\nwe get sheets'
-                        print 'ffr_xs_0'
-                        print ffr_xs_0
-                        print 'ffr_xs_1'
-                        print ffr_xs_1
+                        # print '\nstudying sheets near z = {}'.format(z)
+                        # print '\nwe get sheets'
+                        # print 'ffr_xs_0'
+                        # print ffr_xs_0
+                        # print 'ffr_xs_1'
+                        # print ffr_xs_1
                         raise Exception(
                             '\nCannot track the sheets!\n'
                             'Probably passing too close to a branch point '
@@ -1211,11 +1208,11 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
                 for x_pair_i in x_pair:
                     correct_xy_pairs.update({x_pair_i: x_pair_i})
             else:
-                print 'x_pair = {}'.format(x_pair)
-                print 'reference xs '
-                print ref_xs
-                print 'new xs'
-                print new_xs
+                # print 'x_pair = {}'.format(x_pair)
+                # print 'reference xs '
+                # print ref_xs
+                # print 'new xs'
+                # print new_xs
                 raise Exception('Cannot handle this kind of sheet degeneracy')
         else:
             closest_ys_0 = nsmallest(

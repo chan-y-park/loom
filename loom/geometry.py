@@ -432,7 +432,9 @@ class SWCurve:
         #     and len(x_s) < 27
         # ):
         #     print '\n\nWILL ENHANCE SHEETS!!!'
-        #     f_eqn = sym_poly.as_expr().evalf(n=ROOT_FINDING_PRECISION, chop=True) 
+        #     f_eqn = sym_poly.as_expr().evalf(
+        #         n=ROOT_FINDING_PRECISION, chop=True
+        #     ) 
         #     y_s = map(
         #         complex, sage_subprocess.solve_single_eq_x(
         #             [f_eqn],
@@ -995,7 +997,7 @@ class SWDataBase(object):
         elif algebra_type == 'E':
             if algebra_rank == 6:
                 ffr_weights_list = list(self.g_data.ffr_weights)
-                aligned_ffr_xs = sort_sheets_for_e_6_ffr(
+                aligned_ffr_xs = align_sheets_for_e_6_ffr(
                     ffr_xs, 
                     ffr_weights_list,
                     near_degenerate_branch_locus=near_degenerate_branch_locus,
@@ -1295,7 +1297,9 @@ def get_ramification_points_using_system_of_eqs(
     eq_1 = f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True)
 
     d_x_f_n, d_x_f_d = sympy.cancel(f.diff(x)).as_numer_denom()
-    eq_2 = d_x_f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True) 
+    eq_2 = d_x_f_n.subs(diff_params).evalf(
+        n=ROOT_FINDING_PRECISION, chop=True
+    )
 
     # NOTE: solve_poly_system vs. solve
     # sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
@@ -1444,8 +1448,8 @@ def get_ramification_points_using_discriminant(
         #         )
         #     except NoConvergence:
         #         logger.warning(
-        #             'mpmath.polyroots failed; increase maxsteps & extraprec '
-        #             'by 10.'
+        #             'mpmath.polyroots failed; increase maxsteps & '
+        #             'extraprec by 10.'
         #         )
         #         polyroots_maxsteps += 10
         #         polyroots_extra_precision += 10
@@ -1521,8 +1525,8 @@ def get_ramification_points_using_discriminant(
             is_same_x = lambda a, b: abs(a - b) < accuracy / 1e-2
             gathered_f_x_roots = gather(f_x_roots, is_same_x)
 
-            print '\nfound potential ramification point'
-            print [complex(z_i), gathered_f_x_roots]
+            # print '\nfound potential ramification point'
+            # print [complex(z_i), gathered_f_x_roots]
 
             for x_j, xs in gathered_f_x_roots.iteritems():
                 # m_x is the multiplicity of x_j.
@@ -1552,8 +1556,9 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     if x_0 is None:
         return xs_at_z_0
     else:
-        return sorted(xs_at_z_0,
-                      lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
+        return sorted(
+            xs_at_z_0, lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0))
+        )[:num_x]
    
 
 def null_weight_triples(weights):
@@ -1621,13 +1626,13 @@ def quintet_contained(e, quintet):
     return ans
 
 
-def sort_sheets_for_e_6_ffr(
+def align_sheets_for_e_6_ffr(
     sheets, 
     weights, 
     near_degenerate_branch_locus=None,
 ):
     """
-    Return the list of sheets sorted according to the list of weights.
+    Return the list of sheets aligned according to the list of weights.
     The output is a list such that sheets[i] will correspond to weights[i].
     """
     if len(sheets) != 27:
@@ -1641,7 +1646,12 @@ def sort_sheets_for_e_6_ffr(
         sorted_sheets = sheets
 
     elif n_sheets_at_origin == 3:
-        # print "There are {} sheets at the origin. ".format(n_sheets_at_origin)
+        # In the degenerate E6 curve (e.g. SYM at origin 
+        # of coulomb branch), there are 3 sheets at the origin
+        # while other sheets are arranged into two circles
+        # in two groups of 12.
+
+        # print "Found {} sheets at the origin. ".format(n_sheets_at_origin)
         have_same_r = (
             lambda a, b: abs(abs(complex(a)) - abs(complex(b))) 
             < SHEET_NULL_TOLERANCE
@@ -1671,7 +1681,7 @@ def sort_sheets_for_e_6_ffr(
         # print r_2
 
 
-        # build groups of sheets
+        # build the three groups of sheets
         g_0 = [x for x in sheets if abs(abs(x) - r_0) < SHEET_NULL_TOLERANCE]
         g_1 = [x for x in sheets if abs(abs(x) - r_1) < SHEET_NULL_TOLERANCE]
         g_2 = [x for x in sheets if abs(abs(x) - r_2) < SHEET_NULL_TOLERANCE]
@@ -1700,7 +1710,7 @@ def sort_sheets_for_e_6_ffr(
         # these are given in the paper on ADE networks and run 
         # from 0 to 26. 
         # Each group of weights is ordered clockwise as they 
-        # appear in the Coxeter diuagram, starting from the real axis.
+        # appear in the Coxeter diagram, starting from the real axis.
         # Note: using the Coxeter diagram from the program cproj
         # gives a shift by 1 in the labels of all weights,
         # but otherwise they coincide precisely with the weights
@@ -1736,15 +1746,19 @@ def sort_sheets_for_e_6_ffr(
             for i in range(len(g_1_weights)):
                 #
                 # print 'i = {}'.format(i)
-                # print 'i+1 mod len(g_1_weights) = {}'.format((i + 1) % len(g_1_weights))
+                # print 'i+1 mod len(g_1_weights) = {}'.format(
+                #     (i + 1) % len(g_1_weights)
+                # )
                 # print 'g_1_weights[i] = {}'.format(g_1_weights[i])
-                # print 'g_1_sorted[(i + 1) % len(g_1_weights)] = {}'.format(g_1_sorted[(i + 1) % len(g_1_weights)])
-                sorted_sheets[g_1_weights[i]] = g_1_sorted[(i + 1) % len(g_1_weights)]
+                # print 'g_1_sorted[(i + 1) % len(g_1_weights)] = {}'.format(
+                #     g_1_sorted[(i + 1) % len(g_1_weights)]
+                # )
+                sorted_sheets[g_1_weights[i]] = (
+                    g_1_sorted[(i + 1) % len(g_1_weights)]
+                )
             for i in range(len(g_2_weights)):
                 sorted_sheets[g_2_weights[i]] = g_2_sorted[i]
 
-
-        # raise Exception("This is a degenerate case, cannot handle it yet!")
     else:
         n_w_triples = null_weight_triples(weights)
         n_s_triples = null_sheet_triples(sheets)
