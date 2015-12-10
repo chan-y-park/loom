@@ -402,23 +402,23 @@ class SWCurve:
         if self.num_eq is None:
             raise NotImplementedError
 
-        # fx = self.num_eq.subs(z, z_0)
-        # sym_poly = sympy.Poly(fx, x, domain='CC')
-        # coeff_list = map(complex, sym_poly.all_coeffs())
-        # return numpy.roots(coeff_list)
+        fx = self.num_eq.subs(z, z_0)
+        sym_poly = sympy.Poly(fx, x, domain='CC')
+        coeff_list = map(complex, sym_poly.all_coeffs())
+        return numpy.roots(coeff_list)
 
-        f_x_eq = self.num_eq.subs(z, z_0).evalf(n=ROOT_FINDING_PRECISION)
-        # print '\n this is the f_x equation: {}'.format(f_x_eq)
-        f_x_roots = sage_subprocess.solve_single_eq_x(
-            [f_x_eq],
-            precision=ROOT_FINDING_PRECISION,
-        )
-        # print 'at z = {}'.format(z_0)
-        # print 'curve'
-        # print f_x_eq
-        # print 'roots'
-        # print map(complex, f_x_roots)
-        return map(complex, f_x_roots)
+        # f_x_eq = self.num_eq.subs(z, z_0).evalf(n=ROOT_FINDING_PRECISION)
+        # # print '\n this is the f_x equation: {}'.format(f_x_eq)
+        # f_x_roots = sage_subprocess.solve_single_eq_x(
+        #     [f_x_eq],
+        #     precision=ROOT_FINDING_PRECISION,
+        # )
+        # # print 'at z = {}'.format(z_0)
+        # # print 'curve'
+        # # print f_x_eq
+        # # print 'roots'
+        # # print map(complex, f_x_roots)
+        # return map(complex, f_x_roots)
 
 
 class SWDiff:
