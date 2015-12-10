@@ -1073,67 +1073,6 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     return curve_str
 
 
-#def get_ramification_points(
-#    curve=None, 
-#    diff_params=None, 
-#    mt_params=None,
-#    z_rotation=None,
-#    accuracy=None, 
-#    punctures=None,
-#    method=None,
-#    g_data=None,
-#    logger_name='loom',
-#):
-#    logger = logging.getLogger(logger_name)
-#
-#    if curve.sym_eq is None:
-#        raise NotImplementedError
-#
-#    if method == 'discriminant':
-#        sols = get_ramification_points_using_discriminant(
-#            curve=curve, 
-#            diff_params=diff_params, 
-#            mt_params=mt_params,
-#            accuracy=accuracy, 
-#            punctures=punctures,
-#            g_data=g_data,
-#            logger_name=logger_name,
-#        )
-#    else:
-#        if method != 'system_of_eqs':
-#            logger.warning(
-#                'Unknown or no method set to find ramification points.\n'
-#                'Use system_of_eqs by default.'
-#            )
-#        sols = get_ramification_points_using_system_of_eqs(
-#            curve=curve, 
-#            diff_params=diff_params, 
-#            mt_params=mt_params,
-#            accuracy=accuracy, 
-#            punctures=punctures,
-#            logger_name=logger_name,
-#        )
-#
-#    ramification_points = []
-#
-#    for z_i, (x_j, m_x) in sols:
-#        rp = RamificationPoint(
-#            # Note: if we substitute z' = c z in F(x,z)=0,
-#            # where c is a phase, the position of punctures 
-#            # and branch points will rotate contravariantly
-#            # z_pt -> c^{-1} z_pt
-#            z=PSL2C(mt_params, z_i, numerical=True) / complex(z_rotation),
-#            Ciz=z_i, 
-#            x=x_j, 
-#            i=m_x, 
-#            label=('ramification point #{}'
-#                   .format(len(ramification_points)))
-#        )
-#        ramification_points.append(rp)
-#
-#    return ramification_points
-
-
 def get_ramification_points_using_system_of_eqs(
     curve=None, 
     diff_params=None, 
@@ -1165,7 +1104,7 @@ def get_ramification_points_using_system_of_eqs(
                            'has an unknown factorization: {} = {}.'
                            .format(f_n, f_n.factor()))
 
-    eq_2 = f_n.diff(x)
+    eq_2 = eq_1.diff(x)
 
     # NOTE: solve_poly_system vs. solve
     # sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
@@ -1175,6 +1114,7 @@ def get_ramification_points_using_system_of_eqs(
         precision=ROOT_FINDING_PRECISION,
         logger_name=logger_name,
     )
+
     # TODO: Consider calculating the discriminant D(z)
     # and double-check if all the z_i's are found.
     for z_i, x_i in z_x_s:
@@ -1189,10 +1129,10 @@ def get_ramification_points_using_system_of_eqs(
         # Calculate the multiplicity of x_i 
         # by finding the maximum k that satisfies
         # (d_x)^k f_n(x, z_i)|_{x = x_i} = 0.
-        f_n_i = f_n.subs(diff_params).subs(z, z_i)
+        eq_1_i = eq_1.subs(z, z_i)
         m_x = 1
         while (
-            abs(f_n_i.diff(x, m_x).subs(x, x_i)
+            abs(eq_1_i.diff(x, m_x).subs(x, x_i)
                 .evalf(n=ROOT_FINDING_PRECISION)) < accuracy
         ):
             m_x += 1
