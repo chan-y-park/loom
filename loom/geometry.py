@@ -366,7 +366,7 @@ class SWCurve:
     """
     def __init__(self, casimir_differentials=None, g_data=None, 
                  diff_params=None, mt_params=None, 
-                 z_rotation=sympy.sympify('1'), ffr=False):
+                 z_rotation=None, ffr=False):
         self.sym_eq = None
         self.num_eq = None
 
@@ -381,8 +381,7 @@ class SWCurve:
                 raise ValueError('syntax error in the Casimir differentials.')
             # NOTE: We apply PSL2C only to the numerical curve
             # for the simplicity of analysis.
-            #Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
-            Ciz = PSL2C(mt_params, z, inverse=True) 
+            Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
             self.num_eq = (
                 self.sym_eq.subs(z, Ciz).subs(diff_params)
                 .evalf(n=ROOT_FINDING_PRECISION, chop=True)
@@ -394,11 +393,6 @@ class SWCurve:
                 'class SWCurve with a general representation '
                 'is not implemented yet.'
             )
-
-    def set_z_rotation(self, z_rotation):
-        self.num_eq = (self.num_eq
-                       .subs(z, z_rotation * z)
-                       .evalf(n=ROOT_FINDING_PRECISION, chop=True))
 
     def get_xs(self, z_0):
         """
@@ -414,8 +408,9 @@ class SWCurve:
 
 
 class SWDiff:
-    def __init__(self, v_str, g_data=None, diff_params=None, mt_params=None,
-                 z_rotation=sympy.sympify('1'),):
+    def __init__(
+            self, v_str, g_data=None, diff_params=None, mt_params=None,
+            z_rotation=None,):
         # sym_v is a SymPy expression. 
         self.sym_v = sympy.sympify(v_str)
         # num_v is from sym_v with its parameters 
@@ -617,54 +612,6 @@ class SWDataBase(object):
                 get_ramification_points_using_system_of_eqs
             )
 
-        regular_punctures = get_punctures_from_config(
-            config['regular_punctures'], 'Regular puncture',
-            diff_params, mt_params,
-        )
-        irregular_punctures = get_punctures_from_config(
-            config['irregular_punctures'], 'Irregular puncture',
-            diff_params, mt_params,
-        )
-
-        ffr_curve = SWCurve(
-            casimir_differentials=casimir_differentials, 
-            g_data=self.g_data,
-            diff_params=diff_params,
-            mt_params=mt_params,
-            ffr=True,
-        )
-
-        logger.info(
-            'Calculating ramification points of '
-            'the Seiberg-Witten curve '
-            'in the first fundamental rep.'
-        )
-    
-        punctures = regular_punctures + irregular_punctures
-
-        sols = get_ramification_points(
-            curve=ffr_curve, 
-            diff_params=diff_params,
-            mt_params=mt_params,
-            accuracy=self.accuracy, 
-            punctures=punctures,
-            g_data=self.g_data,
-            logger_name=self.logger_name,
-        )
-
-        ffr_ramification_points = []
-        for z_i, (x_j, m_x) in sols:
-            rp = RamificationPoint(
-                z=PSL2C(mt_params, z_i, numerical=True),
-                Ciz=z_i, 
-                x=x_j, 
-                i=m_x, 
-                label=('ramification point #{}'
-                       .format(len(ffr_ramification_points)))
-            )
-            ffr_ramification_points.append(rp)
-
-        # Rotate the z-plane until branch points are not aligned vertically.
         for pi_div in range(max_pi_div + 1):
             if pi_div == 0:
                 # we study the case of no rotations at all.
@@ -698,27 +645,75 @@ class SWDataBase(object):
                 # parameters such as masses, and stokes data for irregular 
                 # singularities.)
                 
-                # Now check if the z-plane needs to be rotated
+                regular_punctures = get_punctures_from_config(
+                    config['regular_punctures'], 'Regular puncture',
+                    diff_params, mt_params, z_plane_rotation,
+                )
+                irregular_punctures = get_punctures_from_config(
+                    config['irregular_punctures'], 'Irregular puncture',
+                    diff_params, mt_params, z_plane_rotation,
+                )
 
-                # Note: if we substitute z' = c z in F(x,z)=0,
-                # where c is a phase, the position of punctures 
-                # and branch points will rotate contravariantly
-                # z_pt -> c^{-1} z_pt
+                ffr_curve = SWCurve(
+                    casimir_differentials=casimir_differentials, 
+                    g_data=self.g_data,
+                    diff_params=diff_params,
+                    mt_params=mt_params,
+                    z_rotation=z_plane_rotation,
+                    ffr=True,
+                )
+
+                logger.info(
+                    'Calculating ramification points of '
+                    'the Seiberg-Witten curve '
+                    'in the first fundamental rep.'
+                )
+            
+                punctures = regular_punctures + irregular_punctures
+
+                ffr_ramification_points = []
+                sols = get_ramification_points(
+                    curve=ffr_curve, 
+                    diff_params=diff_params,
+                    mt_params=mt_params,
+                    accuracy=self.accuracy, 
+                    punctures=punctures,
+                    g_data=self.g_data,
+                    logger_name=self.logger_name,
+                )
+                for z_i, (x_j, m_x) in sols:
+                    rp = RamificationPoint(
+                        # Note: if we substitute z' = c z in F(x,z)=0,
+                        # where c is a phase, the position of punctures 
+                        # and branch points will rotate contravariantly
+                        # z_pt -> c^{-1} z_pt
+                        z=(PSL2C(mt_params, z_i, numerical=True) /
+                           complex(z_plane_rotation)),
+                        Ciz=z_i, 
+                        x=x_j, 
+                        i=m_x, 
+                        label=('ramification point #{}'
+                               .format(len(ffr_ramification_points)))
+                    )
+                    ffr_ramification_points.append(rp)
+
+
+                logger.debug('These are the punctures:')
+                for pct in punctures:
+                    logger.debug('{} at z={}'.format(pct.label, pct.z))
+
+                # Now check if the z-plane needs to be rotated
 
                 # z-coords of branch points.
                 bpzs = n_remove_duplicate(
-                    [r.z / complex(z_plane_rotation)
-                     for r in ffr_ramification_points if r.z != oo], 
+                    [r.z for r in ffr_ramification_points if r.z != oo],
                     self.accuracy,
                 )
-
                 # z-coords of punctures.
                 pctzs = n_remove_duplicate(
-                    [p.z / complex(z_plane_rotation)
-                     for p in punctures if p.z != oo],
+                    [p.z for p in punctures if p.z != oo],
                     self.accuracy,
                 )
-                
                 z_list = bpzs + pctzs
                 z_r_list = [z.real for z in z_list]
                 if len(z_r_list) > 1:
@@ -768,17 +763,10 @@ class SWDataBase(object):
                 'Could not find a suitable rotation for the z-plane.'
             )
 
-        # Set the z-rotation to numerical values.
         self.z_plane_rotation = z_plane_rotation
-
-        for p in punctures + ffr_ramification_points:
-            if p.z != oo:
-                p.z /= complex(z_plane_rotation)
         self.regular_punctures = regular_punctures
         self.irregular_punctures = irregular_punctures
         self.ffr_ramification_points = ffr_ramification_points
-
-        ffr_curve.set_z_rotation(z_plane_rotation)
         self.ffr_curve = ffr_curve
 
         # Automatically configure various sizes 
@@ -948,7 +936,7 @@ class SWDataBase(object):
 
 def get_punctures_from_config(
     config_punctures_string, label_prefix,
-    diff_params, mt_params,
+    diff_params, mt_params, z_plane_rotation,
 ):
     punctures = []
 
@@ -974,7 +962,8 @@ def get_punctures_from_config(
             # and branch points will rotate contravariantly
             # z_pt -> c^{-1} z_pt
             npz = complex(
-                pz.evalf(n=ROOT_FINDING_PRECISION, chop=True)
+                (pz / z_plane_rotation)
+                .evalf(n=ROOT_FINDING_PRECISION, chop=True)
             )
         punctures.append(
             Puncture(
@@ -1146,26 +1135,26 @@ def get_ramification_points_using_system_of_eqs(
     logger = logging.getLogger(logger_name)
 
     sols = []
-    f = (curve.sym_eq.subs(diff_params)
-         .evalf(n=ROOT_FINDING_PRECISION, chop=True))
+    f = curve.sym_eq
     # Make f into the form of f_n/f_d
     f_n, f_d = sympy.cancel(f).as_numer_denom()
-    eq_1 = f_n
+    eq_1 = f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True)
 
     # Check the curve if it has the D-type factorization.
-    num_factor, f_n_factors = sympy.factor_list(f_n)
-    if len(f_n_factors) > 1:
+    num_factor, eq_1_factors = sympy.factor_list(eq_1)
+    if len(eq_1_factors) > 1:
         # TODO: check Casimir differentials too?
         if (g_data.type == 'D' and
-            len(f_n_factors) == 2 and
-            (x, 2) in f_n_factors):
-            eq_1 = sympy.simplify(f_n / x**2)
+            len(eq_1_factors) == 2 and
+            (x, 2) in eq_1_factors):
+            eq_1 = sympy.simplify(eq_1 / x**2)
         else:
             logger.warning('The curve to find ramification points'
                            'has an unknown factorization: {} = {}.'
-                           .format(f_n, f_n.factor()))
+                           .format(eq_1, eq_1.factor()))
 
-    eq_2 = f_n.diff(x)
+    d_x_f_n, d_x_f_d = sympy.cancel(f.diff(x)).as_numer_denom()
+    eq_2 = d_x_f_n.subs(diff_params).evalf(n=ROOT_FINDING_PRECISION, chop=True) 
 
     # NOTE: solve_poly_system vs. solve
     # sols = sympy.solve_poly_system([f, f.diff(x)], z, x)

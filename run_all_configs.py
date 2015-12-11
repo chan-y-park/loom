@@ -5,10 +5,6 @@ import sys
 import glob
 import logging
 import loom
-import pdb
-
-from bokeh.io import save
-from loom.bokeh_plot import get_spectral_network_bokeh_plot
 
 logger_name = 'loom_test'
 
@@ -39,11 +35,3 @@ for file_path in config_file_paths:
     logger.info('Testing {}...'.format(file_path))
     c = loom.load_config(file_path, logger_name=logger_name)
     d = loom.generate(c, phase=1.0, logger_name=logger_name)
-    p = get_spectral_network_bokeh_plot(d, plot_range=c['plot_range'],
-                                        notebook=True)
-    file_dir, file_name = os.path.split(file_path)
-    name, ext = os.path.splitext(file_name)
-    save(
-        obj=p, filename='test_results/{}.html'.format(name), #resources=None,
-        title=name
-    )

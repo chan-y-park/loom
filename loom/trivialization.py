@@ -175,7 +175,7 @@ class IrregularSingularity:
             self.label = label
             self.monodromy = None
         else:
-            self.z = r2toc(json_data['z'])
+            self.z = json_data['z']
             self.label = json_data['label']
             self.monodromy = numpy.array(json_data['monodromy'])
 
@@ -295,7 +295,7 @@ class SWDataWithTrivialization(SWDataBase):
                         ffr_ramification_points=self.ffr_ramification_points,)
             for data in json_data['branch_points']
         ]
-        self.irregular_singularities = [
+        self.irregular_singulrarities = [
             IrregularSingularity(json_data=data)
             for data in json_data['irregular_singularities']
         ]

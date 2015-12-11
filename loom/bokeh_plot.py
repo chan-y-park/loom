@@ -1,6 +1,5 @@
 import numpy
 import bokeh
-import pdb
 
 from cmath import phase, pi
 from sympy import oo
@@ -80,6 +79,7 @@ def get_spectral_network_bokeh_plot(
 
     # Data source for branch points & cuts.
     bpds = ColumnDataSource({'x': [], 'y': [], 'label': [], 'root': []})
+    bcds = ColumnDataSource({'xs': [], 'ys': []})
     for bp in sw_data.branch_points:
         if bp.z == oo:
             continue
@@ -90,11 +90,8 @@ def get_spectral_network_bokeh_plot(
         for root in bp.positive_roots:
             root_label += str(root.tolist()) + ', '
         bpds.data['root'].append(root_label[:-2])
-
-    bcds = ColumnDataSource({'xs': [], 'ys': []})
-    for bl in sw_data.branch_points + sw_data.irregular_singularities:
-        bcds.data['xs'].append([bl.z.real, bl.z.real])
-        bcds.data['ys'].append([bl.z.imag, y_max])
+        bcds.data['xs'].append([bp.z.real, bp.z.real])
+        bcds.data['ys'].append([bp.z.imag, y_max])
 
     bokeh_figure.x(
         'x', 'y', size=10, color="#e6550D", line_width=3, source=bpds,
