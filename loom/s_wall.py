@@ -483,8 +483,10 @@ class SWall(object):
             if numpy.array_equal(root_0, -parent_root):
                 root_sign = -1
         if root_sign is None:
-            raise RuntimeError('Incorrect root assigned to {}.'
-                               .format(self.label))
+#            raise RuntimeError('Incorrect root assigned to {}.'
+#                               .format(self.label))
+            logger.warning('Incorrect root assigned to {}.'
+                           .format(self.label))
         self.multiple_local_roots = [[root] for root in self.local_roots]
         if len(self.parent_roots) > 1:
             for base_root in root_sign * self.parent_roots:
