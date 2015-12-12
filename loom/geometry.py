@@ -1225,10 +1225,10 @@ def get_ramification_points_using_system_of_eqs(
         # Calculate the multiplicity of x_i 
         # by finding the maximum k that satisfies
         # (d_x)^k f_n(x, z_i)|_{x = x_i} = 0.
-        eq_1_i = eq_1.subs(z, z_i)
+        f_n_i = f_n.subs(z, z_i)
         m_x = 1
         while (
-            abs(eq_1_i.diff(x, m_x).subs(x, x_i)
+            abs(f_n_i.diff(x, m_x).subs(x, x_i)
                 .evalf(n=ROOT_FINDING_PRECISION)) < accuracy
         ):
             m_x += 1

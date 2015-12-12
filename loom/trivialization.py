@@ -769,7 +769,8 @@ class SWDataWithTrivialization(SWDataBase):
 
         # XXX: Temporary analysis for D-type AD theories.
         for rp in bp.ffr_ramification_points:
-            if rp.ramification_type == 'type_AD':
+            if (rp.ramification_type == 'type_AD' or
+                rp.ramification_type == 'type_III'):
                 logger.warning('Temporary fix-up of the monodromy '
                                'for a D-type AD theory.')
                 # Find two diagonal elements and permute them.
