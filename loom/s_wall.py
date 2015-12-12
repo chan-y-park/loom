@@ -84,7 +84,7 @@ class Joint:
             'M': ctor2(self.M),
             'parents': [parent for parent in self.parents],
             'label': self.label,
-            'root': self.root.tolist(),
+            'roots': [root.tolist() for root in self.roots],
             'ode_xs': [ctor2(x) for x in self.ode_xs],
         }
         return json_data
@@ -94,7 +94,7 @@ class Joint:
         self.M = r2toc(json_data['M'])
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
-        self.root = numpy.array(json_data['root'])
+        self.roots = [numpy.array(root) for root in json_data['roots']]
         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
 
     def is_equal_to(self, other, accuracy):
@@ -204,9 +204,9 @@ class SWall(object):
                 for br_loc, t, d in self.cuts_intersections
             ],
             'local_roots': [root.tolist() for root in self.local_roots],
-            'local_multiple_roots': [
+            'multiple_local_roots': [
                 [root.tolist() for root in multiple_roots]
-                for multiple_roots in local_multiple_roots
+                for multiple_roots in self.multiple_local_roots
             ],
             'local_weight_pairs': self.local_weight_pairs,
         }
@@ -226,9 +226,9 @@ class SWall(object):
                 if br_loc_label == br_loc.label:
                     self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
-        self.local_multiple_roots = [
+        self.multiple_local_roots = [
             [numpy.array(root) for root in multiple_roots]
-            for multiple_roots in json_data['local_multiple_roots']
+            for multiple_roots in json_data['multiple_local_roots']
         ]
         self.local_weight_pairs = json_data['local_weight_pairs']
 
@@ -377,7 +377,9 @@ class SWall(object):
                 x_p = self.z[t].real
                 x_n = self.z[t + 1].real
                 if not ((x_p < br_loc_x < x_n) or (x_n < br_loc_x < x_p)):
-                    logger.info('Drop a fake cut intersection.')
+                    logger.warning(
+                        '*** warning *** Drop a fake cut intersection.'
+                    )
                     continue
 
                 # Add 
