@@ -94,7 +94,11 @@ class Joint:
         self.M = r2toc(json_data['M'])
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
-        self.roots = [numpy.array(root) for root in json_data['roots']]
+        # XXX: temporary routine to label multiple roots.
+        try:
+            self.roots = [numpy.array(root) for root in json_data['roots']]
+        except KeyError:
+            self.root = numpy.array(json_data['root'])
         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
 
     def is_equal_to(self, other, accuracy):
@@ -162,7 +166,7 @@ class SWall(object):
         self.cuts_intersections = []
         self.root_basepoint = []
         self.local_roots = []
-        self.multiple_local_roots = [[]]
+        self.multiple_local_roots = None
         # local_weight_pairs is a list of pair of intgers.
         self.local_weight_pairs = []        
 
@@ -226,10 +230,14 @@ class SWall(object):
                 if br_loc_label == br_loc.label:
                     self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
-        self.multiple_local_roots = [
-            [numpy.array(root) for root in multiple_roots]
-            for multiple_roots in json_data['multiple_local_roots']
-        ]
+        # XXX: temporary routine to label multiple roots.
+        try:
+            self.multiple_local_roots = [
+                [numpy.array(root) for root in multiple_roots]
+                for multiple_roots in json_data['multiple_local_roots']
+            ]
+        except KeyError:
+            pass
         self.local_weight_pairs = json_data['local_weight_pairs']
 
     def get_splits(self, endpoints=False):

@@ -161,7 +161,7 @@ def get_spectral_network_bokeh_plot(
                 sn_data['arrow_y'].append(z_i[a_i])
                 sn_data['arrow_angle'].append(a_angle)
             # XXX: temporary routine to label multiple roots.
-            try:
+            if s_wall.multiple_local_roots is not None:
                 for roots in s_wall.multiple_local_roots:
                     sn_data['label'].append(str(s_wall.label))
                     root_label = ''
@@ -171,7 +171,7 @@ def get_spectral_network_bokeh_plot(
                     sn_data['color'].append(
                         sw_data.g_data.get_root_color(roots[0])
                     )
-            except AttributeError:
+            else:
                 for root in s_wall.local_roots:
                     sn_data['label'].append(str(s_wall.label))
                     sn_data['root'].append(str(root.tolist()))
