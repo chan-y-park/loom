@@ -52,9 +52,9 @@ class Joint:
 
         self.z = z
 #        self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
-        self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
+        self.M = M
 #        self.parents = [s_wall_1.label, s_wall_2.label]
-        self.parents = [s_wall_1.label, s_wall_2.label]
+        self.parents = parents 
         # FIXME: Joint.label is given in spectral_network.py
 #        self.label = [s_wall_1.label, s_wall_2.label]
 
@@ -101,11 +101,15 @@ class Joint:
         if(abs(self.z - other.z) > accuracy):
             return False
 
-        if numpy.array_equal(self.root, other.root) is not True:
-            return False
-
         if(abs(self.M - other.M) > accuracy):
             return False
+
+        if len(self.roots) != len(other.roots):
+            return False
+
+        for i in range(len(self.roots)):
+            if numpy.array_equal(self.roots[i], other.roots[i]) is not True:
+                return False
 
         # FIXME: Probably the following comparison is not needed 
         # after comparing the roots of two S-walls.
@@ -158,6 +162,7 @@ class SWall(object):
         self.cuts_intersections = []
         self.root_basepoint = []
         self.local_roots = []
+        self.multiple_local_roots = [[]]
         # local_weight_pairs is a list of pair of intgers.
         self.local_weight_pairs = []        
 
@@ -199,6 +204,10 @@ class SWall(object):
                 for br_loc, t, d in self.cuts_intersections
             ],
             'local_roots': [root.tolist() for root in self.local_roots],
+            'local_multiple_roots': [
+                [root.tolist() for root in multiple_roots]
+                for multiple_roots in local_multiple_roots
+            ],
             'local_weight_pairs': self.local_weight_pairs,
         }
         return json_data
@@ -217,6 +226,10 @@ class SWall(object):
                 if br_loc_label == br_loc.label:
                     self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
+        self.local_multiple_roots = [
+            [numpy.array(root) for root in multiple_roots]
+            for multiple_roots in json_data['local_multiple_roots']
+        ]
         self.local_weight_pairs = json_data['local_weight_pairs']
 
     def get_splits(self, endpoints=False):
@@ -421,7 +434,7 @@ class SWall(object):
             sw_data.g_data.ordered_weight_pairs(initial_root,)
         )
             
-        local_roots = [initial_root]
+        self.local_roots = [initial_root]
         self.local_weight_pairs = [initial_weight_pairs]
         
         if len(self.cuts_intersections) > 0:
@@ -444,7 +457,7 @@ class SWall(object):
                 )
                 new_weight_pairs = g_data.ordered_weight_pairs(new_root)
 
-                local_roots.append(new_root)
+                self.local_roots.append(new_root)
                 self.local_weight_pairs.append(new_weight_pairs)
 
             # Fill in the root types that occur before the basepoint
@@ -459,13 +472,11 @@ class SWall(object):
                 )
                 new_weight_pairs = g_data.ordered_weight_pairs(new_root)
 
-                local_roots.insert(0, new_root)
+                self.local_roots.insert(0, new_root)
                 self.local_weight_pairs.insert(0, new_weight_pairs)
 
-        # local_roots = [root_0, root_1, ...]
-        # Turn this into [[root_0_0, root_0_1], [root_1_0, ...], ...]
         root_sign = None
-        root_0 = local_roots[0]
+        root_0 = self.local_roots[0]
         for parent_root in self.parent_roots:
             if numpy.array_equal(root_0, parent_root):
                 root_sign = 1
@@ -474,25 +485,43 @@ class SWall(object):
         if root_sign is None:
             raise RuntimeError('Incorrect root assigned to {}.'
                                .format(self.label))
-        self.local_roots = [[root] for root in local_roots]
+        self.multiple_local_roots = [[root] for root in self.local_roots]
         if len(self.parent_roots) > 1:
             for base_root in root_sign * self.parent_roots:
                 if numpy.array_equal(base_root, root_0):
                     continue
                 else:
-                    self.local_roots[0].append(base_root)
+                    self.multiple_local_roots[0].append(base_root)
             # We prepared all the base roots, 
             # now we find how they change 
             # as the S-wall crosses cuts.
             for k in range(len(self.cuts_intersections)):
                 br_loc, t, direction = self.cuts_intersections[k]
-                for current_root in self.local_roots[k][1:]:
+                for current_root in self.multiple_local_roots[k][1:]:
                     new_root = g_data.weyl_monodromy(
                         current_root, br_loc, direction
                     )
-                local_roots[k + 1].append(new_root)
+                    self.multiple_local_roots[k + 1].append(new_root)
 
-    def get_root_at_t(self, t):
+#    def get_root_at_t(self, t):
+#        """
+#        Given an integer t which parametrizes a point 
+#        of the trajectory in proper time, return the local 
+#        root at that point.
+#        """
+#        if t < 0 or t > (len(self.z) - 1):
+#            raise ValueError
+#        else:
+#            closed_splits = self.get_splits() + [len(self.z) - 1]
+#            for i, sp in enumerate(closed_splits):
+#                if t <= sp:
+#                    return self.local_roots[i]
+#                    break
+#                else:
+#                    pass
+
+
+    def get_roots_at_t(self, t):
         """
         Given an integer t which parametrizes a point 
         of the trajectory in proper time, return the local 
@@ -504,10 +533,11 @@ class SWall(object):
             closed_splits = self.get_splits() + [len(self.z) - 1]
             for i, sp in enumerate(closed_splits):
                 if t <= sp:
-                    return self.local_roots[i]
+                    return self.multiple_local_roots[i]
                     break
                 else:
                     pass
+
 
     def get_weight_pairs_at_t(self, t):
         """

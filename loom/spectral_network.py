@@ -293,15 +293,10 @@ class SpectralNetwork:
                 p_z_i = p_z_splits[p_z_seg_i]
                 p_z_f = p_z_splits[p_z_seg_i + 1]
 
-                n_seg_roots = new_s_wall.local_roots[n_z_seg_i]
-                p_seg_roots = prev_s_wall.local_roots[p_z_seg_i]
+                n_seg_root = new_s_wall.local_roots[n_z_seg_i]
+                p_seg_root = prev_s_wall.local_roots[p_z_seg_i]
 
-                descendant_roots = get_descendant_roots(
-                    n_seg_roots, p_seg_roots, sw_data.g_data,
-                )
-
-                #if not is_root(p_seg_root + n_seg_root, sw_data.g_data):
-                if len(descendant_roots) == 0:
+                if not is_root(p_seg_root + n_seg_root, sw_data.g_data):
                     # The two segments are not compatible for
                     # forming a joint.
                     continue
@@ -362,8 +357,8 @@ class SpectralNetwork:
                     # TODO: check if the following descendant-roots
                     # finding is necessary.
                     descendant_roots = get_descendant_roots(
-                        prev_s_wall.get_root_at_t(t_p),
-                        new_s_wall.get_root_at_t(t_n),
+                        prev_s_wall.get_roots_at_t(t_p),
+                        new_s_wall.get_roots_at_t(t_n),
                         sw_data.g_data,
                     )
 
@@ -380,14 +375,14 @@ class SpectralNetwork:
                         new_joint_data_group = True
                         Dx = ode_xs[0] - ode_xs[1]
                         for joint_data_group in joint_data_groups:
-                            group_roots, group_ode_xs = joint_data_group:
+                            group_roots, group_ode_xs = joint_data_group
                             group_Dx = group_ode_xs[0] - group_ode_xs[1]
                             if abs(Dx - group_Dx) < accuracy:
                                 new_joint_data_group = False
-                                joint_data_group.roots.append(root)
+                                group_roots.append(root)
                                 break
                         if new_joint_data_group is True:
-                            joint_data_groups.append((root, ode_xs))
+                            joint_data_groups.append(([root], ode_xs))
 
                     joint_M = prev_s_wall.M[t_p] + new_s_wall.M[t_n]
                     joint_parents = [prev_s_wall.label, new_s_wall.label]
@@ -399,6 +394,7 @@ class SpectralNetwork:
                                 ode_xs=ode_xs,
                                 parents=joint_parents,
                                 roots=roots,
+                            )
                         )
                     
                 
@@ -558,4 +554,6 @@ def get_joint_data(descendant_roots, z, sw_data):
         ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
         ode_xs = [ode_x1, ode_x2]
         joint_data.append((root, ode_xs))
+
+    return joint_data
  
