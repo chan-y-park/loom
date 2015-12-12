@@ -1,6 +1,7 @@
 import logging
 import numpy
 import sympy
+import itertools
 import pdb
 
 from cmath import exp, pi
@@ -122,6 +123,7 @@ class Joint:
 
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, M_0=None, parents=None,
+                 parent_roots=None, 
                  label=None, n_steps=None, logger_name='loom'):
         """
         SWall.z is a NumPy array of length n_steps+1,
@@ -147,6 +149,9 @@ class SWall(object):
             self.x[0] = x_0
             self.M[0] = M_0
         self.parents = parents
+        # For a primary S-wall, the roots of the branch points.
+        # For a joint, the root of the joint.
+        self.parent_roots = parent_roots
         self.label = label
 
         # cuts_intersections = [[b_pt_idx, i, '(c)cw'], ...]
@@ -460,16 +465,20 @@ class SWall(object):
                 self.local_roots.insert(0, new_root)
                 self.local_weight_pairs.insert(0, new_weight_pairs)
 
-        root_sign = None
-        root_0 = self.local_roots[0]
+#        root_sign = None
+#        root_0 = self.local_roots[0]
 #        for parent_root in self.parent_roots:
 #            if numpy.array_equal(root_0, parent_root):
 #                root_sign = 1
 #            if numpy.array_equal(root_0, -parent_root):
 #                root_sign = -1
 #        if root_sign is None:
-#            logger.warning('*** warning *** Incorrect root assigned to {}.'
-#                           .format(self.label))
+#            logger.info(
+#                'For {}, local_roots = {}, parent_roots = {}.'
+#                .format(self.label, local_roots, parent_roots)
+#            )
+#            logger.info('Do not know how to treat this case, '
+#                        'do nothing.')
 #        multiple_local_roots = [[root] for root in self.local_roots]
 #        if root_sign is not None and len(self.parent_roots) > 1:
 #            for base_root in root_sign * self.parent_roots:
@@ -694,8 +703,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
         # Construct the seeding points for the branch point
         # by studying the type of ramification structure of the r.p.
+        # XXX: Temporary
         if rp_type == 'type_AD':
             continue
+
         elif rp_type == 'type_I':
             phases = [exp(2 * pi * 1j * float(i) / r_i) for i in range(r_i)]
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
@@ -911,6 +922,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     # |z_1-z_0| we cannot just use dt, but must choose a small 
     # fraction of it
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(min_dt / 100))
+
     logger.debug('Number of S-walls emanating = {}'.format(len(seeds)))
     logger.debug('these are the seeds {}\n'.format(seeds))
     return seeds

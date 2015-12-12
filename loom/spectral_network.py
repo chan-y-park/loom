@@ -122,6 +122,7 @@ class SpectralNetwork:
                         M_0=M_0,
                         # TODO: change this to take bp itself.
                         parents=[bp.label],
+                        parent_roots = bp.positive_roots,
                         label=label,
                         n_steps=n_steps,
                         logger_name=self.logger_name,
@@ -204,11 +205,46 @@ class SpectralNetwork:
                             x_0=joint.ode_xs,
                             M_0=joint.M,
                             parents=joint.parents,
+                            # XXX: parent_roots != (roots of parents)
+                            parent_roots=joint.roots,
                             label=label,
                             n_steps=n_steps,
                             logger_name=self.logger_name,
                         )
                     )
+
+            # XXX: Temporary for AD
+            if itertation == 1:
+                AD_bps = []
+                for bp in sw_data.branch_points:
+                    has_type_AD = False
+                    has_type_I = False
+                    for rp in bp.ffr_ramification_points:
+                        if rp_type == 'type_AD':
+                            has_type_AD = True
+                            continue
+                        elif rp_type == 'type_I':
+                            # XXX: Temporary
+                            has_type_I = True
+                    if has_type_AD and has_type_I:
+                        AD_bps.append(bp)
+
+                additional_seeds = []
+                for bp in AD_bps:
+                    for s_wall in self.s_walls:
+                        if bp.label in s_wall.parents: 
+                            additional_seeds.append(get_AD_seeds(bp, s_wall))
+
+                for seed in additional_seeds:
+                    z_0, xs_0, M_0 = seed 
+                    Dx_0 = xs_0[0] - xs_0[1]
+                    ffr_xs_at_z = sw.get_sheets_at_z(z_0, ffr=True).values()
+                    for x_1, x_2 in itertools.combinations(ffr_xs_at_z, 2)
+                        Dx = x_1 - x_2
+                        if abs(Dx_0 - Dx) < accuracy:
+                            additional_seeds.append([z_0, [x_1, x_2], M_0 
+
+
             logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
 
@@ -516,3 +552,8 @@ def get_joint_data(descendant_roots, z, sw_data):
 
     return joint_data
  
+
+# XXX: Temporary
+def get_AD_seeds(bp, s_wall):
+    
+
