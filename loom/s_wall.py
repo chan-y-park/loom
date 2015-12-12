@@ -373,7 +373,8 @@ class SWall(object):
                 # Check that the intersection actually happens
                 # and is not an artifact of the interpolation used above
                 # which could become an extrapolation
-                x_p = self.z[t - 1].real
+                #x_p = self.z[t - 1].real
+                x_p = self.z[t].real
                 x_n = self.z[t + 1].real
                 if not ((x_p < br_loc_x < x_n) or (x_n < br_loc_x < x_p)):
                     logger.info('Drop a fake cut intersection.')
@@ -488,7 +489,7 @@ class SWall(object):
             logger.warning('*** warning *** Incorrect root assigned to {}.'
                            .format(self.label))
         self.multiple_local_roots = [[root] for root in self.local_roots]
-        if len(self.parent_roots) > 1:
+        if root_sign is not None and len(self.parent_roots) > 1:
             for base_root in root_sign * self.parent_roots:
                 if numpy.array_equal(base_root, root_0):
                     continue

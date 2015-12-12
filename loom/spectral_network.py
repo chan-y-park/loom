@@ -205,6 +205,7 @@ class SpectralNetwork:
                             x_0=joint.ode_xs,
                             M_0=joint.M,
                             parents=joint.parents,
+                            # XXX: parent_roots != (roots of parents)
                             parent_roots=joint.roots,
                             label=label,
                             n_steps=n_steps,
