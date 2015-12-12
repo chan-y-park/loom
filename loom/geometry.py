@@ -524,7 +524,9 @@ class SWDataBase(object):
                     sympy.latex(self.diff.num_v))
         )
 
-        self.analyze_ffr_ramification_points()
+        # TODO: Move analyze_ffr_ramification_points() 
+        # from trivialization.py to here.
+        #self.analyze_ffr_ramification_points()
 
         for rp in self.ffr_ramification_points:
             logger.info("{}: z = {}, x = {}, i = {}."
@@ -946,100 +948,6 @@ class SWDataBase(object):
             raise NotImplementedError
 
         return list(xs)
-
-
-    def analyze_ffr_ramification_points(self):
-        logger = logging.getLogger(self.logger_name)
-        rp_type = None
-        num_eq = self.ffr_curve.num_eq
-
-        # use Dz = z - rp.z & Dx = x - rp.x
-        Dz, Dx = sympy.symbols('Dz, Dx')
-        for rp in self.ffr_ramification_points:
-            local_curve = (
-                num_eq.subs(x, rp.x + Dx).subs(z, rp.z + Dz)
-                .series(Dx, 0, rp.i + 1).removeO()
-                .series(Dz, 0, 2).removeO()
-            )
-            logger.debug('\nlocal curve = {}\n'.format(local_curve))
-                
-            # Classify which type of ramification point
-            # type_I: ADE type with x_0 != 0
-            #   #   i.e. F ~ a z + b x^k
-            # type_II: D-type with x_0 = 0, but nonedgenerate
-            #   i.e. F ~ a z + b x^2r   with r=rank(g)
-            # type_III: D-type with x_0 = 0, degenerate
-            #   i.e. F ~ x^2 (a z + b x^(2r-2))
-            # type IV: Other case.
-            # More cases may be added in the future, in particular 
-            # for degenerations of E_6 or E_7 curves.
-
-            # TODO: avoid using self.* repeatedly, define a local variable.
-            g_data = self.g_data
-            zero_threshold = self.accuracy * 100
-            if (self.g_data.type == 'A' or 
-                ((self.g_data.type == 'D' or self.g_data.type == 'E') and 
-                    abs(rp.x) > zero_threshold)):
-                rp_type = 'type_I'
-            elif (
-                self.g_data.type == 'D' and abs(rp.x) < zero_threshold
-                and 2 * self.g_data.rank == rp.i
-                and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > zero_threshold
-            ):
-                rp_type = 'type_II'
-            elif (
-                self.g_data.type == 'D' and 2 * self.g_data.rank == rp.i
-                and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
-            ):
-                rp_type = 'type_III'
-            # XXX: Temporary case for D-type AD theories.
-            elif (
-                g_data.type == 'D' and rp.i == 4 and abs(rp.x) < zero_threshold
-            ):
-                # No need to grow S-walls from this ramification point,
-                # there will be another ramification point that gives
-                # the same S-wall. This ramification point is a placeholder.
-                rp.ramification_type = 'type_AD'
-                rp.sw_diff_coeff = None 
-                continue
-            else:
-                rp_type = 'type_IV'
-                raise Exception(
-                    'Cannot handle this type of ramification point'
-                    .format(local_curve)
-                )
-
-            if rp_type == 'type_I' or rp_type == 'type_II':
-                a = local_curve.n().subs(Dx, 0).coeff(Dz)
-                b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-
-            elif rp_type == 'type_III':
-                a = local_curve.n().coeff(Dz).coeff(Dx, 2)
-                b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-            
-            logger.debug(
-                '\nThe ramification point at (z,x)={} is of {}'
-                .format([rp.z, rp.x], rp_type)
-            )
-            rp.ramification_type = rp_type
-
-            num_v = self.diff.num_v
-            # Dx = Dx(Dz)
-            Dx_Dz = (-1.0 * (a / b) * Dz) ** sympy.Rational(1, rp.i)
-            local_diff = (
-                num_v.subs(x, rp.x + Dx_Dz).subs(z, rp.z + Dz)
-                .series(Dz, 0, 1).removeO()
-            )
-            # get the coefficient and the exponent of the leading term
-            (diff_c, diff_e) = local_diff.leadterm(Dz)
-            if diff_e == 0:
-                # remove the constant term from the local_diff
-                local_diff -= local_diff.subs(Dz, 0)
-                (diff_c, diff_e) = local_diff.leadterm(Dz)
-
-            # rp.sw_diff_coeff = complex(-1 * a / b)
-            rp.sw_diff_coeff = complex(diff_c.n())
-
 
 
 def get_punctures_from_config(

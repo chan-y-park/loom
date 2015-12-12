@@ -34,16 +34,13 @@ SEED_PRECISION_MAX_DEPTH = 5
 
 
 class Joint:
-#    def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
-#                 t_1=None, t_2=None, sw_data=None, logger_name='loom',):
-    def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
-                 logger_name='loom',):
+    def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
+                 t_1=None, t_2=None, sw_data=None, logger_name='loom',):
         self.z = None
         self.M = None
         self.parents = None
         self.label = None
-        #self.root = None
-        self.roots = None
+        self.root = None
         self.ode_xs = None
 
         if z is None:
@@ -51,29 +48,25 @@ class Joint:
             return
 
         self.z = z
-#        self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
-        self.M = M
-#        self.parents = [s_wall_1.label, s_wall_2.label]
-        self.parents = parents 
+        self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
+        self.parents = [s_wall_1.label, s_wall_2.label]
         # FIXME: Joint.label is given in spectral_network.py
 #        self.label = [s_wall_1.label, s_wall_2.label]
 
-#        alpha_1 = s_wall_1.get_root_at_t(t_1)
-#        alpha_2 = s_wall_2.get_root_at_t(t_2) 
-#        self.root = alpha_1 + alpha_2
-        self.roots = roots
+        alpha_1 = s_wall_1.get_root_at_t(t_1)
+        alpha_2 = s_wall_2.get_root_at_t(t_2) 
+        self.root = alpha_1 + alpha_2
 
-#        # FIXME: The following, including self.ode_xs, can be removed
-#        # once the seeding of an S-wall is done by using a root.
-#        ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
-#        ffr_new_wall_weight_pairs = (
-#            sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
-#        )
-#        ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
-#        ode_x1 = ffr_xs_at_z[ffr_w_p_0[0]]
-#        ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
-#        self.ode_xs = [ode_x1, ode_x2]
-        self.ode_xs = ode_xs
+        # FIXME: The following, including self.ode_xs, can be removed
+        # once the seeding of an S-wall is done by using a root.
+        ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
+        ffr_new_wall_weight_pairs = (
+            sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
+        )
+        ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
+        ode_x1 = ffr_xs_at_z[ffr_w_p_0[0]]
+        ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
+        self.ode_xs = [ode_x1, ode_x2]
 
     def __eq__(self, other):
         return self.label == other.label
@@ -84,7 +77,7 @@ class Joint:
             'M': ctor2(self.M),
             'parents': [parent for parent in self.parents],
             'label': self.label,
-            'roots': [root.tolist() for root in self.roots],
+            'root': self.root.tolist(),
             'ode_xs': [ctor2(x) for x in self.ode_xs],
         }
         return json_data
@@ -94,11 +87,7 @@ class Joint:
         self.M = r2toc(json_data['M'])
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
-        # XXX: temporary routine to label multiple roots.
-        try:
-            self.roots = [numpy.array(root) for root in json_data['roots']]
-        except KeyError:
-            self.root = numpy.array(json_data['root'])
+        self.root = numpy.array(json_data['root'])
         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
 
     def is_equal_to(self, other, accuracy):
@@ -133,8 +122,7 @@ class Joint:
 
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, M_0=None, parents=None,
-                 parent_roots=None, label=None, n_steps=None,
-                 logger_name='loom'):
+                 label=None, n_steps=None, logger_name='loom'):
         """
         SWall.z is a NumPy array of length n_steps+1,
         where z[t] is the base coordinate.
@@ -159,14 +147,12 @@ class SWall(object):
             self.x[0] = x_0
             self.M[0] = M_0
         self.parents = parents
-        self.parent_roots = parent_roots
         self.label = label
 
         # cuts_intersections = [[b_pt_idx, i, '(c)cw'], ...]
         self.cuts_intersections = []
         self.root_basepoint = []
         self.local_roots = []
-        self.multiple_local_roots = None
         # local_weight_pairs is a list of pair of intgers.
         self.local_weight_pairs = []        
 
@@ -208,10 +194,6 @@ class SWall(object):
                 for br_loc, t, d in self.cuts_intersections
             ],
             'local_roots': [root.tolist() for root in self.local_roots],
-            'multiple_local_roots': [
-                [root.tolist() for root in multiple_roots]
-                for multiple_roots in self.multiple_local_roots
-            ],
             'local_weight_pairs': self.local_weight_pairs,
         }
         return json_data
@@ -230,14 +212,6 @@ class SWall(object):
                 if br_loc_label == br_loc.label:
                     self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
-        # XXX: temporary routine to label multiple roots.
-        try:
-            self.multiple_local_roots = [
-                [numpy.array(root) for root in multiple_roots]
-                for multiple_roots in json_data['multiple_local_roots']
-            ]
-        except KeyError:
-            pass
         self.local_weight_pairs = json_data['local_weight_pairs']
 
     def get_splits(self, endpoints=False):
@@ -516,25 +490,7 @@ class SWall(object):
                     )
                     self.multiple_local_roots[k + 1].append(new_root)
 
-#    def get_root_at_t(self, t):
-#        """
-#        Given an integer t which parametrizes a point 
-#        of the trajectory in proper time, return the local 
-#        root at that point.
-#        """
-#        if t < 0 or t > (len(self.z) - 1):
-#            raise ValueError
-#        else:
-#            closed_splits = self.get_splits() + [len(self.z) - 1]
-#            for i, sp in enumerate(closed_splits):
-#                if t <= sp:
-#                    return self.local_roots[i]
-#                    break
-#                else:
-#                    pass
-
-
-    def get_roots_at_t(self, t):
+    def get_root_at_t(self, t):
         """
         Given an integer t which parametrizes a point 
         of the trajectory in proper time, return the local 
@@ -546,7 +502,7 @@ class SWall(object):
             closed_splits = self.get_splits() + [len(self.z) - 1]
             for i, sp in enumerate(closed_splits):
                 if t <= sp:
-                    return self.multiple_local_roots[i]
+                    return self.local_roots[i]
                     break
                 else:
                     pass
