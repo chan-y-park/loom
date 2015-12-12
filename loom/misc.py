@@ -255,6 +255,7 @@ def get_descendant_roots(p1_roots, p2_roots, g_data):
             for new_root in new_roots:
                 root_sum = old_root + new_root
                 if is_root(root_sum, g_data):
+                    # XXX: Needs review --- why no multiple descendant roots?
                     found = False
                     for prev_root in old_roots + new_roots + root_buffer:
                         if numpy.array_equal(prev_root, root_sum):
