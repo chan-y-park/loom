@@ -241,6 +241,22 @@ def is_root(np_array, g_data):
     return ans
 
 
+def get_descendant_roots(p1_roots, p2_roots, g_data):
+    descendant_roots = []
+    old_roots = p1_roots
+    new_roots = p2_roots
+    while len(new_roots) > 1:
+        root_buffer = []
+        for old_root in old_roots:
+            for new_root in new_roots:
+                root_sum = old_root + new_root
+                if is_root(root_sum, g_data):
+                    root_buffer.append(root_sum)
+        descendant_roots += root_buffer
+        old_roots += new_roots
+        new_roots = root_buffer
+
+
 def get_turning_points(zs):
     """
     Return a list of indices of turning points of a curve on the z-plane,

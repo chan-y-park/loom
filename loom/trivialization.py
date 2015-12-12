@@ -398,10 +398,11 @@ class SWDataWithTrivialization(SWDataBase):
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
 
-        # Analyze ramification points
-        for bp in self.branch_points:
-            for rp in bp.ffr_ramification_points:
-                self.analyze_ffr_ramification_point(rp)
+# XXX: Moved to SWDataBase.
+#        # Analyze ramification points
+#        for bp in self.branch_points:
+#            for rp in bp.ffr_ramification_points:
+#                self.analyze_ffr_ramification_point(rp)
 
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
@@ -766,6 +767,27 @@ class SWDataWithTrivialization(SWDataBase):
             if abs(rp.z - bp.z) < self.accuracy
         ]
 
+        # XXX: Temporary analysis for D-type AD theories.
+        for rp in bp.ffr_ramification_points:
+            if rp.ramification_type == 'type_AD':
+                logger.warning('Temporary fix-up of the monodromy '
+                               'for a D-type AD theory.')
+                # Find two diagonal elements and permute them.
+                indices = []
+                for i, row_i in enumerate(bp.monodromy):
+                    if row_i[i] == 1:
+                        indices.append(i)
+                if len(indices) == 2:
+                    i, j = indices
+                    bp.monodromy[i][i] = 0
+                    bp.monodromy[j][j] = 0
+                    bp.monodromy[i][j] = 1
+                    bp.monodromy[j][i] = 1
+                else:
+                    RuntimeError('Unknown form of the monodromy at {}.'
+                                 .format(bp.label))
+
+
     def analyze_irregular_singularity(self, irr_sing):
         logger = logging.getLogger(self.logger_name)
         logger.info(
@@ -775,84 +797,97 @@ class SWDataWithTrivialization(SWDataBase):
         path_around_z = get_path_around(irr_sing.z, self.base_point, self)
         irr_sing.monodromy = self.get_sheet_monodromy(path_around_z)
     
-    def analyze_ffr_ramification_point(self, rp):
-        logger = logging.getLogger(self.logger_name)
-        rp_type = None
-        num_eq = self.ffr_curve.num_eq
-
-        # use Dz = z - rp.z & Dx = x - rp.x
-        Dz, Dx = sympy.symbols('Dz, Dx')
-        local_curve = (
-            num_eq.subs(x, rp.x + Dx).subs(z, rp.z + Dz)
-            .series(Dx, 0, rp.i + 1).removeO()
-            .series(Dz, 0, 2).removeO()
-        )
-        logger.debug('\nlocal curve = {}\n'.format(local_curve))
-            
-        # Classify which type of ramification point
-        # type_I: ADE type with x_0 != 0
-        #   #   i.e. F ~ a z + b x^k
-        # type_II: D-type with x_0 = 0, but nonedgenerate
-        #   i.e. F ~ a z + b x^2r   with r=rank(g)
-        # type_III: D-type with x_0 = 0, degenerate
-        #   i.e. F ~ x^2 (a z + b x^(2r-2))
-        # type IV: Other case.
-        # More cases may be added in the future, in particular 
-        # for degenerations of E_6 or E_7 curves.
-
-        zero_threshold = self.accuracy * 100
-        if (self.g_data.type == 'A' or 
-            ((self.g_data.type == 'D' or self.g_data.type == 'E') and 
-                abs(rp.x) > zero_threshold)):
-            rp_type = 'type_I'
-        elif (
-            self.g_data.type == 'D' and abs(rp.x) < zero_threshold
-            and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > zero_threshold
-        ):
-            rp_type = 'type_II'
-        elif (
-            self.g_data.type == 'D' and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
-        ):
-            rp_type = 'type_III'
-        else:
-            rp_type = 'type_IV'
-            raise Exception(
-                'Cannot handle this type of ramification point'.format(
-                    local_curve
-                )
-            )
-
-        if rp_type == 'type_I' or rp_type == 'type_II':
-            a = local_curve.n().subs(Dx, 0).coeff(Dz)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-
-        elif rp_type == 'type_III':
-            a = local_curve.n().coeff(Dz).coeff(Dx, 2)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-        
-        logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
-            [rp.z, rp.x], rp_type)
-        )
-        rp.ramification_type = rp_type
-
-        num_v = self.diff.num_v
-        # Dx = Dx(Dz)
-        Dx_Dz = (-1.0 * (a / b) * Dz) ** sympy.Rational(1, rp.i)
-        local_diff = (
-            num_v.subs(x, rp.x + Dx_Dz).subs(z, rp.z + Dz)
-            .series(Dz, 0, 1).removeO()
-        )
-        # get the coefficient and the exponent of the leading term
-        (diff_c, diff_e) = local_diff.leadterm(Dz)
-        if diff_e == 0:
-            # remove the constant term from the local_diff
-            local_diff -= local_diff.subs(Dz, 0)
-            (diff_c, diff_e) = local_diff.leadterm(Dz)
-
-        # rp.sw_diff_coeff = complex(-1 * a / b)
-        rp.sw_diff_coeff = complex(diff_c.n())
+# XXX: Moved to SWDataBase
+#    def analyze_ffr_ramification_point(self, rp):
+#        logger = logging.getLogger(self.logger_name)
+#        rp_type = None
+#        num_eq = self.ffr_curve.num_eq
+#
+#        # use Dz = z - rp.z & Dx = x - rp.x
+#        Dz, Dx = sympy.symbols('Dz, Dx')
+#        local_curve = (
+#            num_eq.subs(x, rp.x + Dx).subs(z, rp.z + Dz)
+#            .series(Dx, 0, rp.i + 1).removeO()
+#            .series(Dz, 0, 2).removeO()
+#        )
+#        logger.debug('\nlocal curve = {}\n'.format(local_curve))
+#            
+#        # Classify which type of ramification point
+#        # type_I: ADE type with x_0 != 0
+#        #   #   i.e. F ~ a z + b x^k
+#        # type_II: D-type with x_0 = 0, but nonedgenerate
+#        #   i.e. F ~ a z + b x^2r   with r=rank(g)
+#        # type_III: D-type with x_0 = 0, degenerate
+#        #   i.e. F ~ x^2 (a z + b x^(2r-2))
+#        # type IV: Other case.
+#        # More cases may be added in the future, in particular 
+#        # for degenerations of E_6 or E_7 curves.
+#
+#        # TODO: avoid using self.* repeatedly, define a local variable.
+#        g_data = self.g_data
+#        zero_threshold = self.accuracy * 100
+#        if (self.g_data.type == 'A' or 
+#            ((self.g_data.type == 'D' or self.g_data.type == 'E') and 
+#                abs(rp.x) > zero_threshold)):
+#            rp_type = 'type_I'
+#        elif (
+#            self.g_data.type == 'D' and abs(rp.x) < zero_threshold
+#            and 2 * self.g_data.rank == rp.i
+#            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > zero_threshold
+#        ):
+#            rp_type = 'type_II'
+#        elif (
+#            self.g_data.type == 'D' and 2 * self.g_data.rank == rp.i
+#            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
+#        ):
+#            rp_type = 'type_III'
+#        # XXX: Temporary case for D-type AD theories.
+#        elif (
+#            g_data.type == 'D' and rp.i == 4 and abs(rp.x) < zero_threshold
+#        ):
+#            # No need to grow S-walls from this ramification point,
+#            # there will be another ramification point that gives
+#            # the same S-wall. This ramification point is a placeholder.
+#            rp.ramification_type = 'type_AD'
+#            rp.sw_diff_coeff = None 
+#            return
+#        else:
+#            rp_type = 'type_IV'
+#            raise Exception(
+#                'Cannot handle this type of ramification point'.format(
+#                    local_curve
+#                )
+#            )
+#
+#        if rp_type == 'type_I' or rp_type == 'type_II':
+#            a = local_curve.n().subs(Dx, 0).coeff(Dz)
+#            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
+#
+#        elif rp_type == 'type_III':
+#            a = local_curve.n().coeff(Dz).coeff(Dx, 2)
+#            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
+#        
+#        logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
+#            [rp.z, rp.x], rp_type)
+#        )
+#        rp.ramification_type = rp_type
+#
+#        num_v = self.diff.num_v
+#        # Dx = Dx(Dz)
+#        Dx_Dz = (-1.0 * (a / b) * Dz) ** sympy.Rational(1, rp.i)
+#        local_diff = (
+#            num_v.subs(x, rp.x + Dx_Dz).subs(z, rp.z + Dz)
+#            .series(Dz, 0, 1).removeO()
+#        )
+#        # get the coefficient and the exponent of the leading term
+#        (diff_c, diff_e) = local_diff.leadterm(Dz)
+#        if diff_e == 0:
+#            # remove the constant term from the local_diff
+#            local_diff -= local_diff.subs(Dz, 0)
+#            (diff_c, diff_e) = local_diff.leadterm(Dz)
+#
+#        # rp.sw_diff_coeff = complex(-1 * a / b)
+#        rp.sw_diff_coeff = complex(diff_c.n())
 
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):

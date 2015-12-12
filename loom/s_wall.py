@@ -34,13 +34,16 @@ SEED_PRECISION_MAX_DEPTH = 5
 
 
 class Joint:
-    def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
-                 t_1=None, t_2=None, sw_data=None, logger_name='loom',):
+#    def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
+#                 t_1=None, t_2=None, sw_data=None, logger_name='loom',):
+    def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
+                 logger_name='loom',):
         self.z = None
         self.M = None
         self.parents = None
         self.label = None
-        self.root = None
+        #self.root = None
+        self.roots = None
         self.ode_xs = None
 
         if z is None:
@@ -48,24 +51,29 @@ class Joint:
             return
 
         self.z = z
+#        self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
         self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
+#        self.parents = [s_wall_1.label, s_wall_2.label]
         self.parents = [s_wall_1.label, s_wall_2.label]
-        self.label = [s_wall_1.label, s_wall_2.label]
+        # FIXME: Joint.label is given in spectral_network.py
+#        self.label = [s_wall_1.label, s_wall_2.label]
 
-        alpha_1 = s_wall_1.get_root_at_t(t_1)
-        alpha_2 = s_wall_2.get_root_at_t(t_2) 
-        self.root = alpha_1 + alpha_2
+#        alpha_1 = s_wall_1.get_root_at_t(t_1)
+#        alpha_2 = s_wall_2.get_root_at_t(t_2) 
+#        self.root = alpha_1 + alpha_2
+        self.roots = roots
 
-        # FIXME: The following, including self.ode_xs, can be removed
-        # once the seeding of an S-wall is done by using a root.
-        ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
-        ffr_new_wall_weight_pairs = (
-            sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
-        )
-        ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
-        ode_x1 = ffr_xs_at_z[ffr_w_p_0[0]]
-        ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
-        self.ode_xs = [ode_x1, ode_x2]
+#        # FIXME: The following, including self.ode_xs, can be removed
+#        # once the seeding of an S-wall is done by using a root.
+#        ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
+#        ffr_new_wall_weight_pairs = (
+#            sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
+#        )
+#        ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
+#        ode_x1 = ffr_xs_at_z[ffr_w_p_0[0]]
+#        ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
+#        self.ode_xs = [ode_x1, ode_x2]
+        self.ode_xs = ode_xs
 
     def __eq__(self, other):
         return self.label == other.label
@@ -117,7 +125,8 @@ class Joint:
 
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, M_0=None, parents=None,
-                 label=None, n_steps=None, logger_name='loom'):
+                 parent_roots=None, label=None, n_steps=None,
+                 logger_name='loom'):
         """
         SWall.z is a NumPy array of length n_steps+1,
         where z[t] is the base coordinate.
@@ -142,6 +151,7 @@ class SWall(object):
             self.x[0] = x_0
             self.M[0] = M_0
         self.parents = parents
+        self.parent_roots = parent_roots
         self.label = label
 
         # cuts_intersections = [[b_pt_idx, i, '(c)cw'], ...]
@@ -411,7 +421,7 @@ class SWall(object):
             sw_data.g_data.ordered_weight_pairs(initial_root,)
         )
             
-        self.local_roots = [initial_root]
+        local_roots = [initial_root]
         self.local_weight_pairs = [initial_weight_pairs]
         
         if len(self.cuts_intersections) > 0:
@@ -434,7 +444,7 @@ class SWall(object):
                 )
                 new_weight_pairs = g_data.ordered_weight_pairs(new_root)
 
-                self.local_roots.append(new_root)
+                local_roots.append(new_root)
                 self.local_weight_pairs.append(new_weight_pairs)
 
             # Fill in the root types that occur before the basepoint
@@ -449,8 +459,38 @@ class SWall(object):
                 )
                 new_weight_pairs = g_data.ordered_weight_pairs(new_root)
 
-                self.local_roots.insert(0, new_root)
+                local_roots.insert(0, new_root)
                 self.local_weight_pairs.insert(0, new_weight_pairs)
+
+        # local_roots = [root_0, root_1, ...]
+        # Turn this into [[root_0_0, root_0_1], [root_1_0, ...], ...]
+        root_sign = None
+        root_0 = local_roots[0]
+        for parent_root in self.parent_roots:
+            if numpy.array_equal(root_0, parent_root):
+                root_sign = 1
+            if numpy.array_equal(root_0, -parent_root):
+                root_sign = -1
+        if root_sign is None:
+            raise RuntimeError('Incorrect root assigned to {}.'
+                               .format(self.label))
+        self.local_roots = [[root] for root in local_roots]
+        if len(self.parent_roots) > 1:
+            for base_root in root_sign * self.parent_roots:
+                if numpy.array_equal(base_root, root_0):
+                    continue
+                else:
+                    self.local_roots[0].append(base_root)
+            # We prepared all the base roots, 
+            # now we find how they change 
+            # as the S-wall crosses cuts.
+            for k in range(len(self.cuts_intersections)):
+                br_loc, t, direction = self.cuts_intersections[k]
+                for current_root in self.local_roots[k][1:]:
+                    new_root = g_data.weyl_monodromy(
+                        current_root, br_loc, direction
+                    )
+                local_roots[k + 1].append(new_root)
 
     def get_root_at_t(self, t):
         """
@@ -657,7 +697,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
         # Construct the seeding points for the branch point
         # by studying the type of ramification structure of the r.p.
-        if rp_type == 'type_I':
+        if rp_type == 'type_AD':
+            continue
+        elif rp_type == 'type_I':
             phases = [exp(2 * pi * 1j * float(i) / r_i) for i in range(r_i)]
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
             
