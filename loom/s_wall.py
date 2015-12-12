@@ -485,7 +485,7 @@ class SWall(object):
         if root_sign is None:
 #            raise RuntimeError('Incorrect root assigned to {}.'
 #                               .format(self.label))
-            logger.warning('Incorrect root assigned to {}.'
+            logger.warning('*** warning *** Incorrect root assigned to {}.'
                            .format(self.label))
         self.multiple_local_roots = [[root] for root in self.local_roots]
         if len(self.parent_roots) > 1:
