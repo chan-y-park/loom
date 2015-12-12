@@ -122,7 +122,6 @@ class SpectralNetwork:
                         M_0=M_0,
                         # TODO: change this to take bp itself.
                         parents=[bp.label],
-                        parent_roots = bp.positive_roots,
                         label=label,
                         n_steps=n_steps,
                         logger_name=self.logger_name,
@@ -205,8 +204,6 @@ class SpectralNetwork:
                             x_0=joint.ode_xs,
                             M_0=joint.M,
                             parents=joint.parents,
-                            # XXX: parent_roots != (roots of parents)
-                            parent_roots=joint.roots,
                             label=label,
                             n_steps=n_steps,
                             logger_name=self.logger_name,
@@ -272,10 +269,13 @@ class SpectralNetwork:
             # First check if the two S-walls are compatible
             # for forming a joint.
 
-            # 1. Check if the new S-wall is a descendant
-            # of an existing S-wall. 
-            if prev_s_wall.label in new_s_wall.parents:
-                continue
+            # XXX: There can be a legitimate joint
+            # between an S-wall and its parent S-wall
+            # when there are degenerate S-walls.
+            ## 1. Check if the new S-wall is a descendant
+            ## of an existing S-wall. 
+            #if prev_s_wall.label in new_s_wall.parents:
+            #    continue
             
             # 2. Split the two S-walls into segments 
             # according to the trivialization, then
@@ -357,61 +357,19 @@ class SpectralNetwork:
 
                     # TODO: check if the following descendant-roots
                     # finding is necessary.
-                    descendant_roots = get_descendant_roots(
-                        prev_s_wall.get_roots_at_t(t_p),
-                        new_s_wall.get_roots_at_t(t_n),
-                        sw_data.g_data,
-                    )
-
-                    joint_data = get_joint_data(
-                        descendant_roots, ip_z, sw_data
-                    )
-                    # The following assumes that \lambda = x dz.
-                    # Group joint data according to x_1 - x_2,
-                    # which determines the trajectory of an S-wall.
-
-                    # joint_data_groups = [(roots, ode_xs), ...]
-                    joint_data_groups = []
-                    for root, ode_xs in joint_data:
-                        new_joint_data_group = True
-                        Dx = ode_xs[0] - ode_xs[1]
-                        for joint_data_group in joint_data_groups:
-                            group_roots, group_ode_xs = joint_data_group
-                            group_Dx = group_ode_xs[0] - group_ode_xs[1]
-                            if abs(Dx - group_Dx) < accuracy:
-                                new_joint_data_group = False
-                                group_roots.append(root)
-                                break
-                        if new_joint_data_group is True:
-                            joint_data_groups.append(([root], ode_xs))
-
-                    joint_M = prev_s_wall.M[t_p] + new_s_wall.M[t_n]
-                    joint_parents = [prev_s_wall.label, new_s_wall.label]
-                    for roots, ode_xs in joint_data_groups:
+                    if is_root(prev_s_wall.get_root_at_t(t_p) +
+                               new_s_wall.get_root_at_t(t_n), 
+                               sw_data.g_data,) is True:
                         new_joints.append(
                             Joint(
-                                z=ip_z,
-                                M=joint_M,
-                                ode_xs=ode_xs,
-                                parents=joint_parents,
-                                roots=roots,
+                                z=ip_z, 
+                                s_wall_1=prev_s_wall,
+                                s_wall_2=new_s_wall,                         
+                                t_1=t_p, 
+                                t_2=t_n,
+                                sw_data=sw_data,
                             )
                         )
-                    
-                
-#                    if is_root(prev_s_wall.get_root_at_t(t_p) +
-#                               new_s_wall.get_root_at_t(t_n), 
-#                               sw_data.g_data,) is True:
-#                        new_joints.append(
-#                            Joint(
-#                                z=ip_z, 
-#                                s_wall_1=prev_s_wall,
-#                                s_wall_2=new_s_wall,                         
-#                                t_1=t_p, 
-#                                t_2=t_n,
-#                                sw_data=sw_data,
-#                            )
-#                        )
 
         return new_joints
 

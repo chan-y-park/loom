@@ -462,33 +462,31 @@ class SWall(object):
 
         root_sign = None
         root_0 = self.local_roots[0]
-        for parent_root in self.parent_roots:
-            if numpy.array_equal(root_0, parent_root):
-                root_sign = 1
-            if numpy.array_equal(root_0, -parent_root):
-                root_sign = -1
-        if root_sign is None:
-#            raise RuntimeError('Incorrect root assigned to {}.'
-#                               .format(self.label))
-            logger.warning('*** warning *** Incorrect root assigned to {}.'
-                           .format(self.label))
-        self.multiple_local_roots = [[root] for root in self.local_roots]
-        if root_sign is not None and len(self.parent_roots) > 1:
-            for base_root in root_sign * self.parent_roots:
-                if numpy.array_equal(base_root, root_0):
-                    continue
-                else:
-                    self.multiple_local_roots[0].append(base_root)
-            # We prepared all the base roots, 
-            # now we find how they change 
-            # as the S-wall crosses cuts.
-            for k in range(len(self.cuts_intersections)):
-                br_loc, t, direction = self.cuts_intersections[k]
-                for current_root in self.multiple_local_roots[k][1:]:
-                    new_root = g_data.weyl_monodromy(
-                        current_root, br_loc, direction
-                    )
-                    self.multiple_local_roots[k + 1].append(new_root)
+#        for parent_root in self.parent_roots:
+#            if numpy.array_equal(root_0, parent_root):
+#                root_sign = 1
+#            if numpy.array_equal(root_0, -parent_root):
+#                root_sign = -1
+#        if root_sign is None:
+#            logger.warning('*** warning *** Incorrect root assigned to {}.'
+#                           .format(self.label))
+#        multiple_local_roots = [[root] for root in self.local_roots]
+#        if root_sign is not None and len(self.parent_roots) > 1:
+#            for base_root in root_sign * self.parent_roots:
+#                if numpy.array_equal(base_root, root_0):
+#                    continue
+#                else:
+#                    multiple_local_roots[0].append(base_root)
+#            # We prepared all the base roots, 
+#            # now we find how they change 
+#            # as the S-wall crosses cuts.
+#            for k in range(len(self.cuts_intersections)):
+#                br_loc, t, direction = self.cuts_intersections[k]
+#                for current_root in multiple_local_roots[k][1:]:
+#                    new_root = g_data.weyl_monodromy(
+#                        current_root, br_loc, direction
+#                    )
+#                    multiple_local_roots[k + 1].append(new_root)
 
     def get_root_at_t(self, t):
         """
