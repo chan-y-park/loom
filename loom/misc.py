@@ -266,6 +266,29 @@ def get_descendant_roots(parent_roots, g_data):
 
     return descendant_roots
 
+
+def sort_roots(roots, g_data):
+    """
+    Sort roots according to g_data.roots,
+    assuming no repetition in roots.
+    """
+    root_indices = range(len(roots))
+    sorted_roots = []
+    for g_data_root in g_data.roots:
+        found = False
+        for i in root_indices:
+            if numpy.array_equal(g_data_root, roots[i]):
+                found = True
+                sorted_roots.append(g_data_root)
+                break
+        if found is True:
+            root_indices.remove(i)
+        if len(root_indices) == 0:
+            break
+
+    return sorted_roots
+
+
 def get_turning_points(zs):
     """
     Return a list of indices of turning points of a curve on the z-plane,

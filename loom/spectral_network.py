@@ -12,7 +12,7 @@ from scipy import integrate
 from s_wall import SWall, Joint, get_s_wall_seeds
 from misc import (
     n_nearest_indices, is_root, get_turning_points, get_splits_with_overlap,
-    get_descendant_roots,
+    get_descendant_roots, sort_roots,
 )
 from intersection import (
     NoIntersection, find_intersection_of_segments,
@@ -294,10 +294,16 @@ class SpectralNetwork:
                 p_z_i = p_z_splits[p_z_seg_i]
                 p_z_f = p_z_splits[p_z_seg_i + 1]
 
-                n_seg_root = new_s_wall.local_roots[n_z_seg_i]
-                p_seg_root = prev_s_wall.local_roots[p_z_seg_i]
+#                n_seg_root = new_s_wall.local_roots[n_z_seg_i]
+#                p_seg_root = prev_s_wall.local_roots[p_z_seg_i]
+                descendant_roots = get_descendant_roots(
+                    (prev_s_wall.multiple_local_roots[p_z_seg_i] +
+                     new_s_wall.multiple_local_roots[n_z_seg_i]),
+                    sw_data.g_data,
+                )
 
-                if not is_root(p_seg_root + n_seg_root, sw_data.g_data):
+#                if not is_root(p_seg_root + n_seg_root, sw_data.g_data):
+                if len(descendant_roots) == 0:
                     # The two segments are not compatible for
                     # forming a joint.
                     continue
@@ -356,7 +362,8 @@ class SpectralNetwork:
                     logger.debug('Intersection at z = {}'.format(ip_z))
 
                     # TODO: check if the following descendant-roots
-                    # finding is necessary.
+                    # finding is necessary, note that we calculate
+                    # descendant roots above.
                     descendant_roots = get_descendant_roots(
                         (prev_s_wall.get_roots_at_t(t_p) +
                          new_s_wall.get_roots_at_t(t_n)),
@@ -394,25 +401,10 @@ class SpectralNetwork:
                                 M=joint_M,
                                 ode_xs=ode_xs,
                                 parents=joint_parents,
-                                roots=roots,
+                                roots=sort_roots(roots, sw_data.g_data),
                             )
                         )
                     
-                
-#                    if is_root(prev_s_wall.get_root_at_t(t_p) +
-#                               new_s_wall.get_root_at_t(t_n), 
-#                               sw_data.g_data,) is True:
-#                        new_joints.append(
-#                            Joint(
-#                                z=ip_z, 
-#                                s_wall_1=prev_s_wall,
-#                                s_wall_2=new_s_wall,                         
-#                                t_1=t_p, 
-#                                t_2=t_n,
-#                                sw_data=sw_data,
-#                            )
-#                        )
-
         return new_joints
 
 

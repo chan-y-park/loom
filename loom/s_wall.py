@@ -9,7 +9,7 @@ from scipy import interpolate
 
 from geometry import find_xs_at_z_0
 from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,
-                  get_descendant_roots,)
+                  get_descendant_roots, sort_roots,)
 
 x, z = sympy.symbols('x z')
 
@@ -507,13 +507,17 @@ class SWall(object):
 
         ffr_xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=True).values()
 
-        self.multiple_local_roots = [[root] for root in self.local_roots]
-        all_roots_from_parents = (self.parent_roots + 
-                                 [-root for root in self.parent_roots])
-        descendant_roots = get_descendant_roots(all_roots_from_parents,
-                                                sw_data.g_data,)
-        all_roots_from_parents += descendant_roots
-        if len(self.parent_roots) > 1:
+        #self.multiple_local_roots = [[root] for root in self.local_roots]
+
+        if len(self.parent_roots) == 1:
+            self.multiple_local_roots = [[root] for root in self.local_roots]
+        elif len(self.parent_roots) > 1:
+            multiple_local_roots_0 = [root_0]
+            all_roots_from_parents = (self.parent_roots + 
+                                     [-root for root in self.parent_roots])
+            descendant_roots = get_descendant_roots(all_roots_from_parents,
+                                                    sw_data.g_data,)
+            all_roots_from_parents += descendant_roots
             for root in all_roots_from_parents:
                 if numpy.array_equal(root_0, root):
                     continue
@@ -528,17 +532,25 @@ class SWall(object):
                     ode_x2 = ffr_xs_at_z_0[ffr_w_p_0[1]]
                     Dx = ode_x1 - ode_x2
                     if abs(Dx - Dx_0) < dx:
-                        self.multiple_local_roots[0].append(root)
+                        multiple_local_roots_0.append(root)
+            self.multiple_local_roots = [
+                sort_roots(multiple_local_roots_0, sw_data.g_data)
+            ]
             # We prepared all the base roots, 
             # now we find how they change 
             # as the S-wall crosses cuts.
             for k in range(len(self.cuts_intersections)):
                 br_loc, t, direction = self.cuts_intersections[k]
-                for current_root in self.multiple_local_roots[k][1:]:
+                new_roots = [] 
+                for current_root in self.multiple_local_roots[k]:
                     new_root = g_data.weyl_monodromy(
                         current_root, br_loc, direction
                     )
-                    self.multiple_local_roots[k + 1].append(new_root)
+                    new_roots.append(new_root)
+                self.multiple_local_roots.append(new_roots)
+        else:
+            raise RuntimeError('Parent of {} has no root.'
+                               .format(self.label))
 
 #    def get_root_at_t(self, t):
 #        """
