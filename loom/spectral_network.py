@@ -358,8 +358,8 @@ class SpectralNetwork:
                     # TODO: check if the following descendant-roots
                     # finding is necessary.
                     descendant_roots = get_descendant_roots(
-                        prev_s_wall.get_roots_at_t(t_p),
-                        new_s_wall.get_roots_at_t(t_n),
+                        (prev_s_wall.get_roots_at_t(t_p) +
+                         new_s_wall.get_roots_at_t(t_n)),
                         sw_data.g_data,
                     )
 

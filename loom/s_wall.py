@@ -487,12 +487,11 @@ class SWall(object):
                 self.local_roots.insert(0, new_root)
                 self.local_weight_pairs.insert(0, new_weight_pairs)
 
-        root_sign = None
         root_0 = self.local_roots[0]
         if len(self.cuts_intersections) > 0:
             t_0 = floor(self.cuts_intersections[0][1] / 2)
-        else:
-            t_0 = floor(len(self.z) / 2)
+        #else:
+        #    t_0 = floor(len(self.z) / 2)
         z_0 = self.z[t_0]
         ode_xs_0 = self.x[t_0]
         ode_xs_1 = self.x[t_0 + 1]
@@ -502,30 +501,19 @@ class SWall(object):
         ffr_xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=True).values()
 
         self.multiple_local_roots = [[root] for root in self.local_roots]
-#        all_roots_from_parents = (self.parent_roots + 
-#                                 [-root for root in self.parent_roots])
-#        descendant_of_parent_roots = get_descendant_roots(
-#            [], all_roots_from_parents,
-#            sw_data.g_data,
-#        )
-#        all_roots_from_parents += descendant_of_parent_roots
-#        for root in all_roots_from_parents:
-        for parent_root in self.parent_roots:
-            if numpy.array_equal(root_0, parent_root):
-                root_sign = 1
-            if numpy.array_equal(root_0, -parent_root):
-                root_sign = -1
-        if root_sign is None:
-            logger.info('*** Do not know how to treat this case. Skip it. ***')
-        elif len(self.parent_roots) > 1:
-            for base_root in root_sign * self.parent_roots:
-#            for base_root in root_sign * all_roots_from_parents:
-                if numpy.array_equal(base_root, root_0):
+        all_roots_from_parents = (self.parent_roots + 
+                                 [-root for root in self.parent_roots])
+        descendant_roots = get_descendant_roots(all_roots_from_parents,
+                                                sw_data.g_data,)
+        all_roots_from_parents += descendant_roots
+        if len(self.parent_roots) > 1:
+            for root in all_roots_from_parents:
+                if numpy.array_equal(root_0, root):
                     continue
                 else:
                     wall_weight_pairs = (
                         sw_data.g_data.ordered_weight_pairs(
-                            base_root, ffr=True
+                            root, ffr=True
                         )
                     )
                     ffr_w_p_0 = wall_weight_pairs[0]
@@ -533,7 +521,7 @@ class SWall(object):
                     ode_x2 = ffr_xs_at_z_0[ffr_w_p_0[1]]
                     Dx = ode_x1 - ode_x2
                     if abs(Dx - Dx_0) < dx:
-                        self.multiple_local_roots[0].append(base_root)
+                        self.multiple_local_roots[0].append(root)
             # We prepared all the base roots, 
             # now we find how they change 
             # as the S-wall crosses cuts.

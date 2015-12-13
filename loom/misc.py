@@ -1,3 +1,4 @@
+import itertools
 import numpy
 import sympy
 import warnings
@@ -242,33 +243,28 @@ def is_root(np_array, g_data):
     return ans
 
 
-def get_descendant_roots(p1_roots, p2_roots, g_data):
+def get_descendant_roots(parent_roots, g_data):
     descendant_roots = []
-    old_roots = []
-    old_roots += p1_roots
-    new_roots = []
-    new_roots += p2_roots
 
-    while len(new_roots) > 0:
+    while True:
         root_buffer = []
-        for old_root in old_roots:
-            for new_root in new_roots:
-                root_sum = old_root + new_root
-                if is_root(root_sum, g_data):
-                    # XXX: Needs review --- why no multiple descendant roots?
-                    found = False
-                    for prev_root in old_roots + new_roots + root_buffer:
-                        if numpy.array_equal(prev_root, root_sum):
-                            found = True
-                            break
-                    if found is False:
-                        root_buffer.append(root_sum)
+        prev_roots = parent_roots + descendant_roots
+        for root_1, root_2 in itertools.combinations(prev_roots, 2):
+            root_sum = root_1 + root_2
+            if is_root(root_sum, g_data):
+                # XXX: Needs review --- why no multiple descendant roots?
+                found = False
+                for prev_root in prev_roots + root_buffer:
+                    if numpy.array_equal(prev_root, root_sum):
+                        found = True
+                        break
+                if found is False:
+                    root_buffer.append(root_sum)
+        if len(root_buffer) == 0:
+            break
         descendant_roots += root_buffer
-        old_roots += new_roots
-        new_roots = root_buffer
 
     return descendant_roots
-
 
 def get_turning_points(zs):
     """
