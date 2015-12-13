@@ -122,7 +122,7 @@ class SpectralNetwork:
                         M_0=M_0,
                         # TODO: change this to take bp itself.
                         parents=[bp.label],
-                        parent_roots = bp.positive_roots,
+                        parent_roots = [root for root in bp.positive_roots],
                         label=label,
                         n_steps=n_steps,
                         logger_name=self.logger_name,
