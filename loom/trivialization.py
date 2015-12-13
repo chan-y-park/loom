@@ -299,7 +299,7 @@ class SWDataWithTrivialization(SWDataBase):
                         ffr_ramification_points=self.ffr_ramification_points,)
             for data in json_data['branch_points']
         ]
-        self.irregular_singulrarities = [
+        self.irregular_singularities = [
             IrregularSingularity(json_data=data)
             for data in json_data['irregular_singularities']
         ]
