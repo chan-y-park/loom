@@ -494,10 +494,17 @@ class SWall(object):
         #    t_0 = floor(len(self.z) / 2)
         z_0 = self.z[t_0]
         ode_xs_0 = self.x[t_0]
-        ode_xs_1 = self.x[t_0 + 1]
         Dx_0 = ode_xs_0[0] - ode_xs_0[1]
+
+        if (t_0  + 1) < len(self.z):
+            ode_xs_1 = self.x[t_0 + 1]
+        elif t_0 > 0:
+            ode_xs_1 = self.x[t_0 - 1]
+        else:
+            RuntimeError('Length of z = {}: too short.'.format(len(self.z)))
         dx = max(abs(ode_xs_0[0] - ode_xs_1[0]),
                  abs(ode_xs_0[1] - ode_xs_1[1]),)
+
         ffr_xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=True).values()
 
         self.multiple_local_roots = [[root] for root in self.local_roots]
