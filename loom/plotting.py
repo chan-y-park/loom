@@ -72,7 +72,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             if plot_on_cylinder is True:
                 irs_z = put_on_cylinder(r2toc(irs.z), C)
             else:
-                irs_z = irs.z
+                irs_z = r2toc(irs.z)
             irregular_singularities_z.append([irs_z.real, irs_z.imag])
             labels['irregular_singularities'].append(irs.label)        
 
