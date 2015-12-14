@@ -481,6 +481,7 @@ class SWDataWithTrivialization(SWDataBase):
                     z_0=z_path[i - 1], z_1=z_path[i],
                     g_data=g_data,
                     logger_name=self.logger_name,
+                    sw_curve=self.curve,
                 )
             # if it's a path to branch point, but we are far from it,
             # still check tracking
@@ -489,8 +490,10 @@ class SWDataWithTrivialization(SWDataBase):
                     ffr_xs_0, ffr_xs_1,
                     accuracy=accuracy,
                     check_tracking=True,
+                    z_0=z_path[i - 1], z_1=z_path[i],
                     g_data=g_data,
                     logger_name=self.logger_name,
+                    sw_curve=self.curve,
                 )
             # if it's a path to a branch point and we are getting close to it, 
             # don't check tracking anymore
@@ -501,6 +504,7 @@ class SWDataWithTrivialization(SWDataBase):
                     check_tracking=False,
                     g_data=g_data,
                     logger_name=self.logger_name,
+                    sw_curve=self.curve,
                 )
             if sorted_ffr_xs == 'sorting failed':
                 logger.warning(
@@ -546,17 +550,23 @@ class SWDataWithTrivialization(SWDataBase):
                         logger_name=self.logger_name,
                     )
                     if sorted_ffr_xs == 'sorting failed':
-                        logger.info(
-                                'Studying sheets near z = {} found sheets'
-                                '\n ffr_xs_0 = {} \n ffr_xs_0 = {}'
-                                .format(z, ffr_xs_0, ffr_xs_1)
-                            )
-                        raise Exception(
-                            '\nCannot track the sheets!\n'
-                            'Probably passing too close to a branch point '
-                            'or a puncture. Try increasing N_PATH_TO_PT '
-                            'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
+                        ffr_xs_1_s = self.ffr_curve.get_xs(z, use_sage=True)
+                        sorted_ffr_xs = sort_xs_by_derivative(
+                            ffr_xs_0, ffr_xs_1_s, delta_xs, self.accuracy,
+                            logger_name=self.logger_name,
                         )
+                        if sorted_ffr_xs == 'sorting failed':
+                            logger.info(
+                                    'Studying sheets near z = {} found sheets'
+                                    '\n ffr_xs_0 = {} \n ffr_xs_1 = {}'
+                                    .format(z, ffr_xs_0, ffr_xs_1_s)
+                                )
+                            raise Exception(
+                                '\nCannot track the sheets!\n'
+                                'Probably passing too close to a branch point'
+                                ' or a puncture. Try increasing N_PATH_TO_PT '
+                                'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
+                            )
 
             # this is just the ordinary step, where we add the 
             # latest value of ordered sheets
@@ -1079,7 +1089,7 @@ def get_path_around(z_pt, base_pt, sw):
 # of ramification points above the branch point.
 def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True, 
                   index=None, z_0=None, z_1=None, g_data=None,
-                  logger_name='loom'):
+                  logger_name='loom', sw_curve=None):
     """
     Returns a sorted version of 'new_xs'
     based on matching the closest points with 
@@ -1088,6 +1098,27 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
     logger = logging.getLogger(logger_name)
     sorted_xs = []
     # print 'reference xs = {}'.format(ref_xs)
+
+    # It may happen that numerical inaccuracy of numpy
+    # leads to believe that sheet tracking is going wrong.
+    # For example in E_6 we expect to have three sheets with x=0
+    # but sometimes numpy returns as many as 14 sheets with x=0
+    # then the above check will fail because the unique sheets are
+    # far less than 27 - (3-1), to begin with.
+    # In such case, one can use SAGE to get a better accuracy for 
+    # the values of sheets x's. But sage is slow, so keep it for 
+    # neceessary cases.
+    # Maybe introduce a similar check for D-type, but it seems 
+    # not necessary
+    if g_data.type == 'E' and check_tracking is True:
+        if (27 - len(n_remove_duplicate(new_xs, accuracy))) > 2:
+            new_xs = sw_curve.get_xs(z_1, use_sage=True)
+            if (27 - len(n_remove_duplicate(new_xs, accuracy))) > 2:
+                logging.info(
+                    'Warning! at z={} sheets seem too degenerate:\n{}'
+                    .format(z_1, new_xs)
+                )
+
     for s_1 in ref_xs:
         # closest_candidate = new_xs[0]
         # min_d = abs(s_1 - closest_candidate)
