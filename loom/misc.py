@@ -269,17 +269,19 @@ def get_descendant_roots(parent_roots, g_data):
 
 def sort_roots(roots, g_data):
     """
-    Sort roots according to g_data.roots,
-    assuming no repetition in roots.
+    Sort roots according to g_data.positive_roots,
+    assuming no repetition in roots, and assuming
+    all the roots are either positive or negative.
     """
     root_indices = range(len(roots))
     sorted_roots = []
-    for g_data_root in g_data.roots:
+    for g_data_root in g_data.positive_roots:
         found = False
         for i in root_indices:
-            if numpy.array_equal(g_data_root, roots[i]):
+            if (numpy.array_equal(g_data_root, roots[i]) or
+                numpy.array_equal(-g_data_root, roots[i])):
                 found = True
-                sorted_roots.append(g_data_root)
+                sorted_roots.append(roots[i])
                 break
         if found is True:
             root_indices.remove(i)
