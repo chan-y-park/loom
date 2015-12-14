@@ -14,7 +14,7 @@ from math import pi
 from sympy import oo
 
 from network_plot import NetworkPlotBase
-from misc import put_on_cylinder, get_splits_with_overlap
+from misc import put_on_cylinder, get_splits_with_overlap, r2toc
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
@@ -70,7 +70,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             if irs.z == oo:
                 continue
             if plot_on_cylinder is True:
-                irs_z = put_on_cylinder(irs.z, C)
+                irs_z = put_on_cylinder(r2toc(irs.z), C)
             else:
                 irs_z = irs.z
             irregular_singularities_z.append([irs_z.real, irs_z.imag])

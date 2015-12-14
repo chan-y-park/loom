@@ -185,8 +185,7 @@ class IrregularSingularity:
 
     def get_json_data(self):
         json_data = {
-            #'z': ctor2(self.z),
-            'z': self.z,
+            'z': ctor2(self.z),
             'label': self.label,
             'monodromy': self.monodromy.tolist(),
         }
