@@ -70,9 +70,21 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             if irs.z == oo:
                 continue
             if plot_on_cylinder is True:
-                irs_z = put_on_cylinder(r2toc(irs.z), C)
+                # FIXME: if loading data via json, 
+                # irs.z is a list. But if producing data 
+                # and plotting it directly it's a complex number
+                if type(irs.z)==list:
+                    irs_z = put_on_cylinder(r2toc(irs.z), C)
+                elif type(irs.z)==complex:
+                    irs_z = put_on_cylinder(irs.z, C)
             else:
-                irs_z = r2toc(irs.z)
+                # FIXME: if loading data via json, 
+                # irs.z is a list. But if producing data 
+                # and plotting it directly it's a complex number
+                if type(irs.z)==list:
+                    irs_z = r2toc(irs.z)
+                elif type(irs.z)==complex:
+                    irs_z = irs.z
             irregular_singularities_z.append([irs_z.real, irs_z.imag])
             labels['irregular_singularities'].append(irs.label)        
 
