@@ -555,6 +555,13 @@ def download_plot(process_uuid):
     )
 
 
+def download_E6_E7_data():
+    return flask.send_file(
+        'data/E6_E7_data.tar.gz',
+        as_attachment=True,
+    )
+
+
 def keep_alive(process_uuid):
     """
     Receive heartbeats from clients.
@@ -629,6 +636,10 @@ def get_application(config_file, logging_level):
     )
     application.add_url_rule(
         '/keep_alive/<process_uuid>', 'keep_alive', keep_alive,
+        methods=['GET'],
+    )
+    application.add_url_rule(
+        '/E6_E7_data', 'download_E6_E7_data', download_E6_E7_data,
         methods=['GET'],
     )
     application.add_url_rule(
