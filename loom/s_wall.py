@@ -209,12 +209,18 @@ class SWall(object):
                 for br_loc, t, d in self.cuts_intersections
             ],
             'local_roots': [root.tolist() for root in self.local_roots],
-            'multiple_local_roots': [
-                [root.tolist() for root in multiple_roots]
-                for multiple_roots in self.multiple_local_roots
-            ],
+#            'multiple_local_roots': [
+#                [root.tolist() for root in multiple_roots]
+#                for multiple_roots in self.multiple_local_roots
+#            ],
             'local_weight_pairs': self.local_weight_pairs,
         }
+        # XXX: Temporary fix
+        if self.multiple_local_roots is not None:
+            json_data['multiple_local_roots'] = [
+                [root.tolist() for root in multiple_roots]
+                for multiple_roots in self.multiple_local_roots
+            ]
         return json_data
 
     def set_from_json_data(self, json_data, branch_loci):
