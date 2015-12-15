@@ -43,8 +43,10 @@ LOGGING_FILE_PATH = os.path.join(
 DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
-LOOM_SERVER_URL = 'http://het-math2.physics.rutgers.edu/loom'
-
+#LOOM_SERVER_URL = 'http://het-math2.physics.rutgers.edu/loom'
+BOKEH_CUSTOM_JS_PUBLIC_URL = (
+    'http://het-math2.physics.rutgers.edu/loom/static/bokeh_callbacks.js'
+)
 
 # Array of config options. 
 # Entries that will be placed in the same row
@@ -721,7 +723,8 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
             'download_plot', process_uuid=process_uuid,
         )
     else:
-        bokeh_custom_js_url = LOOM_SERVER_URL + bokeh_custom_js_url
+        #bokeh_custom_js_url = LOOM_SERVER_URL + bokeh_custom_js_url
+        bokeh_custom_js_url = BOKEH_CUSTOM_JS_PUBLIC_URL
 
     return flask.render_template(
         'plot.html',
