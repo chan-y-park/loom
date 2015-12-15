@@ -226,13 +226,13 @@ class SpectralNetwork:
         """
         Load the spectral network data from a JSON-compatible file.
         """
-        branch_points = sw_data.branch_points
+        branch_loci = sw_data.branch_points + sw_data.irregular_singularities
 
         self.phase = json_data['phase']
 
         for s_wall_data in json_data['s_walls']:
             an_s_wall = SWall(logger_name=self.logger_name,)
-            an_s_wall.set_from_json_data(s_wall_data, branch_points)
+            an_s_wall.set_from_json_data(s_wall_data, branch_loci)
             self.s_walls.append(an_s_wall)
 
         for joint_data in json_data['joints']:

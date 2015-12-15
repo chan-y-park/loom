@@ -179,7 +179,7 @@ class IrregularSingularity:
             self.label = label
             self.monodromy = None
         else:
-            self.z = json_data['z']
+            self.z = r2toc(json_data['z'])
             self.label = json_data['label']
             self.monodromy = numpy.array(json_data['monodromy'])
 
