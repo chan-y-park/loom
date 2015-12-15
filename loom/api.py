@@ -235,7 +235,8 @@ def save_spectral_network(
         # Make a compressed data file.
         file_list = [config_file_path, sw_data_file_path]
         file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
-        zipped_file_path = data_dir + '.zip'
+        zipped_file_name = os.path.basename(os.path.normpath(data_dir)) 
+        zipped_file_path = data_dir + '{}.zip'.format(zipped_file_name)
         logger.info('Save compressed data to {}.'.format(zipped_file_path))
         with zipfile.ZipFile(zipped_file_path, 'w',
                              zipfile.ZIP_DEFLATED) as fp:
