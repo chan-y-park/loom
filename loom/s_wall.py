@@ -185,15 +185,15 @@ class SWall(object):
             'parents': [parent for parent in self.parents],
             'label': self.label,
             'cuts_intersections': [
-                [bp.label, t, d]
-                for bp, t, d in self.cuts_intersections
+                [br_loc.label, t, d]
+                for br_loc, t, d in self.cuts_intersections
             ],
             'local_roots': [root.tolist() for root in self.local_roots],
             'local_weight_pairs': self.local_weight_pairs,
         }
         return json_data
 
-    def set_from_json_data(self, json_data, branch_points):
+    def set_from_json_data(self, json_data, branch_loci):
         self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
         self.M = numpy.array([r2toc(M_t) for M_t in json_data['M']])
         self.x = numpy.array(
@@ -202,10 +202,10 @@ class SWall(object):
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
         self.cuts_intersections = []
-        for bp_label, t, d in json_data['cuts_intersections']:
-            for bp in branch_points:
-                if bp_label == bp.label:
-                    self.cuts_intersections.append([bp, t, d])
+        for br_loc_label, t, d in json_data['cuts_intersections']:
+            for br_loc in branch_loci:
+                if br_loc_label == br_loc.label:
+                    self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
         self.local_weight_pairs = json_data['local_weight_pairs']
 
