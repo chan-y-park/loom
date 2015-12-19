@@ -7,7 +7,7 @@ from cmath import exp, pi
 from math import floor
 from scipy import interpolate
 
-from geometry import find_xs_at_z_0
+from geometry import find_xs_at_z_0, align_sheets_for_e_6_ffr
 from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,)
 
 x, z = sympy.symbols('x z')
@@ -405,6 +405,13 @@ class SWall(object):
 
         # Determine the initial root-type
         initial_root = get_s_wall_root(z_0, xs_0, sw_data,)
+
+        if initial_root  not in sw_data.g_data.roots:
+            logging.info(
+                    'Warning: could not assign a root to {}'
+                    .format(self.label)
+                )
+
         # A list of ordered pairs [...[i, j]...]
         # such that weights[j] - weights[i] = root
         initial_weight_pairs = (
@@ -807,7 +814,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 # z_1 = z_0 + accuracy * zeta
                 z_1 = z_0 + dt * zeta
 
-                if rp_type == 'type_I' or rp_type == 'type_IV':
+                if rp_type == 'type_I':
                     x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                     # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
                     # a list of the type
@@ -868,6 +875,45 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                 x_i_x_j_phases.append(
                                     [(ij_factor) / abs(ij_factor), [x_i, x_j]]
                                 )
+
+                elif rp_type == 'type_IV':
+                    x_s = find_xs_at_z_0(
+                        sw, z_1, x_0, r_i, 
+                        ffr=True, use_sage=True
+                    )
+                    # Note: although we are working near a degenerate locus,
+                    # it is correct to enforce the option
+                    # near_degenerate_branch_locus=False
+                    aligned_xs = align_sheets_for_e_6_ffr(
+                        x_s, 
+                        sw.g_data.weights, 
+                        near_degenerate_branch_locus=False
+                    )
+                    # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
+                    # a list of the type
+                    # [... [phase, [x_i, x_j]] ...]
+                    x_i_x_j_phases = []
+                    for i, x_i in enumerate(aligned_xs): 
+                        w_i = sw.g_data.weights[i]
+                        for j, x_j in enumerate(aligned_xs):
+                            w_j = sw.g_data.weights[j]
+                            if w_j - w_i in sw.g_data.roots:
+                                v_i = complex(
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                )
+                                v_j = complex(
+                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                )
+                                if (v_j - v_i) != 0:
+                                    ij_factor = (
+                                        -1.0 * exp(1j * theta) / (v_j - v_i)
+                                    )
+                                    x_i_x_j_phases.append(
+                                        [
+                                            (ij_factor) / abs(ij_factor), 
+                                            [x_i, x_j]
+                                        ]
+                                    )
 
                 closest_pair = sorted(
                     x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)

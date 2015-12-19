@@ -1559,7 +1559,9 @@ def get_ramification_points_using_discriminant(
     return sols
 
 
-def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
+def find_xs_at_z_0(
+        sw_data, z_0, x_0=None, num_x=1, ffr=False, use_sage=False
+    ):
     """
     Get x's above z_0 and return the num_x of them 
     which are nearest to x_0.
@@ -1567,7 +1569,7 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     dictionary.
     """
     if ffr is True:
-        xs_at_z_0 = sw_data.ffr_curve.get_xs(z_0) 
+        xs_at_z_0 = sw_data.ffr_curve.get_xs(z_0, use_sage=use_sage) 
     else:
         raise NotImplementedError
 
@@ -1670,7 +1672,6 @@ def align_sheets_for_e_6_ffr(
         # while other sheets are arranged into two circles
         # in two groups of 12.
 
-        # print "Found {} sheets at the origin. ".format(n_sheets_at_origin)
         have_same_r = (
             lambda a, b: abs(abs(complex(a)) - abs(complex(b))) 
             < SHEET_NULL_TOLERANCE
@@ -1689,39 +1690,28 @@ def align_sheets_for_e_6_ffr(
             raise ValueError(
                 'In a degenerate E_6 curve, sheets should arrange into '
                 'three rings in the complex plane. '
-                '(One ring may shrink to the origin)'
+                '(One or more rings may shrink to the origin)'
             )
 
         # radii of the three circles
         r_0, r_1, r_2 = sorted(map(abs, gathered_sheets.keys()))
-        # print 'radii'
-        # print r_0
-        # print r_1
-        # print r_2
-
 
         # build the three groups of sheets
-        g_0 = [x for x in sheets if abs(abs(x) - r_0) < SHEET_NULL_TOLERANCE]
-        g_1 = [x for x in sheets if abs(abs(x) - r_1) < SHEET_NULL_TOLERANCE]
-        g_2 = [x for x in sheets if abs(abs(x) - r_2) < SHEET_NULL_TOLERANCE]
-
-        # print 'groups of sheets'
-        # print g_0
-        # print g_1
-        # print g_2
+        # g_0 = [x for x in sheets if abs(abs(x) - r_0) < SHEET_NULL_TOLERANCE]
+        # g_1 = [x for x in sheets if abs(abs(x) - r_1) < SHEET_NULL_TOLERANCE]
+        # g_2 = [x for x in sheets if abs(abs(x) - r_2) < SHEET_NULL_TOLERANCE]
+        g_0 = gathered_sheets.values()[0]
+        g_1 = gathered_sheets.values()[1]
+        g_2 = gathered_sheets.values()[2]
         
         # normalize the phase to run from 0 to 2 \pi
         norm_phase = lambda w: phase(w) % (2 * pi)
+        
         # sort sheets within each ring according to their
         # phase, counter-clockwise starting from the real axis
         g_0_sorted = g_0
         g_1_sorted = sorted(g_1, key=norm_phase)
         g_2_sorted = sorted(g_2, key=norm_phase)
-
-        # print 'sorted groups of sheets'
-        # print g_0_sorted
-        # print g_1_sorted
-        # print g_2_sorted
 
         # Groups of sorted weights, according to the Coxeter 
         # projection.

@@ -787,7 +787,7 @@ class SWDataWithTrivialization(SWDataBase):
         else:
             pass
 
-        # Now we have tree lists:
+        # Now we have three lists:
         # initial_sheets = [[0, x_0], [1, x_1], ...]
         # final_sheets = [[0, x'_0], [1, x'_1], ...]
         # sorted_sheets = [[i_0, x_0], [i_1, x_1], ...]
