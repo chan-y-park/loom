@@ -388,7 +388,9 @@ class SWDataWithTrivialization(SWDataBase):
             self.base_point,
         )
 
-        # Construct the list of branch points
+        # Construct the list of branch points. 
+        # Also assign them the respective ramification points 
+        # and analyze them
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
             bp.label = 'Branch point #{}'.format(i)
@@ -409,11 +411,6 @@ class SWDataWithTrivialization(SWDataBase):
             )
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
-
-        # Analyze ramification points
-        for bp in self.branch_points:
-            for rp in bp.ffr_ramification_points:
-                self.analyze_ffr_ramification_point(rp)
 
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
@@ -812,7 +809,8 @@ class SWDataWithTrivialization(SWDataBase):
                 else:
                     raise Exception(
                         'higher-type ramification points for E-type '
-                        'theories can only be of types IV'
+                        'theories can only be of types IV. Found {}'
+                        .format(higher_bp_type)
                     )
                 sorted_sheets = corrected_sheets
                 pass
@@ -899,6 +897,10 @@ class SWDataWithTrivialization(SWDataBase):
             rp for rp in self.ffr_ramification_points
             if abs(rp.z - bp.z) < self.accuracy
         ]
+
+        # Analyze ramification points
+        for rp in bp.ffr_ramification_points:
+            self.analyze_ffr_ramification_point(rp)
 
         ramification_types = (
             [rp.ramification_type for rp in bp.ffr_ramification_points 
