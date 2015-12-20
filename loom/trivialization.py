@@ -11,7 +11,7 @@ from pprint import pprint
 from heapq import nsmallest
 
 from geometry import SWDataBase
-from misc import n_remove_duplicate, ctor2, r2toc
+from misc import n_remove_duplicate, ctor2, r2toc, delete_duplicates
 
 x, z = sympy.symbols('x z')
 
@@ -794,6 +794,12 @@ class SWDataWithTrivialization(SWDataBase):
                         initial_sheets[triple_sheets[2]]
                     )
                 elif is_higher_bp is True and higher_bp_type=='type_IV':
+                    # TODO: should decide case-by-case whether to employ 
+                    # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
+                    # one way to do so would be to pick either, and 
+                    # construct the whole monodromy, then see if applying 
+                    # the monodromy to every root gives back a root
+                    # presumably only one of the two options will work
                     corrected_sheets[triple_sheets[0]] = (
                         initial_sheets[triple_sheets[1]]
                     )
@@ -899,14 +905,22 @@ class SWDataWithTrivialization(SWDataBase):
             if rp.ramification_type!='type_I']
         )
 
+        logger.info("Computing the monodromy")
+        path_around_bp = get_path_around(bp.z, self.base_point, self,)
+
         if len(ramification_types) == 0:
-            logger.info("Computing the monodromy")
-            path_around_bp = get_path_around(bp.z, self.base_point, self,)
-            bp.monodromy = self.get_sheet_monodromy(
-                path_around_bp, is_higher_bp=, higher_bp_type=
-            )
+            bp.monodromy = self.get_sheet_monodromy(path_around_bp)
         else:
-            
+            if len(delete_duplicates(ramification_types)) == 1:
+                bp.monodromy = self.get_sheet_monodromy(
+                    path_around_bp, 
+                    is_higher_bp=True, higher_bp_type=ramification_types[0]
+                )
+            else:
+                raise Exception(
+                    'Multiple ramification types for BP at z = {}'.format(bp.z)
+                )
+
         # TODO: it would be good to make a check here, e.g. on the 
         # relation between vanishing roots and the monodromy.
 
