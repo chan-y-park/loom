@@ -406,7 +406,7 @@ class SWall(object):
         # Determine the initial root-type
         initial_root = get_s_wall_root(z_0, xs_0, sw_data,)
 
-        if initial_root  not in sw_data.g_data.roots:
+        if not(initial_root in sw_data.g_data.roots):
             logging.info(
                     'Warning: could not assign a root to {}'
                     .format(self.label)

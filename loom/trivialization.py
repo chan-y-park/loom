@@ -613,7 +613,9 @@ class SWDataWithTrivialization(SWDataBase):
         return final_sheets
 
     # TODO: Review this method.
-    def get_sheet_monodromy(self, z_path):
+    def get_sheet_monodromy(
+            self, z_path, is_higher_bp=False, higher_bp_type=None
+        ):
         """
         Compares the x-coordinates of sheets at the 
         beginning and at the end of a CLOSED path.
@@ -712,12 +714,27 @@ class SWDataWithTrivialization(SWDataBase):
                 ]
 
                 corrected_sheets = sorted_sheets 
-                corrected_sheets[double_sheets[0]] = (
-                    initial_sheets[double_sheets[0]]
-                )
-                corrected_sheets[double_sheets[1]] = (
-                    initial_sheets[double_sheets[1]]
-                )
+                if is_higher_bp is False:
+                    corrected_sheets[double_sheets[0]] = (
+                        initial_sheets[double_sheets[0]]
+                    )
+                    corrected_sheets[double_sheets[1]] = (
+                        initial_sheets[double_sheets[1]]
+                    )
+                elif is_higher_bp is True and (
+                    higher_bp_type=='type_II' or higher_bp_type=='type_III'
+                ):
+                    corrected_sheets[double_sheets[0]] = (
+                        initial_sheets[double_sheets[1]]
+                    )
+                    corrected_sheets[double_sheets[1]] = (
+                        initial_sheets[double_sheets[0]]
+                    )
+                else:
+                    raise Exception(
+                        'higher-type ramification points for D-type '
+                        'theories can only be of types II or III'
+                    )
                 sorted_sheets = corrected_sheets
                 pass
 
@@ -766,15 +783,31 @@ class SWDataWithTrivialization(SWDataBase):
                 ]
 
                 corrected_sheets = sorted_sheets 
-                corrected_sheets[triple_sheets[0]] = (
-                    initial_sheets[triple_sheets[0]]
-                )
-                corrected_sheets[triple_sheets[1]] = (
-                    initial_sheets[triple_sheets[1]]
-                )
-                corrected_sheets[triple_sheets[2]] = (
-                    initial_sheets[triple_sheets[2]]
-                )
+                if is_higher_bp is False:
+                    corrected_sheets[triple_sheets[0]] = (
+                        initial_sheets[triple_sheets[0]]
+                    )
+                    corrected_sheets[triple_sheets[1]] = (
+                        initial_sheets[triple_sheets[1]]
+                    )
+                    corrected_sheets[triple_sheets[2]] = (
+                        initial_sheets[triple_sheets[2]]
+                    )
+                elif is_higher_bp is True and higher_bp_type=='type_IV':
+                    corrected_sheets[triple_sheets[0]] = (
+                        initial_sheets[triple_sheets[1]]
+                    )
+                    corrected_sheets[triple_sheets[1]] = (
+                        initial_sheets[triple_sheets[2]]
+                    )
+                    corrected_sheets[triple_sheets[2]] = (
+                        initial_sheets[triple_sheets[0]]
+                    )
+                else:
+                    raise Exception(
+                        'higher-type ramification points for E-type '
+                        'theories can only be of types IV'
+                    )
                 sorted_sheets = corrected_sheets
                 pass
 
@@ -856,16 +889,26 @@ class SWDataWithTrivialization(SWDataBase):
         )
         bp.order = len(bp.positive_roots) + 1
         
-        logger.info("Computing the monodromy")
-        path_around_bp = get_path_around(bp.z, self.base_point, self,)
-        bp.monodromy = self.get_sheet_monodromy(path_around_bp)
-        # TODO: it would be good to make a check here, e.g. on the 
-        # relation between vanishing roots and the monodromy.
-
         bp.ffr_ramification_points = [
             rp for rp in self.ffr_ramification_points
             if abs(rp.z - bp.z) < self.accuracy
         ]
+
+        ramification_types = (
+            [rp.ramification_type for rp in bp.ffr_ramification_points 
+            if rp.ramification_type!='type_I']
+        )
+
+        if len(ramification_types) == 0:
+            logger.info("Computing the monodromy")
+            path_around_bp = get_path_around(bp.z, self.base_point, self,)
+            bp.monodromy = self.get_sheet_monodromy(
+                path_around_bp, is_higher_bp=, higher_bp_type=
+            )
+        else:
+            
+        # TODO: it would be good to make a check here, e.g. on the 
+        # relation between vanishing roots and the monodromy.
 
     def analyze_irregular_singularity(self, irr_sing):
         logger = logging.getLogger(self.logger_name)
@@ -901,7 +944,9 @@ class SWDataWithTrivialization(SWDataBase):
         #   i.e. F ~ a z + b x^2r   with r=rank(g)
         # type_III: D-type with x_0 = 0, degenerate
         #   i.e. F ~ x^2 (a z + b x^(2r-2))
-        # type IV: Other case.
+        # type_IV: E6-type with x_0 = 0, degenerate
+        #   i.e. F ~ x^3 (a z + b x^(...))
+        # type V: Other case.
         # More cases may be added in the future, in particular 
         # for degenerations of E_6 or E_7 curves.
 
