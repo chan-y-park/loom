@@ -177,26 +177,46 @@ class GData:
 
         return pairs
 
-    def weyl_monodromy(self, root, br_loc, direction, reverse=False):
+    def weyl_monodromy(
+        self, root, br_loc, direction, reverse=False, perm_matrix=None
+    ):
         """
         Returns a new root of the segment of an S-wall
-        when it crossed a branch cut from a brancing locus
+        when it crosses a branch cut from a brancing locus
         which could be a branch point or an irregular singularity.
+        An option to use directly a sheet permutation matrix is also 
+        given, by specifying the corresponding argument.
         """
-        if reverse is False:
-            if direction == 'ccw':
-                monodromy_matrix = br_loc.monodromy
-            elif direction == 'cw':
-                monodromy_matrix = (
-                    numpy.linalg.inv(br_loc.monodromy).astype(int)
-                )
-        elif reverse is True:
-            if direction == 'cw':
-                monodromy_matrix = br_loc.monodromy
-            elif direction == 'ccw':
-                monodromy_matrix = (
-                    numpy.linalg.inv(br_loc.monodromy).astype(int)
-                )
+        if perm_matrix is None:
+            if reverse is False:
+                if direction == 'ccw':
+                    monodromy_matrix = br_loc.monodromy
+                elif direction == 'cw':
+                    monodromy_matrix = (
+                        numpy.linalg.inv(br_loc.monodromy).astype(int)
+                    )
+            elif reverse is True:
+                if direction == 'cw':
+                    monodromy_matrix = br_loc.monodromy
+                elif direction == 'ccw':
+                    monodromy_matrix = (
+                        numpy.linalg.inv(br_loc.monodromy).astype(int)
+                    )
+        else:
+            if reverse is False:
+                if direction == 'ccw':
+                    monodromy_matrix = perm_matrix
+                elif direction == 'cw':
+                    monodromy_matrix = (
+                        numpy.linalg.inv(perm_matrix).astype(int)
+                    )
+            elif reverse is True:
+                if direction == 'cw':
+                    monodromy_matrix = perm_matrix
+                elif direction == 'ccw':
+                    monodromy_matrix = (
+                        numpy.linalg.inv(perm_matrix).astype(int)
+                    )
                 
         pair_0 = self.ordered_weight_pairs(root)[0]
         v_i_ind = pair_0[0]

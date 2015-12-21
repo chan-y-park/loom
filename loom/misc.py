@@ -241,6 +241,25 @@ def is_root(np_array, g_data):
     return ans
 
 
+def is_weyl_monodromy(sheet_permutation_matrix, g_data):
+    ans = True
+    for r in g_data.roots:
+        if (
+            is_root(
+                g_data.weyl_monodromy(
+                    r, None, 'ccw', perm_matrix=sheet_permutation_matrix
+                ), g_data
+            )
+            and is_root(
+                g_data.weyl_monodromy(
+                    r, None, 'cw', perm_matrix=sheet_permutation_matrix
+                ), g_data
+            )
+        ) is False:
+            ans = False
+    return ans
+
+
 def get_turning_points(zs):
     """
     Return a list of indices of turning points of a curve on the z-plane,

@@ -11,7 +11,9 @@ from pprint import pprint
 from heapq import nsmallest
 
 from geometry import SWDataBase
-from misc import n_remove_duplicate, ctor2, r2toc, delete_duplicates
+from misc import (
+    n_remove_duplicate, ctor2, r2toc, delete_duplicates, is_weyl_monodromy
+)
 
 x, z = sympy.symbols('x z')
 
@@ -611,7 +613,8 @@ class SWDataWithTrivialization(SWDataBase):
 
     # TODO: Review this method.
     def get_sheet_monodromy(
-            self, z_path, is_higher_bp=False, higher_bp_type=None
+            self, z_path, is_higher_bp=False, higher_bp_type=None,
+            is_irr_sing=False
         ):
         """
         Compares the x-coordinates of sheets at the 
@@ -711,15 +714,17 @@ class SWDataWithTrivialization(SWDataBase):
                 ]
 
                 corrected_sheets = sorted_sheets 
-                if is_higher_bp is False:
+                if is_higher_bp is False and is_irr_sing is False:
                     corrected_sheets[double_sheets[0]] = (
                         initial_sheets[double_sheets[0]]
                     )
                     corrected_sheets[double_sheets[1]] = (
                         initial_sheets[double_sheets[1]]
                     )
-                elif is_higher_bp is True and (
-                    higher_bp_type=='type_II' or higher_bp_type=='type_III'
+                elif (
+                    is_higher_bp is True and (
+                        higher_bp_type=='type_II' or higher_bp_type=='type_III'
+                    ) or is_irr_sing is True
                 ):
                     corrected_sheets[double_sheets[0]] = (
                         initial_sheets[double_sheets[1]]
@@ -779,8 +784,11 @@ class SWDataWithTrivialization(SWDataBase):
                     if s[0] == multiple_labels[0]
                 ]
 
+                print 'triple sheets are'
+                print triple_sheets
+
                 corrected_sheets = sorted_sheets 
-                if is_higher_bp is False:
+                if is_higher_bp is False and is_irr_sing is False:
                     corrected_sheets[triple_sheets[0]] = (
                         initial_sheets[triple_sheets[0]]
                     )
@@ -790,22 +798,275 @@ class SWDataWithTrivialization(SWDataBase):
                     corrected_sheets[triple_sheets[2]] = (
                         initial_sheets[triple_sheets[2]]
                     )
-                elif is_higher_bp is True and higher_bp_type=='type_IV':
-                    # TODO: should decide case-by-case whether to employ 
+
+                elif (
+                    (is_higher_bp is True and higher_bp_type=='type_IV')
+                    or is_irr_sing is True
+                ):
+                    # Should decide case-by-case whether to employ 
                     # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
-                    # one way to do so would be to pick either, and 
+                    # One way to do so would be to pick each of them, and 
                     # construct the whole monodromy, then see if applying 
                     # the monodromy to every root gives back a root
                     # presumably only one of the two options will work
-                    corrected_sheets[triple_sheets[0]] = (
-                        initial_sheets[triple_sheets[1]]
-                    )
-                    corrected_sheets[triple_sheets[1]] = (
-                        initial_sheets[triple_sheets[2]]
-                    )
-                    corrected_sheets[triple_sheets[2]] = (
+                    corrected_sheets_0 = [s for s in corrected_sheets]
+                    corrected_sheets_1 = [s for s in corrected_sheets]
+                    corrected_sheets_2 = [s for s in corrected_sheets]
+                    corrected_sheets_3 = [s for s in corrected_sheets]
+                    corrected_sheets_4 = [s for s in corrected_sheets]
+                    corrected_sheets_5 = [s for s in corrected_sheets]
+
+                    corrected_sheets_0[triple_sheets[0]] = (
                         initial_sheets[triple_sheets[0]]
                     )
+                    corrected_sheets_0[triple_sheets[1]] = (
+                        initial_sheets[triple_sheets[1]]
+                    )
+                    corrected_sheets_0[triple_sheets[2]] = (
+                        initial_sheets[triple_sheets[2]]
+                    )
+
+                    corrected_sheets_1[triple_sheets[0]] = (
+                        initial_sheets[triple_sheets[1]]
+                    )
+                    corrected_sheets_1[triple_sheets[1]] = (
+                        initial_sheets[triple_sheets[2]]
+                    )
+                    corrected_sheets_1[triple_sheets[2]] = (
+                        initial_sheets[triple_sheets[0]]
+                    )
+
+                    corrected_sheets_2[triple_sheets[0]] = (
+                        initial_sheets[triple_sheets[2]]
+                    )
+                    corrected_sheets_2[triple_sheets[1]] = (
+                        initial_sheets[triple_sheets[0]]
+                    )
+                    corrected_sheets_2[triple_sheets[2]] = (
+                        initial_sheets[triple_sheets[1]]
+                    )
+
+                    # corrected_sheets_3[triple_sheets[0]] = (
+                    #     initial_sheets[triple_sheets[1]]
+                    # )
+                    # corrected_sheets_3[triple_sheets[1]] = (
+                    #     initial_sheets[triple_sheets[0]]
+                    # )
+                    # corrected_sheets_3[triple_sheets[2]] = (
+                    #     initial_sheets[triple_sheets[2]]
+                    # )
+
+                    # corrected_sheets_4[triple_sheets[0]] = (
+                    #     initial_sheets[triple_sheets[0]]
+                    # )
+                    # corrected_sheets_4[triple_sheets[1]] = (
+                    #     initial_sheets[triple_sheets[2]]
+                    # )
+                    # corrected_sheets_4[triple_sheets[2]] = (
+                    #     initial_sheets[triple_sheets[1]]
+                    # )
+
+                    # corrected_sheets_5[triple_sheets[0]] = (
+                    #     initial_sheets[triple_sheets[2]]
+                    # )
+                    # corrected_sheets_5[triple_sheets[1]] = (
+                    #     initial_sheets[triple_sheets[1]]
+                    # )
+                    # corrected_sheets_5[triple_sheets[2]] = (
+                    #     initial_sheets[triple_sheets[0]]
+                    # )
+
+                    print 'corrected sheets 0'
+                    print corrected_sheets_0
+                    print 'corrected sheets 1'
+                    print corrected_sheets_1
+                    print 'corrected sheets 2'
+                    print corrected_sheets_2
+                    # print 'corrected sheets 3'
+                    # print corrected_sheets_3
+                    # print 'corrected sheets 4'
+                    # print corrected_sheets_4
+                    # print 'corrected sheets 5'
+                    # print corrected_sheets_5
+
+                    m_0 = build_monodromy_matrix(
+                        initial_sheets, corrected_sheets_0
+                    )
+                    m_1 = build_monodromy_matrix(
+                        initial_sheets, corrected_sheets_1
+                    )
+                    m_2 = build_monodromy_matrix(
+                        initial_sheets, corrected_sheets_2
+                    )
+                    # m_3 = build_monodromy_matrix(
+                    #     initial_sheets, corrected_sheets_3
+                    # )
+                    # m_4 = build_monodromy_matrix(
+                    #     initial_sheets, corrected_sheets_4
+                    # )
+                    # m_5 = build_monodromy_matrix(
+                    #     initial_sheets, corrected_sheets_5
+                    # )
+
+                    print 'Option 0 for E6 monodromy'
+                    print m_0
+                    print 'Option 1 for E6 monodromy'
+                    print m_1
+                    print 'Option 2 for E6 monodromy'
+                    print m_2
+                    if is_weyl_monodromy(m_0, self.g_data):
+                        corrected_sheets = corrected_sheets_0
+                        print 'pick option 0'
+                    elif is_weyl_monodromy(m_1, self.g_data):
+                        corrected_sheets = corrected_sheets_1
+                        print 'pick option 1'
+                    elif is_weyl_monodromy(m_2, self.g_data):
+                        corrected_sheets = corrected_sheets_2
+                        print 'pick option 2'
+                    # elif is_weyl_monodromy(m_3, self.g_data):
+                    #     corrected_sheets = corrected_sheets_3
+                    #     print 'pick option 3'
+                    # elif is_weyl_monodromy(m_4, self.g_data):
+                    #     corrected_sheets = corrected_sheets_4
+                    #     print 'pick option 4'
+                    # elif is_weyl_monodromy(m_5, self.g_data):
+                    #     corrected_sheets = corrected_sheets_5
+                    #     print 'pick option 5'
+                    else:
+                        raise Exception(
+                            'Failed to assign a Weyl-type monodromy.'
+                        )
+
+
+
+                # elif (
+                #     (is_higher_bp is True and higher_bp_type=='type_IV')
+                #     or is_irr_sing is True
+                # ):
+                #     # Should decide case-by-case whether to employ 
+                #     # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
+                #     # or another element of S_3
+                #     # One way to do so would be to pick each of them, and 
+                #     # construct the whole monodromy, then see if applying 
+                #     # the monodromy to every root gives back a root
+                #     # presumably only one of the options will work.
+                #     # But maybe more than one. 
+                #     # TODO: need to find a better criterion.
+                #     corrected_sheets_0 = corrected_sheets
+                #     corrected_sheets_1 = corrected_sheets
+                #     corrected_sheets_2 = corrected_sheets
+                #     corrected_sheets_3 = corrected_sheets
+                #     corrected_sheets_4 = corrected_sheets
+                #     corrected_sheets_5 = corrected_sheets
+
+                #     corrected_sheets_0[triple_sheets[0]] = (
+                #         initial_sheets[triple_sheets[0]]
+                #     )
+                #     corrected_sheets_0[triple_sheets[1]] = (
+                #         initial_sheets[triple_sheets[1]]
+                #     )
+                #     corrected_sheets_0[triple_sheets[2]] = (
+                #         initial_sheets[triple_sheets[2]]
+                #     )
+
+                #     corrected_sheets_1[triple_sheets[0]] = (
+                #         initial_sheets[triple_sheets[1]]
+                #     )
+                #     corrected_sheets_1[triple_sheets[1]] = (
+                #         initial_sheets[triple_sheets[2]]
+                #     )
+                #     corrected_sheets_1[triple_sheets[2]] = (
+                #         initial_sheets[triple_sheets[0]]
+                #     )
+
+                #     corrected_sheets_2[triple_sheets[0]] = (
+                #         initial_sheets[triple_sheets[2]]
+                #     )
+                #     corrected_sheets_2[triple_sheets[1]] = (
+                #         initial_sheets[triple_sheets[0]]
+                #     )
+                #     corrected_sheets_2[triple_sheets[2]] = (
+                #         initial_sheets[triple_sheets[1]]
+                #     )
+
+                #     corrected_sheets_3[triple_sheets[0]] = (
+                #         initial_sheets[triple_sheets[1]]
+                #     )
+                #     corrected_sheets_3[triple_sheets[1]] = (
+                #         initial_sheets[triple_sheets[0]]
+                #     )
+                #     corrected_sheets_3[triple_sheets[2]] = (
+                #         initial_sheets[triple_sheets[2]]
+                #     )
+
+                #     corrected_sheets_4[triple_sheets[0]] = (
+                #         initial_sheets[triple_sheets[0]]
+                #     )
+                #     corrected_sheets_4[triple_sheets[1]] = (
+                #         initial_sheets[triple_sheets[2]]
+                #     )
+                #     corrected_sheets_4[triple_sheets[2]] = (
+                #         initial_sheets[triple_sheets[1]]
+                #     )
+
+                #     corrected_sheets_5[triple_sheets[0]] = (
+                #         initial_sheets[triple_sheets[2]]
+                #     )
+                #     corrected_sheets_5[triple_sheets[1]] = (
+                #         initial_sheets[triple_sheets[1]]
+                #     )
+                #     corrected_sheets_5[triple_sheets[2]] = (
+                #         initial_sheets[triple_sheets[0]]
+                #     )
+
+                #     m_0 = build_monodromy_matrix(
+                #         initial_sheets, corrected_sheets_0
+                #     )
+                #     m_1 = build_monodromy_matrix(
+                #         initial_sheets, corrected_sheets_1
+                #     )
+                #     m_2 = build_monodromy_matrix(
+                #         initial_sheets, corrected_sheets_2
+                #     )
+                #     m_3 = build_monodromy_matrix(
+                #         initial_sheets, corrected_sheets_3
+                #     )
+                #     m_4 = build_monodromy_matrix(
+                #         initial_sheets, corrected_sheets_4
+                #     )
+                #     m_5 = build_monodromy_matrix(
+                #         initial_sheets, corrected_sheets_5
+                #     )
+
+                #     # print 'Option 0 for E6 monodromy'
+                #     # print m_0
+                #     # print 'Option 1 for E6 monodromy'
+                #     # print m_1
+                #     # print 'Option 2 for E6 monodromy'
+                #     # print m_2
+                #     if is_weyl_monodromy(m_0, self.g_data):
+                #         corrected_sheets = corrected_sheets_0
+                #         print 'pick option 0'
+                #     elif is_weyl_monodromy(m_1, self.g_data):
+                #         corrected_sheets = corrected_sheets_1
+                #         print 'pick option 1'
+                #     elif is_weyl_monodromy(m_2, self.g_data):
+                #         corrected_sheets = corrected_sheets_2
+                #         print 'pick option 2'
+                #     # elif is_weyl_monodromy(m_3, self.g_data):
+                #     #     corrected_sheets = corrected_sheets_3
+                #     #     print 'pick option 3'
+                #     # elif is_weyl_monodromy(m_4, self.g_data):
+                #     #     corrected_sheets = corrected_sheets_4
+                #     #     print 'pick option 4'
+                #     # elif is_weyl_monodromy(m_5, self.g_data):
+                #     #     corrected_sheets = corrected_sheets_5
+                #     #     print 'pick option 5'
+                #     else:
+                #         raise Exception(
+                #             'Failed to assign a Weyl-type monodromy.'
+                #         )
+                        
                 else:
                     raise Exception(
                         'higher-type ramification points for E-type '
@@ -824,32 +1085,14 @@ class SWDataWithTrivialization(SWDataBase):
         else:
             pass
 
-        # Now we have three lists:
-        # initial_sheets = [[0, x_0], [1, x_1], ...]
-        # final_sheets = [[0, x'_0], [1, x'_1], ...]
-        # sorted_sheets = [[i_0, x_0], [i_1, x_1], ...]
-        # therefore the monodromy permutation corresponds
-        # to 0 -> i_0, 1 -> i_1, etc.
-
-        n_sheets = len(initial_sheets)
-
         logger.debug('Sorted sheets around locus {}'
                           .format(sorted_sheets))
-        
-        # NOTE: in the following basis vectors, i = 0 , ... , n-1
-        def basis_e(i):
-            return numpy.array([kr_delta(j, i) for j in range(n_sheets)])
 
-        perm_list = []
-        for i in range(n_sheets):
-            new_sheet_index = sorted_sheets[i][0]
-            perm_list.append(basis_e(new_sheet_index))
-
-        # perm_matrix = numpy.array(perm_list).transpose()
-        perm_matrix = numpy.array(perm_list)
-
-        logger.debug('Permutation matrix {}'.format(perm_matrix))
-
+        perm_matrix = build_monodromy_matrix(initial_sheets, sorted_sheets)
+        if is_weyl_monodromy(perm_matrix, self.g_data) is False:
+            raise Exception('Failed to assign a Weyl-type monodromy.')
+        else:
+            logger.info('Sheet monodromy is of Weyl type')
         return perm_matrix
 
     def analyze_branch_point(self, bp):
@@ -933,7 +1176,9 @@ class SWDataWithTrivialization(SWDataBase):
             .format(irr_sing.z)
         )
         path_around_z = get_path_around(irr_sing.z, self.base_point, self)
-        irr_sing.monodromy = self.get_sheet_monodromy(path_around_z)
+        irr_sing.monodromy = self.get_sheet_monodromy(
+            path_around_z, is_irr_sing=True
+        )
     
     def analyze_ffr_ramification_point(self, rp):
         logger = logging.getLogger(self.logger_name)
@@ -1463,3 +1708,26 @@ def keep_linearly_independent_vectors(vector_list):
     return independent_list
 
 
+def build_monodromy_matrix(initial_sheets, sorted_sheets):
+    # Now we have three lists:
+    # initial_sheets = [[0, x_0], [1, x_1], ...]
+    # final_sheets = [[0, x'_0], [1, x'_1], ...]
+    # sorted_sheets = [[i_0, x_0], [i_1, x_1], ...]
+    # therefore the monodromy permutation corresponds
+    # to 0 -> i_0, 1 -> i_1, etc.
+
+    n_sheets = len(initial_sheets)
+
+    # NOTE: in the following basis vectors, i = 0 , ... , n-1
+    def basis_e(i):
+        return numpy.array([kr_delta(j, i) for j in range(n_sheets)])
+
+    perm_list = []
+    for i in range(n_sheets):
+        new_sheet_index = sorted_sheets[i][0]
+        perm_list.append(basis_e(new_sheet_index))
+
+    # perm_matrix = numpy.array(perm_list).transpose()
+    perm_matrix = numpy.array(perm_list)
+    logging.debug('Permutation matrix {}'.format(perm_matrix))
+    return perm_matrix

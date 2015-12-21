@@ -8,7 +8,9 @@ from math import floor
 from scipy import interpolate
 
 from geometry import find_xs_at_z_0, align_sheets_for_e_6_ffr
-from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,)
+from misc import (
+    cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root
+)
 
 x, z = sympy.symbols('x z')
 
@@ -406,7 +408,7 @@ class SWall(object):
         # Determine the initial root-type
         initial_root = get_s_wall_root(z_0, xs_0, sw_data,)
 
-        if not(initial_root in sw_data.g_data.roots):
+        if is_root(initial_root, sw_data.g_data) is False:
             logging.info(
                     'Warning: could not assign a root to {}'
                     .format(self.label)
