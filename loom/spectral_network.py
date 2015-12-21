@@ -334,34 +334,53 @@ class SpectralNetwork:
                 for ip_x, ip_y in intersections:
                     ip_z = ip_x + 1j * ip_y
 
-                    # t_n: index of new_s_wall.z nearest to ip_z
-                    t_n = get_nearest_point_index(
-                        new_s_wall.z, ip_z, sw_data.branch_points, accuracy,
-                    )
-
-                    # t_p: index of z_seg_p nearest to ip_z
-                    t_p = get_nearest_point_index(
-                        prev_s_wall.z, ip_z, sw_data.branch_points, accuracy,
-                    )
-
-                    # TODO: need to put the joint into the parent
-                    # S-walls?
-
-                    logger.debug('Joint at z = {}'.format(ip_z))
-
-                    if is_root(prev_s_wall.get_root_at_t(t_p) +
-                               new_s_wall.get_root_at_t(t_n), 
-                               sw_data.g_data,) is True:
-                        new_joints.append(
-                            Joint(
-                                z=ip_z, 
-                                s_wall_1=prev_s_wall,
-                                s_wall_2=new_s_wall,                         
-                                t_1=t_p, 
-                                t_2=t_n,
-                                sw_data=sw_data,
-                            )
+                    # Discard apparent intersections of sibling S-walls 
+                    # that emanate from the same branch point, if they occur 
+                    # at the beginning of the S-walls
+                    # Also discard any intersectins that occur near the 
+                    # beginning of an S-wall
+                    if (
+                        prev_s_wall.parents == new_s_wall.parents 
+                        and abs(ip_z - prev_s_wall.z[0]) < accuracy
+                        and abs(ip_z - new_s_wall.z[0]) < accuracy
+                    ):
+                        continue
+                    elif (
+                        n_nearest_indices(prev_s_wall.z, ip_z, 1)[0] == 0
+                        or n_nearest_indices(new_s_wall.z, ip_z, 1)[0] == 0
+                    ):
+                        continue
+                    else:
+                        # t_n: index of new_s_wall.z nearest to ip_z
+                        t_n = get_nearest_point_index(
+                            new_s_wall.z, ip_z, sw_data.branch_points, 
+                            accuracy,
                         )
+
+                        # t_p: index of z_seg_p nearest to ip_z
+                        t_p = get_nearest_point_index(
+                            prev_s_wall.z, ip_z, sw_data.branch_points, 
+                            accuracy,
+                        )
+
+                        # TODO: need to put the joint into the parent
+                        # S-walls?
+
+                        logger.debug('Joint at z = {}'.format(ip_z))
+
+                        if is_root(prev_s_wall.get_root_at_t(t_p) +
+                                   new_s_wall.get_root_at_t(t_n), 
+                                   sw_data.g_data,) is True:
+                            new_joints.append(
+                                Joint(
+                                    z=ip_z, 
+                                    s_wall_1=prev_s_wall,
+                                    s_wall_2=new_s_wall,                         
+                                    t_1=t_p, 
+                                    t_2=t_n,
+                                    sw_data=sw_data,
+                                )
+                            )
 
         return new_joints
 
@@ -418,33 +437,58 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
 
     t_max = len(s_wall_z) - 1
 
+    t_before = t_0
+
+    t_after = t_0
+
     for bp in branch_points:
-        if abs(s_wall_z[t].real - bp.z.real) < accuracy:
+        if bp.z.real - p_z.real == 0.0 and bp.z.imag <= p_z.imag:
+            raise Exception(
+                'Intersection point lies exactly above {}. '
+                'Try perturbing the phase.'
+                .format(bp.label)
+            )
+
+        elif (
+            abs(s_wall_z[t].real - bp.z.real) < accuracy 
+            and s_wall_z[t].imag - bp.z.imag
+        ):
             logger.info(
                 'The nearest point is too close to a branch cut, '
                 'find the next nearest point.'
             )
+
+            print '\nstudying branch point {} at z={}'.format(bp.label, bp.z)
+            print '\nthis is p_z = {}'.format(p_z)
+            print '\nthis is t_0 = {}'.format(t_0)
+
             # Check the points before & after the given point
             t_m = t_p = t
             while t_m > 0 or t_p < t_max:
                 t_m -= 1
                 if t_m >= 0:
                     z_m = s_wall_z[t_m]
+                    # print 'at t_m={} , z(t)= {},  (z_m.real - bp.z.real) ={}, (p_z.real - bp.z.real)={}'.format(t_m, z_m, (z_m.real - bp.z.real) , (p_z.real - bp.z.real))
                     if (
                         (p_z.real - bp.z.real)*(z_m.real - bp.z.real) > 0
-                        and abs(s_wall_z[t_m].real - bp.z.real) < accuracy
+                        and abs(s_wall_z[t_m].real - bp.z.real) > accuracy
+                        and t_m <= t_before
                     ):
-                        t = t_m
+                        print 'z_m e dalla stessa parte di p_z'
+                        t_before = t_m
                         break
 
                 t_p += 1
                 if t_p <= t_max:
                     z_p = s_wall_z[t_p]
+                    # print 'at t_p={} , z(t)= {}, prod = {}, (p_z.real - bp.z.real)={}'.format(t_p, z_p, (z_p.real - bp.z.real) , (p_z.real - bp.z.real))
                     if (
                         (p_z.real - bp.z.real)*(z_p.real - bp.z.real) > 0
-                        and abs(s_wall_z[t_p].real - bp.z.real) < accuracy
+                        and abs(s_wall_z[t_p].real - bp.z.real) > accuracy
+                        and t_p >= t_after
                     ):
-                        t = t_p
+                        print 'z_p e dalla stessa parte di p_z'
+                        t_after = t_p
                         break
 
             if t_m == 0 and t_p == t_max:
@@ -455,6 +499,19 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                     'Searched along the whole wall.'
                 )
                 break
+            
+            print 't_before = {}\nt_after = {}'.format(t_before,t_after)
+
+    if t_before == 0 and t_after == t_max:
+        raise Exception(
+            'Could not find a suitable nearest point, '
+            'due to the presence of some branch cut.'
+        )
+
+    elif t_before >= 0:
+        t = t_before
+    elif t_after <= t_max:
+        t = t_max
 
     # Final check.
     for bp in branch_points:
