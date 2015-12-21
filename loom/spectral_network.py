@@ -458,9 +458,9 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 'find the next nearest point.'
             )
 
-            print '\nstudying branch point {} at z={}'.format(bp.label, bp.z)
-            print '\nthis is p_z = {}'.format(p_z)
-            print '\nthis is t_0 = {}'.format(t_0)
+            # print '\nstudying branch point {} at z={}'.format(bp.label, bp.z)
+            # print '\nthis is p_z = {}'.format(p_z)
+            # print '\nthis is t_0 = {}'.format(t_0)
 
             # Check the points before & after the given point
             t_m = t_p = t
@@ -474,7 +474,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                         and abs(s_wall_z[t_m].real - bp.z.real) > accuracy
                         and t_m <= t_before
                     ):
-                        print 'z_m e dalla stessa parte di p_z'
+                        # print 'z_m e dalla stessa parte di p_z'
                         t_before = t_m
                         break
 
@@ -487,7 +487,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                         and abs(s_wall_z[t_p].real - bp.z.real) > accuracy
                         and t_p >= t_after
                     ):
-                        print 'z_p e dalla stessa parte di p_z'
+                        # print 'z_p e dalla stessa parte di p_z'
                         t_after = t_p
                         break
 
@@ -500,7 +500,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 )
                 break
             
-            print 't_before = {}\nt_after = {}'.format(t_before,t_after)
+            # print 't_before = {}\nt_after = {}'.format(t_before,t_after)
 
     if t_before == 0 and t_after == t_max:
         raise Exception(
