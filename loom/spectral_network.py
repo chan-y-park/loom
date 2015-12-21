@@ -408,7 +408,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
     the given point on the z-plane.
 
     When the point found is within the accuracy limit from a branch cut,
-    look for the next nearest point and return its index.
+    look fot the next nearest point and return its index.
     """
     logger = logging.getLogger(logger_name)
 
@@ -430,20 +430,14 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 t_m -= 1
                 if t_m >= 0:
                     z_m = s_wall_z[t_m]
-                    if (
-                        (p_z.real - bp.z.real)*(z_m.real - bp.z.real) > 0
-                        and abs(s_wall_z[t_m].real - bp.z.real) < accuracy
-                    ):
+                    if (p_z.real - bp.z.real)*(z_m.real - bp.z.real) > 0:
                         t = t_m
                         break
 
                 t_p += 1
                 if t_p <= t_max:
                     z_p = s_wall_z[t_p]
-                    if (
-                        (p_z.real - bp.z.real)*(z_p.real - bp.z.real) > 0
-                        and abs(s_wall_z[t_p].real - bp.z.real) < accuracy
-                    ):
+                    if (p_z.real - bp.z.real)*(z_p.real - bp.z.real) > 0:
                         t = t_p
                         break
 
@@ -451,8 +445,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 logger.warning(
                     'Unable to find the next nearest point '
                     'that is on the same side from the branch cut '
-                    'as the reference point. '
-                    'Searched along the whole wall.'
+                    'as the reference point.'
                 )
                 break
 
