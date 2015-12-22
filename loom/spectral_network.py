@@ -427,7 +427,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
     the given point on the z-plane.
 
     When the point found is within the accuracy limit from a branch cut,
-    look for the next nearest point and return its index.
+    look fot the next nearest point and return its index.
     """
     logger = logging.getLogger(logger_name)
 
@@ -495,8 +495,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 logger.warning(
                     'Unable to find the next nearest point '
                     'that is on the same side from the branch cut '
-                    'as the reference point. '
-                    'Searched along the whole wall.'
+                    'as the reference point.'
                 )
                 break
             
