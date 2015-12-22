@@ -1048,13 +1048,7 @@ class SWDataWithTrivialization(SWDataBase):
         # type V: Other case.
         # More cases may be added in the future, in particular 
         # for degenerations of E_6 or E_7 curves.
-
-        zero_threshold = self.accuracy * 100
-        print '\nthis is the x coordinate = {}'.format(rp.x)
-        print '\nis above threshold {}'.format(abs(rp.x) > zero_threshold)
-        print '\nthis is the index = {}'.format(rp.i)
-        print '\nthis is the g_data type = {}'.format(self.g_data.type)
-
+        
         zero_threshold = self.accuracy * 100
         if (
             self.g_data.type == 'A' or (
