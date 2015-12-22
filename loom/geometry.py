@@ -1699,12 +1699,6 @@ def align_sheets_for_e_6_ffr(
             < SHEET_NULL_TOLERANCE
         )
         gathered_sheets = gather(sheets, have_same_r)  
-        # print 'the sheets'
-        # print sheets
-        # print 'gathered sheets {}'.format(gathered_sheets)
-        # print len(gathered_sheets)
-        # print 'radii'
-        # print map(abs, gathered_sheets.keys())
 
         if len(gathered_sheets)!=3:
             print 'The following sheets appear: '
@@ -1719,9 +1713,6 @@ def align_sheets_for_e_6_ffr(
         r_0, r_1, r_2 = sorted(map(abs, gathered_sheets.keys()))
 
         # build the three groups of sheets
-        # g_0 = [x for x in sheets if abs(abs(x) - r_0) < SHEET_NULL_TOLERANCE]
-        # g_1 = [x for x in sheets if abs(abs(x) - r_1) < SHEET_NULL_TOLERANCE]
-        # g_2 = [x for x in sheets if abs(abs(x) - r_2) < SHEET_NULL_TOLERANCE]
         g_0 = gathered_sheets.values()[0]
         g_1 = gathered_sheets.values()[1]
         g_2 = gathered_sheets.values()[2]
