@@ -400,10 +400,10 @@ def get_ode(sw, phase, accuracy):
     # Do we need to call sw.diff? Or can we just use the values of x_i's?
     v = sympy.lambdify((z, x), sw.diff.num_v)
 
-    def ode_f(t, zx1x2M):
-        z_i = zx1x2M[0]
-        x1_i = zx1x2M[1]
-        x2_i = zx1x2M[2]
+    def ode_f(t, z_x1_x2_M):
+        z_i = z_x1_x2_M[0]
+        x1_i = z_x1_x2_M[1]
+        x2_i = z_x1_x2_M[2]
         dz_i_dt = exp(phase * 1j) / (v(z_i, x1_i) - v(z_i, x2_i))
         dx1_i_dt = F(z_i, x1_i) * dz_i_dt
         dx2_i_dt = F(z_i, x2_i) * dz_i_dt
