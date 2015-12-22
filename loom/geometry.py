@@ -266,9 +266,11 @@ class GData:
                 numpy.array_equal(-p_root, root)):
                 return self.root_color_map[i]
 
+        # If color is not assigned because this is not a true root
+        # still give a color, so the plot can be displayed
         logger.warning('No color mapped for the root {}'
                        .format(root.tolist()))
-        return None
+        return self.root_color_map[0]
 
 
 class RamificationPoint:
