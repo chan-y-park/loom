@@ -726,12 +726,49 @@ class SWDataWithTrivialization(SWDataBase):
                         higher_bp_type=='type_II' or higher_bp_type=='type_III'
                     ) or is_irr_sing is True
                 ):
-                    corrected_sheets[double_sheets[0]] = (
-                        initial_sheets[double_sheets[1]]
-                    )
-                    corrected_sheets[double_sheets[1]] = (
+                    # Should decide case-by-case whether to employ 
+                    # (0,1) -> (0,1) or (0,1) -> (1,0)
+                    # One way to do so would be to pick each of them, and 
+                    # construct the whole monodromy, then see if applying 
+                    # the monodromy to every root gives back a root
+                    # By direct checks, only one of the two options works
+                    # so there should be no ambiguity left.
+                    # TODO: print a warning if BOTH options give a Weyl 
+                    # sheet matrix, because in that case there may be 
+                    # ambiguity
+                    corrected_sheets_0 = [s for s in corrected_sheets]
+                    corrected_sheets_1 = [s for s in corrected_sheets]
+
+                    corrected_sheets_0[double_sheets[0]] = (
                         initial_sheets[double_sheets[0]]
                     )
+                    corrected_sheets_0[double_sheets[1]] = (
+                        initial_sheets[double_sheets[1]]
+                    )
+
+                    corrected_sheets_1[double_sheets[0]] = (
+                        initial_sheets[double_sheets[1]]
+                    )
+                    corrected_sheets_1[double_sheets[1]] = (
+                        initial_sheets[double_sheets[0]]
+                    )
+
+                    m_0 = build_monodromy_matrix(
+                        initial_sheets, corrected_sheets_0
+                    )
+                    m_1 = build_monodromy_matrix(
+                        initial_sheets, corrected_sheets_1
+                    )
+
+                    if is_weyl_monodromy(m_0, self.g_data):
+                        corrected_sheets = corrected_sheets_0
+                    elif is_weyl_monodromy(m_1, self.g_data):
+                        corrected_sheets = corrected_sheets_1
+                    else:
+                        raise Exception(
+                            'Failed to assign a Weyl-type monodromy.'
+                        )
+                    
                 else:
                     raise Exception(
                         'higher-type ramification points for D-type '
@@ -808,13 +845,14 @@ class SWDataWithTrivialization(SWDataBase):
                     # One way to do so would be to pick each of them, and 
                     # construct the whole monodromy, then see if applying 
                     # the monodromy to every root gives back a root
-                    # presumably only one of the two options will work
+                    # By direct checks, only one of the two options works
+                    # so there should be no ambiguity left.
+                    # TODO: print a warning if BOTH options give a Weyl 
+                    # sheet matrix, because in that case there may be 
+                    # ambiguity
                     corrected_sheets_0 = [s for s in corrected_sheets]
                     corrected_sheets_1 = [s for s in corrected_sheets]
                     corrected_sheets_2 = [s for s in corrected_sheets]
-                    corrected_sheets_3 = [s for s in corrected_sheets]
-                    corrected_sheets_4 = [s for s in corrected_sheets]
-                    corrected_sheets_5 = [s for s in corrected_sheets]
 
                     corrected_sheets_0[triple_sheets[0]] = (
                         initial_sheets[triple_sheets[0]]
@@ -846,49 +884,6 @@ class SWDataWithTrivialization(SWDataBase):
                         initial_sheets[triple_sheets[1]]
                     )
 
-                    # corrected_sheets_3[triple_sheets[0]] = (
-                    #     initial_sheets[triple_sheets[1]]
-                    # )
-                    # corrected_sheets_3[triple_sheets[1]] = (
-                    #     initial_sheets[triple_sheets[0]]
-                    # )
-                    # corrected_sheets_3[triple_sheets[2]] = (
-                    #     initial_sheets[triple_sheets[2]]
-                    # )
-
-                    # corrected_sheets_4[triple_sheets[0]] = (
-                    #     initial_sheets[triple_sheets[0]]
-                    # )
-                    # corrected_sheets_4[triple_sheets[1]] = (
-                    #     initial_sheets[triple_sheets[2]]
-                    # )
-                    # corrected_sheets_4[triple_sheets[2]] = (
-                    #     initial_sheets[triple_sheets[1]]
-                    # )
-
-                    # corrected_sheets_5[triple_sheets[0]] = (
-                    #     initial_sheets[triple_sheets[2]]
-                    # )
-                    # corrected_sheets_5[triple_sheets[1]] = (
-                    #     initial_sheets[triple_sheets[1]]
-                    # )
-                    # corrected_sheets_5[triple_sheets[2]] = (
-                    #     initial_sheets[triple_sheets[0]]
-                    # )
-
-                    print 'corrected sheets 0'
-                    print corrected_sheets_0
-                    print 'corrected sheets 1'
-                    print corrected_sheets_1
-                    print 'corrected sheets 2'
-                    print corrected_sheets_2
-                    # print 'corrected sheets 3'
-                    # print corrected_sheets_3
-                    # print 'corrected sheets 4'
-                    # print corrected_sheets_4
-                    # print 'corrected sheets 5'
-                    # print corrected_sheets_5
-
                     m_0 = build_monodromy_matrix(
                         initial_sheets, corrected_sheets_0
                     )
@@ -898,174 +893,17 @@ class SWDataWithTrivialization(SWDataBase):
                     m_2 = build_monodromy_matrix(
                         initial_sheets, corrected_sheets_2
                     )
-                    # m_3 = build_monodromy_matrix(
-                    #     initial_sheets, corrected_sheets_3
-                    # )
-                    # m_4 = build_monodromy_matrix(
-                    #     initial_sheets, corrected_sheets_4
-                    # )
-                    # m_5 = build_monodromy_matrix(
-                    #     initial_sheets, corrected_sheets_5
-                    # )
 
-                    print 'Option 0 for E6 monodromy'
-                    print m_0
-                    print 'Option 1 for E6 monodromy'
-                    print m_1
-                    print 'Option 2 for E6 monodromy'
-                    print m_2
                     if is_weyl_monodromy(m_0, self.g_data):
                         corrected_sheets = corrected_sheets_0
-                        print 'pick option 0'
                     elif is_weyl_monodromy(m_1, self.g_data):
                         corrected_sheets = corrected_sheets_1
-                        print 'pick option 1'
                     elif is_weyl_monodromy(m_2, self.g_data):
                         corrected_sheets = corrected_sheets_2
-                        print 'pick option 2'
-                    # elif is_weyl_monodromy(m_3, self.g_data):
-                    #     corrected_sheets = corrected_sheets_3
-                    #     print 'pick option 3'
-                    # elif is_weyl_monodromy(m_4, self.g_data):
-                    #     corrected_sheets = corrected_sheets_4
-                    #     print 'pick option 4'
-                    # elif is_weyl_monodromy(m_5, self.g_data):
-                    #     corrected_sheets = corrected_sheets_5
-                    #     print 'pick option 5'
                     else:
                         raise Exception(
                             'Failed to assign a Weyl-type monodromy.'
                         )
-
-
-
-                # elif (
-                #     (is_higher_bp is True and higher_bp_type=='type_IV')
-                #     or is_irr_sing is True
-                # ):
-                #     # Should decide case-by-case whether to employ 
-                #     # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
-                #     # or another element of S_3
-                #     # One way to do so would be to pick each of them, and 
-                #     # construct the whole monodromy, then see if applying 
-                #     # the monodromy to every root gives back a root
-                #     # presumably only one of the options will work.
-                #     # But maybe more than one. 
-                #     # TODO: need to find a better criterion.
-                #     corrected_sheets_0 = corrected_sheets
-                #     corrected_sheets_1 = corrected_sheets
-                #     corrected_sheets_2 = corrected_sheets
-                #     corrected_sheets_3 = corrected_sheets
-                #     corrected_sheets_4 = corrected_sheets
-                #     corrected_sheets_5 = corrected_sheets
-
-                #     corrected_sheets_0[triple_sheets[0]] = (
-                #         initial_sheets[triple_sheets[0]]
-                #     )
-                #     corrected_sheets_0[triple_sheets[1]] = (
-                #         initial_sheets[triple_sheets[1]]
-                #     )
-                #     corrected_sheets_0[triple_sheets[2]] = (
-                #         initial_sheets[triple_sheets[2]]
-                #     )
-
-                #     corrected_sheets_1[triple_sheets[0]] = (
-                #         initial_sheets[triple_sheets[1]]
-                #     )
-                #     corrected_sheets_1[triple_sheets[1]] = (
-                #         initial_sheets[triple_sheets[2]]
-                #     )
-                #     corrected_sheets_1[triple_sheets[2]] = (
-                #         initial_sheets[triple_sheets[0]]
-                #     )
-
-                #     corrected_sheets_2[triple_sheets[0]] = (
-                #         initial_sheets[triple_sheets[2]]
-                #     )
-                #     corrected_sheets_2[triple_sheets[1]] = (
-                #         initial_sheets[triple_sheets[0]]
-                #     )
-                #     corrected_sheets_2[triple_sheets[2]] = (
-                #         initial_sheets[triple_sheets[1]]
-                #     )
-
-                #     corrected_sheets_3[triple_sheets[0]] = (
-                #         initial_sheets[triple_sheets[1]]
-                #     )
-                #     corrected_sheets_3[triple_sheets[1]] = (
-                #         initial_sheets[triple_sheets[0]]
-                #     )
-                #     corrected_sheets_3[triple_sheets[2]] = (
-                #         initial_sheets[triple_sheets[2]]
-                #     )
-
-                #     corrected_sheets_4[triple_sheets[0]] = (
-                #         initial_sheets[triple_sheets[0]]
-                #     )
-                #     corrected_sheets_4[triple_sheets[1]] = (
-                #         initial_sheets[triple_sheets[2]]
-                #     )
-                #     corrected_sheets_4[triple_sheets[2]] = (
-                #         initial_sheets[triple_sheets[1]]
-                #     )
-
-                #     corrected_sheets_5[triple_sheets[0]] = (
-                #         initial_sheets[triple_sheets[2]]
-                #     )
-                #     corrected_sheets_5[triple_sheets[1]] = (
-                #         initial_sheets[triple_sheets[1]]
-                #     )
-                #     corrected_sheets_5[triple_sheets[2]] = (
-                #         initial_sheets[triple_sheets[0]]
-                #     )
-
-                #     m_0 = build_monodromy_matrix(
-                #         initial_sheets, corrected_sheets_0
-                #     )
-                #     m_1 = build_monodromy_matrix(
-                #         initial_sheets, corrected_sheets_1
-                #     )
-                #     m_2 = build_monodromy_matrix(
-                #         initial_sheets, corrected_sheets_2
-                #     )
-                #     m_3 = build_monodromy_matrix(
-                #         initial_sheets, corrected_sheets_3
-                #     )
-                #     m_4 = build_monodromy_matrix(
-                #         initial_sheets, corrected_sheets_4
-                #     )
-                #     m_5 = build_monodromy_matrix(
-                #         initial_sheets, corrected_sheets_5
-                #     )
-
-                #     # print 'Option 0 for E6 monodromy'
-                #     # print m_0
-                #     # print 'Option 1 for E6 monodromy'
-                #     # print m_1
-                #     # print 'Option 2 for E6 monodromy'
-                #     # print m_2
-                #     if is_weyl_monodromy(m_0, self.g_data):
-                #         corrected_sheets = corrected_sheets_0
-                #         print 'pick option 0'
-                #     elif is_weyl_monodromy(m_1, self.g_data):
-                #         corrected_sheets = corrected_sheets_1
-                #         print 'pick option 1'
-                #     elif is_weyl_monodromy(m_2, self.g_data):
-                #         corrected_sheets = corrected_sheets_2
-                #         print 'pick option 2'
-                #     # elif is_weyl_monodromy(m_3, self.g_data):
-                #     #     corrected_sheets = corrected_sheets_3
-                #     #     print 'pick option 3'
-                #     # elif is_weyl_monodromy(m_4, self.g_data):
-                #     #     corrected_sheets = corrected_sheets_4
-                #     #     print 'pick option 4'
-                #     # elif is_weyl_monodromy(m_5, self.g_data):
-                #     #     corrected_sheets = corrected_sheets_5
-                #     #     print 'pick option 5'
-                #     else:
-                #         raise Exception(
-                #             'Failed to assign a Weyl-type monodromy.'
-                #         )
                         
                 else:
                     raise Exception(
@@ -1212,9 +1050,24 @@ class SWDataWithTrivialization(SWDataBase):
         # for degenerations of E_6 or E_7 curves.
 
         zero_threshold = self.accuracy * 100
-        if (self.g_data.type == 'A' or 
-            ((self.g_data.type == 'D' or self.g_data.type == 'E') and 
-                abs(rp.x) > zero_threshold)):
+        print '\nthis is the x coordinate = {}'.format(rp.x)
+        print '\nis above threshold {}'.format(abs(rp.x) > zero_threshold)
+        print '\nthis is the index = {}'.format(rp.i)
+        print '\nthis is the g_data type = {}'.format(self.g_data.type)
+
+        zero_threshold = self.accuracy * 100
+        if (
+            self.g_data.type == 'A' or (
+                (self.g_data.type == 'D' or self.g_data.type == 'E') and 
+                abs(rp.x) > zero_threshold
+            ) or (
+                self.g_data.type == 'D' and rp.i == 2 
+                and abs(rp.x) < zero_threshold
+            ) or (
+                self.g_data.type == 'E' and (rp.i == 2 or rp.i == 3) 
+                and abs(rp.x) < zero_threshold
+            )
+        ):
             rp_type = 'type_I'
         elif (
             self.g_data.type == 'D' and abs(rp.x) < zero_threshold
