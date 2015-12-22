@@ -736,15 +736,20 @@ class SWDataWithTrivialization(SWDataBase):
                     # TODO: print a warning if BOTH options give a Weyl 
                     # sheet matrix, because in that case there may be 
                     # ambiguity
-                    corrected_sheets_0 = [s for s in corrected_sheets]
+                    # UPDATE: Disabling the option 0. Because in these types 
+                    # of ramification points there should be no sheet that
+                    # remains fixed by the permutation
+                    # Keep it in comment in case we encounter trouble
+
+                    # corrected_sheets_0 = [s for s in corrected_sheets]
                     corrected_sheets_1 = [s for s in corrected_sheets]
 
-                    corrected_sheets_0[double_sheets[0]] = (
-                        initial_sheets[double_sheets[0]]
-                    )
-                    corrected_sheets_0[double_sheets[1]] = (
-                        initial_sheets[double_sheets[1]]
-                    )
+                    # corrected_sheets_0[double_sheets[0]] = (
+                    #     initial_sheets[double_sheets[0]]
+                    # )
+                    # corrected_sheets_0[double_sheets[1]] = (
+                    #     initial_sheets[double_sheets[1]]
+                    # )
 
                     corrected_sheets_1[double_sheets[0]] = (
                         initial_sheets[double_sheets[1]]
@@ -753,16 +758,16 @@ class SWDataWithTrivialization(SWDataBase):
                         initial_sheets[double_sheets[0]]
                     )
 
-                    m_0 = build_monodromy_matrix(
-                        initial_sheets, corrected_sheets_0
-                    )
+                    # m_0 = build_monodromy_matrix(
+                    #     initial_sheets, corrected_sheets_0
+                    # )
                     m_1 = build_monodromy_matrix(
                         initial_sheets, corrected_sheets_1
                     )
 
-                    if is_weyl_monodromy(m_0, self.g_data):
-                        corrected_sheets = corrected_sheets_0
-                    elif is_weyl_monodromy(m_1, self.g_data):
+                    # if is_weyl_monodromy(m_0, self.g_data):
+                    #     corrected_sheets = corrected_sheets_0
+                    if is_weyl_monodromy(m_1, self.g_data):
                         corrected_sheets = corrected_sheets_1
                     else:
                         raise Exception(
@@ -850,19 +855,24 @@ class SWDataWithTrivialization(SWDataBase):
                     # TODO: print a warning if BOTH options give a Weyl 
                     # sheet matrix, because in that case there may be 
                     # ambiguity
-                    corrected_sheets_0 = [s for s in corrected_sheets]
+                    # UPDATE: Disabling the option 0. Because in these types 
+                    # of ramification points there should be no sheet that
+                    # remains fixed by the permutation
+                    # Keep it in comment in case we encounter trouble
+
+                    # corrected_sheets_0 = [s for s in corrected_sheets]
                     corrected_sheets_1 = [s for s in corrected_sheets]
                     corrected_sheets_2 = [s for s in corrected_sheets]
 
-                    corrected_sheets_0[triple_sheets[0]] = (
-                        initial_sheets[triple_sheets[0]]
-                    )
-                    corrected_sheets_0[triple_sheets[1]] = (
-                        initial_sheets[triple_sheets[1]]
-                    )
-                    corrected_sheets_0[triple_sheets[2]] = (
-                        initial_sheets[triple_sheets[2]]
-                    )
+                    # corrected_sheets_0[triple_sheets[0]] = (
+                    #     initial_sheets[triple_sheets[0]]
+                    # )
+                    # corrected_sheets_0[triple_sheets[1]] = (
+                    #     initial_sheets[triple_sheets[1]]
+                    # )
+                    # corrected_sheets_0[triple_sheets[2]] = (
+                    #     initial_sheets[triple_sheets[2]]
+                    # )
 
                     corrected_sheets_1[triple_sheets[0]] = (
                         initial_sheets[triple_sheets[1]]
@@ -884,9 +894,9 @@ class SWDataWithTrivialization(SWDataBase):
                         initial_sheets[triple_sheets[1]]
                     )
 
-                    m_0 = build_monodromy_matrix(
-                        initial_sheets, corrected_sheets_0
-                    )
+                    # m_0 = build_monodromy_matrix(
+                    #     initial_sheets, corrected_sheets_0
+                    # )
                     m_1 = build_monodromy_matrix(
                         initial_sheets, corrected_sheets_1
                     )
@@ -894,9 +904,9 @@ class SWDataWithTrivialization(SWDataBase):
                         initial_sheets, corrected_sheets_2
                     )
 
-                    if is_weyl_monodromy(m_0, self.g_data):
-                        corrected_sheets = corrected_sheets_0
-                    elif is_weyl_monodromy(m_1, self.g_data):
+                    # if is_weyl_monodromy(m_0, self.g_data):
+                    #     corrected_sheets = corrected_sheets_0
+                    if is_weyl_monodromy(m_1, self.g_data):
                         corrected_sheets = corrected_sheets_1
                     elif is_weyl_monodromy(m_2, self.g_data):
                         corrected_sheets = corrected_sheets_2
