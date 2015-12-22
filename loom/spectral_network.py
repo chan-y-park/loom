@@ -458,17 +458,12 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 'find the next nearest point.'
             )
 
-            # print '\nstudying branch point {} at z={}'.format(bp.label, bp.z)
-            # print '\nthis is p_z = {}'.format(p_z)
-            # print '\nthis is t_0 = {}'.format(t_0)
-
             # Check the points before & after the given point
             t_m = t_p = t
             while t_m > 0 or t_p < t_max:
                 t_m -= 1
                 if t_m >= 0:
                     z_m = s_wall_z[t_m]
-                    # print 'at t_m={} , z(t)= {},  (z_m.real - bp.z.real) ={}, (p_z.real - bp.z.real)={}'.format(t_m, z_m, (z_m.real - bp.z.real) , (p_z.real - bp.z.real))
                     if (
                         (p_z.real - bp.z.real)*(z_m.real - bp.z.real) > 0
                         and abs(s_wall_z[t_m].real - bp.z.real) > accuracy
@@ -481,7 +476,6 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 t_p += 1
                 if t_p <= t_max:
                     z_p = s_wall_z[t_p]
-                    # print 'at t_p={} , z(t)= {}, prod = {}, (p_z.real - bp.z.real)={}'.format(t_p, z_p, (z_p.real - bp.z.real) , (p_z.real - bp.z.real))
                     if (
                         (p_z.real - bp.z.real)*(z_p.real - bp.z.real) > 0
                         and abs(s_wall_z[t_p].real - bp.z.real) > accuracy

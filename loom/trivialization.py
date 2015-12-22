@@ -826,9 +826,6 @@ class SWDataWithTrivialization(SWDataBase):
                     if s[0] == multiple_labels[0]
                 ]
 
-                print 'triple sheets are'
-                print triple_sheets
-
                 corrected_sheets = sorted_sheets 
                 if is_higher_bp is False and is_irr_sing is False:
                     corrected_sheets[triple_sheets[0]] = (
