@@ -190,6 +190,7 @@ class SWall(object):
                 [br_loc.label, t, d]
                 for br_loc, t, d in self.cuts_intersections
             ],
+            'root_basepoint': self.root_basepoint,
             'local_roots': [root.tolist() for root in self.local_roots],
             'local_weight_pairs': self.local_weight_pairs,
         }
@@ -210,6 +211,7 @@ class SWall(object):
                     self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
         self.local_weight_pairs = json_data['local_weight_pairs']
+        self.root_basepoint = json_data['root_basepoint']
 
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
@@ -894,7 +896,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                         sw.g_data.weights, 
                         near_degenerate_branch_locus=False
                     )
-                    # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
+                    
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
                     x_i_x_j_phases = []

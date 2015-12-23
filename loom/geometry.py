@@ -6,7 +6,7 @@ import copy
 import pdb
 import sympy.mpmath as mpmath
 
-from sympy import oo
+from sympy import oo, I
 from sympy.mpmath import mp
 from sympy.mpmath.libmp.libhyper import NoConvergence
 from itertools import combinations
@@ -1407,24 +1407,9 @@ def get_ramification_points_using_discriminant(
     rf = sympy.simplify(sympy.cancel(sympy.simplify(f.subs(subs_dict))))
     f_n, f_d = rf.as_numer_denom()
     
-    # # Find the roots of D(z), the discriminant of f(x, z)
-    # # as a polynomial of x. 
-    # # TODO: test if sage's discriminant works well also with
-    # # A and D-types curves. Then evaluate whether to get rid of
-    # # the sympy discriminant for them.
-    # if g_data.type == 'E':
-    #     D_z = sage_subprocess.compute_discriminant(f_n.subs(subs_dict))
-    # else:
-    #     D_z = sympy.discriminant(f_n.subs(subs_dict), x)
-
-    # print 'f_n'
-    # print f_n
-    # print 'subs_dict'
-    # print subs_dict
-    # print 'f_n.subs(subs_dict)'
-    # print f_n.subs(subs_dict)
-
-    D_z = sympy.discriminant(f_n.subs(subs_dict), x)
+    # D_z = sympy.discriminant(f_n.subs(subs_dict), x)
+    # D_z = sympy.discriminant(sympy.expand(f_n.subs(subs_dict)), x)
+    D_z = sage_subprocess.compute_discriminant(sympy.expand(f_n.subs(subs_dict)))
 
     if D_z == 0:
         logger.info(
@@ -1450,9 +1435,25 @@ def get_ramification_points_using_discriminant(
                     sympy.simplify(f_n.subs(subs_dict) / (x ** 3))
                 )
             )
-            D_z = sympy.discriminant(
-                sympy.simplify(f_n.subs(subs_dict) / (x ** 3)), x
-            )
+            # D_z = sympy.discriminant(
+            #     sympy.simplify(f_n.subs(subs_dict) / (x ** 3)), x
+            # )
+
+            # FIXME: this is a temporary fix, the computation of the 
+            # discriminant with sage or sympy is just stuck. Mathematica 
+            # is able to do this in a fraction of a second though
+            if (
+                sympy.expand(f_n.subs(subs_dict)/ (x ** 3)) == (
+                    -108*x**24*z**26 - 540*I*x**12*z**15 
+                    + 540*I*x**12*z**13 - z**4 + 2*z**2 - 1
+                )
+            ):
+                D_z = z**598 * (z**2 - 1)**46
+            else:
+                D_z = sage_subprocess.compute_discriminant(
+                    sympy.expand(f_n.subs(subs_dict) / (x ** 3))
+                )
+
         logger.debug(
             'Will work with the effective discriminant:\n{}'.format(D_z)
         )
@@ -1751,7 +1752,7 @@ def align_sheets_for_e_6_ffr(
         # the first weight from g_2 (this one lies precisely 
         # on the positive real axis).
         # Therefore, we have to match sheets to the weights accordingly.
-        if norm_phase(g_1[0]) > norm_phase(g_2[0]):
+        if norm_phase(g_1_sorted[0]) > norm_phase(g_2_sorted[0]):
             for i in range(len(g_1_weights)):
                 sorted_sheets[g_1_weights[i]] = g_1_sorted[i]
             for i in range(len(g_2_weights)):
