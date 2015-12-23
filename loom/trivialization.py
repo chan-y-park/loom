@@ -1123,9 +1123,9 @@ class SWDataWithTrivialization(SWDataBase):
         print 'a = {}'.format(a)
         print 'b = {}'.format(b)
 
-        num_v = self.diff.num_v
-        print 'num_v = {}'.format(num_v)
+        
 
+        # KEEP UNTIL TESTING IS FINISHED.
         # This is WRONG: DX_DZ is just wrong as it is written here.
         # The whole idea that there is a unique closed form expression 
         # for the differential near a ramification point 
