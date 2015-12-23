@@ -821,7 +821,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 # z_1 = z_0 + accuracy * zeta
                 z_1 = z_0 + dt * zeta
 
-                if rp_type == 'type_I':
+                if rp_type == 'type_I' or rp_type == 'type_IV':
                     x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                     # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
                     # a list of the type
@@ -883,48 +883,48 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                     [(ij_factor) / abs(ij_factor), [x_i, x_j]]
                                 )
 
-                elif rp_type == 'type_IV':
-                    x_s = find_xs_at_z_0(
-                        sw, z_1, x_0, r_i, 
-                        ffr=True, use_sage=True
-                    )
-                    # Note: although we are working near a degenerate locus,
-                    # it is correct to enforce the option
-                    # near_degenerate_branch_locus=False
-                    aligned_xs = align_sheets_for_e_6_ffr(
-                        x_s, 
-                        sw.g_data.weights, 
-                        near_degenerate_branch_locus=False
-                    )
+                # elif rp_type == 'type_IV':
+                #     x_s = find_xs_at_z_0(
+                #         sw, z_1, x_0, r_i, 
+                #         ffr=True, use_sage=True
+                #     )
+                #     # Note: although we are working near a degenerate locus,
+                #     # it is correct to enforce the option
+                #     # near_degenerate_branch_locus=False
+                #     aligned_xs = align_sheets_for_e_6_ffr(
+                #         x_s, 
+                #         sw.g_data.weights, 
+                #         near_degenerate_branch_locus=False
+                #     )
                     
-                    # a list of the type
-                    # [... [phase, [x_i, x_j]] ...]
-                    x_i_x_j_phases = []
-                    for i, x_i in enumerate(aligned_xs): 
-                        w_i = sw.g_data.weights[i]
-                        for j, x_j in enumerate(aligned_xs):
-                            w_j = sw.g_data.weights[j]
-                            if is_root(w_j - w_i, sw.g_data):
-                                v_i = complex(
-                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
-                                )
-                                v_j = complex(
-                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
-                                )
-                                # print '\n\ni ={}, j={}'.format(i,j)
-                                # print 'w_j - w_i = {}'.format(w_j -w_i)
-                                # print 'x_j - x_i = {}'.format(x_j -x_i)
-                                # print 'v_j - v_i = {}'.format(v_j -v_i)
-                                if (v_j - v_i) != 0:
-                                    ij_factor = (
-                                        -1.0 * exp(1j * theta) / (v_j - v_i)
-                                    )
-                                    x_i_x_j_phases.append(
-                                        [
-                                            (ij_factor) / abs(ij_factor), 
-                                            [x_i, x_j]
-                                        ]
-                                    )
+                #     # a list of the type
+                #     # [... [phase, [x_i, x_j]] ...]
+                #     x_i_x_j_phases = []
+                #     for i, x_i in enumerate(aligned_xs): 
+                #         w_i = sw.g_data.weights[i]
+                #         for j, x_j in enumerate(aligned_xs):
+                #             w_j = sw.g_data.weights[j]
+                #             if is_root(w_j - w_i, sw.g_data):
+                #                 v_i = complex(
+                #                     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                #                 )
+                #                 v_j = complex(
+                #                     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                #                 )
+                #                 # print '\n\ni ={}, j={}'.format(i,j)
+                #                 # print 'w_j - w_i = {}'.format(w_j -w_i)
+                #                 # print 'x_j - x_i = {}'.format(x_j -x_i)
+                #                 # print 'v_j - v_i = {}'.format(v_j -v_i)
+                #                 if (v_j - v_i) != 0:
+                #                     ij_factor = (
+                #                         -1.0 * exp(1j * theta) / (v_j - v_i)
+                #                     )
+                #                     x_i_x_j_phases.append(
+                #                         [
+                #                             (ij_factor) / abs(ij_factor), 
+                #                             [x_i, x_j]
+                #                         ]
+                #                     )
 
                 closest_pair = sorted(
                     x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
