@@ -1,6 +1,5 @@
 import numpy
 import sympy
-#import logging
 import warnings
 from fractions import Fraction
 from sympy import limit, oo
@@ -10,6 +9,7 @@ from cmath import log
 class LocalDiffError(Exception):
     def __init__(self, value):
         self.value = value
+    
     def __str__(self):
         return repr(self.value)
 
@@ -17,6 +17,7 @@ class LocalDiffError(Exception):
 class GetSWallSeedsError(Exception):
     def __init__(self, value):
         self.value = value
+    
     def __str__(self):
         return repr(self.value)
 
@@ -24,6 +25,7 @@ class GetSWallSeedsError(Exception):
 class NNearestError(Exception):
     def __init__(self, value):
         self.value = value
+    
     def __str__(self):
         return repr(self.value)
 
@@ -31,6 +33,7 @@ class NNearestError(Exception):
 class UnravelError(Exception):
     def __init__(self, value):
         self.value = value
+    
     def __str__(self):
         return repr(self.value)
 
@@ -40,7 +43,7 @@ def ctor2(complex_number):
 
 
 def r2toc(real_tuple):
-    return (real_tuple[0]+1j*real_tuple[1])
+    return (real_tuple[0] + 1j * real_tuple[1])
 
 
 def get_root_multiplicity(coefficients, root_0, accuracy):
@@ -58,8 +61,10 @@ def get_root_multiplicity(coefficients, root_0, accuracy):
 
 
 def cpow(base, exponent_numerator, exponent_denominator=1):
-    return complex(base)**complex(Fraction(exponent_numerator,
-                                           exponent_denominator))
+    return complex(base) ** complex(
+        Fraction(exponent_numerator, exponent_denominator)
+    )
+
 
 def gather(a_list, compare):
     """
@@ -156,10 +161,10 @@ def PSL2C(C, z, inverse=False, numerical=False):
     if numerical is True:
         numer = complex(a) * complex(z) + complex(b)
         denom = complex(c) * complex(z) + complex(d)
-        return numer/denom
+        return numer / denom
     else:
         u = sympy.symbols('u')
-        Cu = (a*u+b)/(c*u+d)
+        Cu = (a * u + b) / (c * u + d)
 
         if z == oo:
             Cz = limit(Cu, u, z)
@@ -174,14 +179,14 @@ def put_on_cylinder(z, mt_params=None):
     Put PSL2C-transformed z-coords
     onto the original cylinder.
     """
-    return log(PSL2C(mt_params, z, inverse=True, numerical=True))/1.0j
+    return log(PSL2C(mt_params, z, inverse=True, numerical=True)) / 1.0j
 
 
-### chan: TODO: use numba?
+# chan: TODO: use numba?
 def delete_duplicates(l, key=None, accuracy=False):
     seen = set()
     uniq = []
-    if key==None and accuracy==None:
+    if key is None and accuracy is None:
         for x in l:
             if not isinstance(x, (int, bool, str, unicode)):
                 warnings.warn('delete_duplicates(): testing the membership'
@@ -189,10 +194,10 @@ def delete_duplicates(l, key=None, accuracy=False):
             if x not in seen:
                 uniq.append(x)
                 seen.add(x)
-    elif key==None and accuracy != None:
+    elif key is None and accuracy is not None:
         uniq = n_remove_duplicate(l, accuracy)
 
-    elif key!=None and accuracy == None:
+    elif key is not None and accuracy is None:
         for x in l:
             if key(x) not in seen:
                 uniq.append(x)

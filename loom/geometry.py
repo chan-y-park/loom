@@ -1,14 +1,14 @@
 import sympy
 import numpy
 import logging
-import warnings
+# import warnings
 import copy
-import pdb
+# import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo, I
 from sympy.mpmath import mp
-from sympy.mpmath.libmp.libhyper import NoConvergence
+# from sympy.mpmath.libmp.libhyper import NoConvergence
 from itertools import combinations
 from cmath import phase, pi
 from matplotlib import cm as mpl_color_map
@@ -244,7 +244,9 @@ class GData:
         num_p_roots = len(p_roots)
         p_root_colors = []
         for i in range(num_p_roots):
-            #r, g, b, alpha = mpl_color_map.jet((i / float(n_rts)), bytes=True)
+            # r, g, b, alpha = mpl_color_map.jet(
+            #     (i / float(n_rts)), bytes=True
+            # )
             try:
                 color_map = mpl_color_map.viridis
             except AttributeError:
@@ -262,8 +264,10 @@ class GData:
             self.set_root_color_map()
 
         for i, p_root in enumerate(self.positive_roots):
-            if (numpy.array_equal(p_root, root) or
-                numpy.array_equal(-p_root, root)):
+            if (
+                numpy.array_equal(p_root, root) or
+                numpy.array_equal(-p_root, root)
+            ):
                 return self.root_color_map[i]
 
         # If color is not assigned because this is not a true root
@@ -734,7 +738,6 @@ class SWDataBase(object):
                     )
                     ffr_ramification_points.append(rp)
 
-
                 logger.debug('These are the punctures:')
                 for pct in punctures:
                     logger.debug('{} at z={}'.format(pct.label, pct.z))
@@ -988,9 +991,11 @@ def get_punctures_from_config(
 ):
     punctures = []
 
-    if (config_punctures_string is None or
+    if (
+        config_punctures_string is None or
         config_punctures_string == 'None' or
-        config_punctures_string == ''):
+        config_punctures_string == ''
+    ):
         return punctures
 
     punctures_str = [
@@ -1127,6 +1132,7 @@ p_2_str = (
     '+ (({phi_5}))^2'
 )
 
+
 def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     """
     Construct a Seiberg-Witten curve in the 1st fundamental representation
@@ -1192,16 +1198,22 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
             # )
             
             # The following goes with the 3rd presentation of the SW curve.
-            q_1 = q_1_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                                phi_8=phi[8], phi_9=phi[9])
-            p_1 = p_1_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                                phi_8=phi[8], phi_9=phi[9])
-            p_2 = p_2_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                                phi_8=phi[8], phi_9=phi[9])
+            q_1 = q_1_str.format(
+                phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
+                phi_8=phi[8], phi_9=phi[9]
+            )
+            p_1 = p_1_str.format(
+                phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
+                phi_8=phi[8], phi_9=phi[9]
+            )
+            p_2 = p_2_str.format(
+                phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
+                phi_8=phi[8], phi_9=phi[9]
+            )
             q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
             curve_str = (
-               '(1/2)*(x^3)*({phi_12})^2 - ({q_1})*({phi_12}) + ({q_2})'
-               .format(phi_12=phi[12], q_1=q_1, q_2=q_2)
+                '(1/2)*(x^3)*({phi_12})^2 - ({q_1})*({phi_12}) + ({q_2})'
+                .format(phi_12=phi[12], q_1=q_1, q_2=q_2)
             )
 
             return curve_str
@@ -1220,7 +1232,6 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
             curve_str += ' * x^{}'.format(N - k)
 
     return curve_str
-
 
 
 def get_ramification_points_using_system_of_eqs(
@@ -1244,10 +1255,11 @@ def get_ramification_points_using_system_of_eqs(
     num_factor, eq_1_factors = sympy.factor_list(eq_1)
     if len(eq_1_factors) > 1:
         # TODO: check Casimir differentials too?
-        if (g_data.type == 'D' and
-            len(eq_1_factors) == 2 and
-            (x, 2) in eq_1_factors):
-            eq_1 = sympy.simplify(eq_1 / x**2)
+        if (
+            g_data.type == 'D' and len(eq_1_factors) == 2 
+            and (x, 2) in eq_1_factors
+        ):
+            eq_1 = sympy.simplify(eq_1 / x ** 2)
         else:
             logger.warning('The curve to find ramification points'
                            'has an unknown factorization: {} = {}.'
@@ -1357,12 +1369,12 @@ def get_ramification_points_using_discriminant(
             # discriminant with sage or sympy is just stuck. Mathematica 
             # is able to do this in a fraction of a second though
             if (
-                sympy.expand(f_n.subs(subs_dict)/ (x ** 3)) == (
-                    -108*x**24*z**26 - 540*I*x**12*z**15 
-                    + 540*I*x**12*z**13 - z**4 + 2*z**2 - 1
+                sympy.expand(f_n.subs(subs_dict) / (x ** 3)) == (
+                    -108 * x ** 24 * z ** 26 - 540 * I * x ** 12 * z ** 15 
+                    + 540 * I * x ** 12 * z ** 13 - z ** 4 + 2 * z ** 2 - 1
                 )
             ):
-                D_z = z**598 * (z**2 - 1)**46
+                D_z = z ** 598 * (z ** 2 - 1) ** 46
             else:
                 D_z = sympy.discriminant(
                     sympy.simplify(f_n.subs(subs_dict) / (x ** 3)), x
@@ -1372,9 +1384,10 @@ def get_ramification_points_using_discriminant(
             'Will work with the effective discriminant:\n{}'.format(D_z)
         )
 
-    
     # SECOND METHOD: Use SAGE to compute discriminants
-    # D_z = sage_subprocess.compute_discriminant(sympy.expand(f_n.subs(subs_dict)))
+    # D_z = sage_subprocess.compute_discriminant(
+    #     sympy.expand(f_n.subs(subs_dict))
+    # )
 
     # if D_z == 0:
     #     logger.info(
@@ -1490,7 +1503,7 @@ def get_ramification_points_using_discriminant(
 
 def find_xs_at_z_0(
         sw_data, z_0, x_0=None, num_x=1, ffr=False, use_sage=False
-    ):
+):
     """
     Get x's above z_0 and return the num_x of them 
     which are nearest to x_0.
@@ -1607,7 +1620,7 @@ def align_sheets_for_e_6_ffr(
         )
         gathered_sheets = gather(sheets, have_same_r)  
 
-        if len(gathered_sheets)!=3:
+        if len(gathered_sheets) != 3:
             print 'The following sheets appear: '
             print sheets
             raise ValueError(

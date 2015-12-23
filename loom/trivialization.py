@@ -1,7 +1,6 @@
 import numpy
 import logging
 import sympy
-import pdb
 
 from cmath import exp, pi, phase
 from sympy import oo
@@ -21,11 +20,11 @@ x, z = sympy.symbols('x z')
 # TODO: set both of the following automatically: e.g. using the
 # minimal_distance attribute of the SW fibration
 
-# number of steps used to track the sheets along a leg 
+# number of steps used to track the sheets along a leg
 # the path used to trivialize the cover at any given point
 N_PATH_TO_PT = 100
 
-# number of steps for each SEGMENT of the path around a 
+# number of steps for each SEGMENT of the path around a
 # branching point (either branch-point, or irregular singularity)
 N_PATH_AROUND_PT = 60
 # N_PATH_AROUND_PT = 100
@@ -46,7 +45,7 @@ class BranchPoint:
     """
     The BranchPoint class.
 
-    This class is strictly related to the 
+    This class is strictly related to the
     cover corresponding to the first fundamental
     representation.
 
@@ -56,8 +55,8 @@ class BranchPoint:
     z :
         The position of the branch point on the z-plane
 
-    trivialization : 
-        The trivialization of the cover to which the 
+    trivialization :
+        The trivialization of the cover to which the
         branch point is associated.
 
     groups :
@@ -69,50 +68,50 @@ class BranchPoint:
         other sheet.
 
     enum_sh :
-        The enumerated sheets at the branch point. 
-        A list of pairs [i, x] where i is the sheet 
-        identifier referring to the reference sheets 
+        The enumerated sheets at the branch point.
+        A list of pairs [i, x] where i is the sheet
+        identifier referring to the reference sheets
         of the trivialization class; x is the corresponding
         coordinate in the fiber above the branch point.
 
     path_to_bp - UNAVAILABLE :
         A path running from the basepoint of the trivialization
         to the branch point without crossing any branch cut.
-    
+
     sheet_tracks_to_bp - UNAVAILABLE :
         A list of sheet tracks, i.e. the x-values of each
         sheet as it is tracked along a path that runs to
-        the branch point, to determine collision structure 
+        the branch point, to determine collision structure
         of the various sheets.
-    
+
     positive_roots :
-        A minimal list of positive roots characterizing the 
+        A minimal list of positive roots characterizing the
         groups of colliding sheets at the branch point.
-    
+
     path_around_bp - UNAVAILABLE :
         A path encircling the branch point and no one else,
         used to compute the monodromy.
-    
+
     sheet_tracks_around_bp - UNAVAILABLE :
         A list of sheet tracks, i.e. the x-values of each
-        sheet as it is tracked along a path that runs around 
+        sheet as it is tracked along a path that runs around
         the branch point, to determine the monodromy.
-    
-    monodromy : 
+
+    monodromy :
         The monodromy matrix acting on the column vector
         of sheets (hence, acting FROM the left).
-        Sheets are ordered according to the reference 
+        Sheets are ordered according to the reference
         sheets of the trivialization.
-    
-    order : 
-        At a branch point, the dual of the higgs field 
+
+    order :
+        At a branch point, the dual of the higgs field
         lies on the boundary of a Weyl chamber.
         In general, it will li at the intersection of
         k of the walls delimiting the chamber.
         The order of the branch point is then k + 1.
 
     ffr_ramification_points :
-        A list of all ramification point objects, which 
+        A list of all ramification point objects, which
         lie in the fiber above the branch point.
 
     """
@@ -122,8 +121,8 @@ class BranchPoint:
             self.label = None
             self.monodromy = None
 
-            self.groups = None 
-            self.positive_roots = None 
+            self.groups = None
+            self.positive_roots = None
             self.order = None
 
             self.ffr_ramification_points = None
@@ -156,7 +155,7 @@ class BranchPoint:
             for rp in ffr_ramification_points:
                 if rp_label == rp.label:
                     self.ffr_ramification_points.append(rp)
-            
+
     def print_info(self):
         print(
             "---------------------------------------------------------\n"
@@ -192,7 +191,7 @@ class IrregularSingularity:
             'monodromy': self.monodromy.tolist(),
         }
         return json_data
-        
+
     def print_info(self):
         print(
             "---------------------------------------------------------\n"
@@ -208,7 +207,7 @@ class IrregularSingularity:
 # TODO: Use g_data.weights at the base point as labels of sheets,
 # instead of integer indicies. Just a conceptual issue, because
 # the integer indicies are labeling g_data.weights in the same order.
-# PL: not sure if we want to do that: for a human interface, 
+# PL: not sure if we want to do that: for a human interface,
 # labeling by integers is much more readable.
 class SWDataWithTrivialization(SWDataBase):
     """
@@ -217,24 +216,24 @@ class SWDataWithTrivialization(SWDataBase):
 
     Arguments
     ---------
-    
-    sw_data : 
-        an object of the type SWData, whose attribute 'curve' 
+
+    sw_data :
+        an object of the type SWData, whose attribute 'curve'
         should correspond to the curve in the FIRST fundamental
         representation of the Lie algebra
-    
-    ffr_ramification_points : 
+
+    ffr_ramification_points :
         a list of objects of the type RamificationPoint, corresponding
         to the given Seiberg-Witten curve in the first fundamental rep.
 
     Attributes & Methods
     --------------------
 
-    base_point : 
+    base_point :
         the base point of the trivialization
 
     reference_ffr_xs :
-        a list of x's 
+        a list of x's
             [x_0, x_1, ..., x_i, ...]
         where 'i' is an integer label for the sheet,
         and 'x' is its position in the fiber of T^*C 
@@ -325,11 +324,11 @@ class SWDataWithTrivialization(SWDataBase):
         )
 
         logger.info(
-                'Ramification points arrange into {} branch points '
-                'at positions {}'.format(
-                    len(bpzs), bpzs
-                )
+            'Ramification points arrange into {} branch points '
+            'at positions {}'.format(
+                len(bpzs), bpzs
             )
+        )
 
         # z-coords of irregular punctures.
         ipzs = n_remove_duplicate(
@@ -556,10 +555,10 @@ class SWDataWithTrivialization(SWDataBase):
                         )
                         if sorted_ffr_xs == 'sorting failed':
                             logger.info(
-                                    'Studying sheets near z = {} found sheets'
-                                    '\n ffr_xs_0 = {} \n ffr_xs_1 = {}'
-                                    .format(z, ffr_xs_0, ffr_xs_1_s)
-                                )
+                                'Studying sheets near z = {} found sheets'
+                                '\n ffr_xs_0 = {} \n ffr_xs_1 = {}'
+                                .format(z, ffr_xs_0, ffr_xs_1_s)
+                            )
                             raise Exception(
                                 '\nCannot track the sheets!\n'
                                 'Probably passing too close to a branch point'
@@ -613,9 +612,9 @@ class SWDataWithTrivialization(SWDataBase):
 
     # TODO: Review this method.
     def get_sheet_monodromy(
-            self, z_path, is_higher_bp=False, higher_bp_type=None,
-            is_irr_sing=False
-        ):
+        self, z_path, is_higher_bp=False, higher_bp_type=None,
+        is_irr_sing=False
+    ):
         """
         Compares the x-coordinates of sheets at the 
         beginning and at the end of a CLOSED path.
@@ -723,7 +722,8 @@ class SWDataWithTrivialization(SWDataBase):
                     )
                 elif (
                     is_higher_bp is True and (
-                        higher_bp_type=='type_II' or higher_bp_type=='type_III'
+                        higher_bp_type == 'type_II' 
+                        or higher_bp_type == 'type_III'
                     ) or is_irr_sing is True
                 ):
                     # Should decide case-by-case whether to employ 
@@ -841,7 +841,7 @@ class SWDataWithTrivialization(SWDataBase):
                     )
 
                 elif (
-                    (is_higher_bp is True and higher_bp_type=='type_IV')
+                    (is_higher_bp is True and higher_bp_type == 'type_IV')
                     or is_irr_sing is True
                 ):
                     # Should decide case-by-case whether to employ 
@@ -934,8 +934,9 @@ class SWDataWithTrivialization(SWDataBase):
         else:
             pass
 
-        logger.debug('Sorted sheets around locus {}'
-                          .format(sorted_sheets))
+        logger.debug(
+            'Sorted sheets around locus {}'.format(sorted_sheets)
+        )
 
         perm_matrix = build_monodromy_matrix(initial_sheets, sorted_sheets)
         if is_weyl_monodromy(perm_matrix, self.g_data) is False:
@@ -976,9 +977,9 @@ class SWDataWithTrivialization(SWDataBase):
             if is_single is True:
                 clusters.append([i])
 
-        #bp.enum_sh = enum_sh
+        # bp.enum_sh = enum_sh
         bp.groups = [c for c in clusters if len(c) > 1]
-        #bp.singles = [c[0] for c in clusters if len(c) == 1]
+        # bp.singles = [c[0] for c in clusters if len(c) == 1]
 
         bp.positive_roots = get_positive_roots_of_branch_point(
             bp, self.g_data, self.logger_name,
@@ -994,10 +995,10 @@ class SWDataWithTrivialization(SWDataBase):
         for rp in bp.ffr_ramification_points:
             self.analyze_ffr_ramification_point(rp)
 
-        ramification_types = (
-            [rp.ramification_type for rp in bp.ffr_ramification_points 
-            if rp.ramification_type!='type_I']
-        )
+        ramification_types = ([
+            rp.ramification_type for rp in bp.ffr_ramification_points 
+            if rp.ramification_type != 'type_I'
+        ])
 
         logger.info("Computing the monodromy")
         path_around_bp = get_path_around(bp.z, self.base_point, self,)

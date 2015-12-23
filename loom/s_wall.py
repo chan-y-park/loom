@@ -1,7 +1,6 @@
 import logging
 import numpy
 import sympy
-import pdb
 
 from cmath import exp, pi
 from math import floor
@@ -22,7 +21,7 @@ NUM_ODE_XS_OVER_Z = 2
 # within a disc of such radius from any branch point,
 # the intersection of a S-wall originating from there
 # with the corresponding cut, will be ignored.
-#BRANCH_POINT_RADIUS = 0.01 
+# BRANCH_POINT_RADIUS = 0.01 
 
 # Desired precision on the phase of seeds
 # Warning: setting it too small will bring the seeding point
@@ -32,7 +31,7 @@ SEED_PRECISION_MAX_DEPTH = 5
 
 # FIXME: Use the configuration data 'puncture_cutoff'
 # cut S-walls if they get too close to punctures
-#PUNCTURE_RADIUS = 0.001
+# PUNCTURE_RADIUS = 0.001
 
 
 class Joint:
@@ -346,9 +345,11 @@ class SWall(object):
                 # branch cut emanating from its parent branch-point
                 # if such intersections happens within a short 
                 # distance from the starting point.
-                if (br_loc.__class__.__name__ == 'BranchPoint' and
+                if (
+                    br_loc.__class__.__name__ == 'BranchPoint' and
                     br_loc.label == self.parents[0] and 
-                    (abs(br_loc.z - self.z[t]) < cutoff_radius)):
+                    (abs(br_loc.z - self.z[t]) < cutoff_radius)
+                ):
                     continue
 
                 # Check that the intersection actually happens
@@ -415,9 +416,9 @@ class SWall(object):
 
         if is_root(initial_root, sw_data.g_data) is False:
             logging.info(
-                    'Warning: could not assign a root to {}'
-                    .format(self.label)
-                )
+                'Warning: could not assign a root to {}'
+                .format(self.label)
+            )
 
         # A list of ordered pairs [...[i, j]...]
         # such that weights[j] - weights[i] = root
@@ -802,7 +803,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 ((-1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
                 (omega ** s)
                 for i in range(13) for j in range(13) 
-                for s in range(13) if (i !=j and e_6_compatible(i, j))
+                for s in range(13) if (i != j and e_6_compatible(i, j))
             ])
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
@@ -1009,17 +1010,17 @@ def left_right(l, point):
     determines whether x increases or decreases at that point, 
     returning repsectively 'left' or 'right'
     """
-    if point > len(l)-1:
+    if point > len(l) - 1:
         raise ValueError(
             'Can\'t determine direction, point doesnt belong to list!'
         )
     elif point > 0:
-        if l[point-1].real < l[point].real:
+        if l[point - 1].real < l[point].real:
             return 'right'
         else:
             return 'left'
     elif point == 0:
-        if l[point].real < l[point+1].real:
+        if l[point].real < l[point + 1].real:
             return 'right'
         else:
             return 'left'
@@ -1037,12 +1038,11 @@ def e_6_compatible(i, j):
     a given weight with other weights.
     """
     dist = abs(i - j) % 12
-    if ((0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
+    if (
+        (0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
         (i == 12 or j == 12)
     ):
         return True
     else:
         return False
-
-
 
