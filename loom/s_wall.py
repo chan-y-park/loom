@@ -661,18 +661,23 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
         x_0 = rp.x
         r_i = rp.i
         rp_type = rp.ramification_type
-        sw_diff_coeff = rp.sw_diff_coeff
+        # sw_diff_coeff = rp.sw_diff_coeff
+        sw_diff_coeffs_a_b = rp.sw_diff_coeffs_a_b
         logger.debug('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
         logger.debug('Ramification index = {}'.format(r_i))
         logger.debug('Ramification type = {}'.format(rp_type))
-        logger.debug(
-            'leading coefficient of SW diff = {}\n'.format(sw_diff_coeff)
-        )
+        # logger.debug(
+        #     'leading coefficient of SW diff = {}\n'.format(sw_diff_coeff)
+        # )
         print('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
         print('Ramification index = {}'.format(r_i))
         print('Ramification type = {}'.format(rp_type))
+        # print(
+        #     'leading coefficient of SW diff = {}\n'.format(sw_diff_coeff)
+        # )
         print(
-            'leading coefficient of SW diff = {}\n'.format(sw_diff_coeff)
+            'leading coefficients of SW diff: a = {}\t b={}\n'
+            .format(sw_diff_coeffs_a_b[0], sw_diff_coeffs_a_b[1])
         )
 
         # Construct the seeding points for the branch point
@@ -793,10 +798,15 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             omega = exp(
                 2.0 * pi * 1j / 13.0
             )
+            a, b = sw_diff_coeffs_a_b
+            print '(1.0 / cpow((-1.0 * a / b), 1, 13)) = {}'.format((1.0 / cpow((-1.0 * a / b), 1, 13)) )
+            print 'exp(1j * theta * 12.0 / 13.0) = {}'.format(exp(1j * theta * 12.0 / 13.0))
+            print 'omega = {}'.format(omega)
+
             dz_phases = ([
-                (1.0 / cpow(sw_diff_coeff, 12, 13)) *
+                (1.0 / cpow((-1.0 * a / b), 1, 13)) *
                 exp(1j * theta * 12.0 / 13.0) *
-                ((1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
+                ((-1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
                 (omega ** s)
                 for i in range(13) for j in range(13) 
                 for s in range(13) if (i !=j and e_6_compatible(i, j))
