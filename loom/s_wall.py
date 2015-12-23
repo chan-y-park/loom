@@ -688,13 +688,23 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             
             omega = exp(2.0 * pi * 1j * float(r_i) / float(r_i + 1))
 
+            a, b = sw_diff_coeffs_a_b
             dz_phases = ([
-                (1.0 / cpow(sw_diff_coeff, r_i, r_i + 1)) *
+                (1.0 / cpow((-1.0 * a / b), 1, r_i + 1)) *
                 exp(1j * theta * float(r_i) / (r_i + 1)) *
-                ((1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
+                ((-1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
                 for i in range(r_i) for j in range(r_i) 
                 for s in range(r_i + 1) if i != j
             ])
+
+            # OLD WAY
+            # dz_phases = ([
+            #     (1.0 / cpow(sw_diff_coeff, r_i, r_i + 1)) *
+            #     exp(1j * theta * float(r_i) / (r_i + 1)) *
+            #     ((1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
+            #     for i in range(r_i) for j in range(r_i) 
+            #     for s in range(r_i + 1) if i != j
+            # ])
 
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
@@ -718,22 +728,41 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 (phases[i] + phases[j]) * numpy.sign(i - j) for i in range(r_k)
             ] for j in range(r_k)]
             
+            a, b = sw_diff_coeffs_a_b
             omega = exp(2.0 * pi * 1j * float(2 * r_k) / float(2 * r_k + 1))
+
             dz_phases = ([
-                (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
+                (1.0 / cpow((-1.0 * a / b), 1, 2 * r_k + 1)) *
                 exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
-                ((1.0 / phi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
+                ((-1.0 / phi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
                 * (omega ** s)
                 for i in range(r_k) for j in range(r_k) 
                 for s in range(2 * r_k + 1) if i != j
             ] + [
-                (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
+                (1.0 / cpow((-1.0 * a / b), 1, 2 * r_k + 1)) *
                 exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
-                ((1.0 / psi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
+                ((-1.0 / psi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
                 * (omega ** s)
                 for i in range(r_k) for j in range(r_k) 
                 for s in range(2 * r_k + 1) if i != j
             ])
+
+            # OLD WAY
+            # dz_phases = ([
+            #     (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
+            #     exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
+            #     ((1.0 / phi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
+            #     * (omega ** s)
+            #     for i in range(r_k) for j in range(r_k) 
+            #     for s in range(2 * r_k + 1) if i != j
+            # ] + [
+            #     (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
+            #     exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
+            #     ((1.0 / psi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
+            #     * (omega ** s)
+            #     for i in range(r_k) for j in range(r_k) 
+            #     for s in range(2 * r_k + 1) if i != j
+            # ])
 
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
@@ -763,31 +792,47 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             omega = exp(
                 2.0 * pi * 1j * float(2 * r_k - 2) / float(2 * r_k - 1)
             )
+
+            a, b = sw_diff_coeffs_a_b
             dz_phases = ([
-                (1.0 / cpow(sw_diff_coeff, 2 * r_k - 2, 2 * r_k - 1)) *
+                (1.0 / cpow((-1.0 * a / b), 1, 2 * r_k - 1)) *
                 exp(1j * theta * float(2 * r_k - 2) / (2 * r_k - 1)) *
-                ((1.0 / phi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
+                ((-1.0 / phi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
                 (omega ** s)
                 for i in range(r_k) for j in range(r_k) 
                 for s in range(2 * r_k - 1) if i != j
             ] + [
-                (1.0 / cpow(sw_diff_coeff, 2 * r_k - 2, 2 * r_k - 1)) *
+                (1.0 / cpow((-1.0 * a / b), 1, 2 * r_k - 1)) *
                 exp(1j * theta * float(2 * r_k - 2) / (2 * r_k - 1)) *
-                ((1.0 / psi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
+                ((-1.0 / psi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
                 (omega ** s)
                 for i in range(r_k) for j in range(r_k) 
                 for s in range(2 * r_k - 1) if i != j
             ])
+
+            # OLD WAY
+            # dz_phases = ([
+            #     (1.0 / cpow(sw_diff_coeff, 2 * r_k - 2, 2 * r_k - 1)) *
+            #     exp(1j * theta * float(2 * r_k - 2) / (2 * r_k - 1)) *
+            #     ((1.0 / phi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
+            #     (omega ** s)
+            #     for i in range(r_k) for j in range(r_k) 
+            #     for s in range(2 * r_k - 1) if i != j
+            # ] + [
+            #     (1.0 / cpow(sw_diff_coeff, 2 * r_k - 2, 2 * r_k - 1)) *
+            #     exp(1j * theta * float(2 * r_k - 2) / (2 * r_k - 1)) *
+            #     ((1.0 / psi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
+            #     (omega ** s)
+            #     for i in range(r_k) for j in range(r_k) 
+            #     for s in range(2 * r_k - 1) if i != j
+            # ])
+
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < accuracy
             )
-
-        #########################
-        # TO DO: CLEAN UP ALSO TYPES i,ii,iii AS I DID FOR TYPE iv
-        #########################
 
         elif rp_type == 'type_IV':
             phases = [
@@ -877,8 +922,11 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
                     # order of magnitude of expected separation 
                     # of sheets at z_1
-                    dx = abs(sw_diff_coeff) * (dt ** (1.0 / float(r_i)))
+                    dx = abs(a / b) * (dt ** (1.0 / float(r_i)))
                     x_accuracy = min([accuracy, dx])
+                    # OLD
+                    # dx = abs(sw_diff_coeff) * (dt ** (1.0 / float(r_i)))
+                    # x_accuracy = min([accuracy, dx])
 
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
