@@ -19,7 +19,7 @@ class LoomConfig:
         self.options = {
             'Seiberg-Witten data': {
                 'description': 'Description',
-                'root_system': 'Root System',
+                'root_system': 'Root system',
                 'representation': 'Representation',
                 'casimir_differentials': 'Casimir differentials',
                 'differential_parameters': 'Parameters of differentials',
@@ -30,7 +30,7 @@ class LoomConfig:
                     'Ramification point finding method', 
             },
             'numerical parameters': {
-                'accuracy': 'Accurcay',
+                'accuracy': 'Accuracy',
                 'plot_range': 'Plot range',
                 'num_of_steps': 'Number of steps',
                 'num_of_iterations': 'Number of iterations',
