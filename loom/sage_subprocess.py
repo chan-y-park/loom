@@ -147,26 +147,19 @@ def compute_discriminant(f):
     The discriminant will be computed with respect to x.
     """
 
-    # TODO: find a more civilized way, instead of this very dirty trick
-    f_list = list(str(f))
-    for i, letter in enumerate(f_list):
-        if letter == 'I':
-            f_list[i] = '1j'
-    f_str = "".join(f_list)
-
+    # SECOND method: keep working with I and let sage deal with it
     try:
         disc_str = subprocess.check_output(
             ['sage', sage_script_dir + 'compute_discriminant.sage'] +
-            [f_str]
+            [str(f)]
         )
     except (KeyboardInterrupt, SystemExit):
         raise
-    print 'tha answer of sage'
-    print disc_str
+
     disc_sym = sympify(disc_str)
     if disc_sym == 0:
         return 0
     else:
-        return poly(sympify(disc_str))
+        return poly(disc_sym)
 
 
