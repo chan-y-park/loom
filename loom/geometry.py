@@ -430,18 +430,11 @@ class SWCurve:
             coeff_list = map(complex, sym_poly.all_coeffs())
             return numpy.roots(coeff_list)
         else:
-            # print '\n\nUSING SAGE TO GET SHEETS'
             f_x_eq = self.num_eq.subs(z, z_0).evalf(n=ROOT_FINDING_PRECISION)
-            # print '\n this is the f_x equation: {}'.format(f_x_eq)
             f_x_roots = sage_subprocess.solve_single_eq_x(
                 [f_x_eq],
                 precision=ROOT_FINDING_PRECISION,
             )
-            # print 'at z = {}'.format(z_0)
-            # print 'curve'
-            # print f_x_eq
-            # print 'roots'
-            # print map(complex, f_x_roots)
             return map(complex, f_x_roots)
 
 
@@ -533,12 +526,6 @@ class SWDataBase(object):
             .format(sympy.latex(self.ffr_curve.sym_eq),
                     sympy.latex(self.ffr_curve.num_eq))
         )
-        # z_0 = 0.136188373742-0.257456561838j
-        # print 'at z = {} the curve is \n{}\n{}'.format(
-        #     z_0, 
-        #     self.ffr_curve.num_eq.subs(z, z_0), 
-        #     sympy.simplify(self.ffr_curve.num_eq.subs(z, z_0))
-        # )
 
         # TODO: SWCurve in a general representation.
         if self.g_data.fundamental_representation_index == 1:
@@ -721,10 +708,6 @@ class SWDataBase(object):
                 punctures = regular_punctures + irregular_punctures
 
                 ffr_ramification_points = []
-                # print '\nthis is the curve'
-                # print ffr_curve.num_eq
-                # print '\nthese are the roots'
-                # print self.g_data.roots.tolist()
                 sols = get_ramification_points(
                     curve=ffr_curve, 
                     diff_params=diff_params,
@@ -864,14 +847,6 @@ class SWDataBase(object):
         # NOTE: does this correspond to the 7th irrep for E7?
         #       We need that one for that algebra
         ffr_xs = self.ffr_curve.get_xs(z_0) 
-
-        ### MUST REMOVE: this is temporary
-        # if len(ffr_xs) != 27:
-        #     print '\n\nNot enough sheets! '
-        #     print 'at z = {}'.format(z_0)
-        #     print 'ffr xs = '
-        #     print ffr_xs
-        ###
 
         if algebra_type == 'A':
             # Can consider ffr_xs to be aligned according to ffr_weights,
@@ -1048,6 +1023,8 @@ def get_punctures_from_config(
 
 # E_6 curve strings
 #
+# KEEP FOR NOW
+#
 # The 1st representation
 # tau_str = 'z + 1/z + ({u_6})'
 # q_1_str = (
@@ -1182,6 +1159,8 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
         # u_(1, 2, 3, 4, 5) = phi[2, 5, 6, 8, 9, 12]
         if g_rank == 6:
 
+            # KEEP FOR NOW
+
             # # The following goes with the 1st presentation of the SW curve.
             # tau = tau_str.format(u_6=phi[12])
             # q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
@@ -1225,9 +1204,6 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
                .format(phi_12=phi[12], q_1=q_1, q_2=q_2)
             )
 
-            # print '\nthe curve string'
-            # print curve_str
-
             return curve_str
 
     else:
@@ -1245,66 +1221,6 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
 
     return curve_str
 
-
-#def get_ramification_points(
-#    curve=None, 
-#    diff_params=None, 
-#    mt_params=None,
-#    z_rotation=None,
-#    accuracy=None, 
-#    punctures=None,
-#    method=None,
-#    g_data=None,
-#    logger_name='loom',
-#):
-#    logger = logging.getLogger(logger_name)
-#
-#    if curve.sym_eq is None:
-#        raise NotImplementedError
-#
-#    if method == 'discriminant':
-#        sols = get_ramification_points_using_discriminant(
-#            curve=curve, 
-#            diff_params=diff_params, 
-#            mt_params=mt_params,
-#            accuracy=accuracy, 
-#            punctures=punctures,
-#            g_data=g_data,
-#            logger_name=logger_name,
-#        )
-#    else:
-#        if method != 'system_of_eqs':
-#            logger.warning(
-#                'Unknown or no method set to find ramification points.\n'
-#                'Use system_of_eqs by default.'
-#            )
-#        sols = get_ramification_points_using_system_of_eqs(
-#            curve=curve, 
-#            diff_params=diff_params, 
-#            mt_params=mt_params,
-#            accuracy=accuracy, 
-#            punctures=punctures,
-#            logger_name=logger_name,
-#        )
-#
-#    ramification_points = []
-#
-#    for z_i, (x_j, m_x) in sols:
-#        rp = RamificationPoint(
-#            # Note: if we substitute z' = c z in F(x,z)=0,
-#            # where c is a phase, the position of punctures 
-#            # and branch points will rotate contravariantly
-#            # z_pt -> c^{-1} z_pt
-#            z=PSL2C(mt_params, z_i, numerical=True) / complex(z_rotation),
-#            Ciz=z_i, 
-#            x=x_j, 
-#            i=m_x, 
-#            label=('ramification point #{}'
-#                   .format(len(ramification_points)))
-#        )
-#        ramification_points.append(rp)
-#
-#    return ramification_points
 
 
 def get_ramification_points_using_system_of_eqs(
@@ -1524,42 +1440,12 @@ def get_ramification_points_using_discriminant(
 
         f_roots = None
 
-        # OLD METHOD
-        #
-        # Increase maxsteps & extraprec when root-finding fails.
-        # polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
-        # polyroots_extra_precision = ROOT_FINDING_PRECISION
-        # while f_roots is None:
-        #     try:
-        #         f_roots = mpmath.polyroots(
-        #             f_P_coeffs, 
-        #             maxsteps=polyroots_maxsteps,
-        #             extraprec=polyroots_extra_precision,
-        #         )
-        #     except NoConvergence:
-        #         logger.warning(
-        #             'mpmath.polyroots failed; increase maxsteps & '
-        #             'extraprec by 10.'
-        #         )
-        #         polyroots_maxsteps += 10
-        #         polyroots_extra_precision += 10
-
         fact_eq = f_P.as_expr().evalf(n=ROOT_FINDING_PRECISION, chop=True) 
         f_roots = sage_subprocess.solve_single_eq_z(
             [fact_eq],
             precision=ROOT_FINDING_PRECISION,
             logger_name=logger_name,
         )
-
-        # # TODO: numerical errors in the determination of 
-        # # roots of the discriminant induces an artificial 
-        # # separation in the roots sometimes.
-        # # This is especially the case with E_6, hence the following
-        # # criterion. Find something better.
-        # if g_data.type == 'E':
-        #     is_same_z = lambda a, b: abs(a - b) < 0.001
-        # else:
-        #     is_same_z = lambda a, b: abs(a - b) < accuracy   
 
         is_same_z = lambda a, b: abs(a - b) < accuracy    
         
@@ -1576,29 +1462,6 @@ def get_ramification_points_using_discriminant(
                     is_puncture = True
             if is_puncture:
                 continue
-            
-            # OLD METHOD
-            #      
-            # subs_dict[z] = z_i
-            # f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
-            #           for c in sympy.Poly(f, x).all_coeffs()]
-            # f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
-            # f_x_roots = None
-            #
-            # while f_x_roots is None:
-            #     try:
-            #         f_x_roots = mpmath.polyroots(
-            #             f_x_coeffs,
-            #             maxsteps=polyroots_maxsteps,
-            #             extraprec=polyroots_extra_precision
-            #         )
-            #     except NoConvergence:
-            #         logger.warning(
-            #             'mpmath.polyroots failed; increase maxsteps & '
-            #             'extraprec by 10.'
-            #         )
-            #         polyroots_maxsteps += 10
-            #         polyroots_extra_precision += 10
 
             subs_dict[z] = z_i
             f_x_eq = f.subs(subs_dict).evalf(n=ROOT_FINDING_PRECISION)
@@ -1608,15 +1471,10 @@ def get_ramification_points_using_discriminant(
                 precision=ROOT_FINDING_PRECISION,
                 logger_name=logger_name,
             )
-            # print 'this is the equation for sage : {}'.format(f_x_eq)
-            # print 'this is the solution {}'.format(f_x_roots)
 
             # In general x-roots have worse errors.
             is_same_x = lambda a, b: abs(a - b) < accuracy / 1e-2
             gathered_f_x_roots = gather(f_x_roots, is_same_x)
-
-            # print '\nfound potential ramification point'
-            # print [complex(z_i), gathered_f_x_roots]
 
             for x_j, xs in gathered_f_x_roots.iteritems():
                 # m_x is the multiplicity of x_j.
@@ -1809,21 +1667,8 @@ def align_sheets_for_e_6_ffr(
             # In this case we start from the 2nd sheet, not the first one
             # we handle this by shifting cyclically the argument of
             # g_1_sorted
-            #
-            # print '\n g_1_weights'
-            # print g_1_weights
-            # print '\n g_1_sorted'
-            # print g_1_sorted
+            
             for i in range(len(g_1_weights)):
-                #
-                # print 'i = {}'.format(i)
-                # print 'i+1 mod len(g_1_weights) = {}'.format(
-                #     (i + 1) % len(g_1_weights)
-                # )
-                # print 'g_1_weights[i] = {}'.format(g_1_weights[i])
-                # print 'g_1_sorted[(i + 1) % len(g_1_weights)] = {}'.format(
-                #     g_1_sorted[(i + 1) % len(g_1_weights)]
-                # )
                 sorted_sheets[g_1_weights[i]] = (
                     g_1_sorted[(i + 1) % len(g_1_weights)]
                 )
@@ -1854,12 +1699,9 @@ def align_sheets_for_e_6_ffr(
         # Note: these are the actual values of sheet coordinates
         s_q_0 = get_quintets(x_0, n_s_triples)
         if len(s_q_0) != NULL_TRIPLES_INDIVIDUAL:
-            print '\nthe sheets'
-            print sheets
-            print '\nthe choice of x_0'
-            print x_0
-            print '\nthe triples of x_0'
-            print s_q_0
+            logger.info('the sheets\n{}'.format(sheets))
+            logger.info('the choice of x_0\n{}'.format(x_0))
+            logger.info('the triples of x_0\n{}'.format(s_q_0))
             raise ValueError(
                 'Wrong number of sheet triples: {} instead of {}'.format(
                     len(s_q_0), NULL_TRIPLES_INDIVIDUAL

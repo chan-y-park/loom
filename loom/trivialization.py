@@ -733,9 +733,11 @@ class SWDataWithTrivialization(SWDataBase):
                     # the monodromy to every root gives back a root
                     # By direct checks, only one of the two options works
                     # so there should be no ambiguity left.
+
                     # TODO: print a warning if BOTH options give a Weyl 
                     # sheet matrix, because in that case there may be 
                     # ambiguity
+
                     # UPDATE: Disabling the option 0. Because in these types 
                     # of ramification points there should be no sheet that
                     # remains fixed by the permutation
@@ -849,9 +851,11 @@ class SWDataWithTrivialization(SWDataBase):
                     # the monodromy to every root gives back a root
                     # By direct checks, only one of the two options works
                     # so there should be no ambiguity left.
+                    
                     # TODO: print a warning if BOTH options give a Weyl 
                     # sheet matrix, because in that case there may be 
                     # ambiguity
+
                     # UPDATE: Disabling the option 0. Because in these types 
                     # of ramification points there should be no sheet that
                     # remains fixed by the permutation
@@ -1117,39 +1121,10 @@ class SWDataWithTrivialization(SWDataBase):
         logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
             [rp.z, rp.x], rp_type)
         )
-        rp.ramification_type = rp_type
 
-        print 'coefficients of SW diff'
-        print 'a = {}'.format(a)
-        print 'b = {}'.format(b)
-
-        
-
-        # KEEP UNTIL TESTING IS FINISHED.
-        # This is WRONG: DX_DZ is just wrong as it is written here.
-        # The whole idea that there is a unique closed form expression 
-        # for the differential near a ramification point 
-        # is also completely misguided.
-        #
-        # # Dx = Dx(Dz)
-        # Dx_Dz = (-1.0 * (a / b) * Dz) ** sympy.Rational(1, rp.i)
-        # local_diff = (
-        #     num_v.subs(x, rp.x + Dx_Dz).subs(z, rp.z + Dz)
-        #     .series(Dz, 0, 1).removeO()
-        # )
-        # # get the coefficient and the exponent of the leading term
-        # (diff_c, diff_e) = local_diff.leadterm(Dz)
-        # if diff_e == 0:
-        #     # remove the constant term from the local_diff
-        #     local_diff -= local_diff.subs(Dz, 0)
-        #     (diff_c, diff_e) = local_diff.leadterm(Dz)
-
-        # # rp.sw_diff_coeff = complex(-1 * a / b)
-        # rp.sw_diff_coeff = complex(diff_c.n())
-        
+        rp.ramification_type = rp_type    
         rp.sw_diff_coeffs_a_b = [complex(a), complex(b)]
         
-
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):
     """
@@ -1271,7 +1246,6 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
     """
     logger = logging.getLogger(logger_name)
     sorted_xs = []
-    # print 'reference xs = {}'.format(ref_xs)
 
     # It may happen that numerical inaccuracy of numpy
     # leads to believe that sheet tracking is going wrong.
@@ -1294,23 +1268,8 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 )
 
     for s_1 in ref_xs:
-        # closest_candidate = new_xs[0]
-        # min_d = abs(s_1 - closest_candidate)
-        # for s_2 in new_xs:
-        #     if abs(s_2 - s_1) < min_d:
-        #         min_d = abs(s_2 - s_1)
-        #         closest_candidate = s_2
         closest_candidate = nsmallest(1, new_xs, key=lambda x: abs(x - s_1))[0]
-        # print 'the closest to {} is {}'.format(s_1, closest_candidate)
         sorted_xs.append(closest_candidate)
-        # rel_min_d = abs(
-        #     (s_1 - closest_candidate) / (s_1 + closest_candidate)
-        # )
-        # for s_2 in new_xs:
-        #     if abs((s_2 - s_1)/max(map(abs, [s_2 , s_1]))) < rel_min_d:
-        #         min_d = abs((s_2 - s_1)/max(map(abs, [s_2 , s_1])))
-        #         closest_candidate = s_2
-        # sorted_xs.append(closest_candidate)
     
     if check_tracking is True:
         # Now we check that sheet tracking is not making a mistake.

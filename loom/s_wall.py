@@ -666,16 +666,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
         logger.debug('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
         logger.debug('Ramification index = {}'.format(r_i))
         logger.debug('Ramification type = {}'.format(rp_type))
-        # logger.debug(
-        #     'leading coefficient of SW diff = {}\n'.format(sw_diff_coeff)
-        # )
-        print('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
-        print('Ramification index = {}'.format(r_i))
-        print('Ramification type = {}'.format(rp_type))
-        # print(
-        #     'leading coefficient of SW diff = {}\n'.format(sw_diff_coeff)
-        # )
-        print(
+        logger.debug(
             'leading coefficients of SW diff: a = {}\t b={}\n'
             .format(sw_diff_coeffs_a_b[0], sw_diff_coeffs_a_b[1])
         )
@@ -696,15 +687,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 for i in range(r_i) for j in range(r_i) 
                 for s in range(r_i + 1) if i != j
             ])
-
-            # OLD WAY
-            # dz_phases = ([
-            #     (1.0 / cpow(sw_diff_coeff, r_i, r_i + 1)) *
-            #     exp(1j * theta * float(r_i) / (r_i + 1)) *
-            #     ((1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
-            #     for i in range(r_i) for j in range(r_i) 
-            #     for s in range(r_i + 1) if i != j
-            # ])
 
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
@@ -746,23 +728,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 for i in range(r_k) for j in range(r_k) 
                 for s in range(2 * r_k + 1) if i != j
             ])
-
-            # OLD WAY
-            # dz_phases = ([
-            #     (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
-            #     exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
-            #     ((1.0 / phi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
-            #     * (omega ** s)
-            #     for i in range(r_k) for j in range(r_k) 
-            #     for s in range(2 * r_k + 1) if i != j
-            # ] + [
-            #     (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
-            #     exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
-            #     ((1.0 / psi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
-            #     * (omega ** s)
-            #     for i in range(r_k) for j in range(r_k) 
-            #     for s in range(2 * r_k + 1) if i != j
-            # ])
 
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
@@ -810,23 +775,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 for s in range(2 * r_k - 1) if i != j
             ])
 
-            # OLD WAY
-            # dz_phases = ([
-            #     (1.0 / cpow(sw_diff_coeff, 2 * r_k - 2, 2 * r_k - 1)) *
-            #     exp(1j * theta * float(2 * r_k - 2) / (2 * r_k - 1)) *
-            #     ((1.0 / phi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
-            #     (omega ** s)
-            #     for i in range(r_k) for j in range(r_k) 
-            #     for s in range(2 * r_k - 1) if i != j
-            # ] + [
-            #     (1.0 / cpow(sw_diff_coeff, 2 * r_k - 2, 2 * r_k - 1)) *
-            #     exp(1j * theta * float(2 * r_k - 2) / (2 * r_k - 1)) *
-            #     ((1.0 / psi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
-            #     (omega ** s)
-            #     for i in range(r_k) for j in range(r_k) 
-            #     for s in range(2 * r_k - 1) if i != j
-            # ])
-
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
@@ -848,10 +796,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 2.0 * pi * 1j / 13.0
             )
             a, b = sw_diff_coeffs_a_b
-            print '(1.0 / cpow((-1.0 * a / b), 1, 13)) = {}'.format((1.0 / cpow((-1.0 * a / b), 1, 13)) )
-            print 'exp(1j * theta * 12.0 / 13.0) = {}'.format(exp(1j * theta * 12.0 / 13.0))
-            print 'omega = {}'.format(omega)
-
             dz_phases = ([
                 (1.0 / cpow((-1.0 * a / b), 1, 13)) *
                 exp(1j * theta * 12.0 / 13.0) *
@@ -866,13 +810,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             zetas = remove_duplicate(
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < accuracy
             )
-        
-        print 'the phases are'
-        print zetas
 
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0
-
         for zeta in zetas:
             raise_precision = True
             precision_level = 0
