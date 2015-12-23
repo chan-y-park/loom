@@ -126,6 +126,7 @@ class BranchPoint:
             self.order = None
 
             self.ffr_ramification_points = None
+            self.seeds = []
         else:
             self.set_from_json_data(json_data, ffr_ramification_points,)
 
@@ -140,6 +141,7 @@ class BranchPoint:
             'ffr_ramification_points': [
                 rp.label for rp in self.ffr_ramification_points
             ],
+            # 'seeds': map(ctor2, self.seeds),
         }
         return json_data
 
@@ -151,6 +153,7 @@ class BranchPoint:
         self.positive_roots = numpy.array(json_data['positive_roots'])
         self.order = json_data['order']
         self.ffr_ramification_points = []
+        # self.seeds = map(r2toc, json_data['seeds'])
         for rp_label in json_data['ffr_ramification_points']:
             for rp in ffr_ramification_points:
                 if rp_label == rp.label:

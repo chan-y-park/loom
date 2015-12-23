@@ -189,7 +189,7 @@ class SWall(object):
                 [br_loc.label, t, d]
                 for br_loc, t, d in self.cuts_intersections
             ],
-            # 'root_basepoint': self.root_basepoint,
+            # 'root_basepoint': ctor2(self.root_basepoint),
             'local_roots': [root.tolist() for root in self.local_roots],
             'local_weight_pairs': self.local_weight_pairs,
         }
@@ -210,7 +210,7 @@ class SWall(object):
                     self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
         self.local_weight_pairs = json_data['local_weight_pairs']
-        # self.root_basepoint = json_data['root_basepoint']
+        # self.root_basepoint = r2toc(json_data['root_basepoint'])
 
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
@@ -975,6 +975,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(min_dt / 100))
     logger.debug('Number of S-walls emanating = {}'.format(len(seeds)))
     logger.debug('these are the seeds {}\n'.format(seeds))
+    branch_point.seeds = seeds
     return seeds
 
 
