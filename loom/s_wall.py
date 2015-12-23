@@ -668,6 +668,12 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
         logger.debug(
             'leading coefficient of SW diff = {}\n'.format(sw_diff_coeff)
         )
+        print('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
+        print('Ramification index = {}'.format(r_i))
+        print('Ramification type = {}'.format(rp_type))
+        print(
+            'leading coefficient of SW diff = {}\n'.format(sw_diff_coeff)
+        )
 
         # Construct the seeding points for the branch point
         # by studying the type of ramification structure of the r.p.
@@ -802,6 +808,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < accuracy
             )
         
+        print 'the phases are'
+        print zetas
+
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0
 

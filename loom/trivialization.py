@@ -1119,13 +1119,37 @@ class SWDataWithTrivialization(SWDataBase):
         )
         rp.ramification_type = rp_type
 
+        print 'coefficients of SW diff'
+        print 'a = {}'.format(a)
+        print 'b = {}'.format(b)
+
         num_v = self.diff.num_v
+        print 'num_v = {}'.format(num_v)
+
+        # # Dx = Dx(Dz)
+        # Dx_Dz = (-1.0 * (a / b) * Dz) ** sympy.Rational(1, rp.i)
+        # local_diff = (
+        #     num_v.subs(x, rp.x + Dx_Dz).subs(z, rp.z + Dz)
+        #     .series(Dz, 0, 1).removeO()
+        # )
+        # # get the coefficient and the exponent of the leading term
+        # (diff_c, diff_e) = local_diff.leadterm(Dz)
+        # if diff_e == 0:
+        #     # remove the constant term from the local_diff
+        #     local_diff -= local_diff.subs(Dz, 0)
+        #     (diff_c, diff_e) = local_diff.leadterm(Dz)
+
+        # # rp.sw_diff_coeff = complex(-1 * a / b)
+        # rp.sw_diff_coeff = complex(diff_c.n())
+
         # Dx = Dx(Dz)
         Dx_Dz = (-1.0 * (a / b) * Dz) ** sympy.Rational(1, rp.i)
         local_diff = (
-            num_v.subs(x, rp.x + Dx_Dz).subs(z, rp.z + Dz)
+            (rp.x + Dx_Dz).subs(z, rp.z + Dz)
             .series(Dz, 0, 1).removeO()
         )
+        print 'local diff = {}'.format(local_diff)
+
         # get the coefficient and the exponent of the leading term
         (diff_c, diff_e) = local_diff.leadterm(Dz)
         if diff_e == 0:
@@ -1133,6 +1157,7 @@ class SWDataWithTrivialization(SWDataBase):
             local_diff -= local_diff.subs(Dz, 0)
             (diff_c, diff_e) = local_diff.leadterm(Dz)
 
+        print 'diff coefficient  = {}'.format(diff_c)
         # rp.sw_diff_coeff = complex(-1 * a / b)
         rp.sw_diff_coeff = complex(diff_c.n())
 
