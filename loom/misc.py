@@ -225,6 +225,8 @@ def parse_sym_dict_str(string):
     """
     result = []
     for k_v_str in string.lstrip('{').rstrip('}').split(','):
+        if not k_v_str.strip():
+            continue
         item = k_v_str.split(':')
         if len(item) != 2:
             item = k_v_str.split('=')
