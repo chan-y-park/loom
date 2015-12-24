@@ -695,6 +695,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             zetas = remove_duplicate(
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < (accuracy)
             )
+
+            print 'a = {}\nb = {}'.format(a, b)
+            print 'phases = {}'.format(zetas)
         
         elif rp_type == 'type_II':
             if r_i % 2 == 1:

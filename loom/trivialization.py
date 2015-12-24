@@ -1110,6 +1110,11 @@ class SWDataWithTrivialization(SWDataBase):
                 )
             )
 
+        ###### PL -- RESTART HERE: in general the curve is not of the types I, II, III, IV
+        ###### More generally one could have things like 3. x^2 + (0. + 0.5 I) z - (0. + 1.41421 I) x z
+        ###### In this case, it is necessary to account for the mixed terms xz.
+        ###### Need to think this through a bit more, see mathematica file for how to deal with this.
+
         if rp_type == 'type_I' or rp_type == 'type_II':
             a = local_curve.n().subs(Dx, 0).coeff(Dz)
             b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
