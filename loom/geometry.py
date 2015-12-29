@@ -1,14 +1,13 @@
 import sympy
 import numpy
 import logging
-import warnings
 import copy
-import pdb
+# import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo
 from sympy.mpmath import mp
-from sympy.mpmath.libmp.libhyper import NoConvergence
+# from sympy.mpmath.libmp.libhyper import NoConvergence
 from itertools import combinations
 from cmath import phase, pi
 from matplotlib import cm as mpl_color_map
@@ -224,7 +223,6 @@ class GData:
         num_p_roots = len(p_roots)
         p_root_colors = []
         for i in range(num_p_roots):
-            #r, g, b, alpha = mpl_color_map.jet((i / float(n_rts)), bytes=True)
             try:
                 color_map = mpl_color_map.viridis
             except AttributeError:
@@ -242,8 +240,10 @@ class GData:
             self.set_root_color_map()
 
         for i, p_root in enumerate(self.positive_roots):
-            if (numpy.array_equal(p_root, root) or
-                numpy.array_equal(-p_root, root)):
+            if (
+                numpy.array_equal(p_root, root) or
+                numpy.array_equal(-p_root, root)
+            ):
                 return self.root_color_map[i]
 
         logger.warning('No color mapped for the root {}'
@@ -665,7 +665,6 @@ class SWDataBase(object):
             )
             ffr_ramification_points.append(rp)
 
-
         for pi_div in range(max_pi_div + 1):
             if pi_div == 0:
                 # we study the case of no rotations at all.
@@ -951,7 +950,6 @@ class SWDataBase(object):
 
             return list(xs)
 
-
     def analyze_ffr_ramification_points(self):
         logger = logging.getLogger(self.logger_name)
         rp_type = None
@@ -1069,16 +1067,17 @@ class SWDataBase(object):
             rp.sw_diff_coeff = complex(diff_c.n())
 
 
-
 def get_punctures_from_config(
     config_punctures_string, label_prefix,
     diff_params, mt_params,
 ):
     punctures = []
 
-    if (config_punctures_string is None or
+    if (
+        config_punctures_string is None or
         config_punctures_string == 'None' or
-        config_punctures_string == ''):
+        config_punctures_string == ''
+    ):
         return punctures
 
     punctures_str = [
@@ -1210,6 +1209,7 @@ p_2_str = (
     '+ (({phi_5}))^2'
 )
 
+
 def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     """
     Construct a Seiberg-Witten curve in the 1st fundamental representation
@@ -1296,15 +1296,15 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
             
             # The following goes with the 3rd presentation of the SW curve.
             q_1 = q_1_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                                phi_8=phi[8], phi_9=phi[9])
+                                 phi_8=phi[8], phi_9=phi[9])
             p_1 = p_1_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                                phi_8=phi[8], phi_9=phi[9])
+                                 phi_8=phi[8], phi_9=phi[9])
             p_2 = p_2_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                                phi_8=phi[8], phi_9=phi[9])
+                                 phi_8=phi[8], phi_9=phi[9])
             q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
             curve_str = (
-               '(1/2)*(x^3)*({phi_12})^2 - ({q_1})*({phi_12}) + ({q_2})'
-               .format(phi_12=phi[12], q_1=q_1, q_2=q_2)
+                '(1/2)*(x^3)*({phi_12})^2 - ({q_1})*({phi_12}) + ({q_2})'
+                .format(phi_12=phi[12], q_1=q_1, q_2=q_2)
             )
 
             return curve_str
@@ -1346,10 +1346,12 @@ def get_ramification_points_using_system_of_eqs(
     num_factor, f_n_factors = sympy.factor_list(f_n)
     if len(f_n_factors) > 1:
         # TODO: check Casimir differentials too?
-        if (g_data.type == 'D' and
+        if (
+            g_data.type == 'D' and
             len(f_n_factors) == 2 and
-            (x, 2) in f_n_factors):
-            eq_1 = sympy.simplify(f_n / x**2)
+            (x, 2) in f_n_factors
+        ):
+            eq_1 = sympy.simplify(f_n / (x ** 2))
         else:
             logger.warning('The curve to find ramification points'
                            'has an unknown factorization: {} = {}.'
@@ -1721,7 +1723,7 @@ def align_sheets_for_e_6_ffr(
         # print 'radii'
         # print map(abs, gathered_sheets.keys())
 
-        if len(gathered_sheets)!=3:
+        if len(gathered_sheets) != 3:
             print 'The following sheets appear: '
             print sheets
             raise ValueError(
@@ -1736,7 +1738,6 @@ def align_sheets_for_e_6_ffr(
         # print r_0
         # print r_1
         # print r_2
-
 
         # build the three groups of sheets
         g_0 = [x for x in sheets if abs(abs(x) - r_0) < SHEET_NULL_TOLERANCE]

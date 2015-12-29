@@ -1,6 +1,6 @@
 import os
 import numpy
-import pdb
+# import pdb
 import Tkinter as tk
 
 import matplotlib
@@ -15,6 +15,7 @@ from sympy import oo
 
 from network_plot import NetworkPlotBase
 from misc import put_on_cylinder, get_splits_with_overlap
+
 
 class SpectralNetworkPlotBase(NetworkPlotBase):
     def draw(
@@ -122,13 +123,15 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                        '------------------------\n'
                        'phase : {}\n'.format(spectral_network.phase) +
                        '------------------------\n')
-        plot_legend += get_legend(g_data)
+        plot_legend += get_legend(
+            g_data=g_data,
+            branch_points=branch_points,
+            irregular_singularities=irregular_singularities,
+        )
 
         plot_legend += get_spectral_network_data_legend(
-                s_walls=spectral_network.s_walls, 
-                branch_points=branch_points,
-                irregular_singularities=irregular_singularities,
-                g_data=g_data,
+            s_walls=spectral_network.s_walls, 
+            g_data=g_data,
         )
 
         super(SpectralNetworkPlotBase, self).draw(
@@ -175,7 +178,7 @@ class NetworkPlot(SpectralNetworkPlotBase):
 
     def save(self, plot_dir, file_prefix=''):
         # TODO: change the current figure to plot_id.
-        digits = len(str(len(self.plots)-1))
+        digits = len(str(len(self.plots) - 1))
         for i, axes in enumerate(self.plots):
             self.change_current_plot(i)
             plot_file_path = os.path.join(
@@ -183,23 +186,18 @@ class NetworkPlot(SpectralNetworkPlotBase):
             )
             self.figure.savefig(plot_file_path)
 
-
     def change_current_plot(self, new_plot_idx):
         super(NetworkPlot, self).change_current_plot(new_plot_idx)
         if self.index_text is not None:
             self.index_text.set_text(
-                "{}/{}".format(self.current_plot_idx, len(self.plots)-1)
+                "{}/{}".format(self.current_plot_idx, len(self.plots) - 1)
             )
-
-
 
     def show_prev_plot(self, event):
         super(NetworkPlot, self).show_prev_plot(event)
 
-
     def show_next_plot(self, event):
         super(NetworkPlot, self).show_next_plot(event)
-
 
     def show(self):
         plot_idx = 0
@@ -209,24 +207,24 @@ class NetworkPlot(SpectralNetworkPlotBase):
 
         if(len(self.plots) > 1):
             button_width = .05
-            index_width = .03*len(str(len(self.plots)-1))
+            index_width = .03 * len(str(len(self.plots) - 1))
             button_height = .05
             button_bottom = .025
             center = .5
             margin = .005
 
-            axes_prev_rect = [center - index_width/2 - margin - button_width,
+            axes_prev_rect = [center - index_width / 2 - margin - button_width,
                               button_bottom, button_width, button_height]
             axes_prev = self.figure.add_axes(axes_prev_rect)
             self.button_prev = Button(axes_prev, '<')
             self.button_prev.on_clicked(self.show_prev_plot)
 
             self.index_text = self.figure.text(
-                center - index_width/2, (button_bottom+button_height)/2,
-                "{}/{}".format(self.current_plot_idx, len(self.plots)-1)
+                center - index_width / 2, (button_bottom + button_height) / 2,
+                "{}/{}".format(self.current_plot_idx, len(self.plots) - 1)
             )
 
-            axes_next_rect = [center + index_width/2 + margin,
+            axes_next_rect = [center + index_width / 2 + margin,
                               button_bottom, button_width, button_height]
             axes_next = self.figure.add_axes(axes_next_rect)
             self.button_next = Button(axes_next, '>')
@@ -245,11 +243,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
     whose parent is 'NetworkPlotBase'; just change the name of the
     parent in the definition of this class.
     """
-    def __init__(self,
-        master=None,
-        title=None,
-        plot_range=None,
-    ):
+    def __init__(self, master=None, title=None, plot_range=None,):
         super(NetworkPlotTk, self).__init__(
             matplotlib_figure=matplotlib.figure.Figure(),
             plot_range=plot_range,
@@ -287,19 +281,15 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
    
-
-
     def on_closing(self):
         self.toplevel.destroy()
         if self.master is None:
             self.root.destroy()
 
-
     def scale_action(self, scale_value):
         new_plot_idx = int(scale_value)
         self.update_current_plot(new_plot_idx)
         self.plot_idx_entry_var.set(new_plot_idx)
-
 
     def plot_idx_entry_change(self, *args):
         try:
@@ -334,10 +324,8 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
 
         return None
 
-
     def canvas_resize_callback(self, event):
         self.set_data_cursor()
-
 
     def show(self):
         plot_idx = 0
@@ -355,22 +343,22 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
             self.plot_idx_entry = tk.Entry(
                 self.toplevel,
                 textvariable=self.plot_idx_entry_var,
-                width=len(str(len(self.plots)-1)),
+                width=len(str(len(self.plots) - 1)),
             )
             self.plot_idx_entry.pack(side=tk.LEFT)
 
             tk.Label(
                 self.toplevel,
-                text='/{}'.format(len(self.plots)-1),
+                text='/{}'.format(len(self.plots) - 1),
             ).pack(side=tk.LEFT)
 
             self.plot_idx_scale = tk.Scale(
                 self.toplevel,
                 command=self.scale_action,
-                #length=100*len(self.plots),
+                # length=100*len(self.plots),
                 orient=tk.HORIZONTAL,
                 showvalue=0,
-                to=len(self.plots)-1,
+                to=len(self.plots) - 1,
                 variable=self.current_plot_idx,
             )
             self.plot_idx_scale.pack(
@@ -380,43 +368,63 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
             )
 
 
+def get_label(value, dictionary):
+    """
+    Returns the key of a dictionary entry.
+    Values of the dictionary must be numpy arrays.
+    """
+    is_in_dictionary = False
+    for v in dictionary.values():
+        if numpy.array_equal(v, value):
+            is_in_dictionary = True
+
+    if is_in_dictionary:
+        return [
+            k for k, v in dictionary.iteritems() if numpy.array_equal(v, value)
+        ][0]
+    else:
+        return 'Not a root: {}'.format(value)
+
+
 def make_root_dictionary(g_data):
     g_roots = list(g_data.roots)
-    root_dictionary = (
-                {'alpha_' + str(i) : rt for i, rt in enumerate(g_roots)}
-            )
+    root_dictionary = {'alpha_' + str(i): rt for i, rt in enumerate(g_roots)}
     return root_dictionary
+
 
 def make_weight_dictionary(g_data):
     g_weights = list(g_data.weights)
-    weight_dictionary = (
-                {'mu_' + str(i) : w for i, w in enumerate(g_weights)}
-            )
+    weight_dictionary = {'mu_' + str(i): w for i, w in enumerate(g_weights)}
     return weight_dictionary
 
 
-def get_spectral_network_data_legend(
-    s_walls=None,
+def get_legend(
+    g_data=None,
     branch_points=None,
     irregular_singularities=None,
-    g_data=None,
 ):
     root_dictionary = make_root_dictionary(g_data)
+    weight_dictionary = make_weight_dictionary(g_data)
+    root_labels = root_dictionary.keys()
+    roots = root_dictionary.values()
+    weight_pairs = [
+        [str('(mu_' + str(p[0]) + ', mu_' + str(p[1]) + ')') 
+         for p in g_data.ordered_weight_pairs(rt)]
+        for rt in roots
+    ]
+    weight_labels = weight_dictionary.keys()
+    weights = weight_dictionary.values()
 
-    legend = ('\t--- The S-Wall Data ---\n')
-    for s in s_walls:
-        rt_labels = [get_label(rt, root_dictionary) for rt in s.local_roots]
-        wt_labels = [
-            [
-                ['mu_' + str(pair[0]), 'mu_' + str(pair[1])] 
-                for pair in loc_wts
-            ] for loc_wts in s.local_weight_pairs
-        ]
+    legend = ('\t--- The Root System ---\n')
+    for i in range(len(roots)):
         legend += (
-            s.label + 
-            '\troot types : {}\n'.format(rt_labels) +
-            '\t\tsheet pairs : {}\n'.format(wt_labels)
+            root_labels[i] + ' : {}\n'.format(list(roots[i])) +
+            'ordered weight pairs : {}\n'.format(weight_pairs[i])
         )
+
+    legend += ('\t--- The Weight System ---\n')
+    for i in range(len(weights)):
+        legend += (weight_labels[i] + ' : {}\n'.format(list(weights[i])))
 
     legend += ('\t--- The Branch Points ---\n')
     for bp in branch_points:
@@ -440,46 +448,27 @@ def get_spectral_network_data_legend(
     return legend
 
 
-def get_label(value, dictionary):
-    """
-    Returns the key of a dictionary entry.
-    Values of the dictionary must be numpy arrays.
-    """
-    is_in_dictionary = False
-    for v in dictionary.values():
-        if numpy.array_equal(v, value):
-            is_in_dictionary = True
-
-    if is_in_dictionary:
-        return [
-            k for k, v in dictionary.iteritems() if numpy.array_equal(v, value)
-        ][0]
-    else:
-        return 'Not a root: {}'.format(value)
-
-
-def get_legend(g_data):
+def get_spectral_network_data_legend(
+    s_walls=None,
+    g_data=None,
+):
     root_dictionary = make_root_dictionary(g_data)
-    weight_dictionary = make_weight_dictionary(g_data)
-    root_labels = root_dictionary.keys()
-    roots = root_dictionary.values()
-    weight_pairs=[
-        [str('(mu_'+str(p[0])+', mu_'+str(p[1])+')') 
-         for p in g_data.ordered_weight_pairs(rt)]
-        for rt in roots
-    ]
-    weight_labels = weight_dictionary.keys()
-    weights = weight_dictionary.values()
 
-    legend = ('\t--- The Root System ---\n')
-    for i in range(len(roots)):
+    legend = ('\t--- The S-Wall Data ---\n')
+    for s in s_walls:
+        rt_labels = [get_label(rt, root_dictionary) for rt in s.local_roots]
+        wt_labels = [
+            [
+                ['mu_' + str(pair[0]), 'mu_' + str(pair[1])] 
+                for pair in loc_wts
+            ] for loc_wts in s.local_weight_pairs
+        ]
         legend += (
-            root_labels[i] + ' : {}\n'.format(list(roots[i])) +
-            'ordered weight pairs : {}\n'.format(weight_pairs[i])
+            s.label + 
+            '\troot types : {}\n'.format(rt_labels) +
+            '\t\tsheet pairs : {}\n'.format(wt_labels)
         )
 
-    legend += ('\t--- The Weight System ---\n')
-    for i in range(len(weights)):
-        legend += (weight_labels[i] + ' : {}\n'.format(list(weights[i])))
-
     return legend
+
+

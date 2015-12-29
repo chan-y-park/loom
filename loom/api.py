@@ -7,7 +7,7 @@ import logging
 import subprocess
 import signal
 import matplotlib
-import pdb
+# import pdb
 
 from logutils_queue import QueueHandler
 from config import LoomConfig
@@ -61,7 +61,7 @@ def set_logging(
             fh = logging.handlers.RotatingFileHandler(
                 logging_file_name,
                 mode='w',
-                maxBytes=10*1024*1024,
+                maxBytes=(10 * 1024 * 1024),
                 backupCount=10,
             )
         else:
@@ -126,7 +126,6 @@ def load_spectral_network(
 ):
     logger = logging.getLogger(logger_name)
     
-
     if data_dir is None:
         return (None, None)
     logger.info('Opening data directory "{}"...'.format(data_dir))
