@@ -1,0 +1,3 @@
+[submodule "loom/modules/mpldatacursor"]
+	path = loom/modules/mpldatacursor
+	url = https://github.com/joferkington/mpldatacursor.git
