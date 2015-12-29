@@ -10,7 +10,7 @@ from sympy import oo
 from sympy.mpmath import mp
 from sympy.mpmath.libmp.libhyper import NoConvergence
 from itertools import combinations
-from cmath import phase
+from cmath import phase, pi
 from matplotlib import cm as mpl_color_map
 
 import sage_subprocess
@@ -369,6 +369,7 @@ class SWCurve:
                  z_rotation=sympy.sympify('1'), ffr=False):
         self.sym_eq = None
         self.num_eq = None
+        self.g_data = g_data
 
         if ffr is True:
             # Build a cover in the first fundamental representation.
@@ -381,8 +382,7 @@ class SWCurve:
                 raise ValueError('syntax error in the Casimir differentials.')
             # NOTE: We apply PSL2C only to the numerical curve
             # for the simplicity of analysis.
-            #Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
-            Ciz = PSL2C(mt_params, z, inverse=True) 
+            Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
             self.num_eq = (
                 self.sym_eq.subs(z, Ciz).subs(diff_params)
                 .evalf(n=ROOT_FINDING_PRECISION, chop=True)
@@ -412,10 +412,24 @@ class SWCurve:
         coeff_list = map(complex, sym_poly.all_coeffs())
         return numpy.roots(coeff_list)
 
+        # f_x_eq = self.num_eq.subs(z, z_0).evalf(n=ROOT_FINDING_PRECISION)
+        # # print '\n this is the f_x equation: {}'.format(f_x_eq)
+        # f_x_roots = sage_subprocess.solve_single_eq_x(
+        #     [f_x_eq],
+        #     precision=ROOT_FINDING_PRECISION,
+        # )
+        # # print 'at z = {}'.format(z_0)
+        # # print 'curve'
+        # # print f_x_eq
+        # # print 'roots'
+        # # print map(complex, f_x_roots)
+        # return map(complex, f_x_roots)
+
 
 class SWDiff:
-    def __init__(self, v_str, g_data=None, diff_params=None, mt_params=None,
-                 z_rotation=sympy.sympify('1'),):
+    def __init__(
+            self, v_str, g_data=None, diff_params=None, mt_params=None,
+            z_rotation=sympy.sympify('1'),):
         # sym_v is a SymPy expression. 
         self.sym_v = sympy.sympify(v_str)
         # num_v is from sym_v with its parameters 
@@ -459,7 +473,6 @@ class SWDataBase(object):
         self.curve = None
         self.diff = None
 
-
         if config['mt_params'] is not None:
             mt_params = sympy.sympify(config['mt_params'])
         else:
@@ -496,7 +509,8 @@ class SWDataBase(object):
 
         logger.info(
             'Seiberg-Witten curve in the 1st fundamental '
-            'representation:\n{} = 0\n(numerically\n{}=0\n)'
+            'representation:\n(note: here x really stands for \lambda)'
+            '\n{} = 0\n(numerically\n{}=0\n)'
             .format(sympy.latex(self.ffr_curve.sym_eq),
                     sympy.latex(self.ffr_curve.num_eq))
         )
@@ -666,7 +680,7 @@ class SWDataBase(object):
             )
             ffr_ramification_points.append(rp)
 
-        # Rotate the z-plane until branch points are not aligned vertically.
+
         for pi_div in range(max_pi_div + 1):
             if pi_div == 0:
                 # we study the case of no rotations at all.
@@ -713,14 +727,12 @@ class SWDataBase(object):
                      for r in ffr_ramification_points if r.z != oo], 
                     self.accuracy,
                 )
-
                 # z-coords of punctures.
                 pctzs = n_remove_duplicate(
                     [p.z / complex(z_plane_rotation)
                      for p in punctures if p.z != oo],
                     self.accuracy,
                 )
-                
                 z_list = bpzs + pctzs
                 z_r_list = [z.real for z in z_list]
                 if len(z_r_list) > 1:
@@ -754,6 +766,10 @@ class SWDataBase(object):
                     break
                 
                 else:
+                    # This will block rotation of the z-plane
+                    # enable only for debugging purposes
+                    # rotate_z_plane = False
+                    #
                     logger.info(
                         'Some branch points or punctures '
                         'are vertically aligned.\n'
@@ -804,8 +820,8 @@ class SWDataBase(object):
         """
         Returns (aligned_ffr_xs, aligned_xs), where each element is
         a numpy array of x-coordinates of the fibers over z.
-        The order of x's is the same as the order of the weights
-        in g_data.weights.
+        The order of x's is compatible with the order of the weights
+        in g_data.weights, in the sense that they are linearly related.
         """
         logger = logging.getLogger(self.logger_name)
 
@@ -820,6 +836,14 @@ class SWDataBase(object):
         # NOTE: does this correspond to the 7th irrep for E7?
         #       We need that one for that algebra
         ffr_xs = self.ffr_curve.get_xs(z_0) 
+
+        ### MUST REMOVE: this is temporary
+        # if len(ffr_xs) != 27:
+        #     print '\n\nNot enough sheets! '
+        #     print 'at z = {}'.format(z_0)
+        #     print 'ffr xs = '
+        #     print ffr_xs
+        ###
 
         if algebra_type == 'A':
             # Can consider ffr_xs to be aligned according to ffr_weights,
@@ -920,8 +944,10 @@ class SWDataBase(object):
         elif algebra_type == 'E':
             if algebra_rank == 6:
                 ffr_weights_list = list(self.g_data.ffr_weights)
-                aligned_ffr_xs = sort_sheets_for_e_6_ffr(
-                    ffr_xs, ffr_weights_list
+                aligned_ffr_xs = align_sheets_for_e_6_ffr(
+                    ffr_xs, 
+                    ffr_weights_list,
+                    near_degenerate_branch_locus=near_degenerate_branch_locus,
                 )
                 if fund_rep_index == 1:
                     xs = aligned_ffr_xs
@@ -935,17 +961,22 @@ class SWDataBase(object):
 
     def get_xs_of_weights_from_ffr_xs(self, ffr_xs):
         g_data = self.g_data
-        # xs = numpy.zeros(len(g_data.weights), dtype=complex)
-        xs = [0.0j for i in range(len(g_data.weights))]
+        fund_rep_index = g_data.fundamental_representation_index
 
-        if g_data.type == 'A' or g_data.type == 'D':
-            for i, cs in enumerate(g_data.weight_coefficients):
-                for j, c_j in enumerate(cs):
-                    xs[i] += c_j * ffr_xs[j]
+        if fund_rep_index == 1:
+            return ffr_xs
         else:
-            raise NotImplementedError
+            # xs = numpy.zeros(len(g_data.weights), dtype=complex)
+            xs = [0.0j for i in range(len(g_data.weights))]
 
-        return list(xs)
+            if g_data.type == 'A' or g_data.type == 'D':
+                for i, cs in enumerate(g_data.weight_coefficients):
+                    for j, c_j in enumerate(cs):
+                        xs[i] += c_j * ffr_xs[j]
+            else:
+                raise NotImplementedError
+
+            return list(xs)
 
 
     def analyze_ffr_ramification_points(self):
@@ -956,6 +987,10 @@ class SWDataBase(object):
         # use Dz = z - rp.z & Dx = x - rp.x
         Dz, Dx = sympy.symbols('Dz, Dx')
         for rp in self.ffr_ramification_points:
+            logger.info(
+                "Analyzing a ramification point at z = {}, x={}."
+                .format(rp.z, rp.x)
+            )
             local_curve = (
                 num_eq.subs(x, rp.x + Dx).subs(z, rp.z + Dz)
                 .series(Dx, 0, rp.i + 1).removeO()
@@ -977,9 +1012,21 @@ class SWDataBase(object):
             # TODO: avoid using self.* repeatedly, define a local variable.
             g_data = self.g_data
             zero_threshold = self.accuracy * 100
-            if (self.g_data.type == 'A' or 
+            # XXX: Temporary case for D-type AD theories.
+            if (
+                g_data.type == 'D' and rp.i == 4 and abs(rp.x) < zero_threshold
+            ):
+                # No need to grow S-walls from this ramification point,
+                # there will be another ramification point that gives
+                # the same S-wall. This ramification point is a placeholder.
+                rp.ramification_type = 'type_AD'
+                rp.sw_diff_coeff = None 
+                continue
+            elif (
+                self.g_data.type == 'A' or 
                 ((self.g_data.type == 'D' or self.g_data.type == 'E') and 
-                    abs(rp.x) > zero_threshold)):
+                 abs(rp.x) > zero_threshold)
+            ):
                 rp_type = 'type_I'
             elif (
                 self.g_data.type == 'D' and abs(rp.x) < zero_threshold
@@ -992,22 +1039,6 @@ class SWDataBase(object):
                 and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
             ):
                 rp_type = 'type_III'
-            # XXX: Temporary case for D-type AD theories.
-            elif (
-                g_data.type == 'D' and rp.i == 4 and abs(rp.x) < zero_threshold
-            ):
-                # No need to grow S-walls from this ramification point,
-                # there will be another ramification point that gives
-                # the same S-wall. This ramification point is a placeholder.
-                rp.ramification_type = 'type_AD'
-                rp.sw_diff_coeff = None 
-                continue
-#            else:
-#                rp_type = 'type_IV'
-#                raise Exception(
-#                    'Cannot handle this type of ramification point'
-#                    .format(local_curve)
-#                )
             elif (
                 self.g_data.type == 'E' and self.g_data.rank == 6
                 and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
@@ -1084,18 +1115,15 @@ def get_punctures_from_config(
     for p_n, p_str in enumerate(punctures_str):
         if len(p_str) == 0:
             continue
+
         Cipz = sympy.sympify(p_str.strip()).subs(diff_params)
         pz = PSL2C(mt_params, Cipz)
+
         if pz == oo:
             npz = oo
         else:
-            # Note: if we substitute z' = c z in F(x,z)=0,
-            # where c is a phase, the position of punctures 
-            # and branch points will rotate contravariantly
-            # z_pt -> c^{-1} z_pt
-            npz = complex(
-                pz.evalf(n=ROOT_FINDING_PRECISION, chop=True)
-            )
+            npz = complex(pz.evalf(n=ROOT_FINDING_PRECISION, chop=True))
+
         punctures.append(
             Puncture(
                 z=npz, Ciz=Cipz,
@@ -1104,27 +1132,78 @@ def get_punctures_from_config(
         )
     return punctures
 
-## E_6 curve strings
-#tau_str = 't + 1/t + {u_6}'
-#q_1_str = (
-#    '270*x^(15) + 342*({u_1})*x^(13) + 162*({u_1})^2*x^(11)'  
-#    '- 252*({u_2})*x^(10) + (26*({u_1})^3 + 18*({u_3}))*x^9' 
-#    '- 162*({u_1})*({u_2})*x^8 + (6*({u_1})*({u_3}) - 27*({u_4}))*x^7' 
-#    '- (30*({u_1})^2*({u_2}) - 36*({u_5}))*x^6' 
-#    '+ (27*({u_2})^2 - 9*({u_1})*({u_4}))*x^5' 
-#    '- (3*({u_2})*({u_3}) - 6*({u_1})*({u_5}))*x^4' 
-#    '- 3*({u_1})*({u_2})^2*x^3 - 3*({u_2})*({u_5})*x - ({u_2})^3'
-#)
-#q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
-#p_1_str = (
-#    '78*x^10 + 60*({u_1})*x^8 + 14*({u_1})^2*x^6 - 33*({u_2})*x^5' 
-#    '+ 2*({u_3})*x^4 - 5*({u_1})*({u_2})*x^3 - ({u_4})*x^2 - ({u_5})*x'
-#    '- ({u_2})^2'
-#)
-#p_2_str = (
-#    '12*x^10 + 12*({u_1})*x^8 + 4*({u_1})^2*x^6 - 12*({u_2})*x^5 + ({u_3})*x^4' 
-#    '- 4*({u_1})*({u_2})*x^3 - 2*({u_4})*x^2 + 4*({u_5})*x  + ({u_2})^2'
-#)
+
+# E_6 curve strings
+#
+# The 1st representation
+# tau_str = 'z + 1/z + ({u_6})'
+# q_1_str = (
+#     '270*x^(15) + 342*(({u_1}))*x^(13) + 162*(({u_1}))^2*x^(11)'  
+#     '- 252*(({u_2}))*x^(10) + (26*(({u_1}))^3 + 18*(({u_3})))*x^9' 
+#     '- 162*(({u_1}))*(({u_2}))*x^8 + (6*(({u_1}))*(({u_3})) '
+#     '- 27*(({u_4})))*x^7' 
+#     '- (30*(({u_1}))^2*(({u_2})) - 36*(({u_5})))*x^6' 
+#     '+ (27*(({u_2}))^2 - 9*(({u_1}))*(({u_4})))*x^5' 
+#     '- (3*(({u_2}))*(({u_3})) - 6*(({u_1}))*(({u_5})))*x^4' 
+#     '- 3*(({u_1}))*(({u_2}))^2*x^3 - 3*(({u_2}))*(({u_5}))*x '
+#     '- (({u_2}))^3'
+# )
+# q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
+# p_1_str = (
+#     '78*x^10 + 60*(({u_1}))*x^8 + 14*(({u_1}))^2*x^6 '
+#     '- 33*(({u_2}))*x^5' 
+#     '+ 2*(({u_3}))*x^4 - 5*(({u_1}))*(({u_2}))*x^3 - (({u_4}))*x^2 '
+#     '- (({u_5}))*x - (({u_2}))^2'
+# )
+# p_2_str = (
+#     '12*x^10 + 12*(({u_1}))*x^8 + 4*(({u_1}))^2*x^6 '
+#     '- 12*(({u_2}))*x^5 + (({u_3}))*x^4' 
+#     '- 4*(({u_1}))*(({u_2}))*x^3 - 2*(({u_4}))*x^2 + 4*(({u_5}))*x '
+#     '+ (({u_2}))^2'
+# )
+
+
+# The 2nd representation
+# Another version of the SW curve, obtained after replacing 
+# x -> - z x / 2
+# so that now x ~ \lambda_{SW}
+#
+# phi_12_str = '({u_6})'
+# q_1_str = (
+#     '-(13/256) * x^9 * ({u_1})^3 * z^9 '
+#     '- 15/32 * x^6 * ({u_1})^2 * ({u_2}) * z^6'
+#     '-(81 * x^(11) * ({u_1})^2 * z^(11))/(1024) '
+#     '+ (3/8) * x^3 * ({u_1}) * ({u_2})^2 * z^3 '
+#     '- (81/128) * x^8 * ({u_1}) * ({u_2}) * z^8'
+#     '- (3/64) * x^7 * ({u_1}) * ({u_3}) * z^7 '
+#     '+ (9 / 32) * x^5 * ({u_1}) * ({u_4}) * z^5'
+#     '+ (3/8) * x^4 * ({u_1}) * ({u_5}) * z^4 '
+#     '- (171 * x^(13) * ({u_1}) * z^(13))/(4096)'
+#     '- ({u_2})^3 - (27/32) * x^5 * ({u_2})^2 * z^5 '
+#     '- (3/16) * x^4 * ({u_2}) * ({u_3}) * z^4'
+#     '+ (3/2) * x * ({u_2}) * ({u_5}) * z '
+#     '- (63/256) * x^(10) * ({u_2}) * z^(10) '
+#     '- (9/256) * x^9 * ({u_3}) * z^9 '
+#     '+ (27/128) * x^7 * ({u_4}) * z^7 '
+#     '+ (9/16) * x^6 * ({u_5}) * z^6 '
+#     '- (135 * x^(15) * z^(15))/(16384)'
+# )
+# q_2_str = '1/2 * ((-2) / (x * z))^3 *(({q_1})^2 - ({p_1})^2*({p_2}))'
+# p_1_str = (
+#     '(7/32) * x^6 * ({u_1})^2 * z^6 + (5/8) * x^3 * ({u_1}) * ({u_2}) * z^3' 
+#     '+ (15/64) * x^8 * ({u_1}) * z^8 - ({u_2})^2 '
+#     '+ (33/32) * x^5 * ({u_2}) * z^5 + (1/8) * x^4 * ({u_3}) * z^4 '
+#     '- (1/4) * x^2 * ({u_4}) * z^2 + (x * ({u_5}) * z)/2 '
+#     '+ (39 * x^(10) * z^(10))/512'
+# )
+# p_2_str = (
+#     '(1/256) * x * z * (16 * x^5 * ({u_1})^2 * z^5 '
+#     '+ 12 * x^7 * ({u_1}) * z^7 + 16 * x^3 * ({u_3}) * z^3 '
+#     '- 128 * x * ({u_4}) * z - 512 * ({u_5}) + 3 * x^9 * z^9) '
+#     '+ (1/8) * ({u_2}) * (4 * x^3 * ({u_1}) * z^3 + 3 * x^5 * z^5) '
+#     '+ ({u_2})^2'
+# )
+
 
 # The 3rd representation
 # The E_6 curve in Class S form
@@ -1255,9 +1334,6 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
                .format(phi_12=phi[12], q_1=q_1, q_2=q_2)
             )
 
-            # print '\nthe curve string'
-            # print curve_str
-
             return curve_str
     else:
         raise NotImplemented(
@@ -1357,23 +1433,70 @@ def get_ramification_points_using_discriminant(
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
-    sols = []
+    sols = []    
+    
+    # Old way -- keep until testing is complete:
+    # f = curve.sym_eq
+    # Make f into the form of rf = f_n/f_d
+    # rf = sympy.cancel(f)
+    # rf = sympy.cancel(f.subs(subs_dict))
+    # f_n, f_d = rf.as_numer_denom()
+    # subs_dict = copy.deepcopy(diff_params)
+    
+    # New way:
     f = curve.sym_eq
     # Make f into the form of rf = f_n/f_d
-    rf = sympy.cancel(f)
-    f_n, f_d = rf.as_numer_denom()
     subs_dict = copy.deepcopy(diff_params)
-    # Find the roots of D(z), the discriminant of f(x, z)
-    # as a polynomial of x. 
+    rf = sympy.simplify(sympy.cancel(sympy.simplify(f.subs(subs_dict))))
+    f_n, f_d = rf.as_numer_denom()
+    
+    # # Find the roots of D(z), the discriminant of f(x, z)
+    # # as a polynomial of x. 
+    # # TODO: test if sage's discriminant works well also with
+    # # A and D-types curves. Then evaluate whether to get rid of
+    # # the sympy discriminant for them.
+    # if g_data.type == 'E':
+    #     D_z = sage_subprocess.compute_discriminant(f_n.subs(subs_dict))
+    # else:
+    #     D_z = sympy.discriminant(f_n.subs(subs_dict), x)
+
+    # print 'f_n'
+    # print f_n
+    # print 'subs_dict'
+    # print subs_dict
+    # print 'f_n.subs(subs_dict)'
+    # print f_n.subs(subs_dict)
+
     D_z = sympy.discriminant(f_n.subs(subs_dict), x)
 
     if D_z == 0:
-        logger.info('The discriminant of F(x,z) is identically zero')
+        logger.info(
+            'The discriminant of F(x,z) is identically zero. '
+            'Will work with an effective discriminant.'
+        )
         if g_data.type == 'A':
             D_z = sympy.discriminant(f_n.subs(subs_dict) / x, x)
         if g_data.type == 'D':
             D_z = sympy.discriminant(f_n.subs(subs_dict) / (x ** 2), x)
-        logger.info(
+        # NOTE: think through possible generalizations here,
+        # this is only handling certain special cases with E_6
+        # i.e. the maximally degenerate branch-point, occurring 
+        # at the origin of the coulomb branch of pure E_6 SYM
+        if g_data.type == 'E':
+            logger.info(
+                'will work with renormalized curve \n{}'.format(
+                    f_n.subs(subs_dict) / (x ** 3)
+                )
+            )
+            logger.debug(
+                'after simplification \n{}'.format(
+                    sympy.simplify(f_n.subs(subs_dict) / (x ** 3))
+                )
+            )
+            D_z = sympy.discriminant(
+                sympy.simplify(f_n.subs(subs_dict) / (x ** 3)), x
+            )
+        logger.debug(
             'Will work with the effective discriminant:\n{}'.format(D_z)
         )
 
@@ -1382,6 +1505,7 @@ def get_ramification_points_using_discriminant(
     for fact in factors:
         logger.debug('stuyding roots of factor {}'.format(fact))
         # separate the factor itself and the multiplicity
+        f_multiplicity = fact[1]
         f_P = sympy.Poly(fact[0], z)
         # f_m = fact[1]
         cs = [
@@ -1391,26 +1515,48 @@ def get_ramification_points_using_discriminant(
             for c_sym in f_P.all_coeffs()
         ]
         f_P_coeffs = [mpmath.mpc(*c) for c in cs]
-        # Increase maxsteps & extraprec when root-finding fails.
-        f_roots = None
-        polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
-        polyroots_extra_precision = ROOT_FINDING_PRECISION
-        while f_roots is None:
-            try:
-                f_roots = mpmath.polyroots(
-                    f_P_coeffs, 
-                    maxsteps=polyroots_maxsteps,
-                    extraprec=polyroots_extra_precision,
-                )
-            except NoConvergence:
-                logger.warning(
-                    'mpmath.polyroots failed; increase maxsteps & extraprec '
-                    'by 10.'
-                )
-                polyroots_maxsteps += 10
-                polyroots_extra_precision += 10
 
-        is_same_z = lambda a, b: abs(a - b) < accuracy
+        f_roots = None
+
+        # OLD METHOD
+        #
+        # Increase maxsteps & extraprec when root-finding fails.
+        # polyroots_maxsteps = ROOT_FINDING_MAX_STEPS
+        # polyroots_extra_precision = ROOT_FINDING_PRECISION
+        # while f_roots is None:
+        #     try:
+        #         f_roots = mpmath.polyroots(
+        #             f_P_coeffs, 
+        #             maxsteps=polyroots_maxsteps,
+        #             extraprec=polyroots_extra_precision,
+        #         )
+        #     except NoConvergence:
+        #         logger.warning(
+        #             'mpmath.polyroots failed; increase maxsteps & '
+        #             'extraprec by 10.'
+        #         )
+        #         polyroots_maxsteps += 10
+        #         polyroots_extra_precision += 10
+
+        fact_eq = f_P.as_expr().evalf(n=ROOT_FINDING_PRECISION, chop=True) 
+        f_roots = sage_subprocess.solve_single_eq_z(
+            [fact_eq],
+            precision=ROOT_FINDING_PRECISION,
+            logger_name=logger_name,
+        )
+
+        # # TODO: numerical errors in the determination of 
+        # # roots of the discriminant induces an artificial 
+        # # separation in the roots sometimes.
+        # # This is especially the case with E_6, hence the following
+        # # criterion. Find something better.
+        # if g_data.type == 'E':
+        #     is_same_z = lambda a, b: abs(a - b) < 0.001
+        # else:
+        #     is_same_z = lambda a, b: abs(a - b) < accuracy   
+
+        is_same_z = lambda a, b: abs(a - b) < accuracy    
+        
         gathered_f_roots = gather(f_roots, is_same_z)  
 
         # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
@@ -1424,37 +1570,57 @@ def get_ramification_points_using_discriminant(
                     is_puncture = True
             if is_puncture:
                 continue
-                    
+            
+            # OLD METHOD
+            #      
+            # subs_dict[z] = z_i
+            # f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
+            #           for c in sympy.Poly(f, x).all_coeffs()]
+            # f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
+            # f_x_roots = None
+            #
+            # while f_x_roots is None:
+            #     try:
+            #         f_x_roots = mpmath.polyroots(
+            #             f_x_coeffs,
+            #             maxsteps=polyroots_maxsteps,
+            #             extraprec=polyroots_extra_precision
+            #         )
+            #     except NoConvergence:
+            #         logger.warning(
+            #             'mpmath.polyroots failed; increase maxsteps & '
+            #             'extraprec by 10.'
+            #         )
+            #         polyroots_maxsteps += 10
+            #         polyroots_extra_precision += 10
+
             subs_dict[z] = z_i
-            f_x_cs = [c.evalf(subs=subs_dict, n=ROOT_FINDING_PRECISION) 
-                      for c in sympy.Poly(f, x).all_coeffs()]
-            f_x_coeffs = [mpmath.mpc(*c.as_real_imag()) for c in f_x_cs]
-            f_x_roots = None
-            while f_x_roots is None:
-                try:
-                    f_x_roots = mpmath.polyroots(
-                        f_x_coeffs,
-                        maxsteps=polyroots_maxsteps,
-                        extraprec=polyroots_extra_precision
-                    )
-                except NoConvergence:
-                    logger.warning(
-                        'mpmath.polyroots failed; increase maxsteps & '
-                        'extraprec by 10.'
-                    )
-                    polyroots_maxsteps += 10
-                    polyroots_extra_precision += 10
+            f_x_eq = f.subs(subs_dict).evalf(n=ROOT_FINDING_PRECISION)
+            # print '\n this is the f_x equation: {}'.format(f_x_eq)
+            f_x_roots = sage_subprocess.solve_single_eq_x(
+                [f_x_eq],
+                precision=ROOT_FINDING_PRECISION,
+                logger_name=logger_name,
+            )
+            # print 'this is the equation for sage : {}'.format(f_x_eq)
+            # print 'this is the solution {}'.format(f_x_roots)
 
             # In general x-roots have worse errors.
             is_same_x = lambda a, b: abs(a - b) < accuracy / 1e-2
             gathered_f_x_roots = gather(f_x_roots, is_same_x)
+
+            # print '\nfound potential ramification point'
+            # print [complex(z_i), gathered_f_x_roots]
+
             for x_j, xs in gathered_f_x_roots.iteritems():
                 # m_x is the multiplicity of x_j.
+                # m_x = len(xs) * f_multiplicity
                 m_x = len(xs)
                 if m_x == 1:
                     continue
 
                 sols.append([complex(z_i), (complex(x_j), m_x)])
+
     return sols
 
 
@@ -1474,8 +1640,9 @@ def find_xs_at_z_0(sw_data, z_0, x_0=None, num_x=1, ffr=False):
     if x_0 is None:
         return xs_at_z_0
     else:
-        return sorted(xs_at_z_0,
-                      lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0)))[:num_x]
+        return sorted(
+            xs_at_z_0, lambda x1, x2: cmp(abs(x1 - x_0), abs(x2 - x_0))
+        )[:num_x]
    
 
 def null_weight_triples(weights):
@@ -1487,7 +1654,7 @@ def null_weight_triples(weights):
         w_k = weights[k]
         # FIXME: weights are in general arrays of floats, so
         # there may be a numerical issue in the following comparison.
-        if (w_i + w_j + w_k == null_vec):
+        if (w_i + w_j + w_k == null_vec).all():
             null_triples.append([i, j, k])
 
     return sorted(null_triples)
@@ -1495,9 +1662,31 @@ def null_weight_triples(weights):
 
 def null_sheet_triples(sheets):
     null_triples = []
-    for x_i, x_j, x_k in combinations(sheets, 3):
-        if (abs(x_i + x_j + x_k) < SHEET_NULL_TOLERANCE):
-            null_triples.append([x_i, x_j, x_k])
+    delta_x = SHEET_NULL_TOLERANCE
+    max_attemps = 100
+    n_attempt = 0
+
+    while len(null_triples) != N_NULL_TRIPLES and n_attempt < max_attemps:
+        for x_i, x_j, x_k in combinations(sheets, 3):
+            if (abs(x_i + x_j + x_k) < delta_x):
+                null_triples.append([x_i, x_j, x_k])
+
+        n_attempt += 1
+        if len(null_triples) != N_NULL_TRIPLES:
+            print '\n{} triples'.format(len(null_triples))
+            print 'delta_x = {}'.format(delta_x)
+            if len(null_triples) < N_NULL_TRIPLES:
+                delta_x = delta_x * 1.2
+            elif len(null_triples) > N_NULL_TRIPLES:
+                delta_x = delta_x / 2
+            null_triples = []
+
+    if len(null_triples) != N_NULL_TRIPLES:
+        raise ValueError(
+            'Wrong number of overall sheet triples after {} attempts'.format(
+                n_attempt
+            )
+        )
 
     return sorted(null_triples)
 
@@ -1521,95 +1710,283 @@ def quintet_contained(e, quintet):
     return ans
 
 
-def sort_sheets_for_e_6_ffr(sheets, weights):
+def align_sheets_for_e_6_ffr(
+    sheets, 
+    weights, 
+    near_degenerate_branch_locus=None,
+):
     """
-    Return the list of sheets sorted according to the list of weights.
+    Return the list of sheets aligned according to the list of weights.
     The output is a list such that sheets[i] will correspond to weights[i].
     """
-    sorted_sheets = [None for w in weights]
-    x_0 = sheets[0]
+    if len(sheets) != 27:
+        raise Exception('Missing some sheets of the E_6 cover.')
 
-    n_w_triples = null_weight_triples(weights)
-    n_s_triples = null_sheet_triples(sheets)
-
-    # Start sorting
-    sorted_sheets[0] = x_0
-
-    # The quintet of triples of \mu_0
-    q_0 = get_quintets(0, n_w_triples)
-
-    # The quintet of SHEET triples of x_0
-    s_q_0 = get_quintets(x_0, n_s_triples)
-
-    # Get the list of sheets appearing in the quintet s_q_0
-    # The weyl symmetry allows us to fix the these
-    known_sheets = [x_0]
-    for i in range(NULL_TRIPLES_INDIVIDUAL):
-        # Get the (unordered) pair of sheets [x_i, x_j] 
-        # from each triple [x_0, x_i, x_j]
-        s_pair = [s for s in s_q_0[i] if s != x_0]
-        # Get the (unordered) pair of weight-labels [i, j] 
-        # from each triple [0, i, j]
-        w_pair = [k for k in q_0[i] if k != 0]
-
-        sorted_sheets[w_pair[0]] = s_pair[0]
-        sorted_sheets[w_pair[1]] = s_pair[1]
-
-        known_sheets.append(s_pair[0])
-        known_sheets.append(s_pair[1])
-
-    # Get the list of weights appearing in the quintet q_0
-    known_weights = [0]
-    for t in q_0:
-        for i in t:
-            if i in known_weights:
-                continue
-            else:
-                known_weights.append(i)
-
-    missing_weights = [
-        i for i in range(len(weights)) if i not in known_weights
-    ]
-    missing_sheets = [
-        x for x in range(len(sheets)) if i not in known_sheets
-    ]
+    n_sheets_at_origin = len(
+        [x for x in sheets if abs(x) < SHEET_NULL_TOLERANCE]
+    )
     
-    # List all the combos of which WEIGHT quintets 
-    # must/must not contain all missing WEIGHTS
-    weight_combos = [
-        [
-            quintet_contained(j, get_quintets(i, n_w_triples)) 
-            for i in known_weights
-        ] for j in missing_weights
-    ]
+    if n_sheets_at_origin == 27 and near_degenerate_branch_locus:
+        sorted_sheets = sheets
 
-    # List all the combos of which SHEET quintets 
-    # must/must not contain all missing SHEETS
-    sheet_combos = [
-        [
-            quintet_contained(x, get_quintets(y, n_s_triples)) 
-            for y in known_sheets
-        ] for x in missing_sheets
-    ]
+    elif n_sheets_at_origin == 3:
+        # In the degenerate E6 curve (e.g. SYM at origin 
+        # of coulomb branch), there are 3 sheets at the origin
+        # while other sheets are arranged into two circles
+        # in two groups of 12.
 
-    # Now match the patterns of inclusion in the quintets
-    # between missing weights and missing sheets.
-    # When the patterns match, assign the corresponding 
-    # sheet to the list of sorted ones.
-    for i in range(len(missing_sheets)):
-        s_combo = sheet_combos[i]
-        for j in range(len(missing_weights)):
-            w_combo = weight_combos[j]
-            if s_combo == w_combo:
-                sorted_sheets[j] = missing_sheets[i]
-            else:
-                pass
+        # print "Found {} sheets at the origin. ".format(n_sheets_at_origin)
+        have_same_r = (
+            lambda a, b: abs(abs(complex(a)) - abs(complex(b))) 
+            < SHEET_NULL_TOLERANCE
+        )
+        gathered_sheets = gather(sheets, have_same_r)  
+        # print 'the sheets'
+        # print sheets
+        # print 'gathered sheets {}'.format(gathered_sheets)
+        # print len(gathered_sheets)
+        # print 'radii'
+        # print map(abs, gathered_sheets.keys())
 
-    # A basic check that we didn't pick a sheet twice
-    if len(sorted_sheets) == len(delete_duplicates(sorted_sheets)):
-        pass
+        if len(gathered_sheets)!=3:
+            print 'The following sheets appear: '
+            print sheets
+            raise ValueError(
+                'In a degenerate E_6 curve, sheets should arrange into '
+                'three rings in the complex plane. '
+                '(One ring may shrink to the origin)'
+            )
+
+        # radii of the three circles
+        r_0, r_1, r_2 = sorted(map(abs, gathered_sheets.keys()))
+        # print 'radii'
+        # print r_0
+        # print r_1
+        # print r_2
+
+
+        # build the three groups of sheets
+        g_0 = [x for x in sheets if abs(abs(x) - r_0) < SHEET_NULL_TOLERANCE]
+        g_1 = [x for x in sheets if abs(abs(x) - r_1) < SHEET_NULL_TOLERANCE]
+        g_2 = [x for x in sheets if abs(abs(x) - r_2) < SHEET_NULL_TOLERANCE]
+
+        # print 'groups of sheets'
+        # print g_0
+        # print g_1
+        # print g_2
+        
+        # normalize the phase to run from 0 to 2 \pi
+        norm_phase = lambda w: phase(w) % (2 * pi)
+        # sort sheets within each ring according to their
+        # phase, counter-clockwise starting from the real axis
+        g_0_sorted = g_0
+        g_1_sorted = sorted(g_1, key=norm_phase)
+        g_2_sorted = sorted(g_2, key=norm_phase)
+
+        # print 'sorted groups of sheets'
+        # print g_0_sorted
+        # print g_1_sorted
+        # print g_2_sorted
+
+        # Groups of sorted weights, according to the Coxeter 
+        # projection.
+        # The weights are represented by integer labels, 
+        # these are given in the paper on ADE networks and run 
+        # from 0 to 26. 
+        # Each group of weights is ordered clockwise as they 
+        # appear in the Coxeter diagram, starting from the real axis.
+        # Note: using the Coxeter diagram from the program cproj
+        # gives a shift by 1 in the labels of all weights,
+        # but otherwise they coincide precisely with the weights
+        # used by loom.
+        g_0_weights = [8, 13, 17]
+        g_1_weights = [6, 3, 9, 5, 11, 16, 19, 20, 22, 21, 10, 15]
+        g_2_weights = [4, 2, 1, 0, 7, 14, 18, 26, 25, 24, 23, 12]
+
+        # Now start sorting the sheets
+        sorted_sheets = [None for w in weights]
+        # The center ring g_0 is easy
+        for i in range(len(g_0_weights)):
+            sorted_sheets[g_0_weights[i]] = g_0_sorted[i]
+        # In the Coxeter diagram, the phase of the 
+        # first weight from g_1 is larger than the phase of 
+        # the first weight from g_2 (this one lies precisely 
+        # on the positive real axis).
+        # Therefore, we have to match sheets to the weights accordingly.
+        if norm_phase(g_1[0]) > norm_phase(g_2[0]):
+            for i in range(len(g_1_weights)):
+                sorted_sheets[g_1_weights[i]] = g_1_sorted[i]
+            for i in range(len(g_2_weights)):
+                sorted_sheets[g_2_weights[i]] = g_2_sorted[i]
+        else:
+            # In this case we start from the 2nd sheet, not the first one
+            # we handle this by shifting cyclically the argument of
+            # g_1_sorted
+            #
+            # print '\n g_1_weights'
+            # print g_1_weights
+            # print '\n g_1_sorted'
+            # print g_1_sorted
+            for i in range(len(g_1_weights)):
+                #
+                # print 'i = {}'.format(i)
+                # print 'i+1 mod len(g_1_weights) = {}'.format(
+                #     (i + 1) % len(g_1_weights)
+                # )
+                # print 'g_1_weights[i] = {}'.format(g_1_weights[i])
+                # print 'g_1_sorted[(i + 1) % len(g_1_weights)] = {}'.format(
+                #     g_1_sorted[(i + 1) % len(g_1_weights)]
+                # )
+                sorted_sheets[g_1_weights[i]] = (
+                    g_1_sorted[(i + 1) % len(g_1_weights)]
+                )
+            for i in range(len(g_2_weights)):
+                sorted_sheets[g_2_weights[i]] = g_2_sorted[i]
+
     else:
-        raise ValueError('Something is wrong with the sorting of sheets')
+        n_w_triples = null_weight_triples(weights)
+        n_s_triples = null_sheet_triples(sheets)
 
+        # Pick the first sheet and the first weight, 
+        # we will declare them to match
+        # These must be numbers between 0 and 26,
+        # any choice should be equivalent.
+        sheet_0_index = 0
+        weight_0_index = 0
+
+        x_0 = sheets[sheet_0_index]
+        # w_0 = weights[weight_0_index]
+        # sorted_sheets[weight_0_index] = x_0
+
+        # The quintet of triples of w_0
+        # Note: these are not actual weights, 
+        # but rather their integer labels
+        q_0 = get_quintets(weight_0_index, n_w_triples)
+
+        # The quintet of SHEET triples of x_0
+        # Note: these are the actual values of sheet coordinates
+        s_q_0 = get_quintets(x_0, n_s_triples)
+        if len(s_q_0) != NULL_TRIPLES_INDIVIDUAL:
+            print '\nthe sheets'
+            print sheets
+            print '\nthe choice of x_0'
+            print x_0
+            print '\nthe triples of x_0'
+            print s_q_0
+            raise ValueError(
+                'Wrong number of sheet triples: {} instead of {}'.format(
+                    len(s_q_0), NULL_TRIPLES_INDIVIDUAL
+                )
+            )
+
+        # Get the ordered list of sheets appearing in the quintet s_q_0
+        known_sheets = [x_0]
+        for i in range(NULL_TRIPLES_INDIVIDUAL):
+            # Get the (ordered) pair of sheets [x_i, x_j] 
+            # from each triple [x_0, x_i, x_j]
+            s_pair = [s for s in s_q_0[i] if s != x_0]
+            known_sheets.append(s_pair[0])
+            known_sheets.append(s_pair[1])
+
+        # Get the ordered list of weights appearing in the quintet q_0
+        known_weights = [weight_0_index]
+        for t in q_0:
+            for i in t:
+                if i in known_weights:
+                    continue
+                else:
+                    known_weights.append(i)
+
+        missing_weights = [
+            i for i in range(len(weights)) if i not in known_weights
+        ]
+        missing_sheets = [
+            x for x in sheets if x not in known_sheets
+        ]
+
+        # The ordering of the known weights is now the following:
+        # [i_0, j_1, j_2, k_1, k_2, ...]
+        # where i_0 + j_1 + j_2 = 0 = i_0 + k_1 + k_2 = ...
+        # (intended as a sum of the actual weights, not their labels)
+        # This ordering matters, as we will use it to catalogue the 
+        # remaining unknown weights, and we will do the same with the sheets.
+        # The overall ordering of the pairs [j_1, j_2], [k_1, k_2], ...
+        # is ALMOST free, because of the Weyl symmetry.
+        # More precisely, there are 5 pairs and we have a W(D_5)
+        # symmetry. So pairs can be permuted and an EVEN number of 
+        # 'flips' can be performed. I.e. W(D_5) ~ S_5 x (Z_2)^4
+        # This leaves us with two inequiavlent choices:
+        # eiher
+        # [i_0, j_1, j_2, k_1, k_2, ..., n_1, n_2]
+        # or
+        # [i_0, j_1, j_2, k_1, k_2, ..., n_2, n_1]
+        # We have to try both cases.
+
+        last_pair = known_weights[-2:]
+        last_pair_r = [last_pair[1], last_pair[0]]
+        known_weights_1 = known_weights
+        known_weights_2 = [k_s for k_s in known_weights[:-2]] + last_pair_r
+
+        # List all the combos of which SHEET quintets 
+        # must/must not contain all missing SHEETS
+        sheet_combos = [
+            [
+                quintet_contained(x, get_quintets(y, n_s_triples)) 
+                for y in known_sheets
+            ] for x in missing_sheets
+        ]
+
+        for known_weights_i in [known_weights_1, known_weights_2]:
+            # Will reorder the sheets according to the weights 
+            # they correspond to
+            # e.g. if 
+            # weights = [w_0, w_1, ...]
+            # then we aim for
+            # [x_0, x_1, ...] --> [x'_0, x'_1, ...]
+            # were on LHS is the list of sheets, and on RHS
+            # is the list of sorted_sheets.
+            sorted_sheets = [None for w in weights]
+
+            # List all the combos of which WEIGHT quintets 
+            # must/must not contain all missing WEIGHTS
+            weight_combos = [
+                [
+                    quintet_contained(j, get_quintets(i, n_w_triples)) 
+                    for i in known_weights_i
+                ] for j in missing_weights
+            ]
+
+            # Now place the known sheets in the corresponding position
+            # as dictated by the corresponding known weight.
+            for i in range(len(known_weights_i)):
+                k_w = known_weights_i[i]
+                k_s = known_sheets[i]
+                sorted_sheets[k_w] = k_s
+
+            # Now match the patterns of inclusion in the quintets
+            # between missing weights and missing sheets.
+            # When the patterns match, assign the corresponding 
+            # sheet to the list of sorted ones.
+            for i in range(len(missing_sheets)):
+                s_combo = sheet_combos[i]
+                for j in range(len(missing_weights)):
+                    w_combo = weight_combos[j]
+                    if s_combo == w_combo:
+                        sorted_sheets[missing_weights[j]] = missing_sheets[i]
+                    else:
+                        pass
+            
+            if None in sorted_sheets:
+                # this would mean that sorted_weights_i 
+                # is not the correct ordering
+                pass
+            else:
+                break
+
+        if None in sorted_sheets:
+            raise ValueError('Cannot match all sheets with weights') 
+        elif len(sorted_sheets) != len(delete_duplicates(sorted_sheets)):
+            raise ValueError('Duplicate identification of sheets and weights')
+            
     return sorted_sheets
 

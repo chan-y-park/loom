@@ -1,6 +1,8 @@
 # Force integer division to give a float, i.e. 1/2 = 0.5.
 from __future__ import division
+from sympy import sympify, poly
 from sympy.mpmath import mp, mpc
+# from sympy.parsing.sympy_parser import parse_expr
 import logging
 import os
 import subprocess
@@ -46,6 +48,84 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
     return sols
 
 
+# TODO: Unify this and the next function 
+# with the above method for multi-equations
+# these were written in a rush to finish something else, 
+# apologies for the repetition of code :)
+# But Careful for the subtle differences, not just relabelings..
+# In particular the use of the polynomial ring and of the
+# method called .roots()
+# Also, cleanup the messages log forwarding in here, it's probably useless.
+def solve_single_eq_z(eqs, precision=None, logger_name='loom',):
+    """
+    Use sage to solve a single polynomial equation in z.
+    """
+    logger = logging.getLogger(logger_name)
+    sols = []
+    if precision is not None:
+        mp.dps = precision
+    else:
+        precision = 15
+    try:
+        rv_str = subprocess.check_output(
+            ['sage', sage_script_dir + 'solve_single_eq_z.sage'] +
+            [str(precision)] +
+            [str(eq) for eq in eqs]
+        )
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    
+    rv = eval(rv_str)
+    sols_str_list, mult_str_list, messages = rv
+
+    for msg in messages:
+        logger.warning(msg)
+    
+    for i, sols_str in enumerate(sols_str_list):
+        (z_re, z_im) = sols_str
+        for j in range(mult_str_list[i]):
+            sols.append(
+                mpc(z_re, z_im)
+            )
+
+    return sols
+
+
+def solve_single_eq_x(eqs, precision=None, logger_name='loom',):
+    """
+    Use sage to solve a single polynomial equation in x.
+    """
+    logger = logging.getLogger(logger_name)
+    sols = []
+    if precision is not None:
+        mp.dps = precision
+    else:
+        precision = 15
+    try:
+        rv_str = subprocess.check_output(
+            ['sage', sage_script_dir + 'solve_single_eq_x.sage'] +
+            [str(precision)] +
+            [str(eq) for eq in eqs]
+        )
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    
+    rv = eval(rv_str)
+    sols_str_list, mult_str_list, messages = rv
+
+    for msg in messages:
+        logger.warning(msg)
+    
+    for i, sols_str in enumerate(sols_str_list):
+        (z_re, z_im) = sols_str
+        for j in range(mult_str_list[i]):
+            sols.append(
+                mpc(z_re, z_im)
+            )
+
+    return sols
+
+
 def get_g_data(root_system, highest_weight):
     try:
         g_data_str = subprocess.check_output(
@@ -58,4 +138,23 @@ def get_g_data(root_system, highest_weight):
     g_data = eval(g_data_str)
     
     return g_data
+
+
+def compute_discriminant(f):
+    """
+    Use SAGE to compute the discriminant of a polynomial f.
+    f must be expressed in variables x, z.
+    The discriminant will be computed with respect to x.
+    """
+    
+    try:
+        disc_str = subprocess.check_output(
+            ['sage', sage_script_dir + 'compute_discriminant.sage'] +
+            [str(f)]
+        )
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    
+    return poly(sympify(disc_str))
+
 

@@ -91,7 +91,6 @@ def get_spectral_network_bokeh_plot(
             root_label += str(root.tolist()) + ', '
         bpds.data['root'].append(root_label[:-2])
 
-    # XXX: a comment to prevent a merge error
     bcds = ColumnDataSource({'xs': [], 'ys': []})
     for bl in sw_data.branch_points + sw_data.irregular_singularities:
         bcds.data['xs'].append([bl.z.real, bl.z.real])

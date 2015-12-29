@@ -29,8 +29,12 @@ N_PATH_AROUND_PT = 60
 # N_PATH_AROUND_PT = 100
 
 # Number of times the tracking of sheets is allowed to automatically zoom in.
+# Usual values
 MAX_ZOOM_LEVEL = 3
 ZOOM_FACTOR = 10
+# Tuned for E_6
+# MAX_ZOOM_LEVEL = 0
+# ZOOM_FACTOR = 10
 
 # Tolerance for recognizing colliding sheets at a branch-point
 BP_PROXIMITY_THRESHOLD = 0.05
@@ -318,6 +322,13 @@ class SWDataWithTrivialization(SWDataBase):
             self.accuracy,
         )
 
+        logger.info(
+                'Ramification points arrange into {} branch points '
+                'at positions {}'.format(
+                    len(bpzs), bpzs
+                )
+            )
+
         # z-coords of irregular punctures.
         ipzs = n_remove_duplicate(
             [p.z for p in self.irregular_punctures if p.z != oo],
@@ -381,6 +392,7 @@ class SWDataWithTrivialization(SWDataBase):
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
             bp.label = 'Branch point #{}'.format(i)
+
             self.analyze_branch_point(bp)
             if bp.order > 1:
                 # only add if there are any positive roots associated
@@ -442,6 +454,7 @@ class SWDataWithTrivialization(SWDataBase):
         # Each element is a sheet, which is a list of x's along the path.
         # Initialized with reference_xs.
         # TODO: set each element to an integer rather than a float.
+        
         if ffr_sheets_along_path is None:
             ffr_sheets_along_path = [[x] for x in ffr_xs_0]
         
@@ -449,10 +462,16 @@ class SWDataWithTrivialization(SWDataBase):
             near_degenerate_branch_locus = False
             if is_path_to_bp is True and abs(z - z_path[-1]) < self.accuracy:
                 near_degenerate_branch_locus = True
-            ffr_xs_1, xs_1 = self.get_aligned_xs(
-                z, 
-                near_degenerate_branch_locus=near_degenerate_branch_locus
-            )
+            # NOTE: Commenting this, since we don't need to bother
+            # with alignment for now. This saves a lot of problems 
+            # with numerics and make the code much faster.
+            # Delete the following commend after EXTENSIVE testing.
+            # ffr_xs_1, xs_1 = self.get_aligned_xs(
+            #     z, 
+            #     near_degenerate_branch_locus=near_degenerate_branch_locus
+            # )
+            ffr_xs_1 = self.ffr_curve.get_xs(z) 
+            # print ffr_xs_1
 
             # if it's not a path to branch point, check tracking
             if is_path_to_bp is False:
@@ -489,11 +508,18 @@ class SWDataWithTrivialization(SWDataBase):
                     'Encountered a problem with sheet tracking.'
                 )
                 if zoom_level > 0:
-                    delta_z = (z_path[i] - z_path[i - 1]) / ZOOM_FACTOR
-                    zoomed_path = [
-                        z_path[i - 1] + j * delta_z  
-                        for j in range(ZOOM_FACTOR + 1)
-                    ]
+                    if i > 0:
+                        delta_z = (z_path[i] - z_path[i - 1]) / ZOOM_FACTOR
+                        zoomed_path = [
+                            z_path[i - 1] + j * delta_z  
+                            for j in range(ZOOM_FACTOR + 1)
+                        ]
+                    else:
+                        delta_z = (z_path[1] - z_path[0]) / ZOOM_FACTOR
+                        zoomed_path = [
+                            z_path[0] + j * delta_z  
+                            for j in range(ZOOM_FACTOR + 1)
+                        ]
                     sheets_along_zoomed_path = self.get_sheets_along_path(
                         zoomed_path, 
                         is_path_to_bp=near_degenerate_branch_locus,
@@ -521,6 +547,11 @@ class SWDataWithTrivialization(SWDataBase):
                         logger_name=self.logger_name,
                     )
                     if sorted_ffr_xs == 'sorting failed':
+                        logger.info(
+                                'Studying sheets near z = {} found sheets'
+                                '\n ffr_xs_0 = {} \n ffr_xs_0 = {}'
+                                .format(z, ffr_xs_0, ffr_xs_1)
+                            )
                         raise Exception(
                             '\nCannot track the sheets!\n'
                             'Probably passing too close to a branch point '
@@ -625,6 +656,8 @@ class SWDataWithTrivialization(SWDataBase):
             # When studying D-type covers there may be situations
             # where two sheets collide at x=0 everywhere
             # Do not raise an error in this case.
+            # Likewise for E-type
+            # TODO: Merge the handling of these two cases
             if (
                 self.g_data.type == 'D' and 
                 min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
@@ -678,6 +711,64 @@ class SWDataWithTrivialization(SWDataBase):
                 )
                 sorted_sheets = corrected_sheets
                 pass
+
+            elif (
+                self.g_data.type == 'E' and 
+                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
+                and len(sorted_sheets) - len(uniq) == 2
+            ):
+                # If THREE sheets are equal (and all zero) then the integer
+                # labels they got assigned in sorting above may be the same,
+                # this would lead to a singular permutation matrix
+                # and must be corrected, as follows.
+                int_labels = [s[0] for s in sorted_sheets]
+                uniq_labels = list(set(int_labels))
+                labels_multiplicities = [
+                    len([i for i, x in enumerate(int_labels) if x == u]) 
+                    for u in uniq_labels
+                ]
+                multiple_labels = []
+                for i, u in enumerate(uniq_labels):
+                    if labels_multiplicities[i] > 1:
+                        if labels_multiplicities[i] == 3:
+                            multiple_labels.append(u)
+                        else:
+                            logger.debug(
+                                'int labels = {}'.format(int_labels)
+                            )
+                            logger.debug(
+                                'multiple labels = {}'
+                                .format(multiple_labels)
+                            )
+                            raise Exception('Too many degenerate sheets')
+                if len(multiple_labels) != 1:
+                    raise Exception(
+                        'Cannot determine which sheets are' +
+                        'degenerate, tracking will fail.'
+                    )
+
+                # missing_label = [
+                #     i for i in range(len(int_labels)) if 
+                #     (i not in int_labels)
+                # ][0]
+                triple_sheets = [
+                    i for i, s in enumerate(sorted_sheets) 
+                    if s[0] == multiple_labels[0]
+                ]
+
+                corrected_sheets = sorted_sheets 
+                corrected_sheets[triple_sheets[0]] = (
+                    initial_sheets[triple_sheets[0]]
+                )
+                corrected_sheets[triple_sheets[1]] = (
+                    initial_sheets[triple_sheets[1]]
+                )
+                corrected_sheets[triple_sheets[2]] = (
+                    initial_sheets[triple_sheets[2]]
+                )
+                sorted_sheets = corrected_sheets
+                pass
+
             else:
                 raise ValueError(
                     '\nError in determination of monodromy!\n' +
@@ -800,95 +891,6 @@ class SWDataWithTrivialization(SWDataBase):
     
 # XXX: Moved to SWDataBase
 #    def analyze_ffr_ramification_point(self, rp):
-#        logger = logging.getLogger(self.logger_name)
-#        rp_type = None
-#        num_eq = self.ffr_curve.num_eq
-#
-#        # use Dz = z - rp.z & Dx = x - rp.x
-#        Dz, Dx = sympy.symbols('Dz, Dx')
-#        local_curve = (
-#            num_eq.subs(x, rp.x + Dx).subs(z, rp.z + Dz)
-#            .series(Dx, 0, rp.i + 1).removeO()
-#            .series(Dz, 0, 2).removeO()
-#        )
-#        logger.debug('\nlocal curve = {}\n'.format(local_curve))
-#            
-#        # Classify which type of ramification point
-#        # type_I: ADE type with x_0 != 0
-#        #   #   i.e. F ~ a z + b x^k
-#        # type_II: D-type with x_0 = 0, but nonedgenerate
-#        #   i.e. F ~ a z + b x^2r   with r=rank(g)
-#        # type_III: D-type with x_0 = 0, degenerate
-#        #   i.e. F ~ x^2 (a z + b x^(2r-2))
-#        # type IV: Other case.
-#        # More cases may be added in the future, in particular 
-#        # for degenerations of E_6 or E_7 curves.
-#
-#        # TODO: avoid using self.* repeatedly, define a local variable.
-#        g_data = self.g_data
-#        zero_threshold = self.accuracy * 100
-#        if (self.g_data.type == 'A' or 
-#            ((self.g_data.type == 'D' or self.g_data.type == 'E') and 
-#                abs(rp.x) > zero_threshold)):
-#            rp_type = 'type_I'
-#        elif (
-#            self.g_data.type == 'D' and abs(rp.x) < zero_threshold
-#            and 2 * self.g_data.rank == rp.i
-#            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > zero_threshold
-#        ):
-#            rp_type = 'type_II'
-#        elif (
-#            self.g_data.type == 'D' and 2 * self.g_data.rank == rp.i
-#            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
-#        ):
-#            rp_type = 'type_III'
-#        # XXX: Temporary case for D-type AD theories.
-#        elif (
-#            g_data.type == 'D' and rp.i == 4 and abs(rp.x) < zero_threshold
-#        ):
-#            # No need to grow S-walls from this ramification point,
-#            # there will be another ramification point that gives
-#            # the same S-wall. This ramification point is a placeholder.
-#            rp.ramification_type = 'type_AD'
-#            rp.sw_diff_coeff = None 
-#            return
-#        else:
-#            rp_type = 'type_IV'
-#            raise Exception(
-#                'Cannot handle this type of ramification point'.format(
-#                    local_curve
-#                )
-#            )
-#
-#        if rp_type == 'type_I' or rp_type == 'type_II':
-#            a = local_curve.n().subs(Dx, 0).coeff(Dz)
-#            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-#
-#        elif rp_type == 'type_III':
-#            a = local_curve.n().coeff(Dz).coeff(Dx, 2)
-#            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-#        
-#        logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
-#            [rp.z, rp.x], rp_type)
-#        )
-#        rp.ramification_type = rp_type
-#
-#        num_v = self.diff.num_v
-#        # Dx = Dx(Dz)
-#        Dx_Dz = (-1.0 * (a / b) * Dz) ** sympy.Rational(1, rp.i)
-#        local_diff = (
-#            num_v.subs(x, rp.x + Dx_Dz).subs(z, rp.z + Dz)
-#            .series(Dz, 0, 1).removeO()
-#        )
-#        # get the coefficient and the exponent of the leading term
-#        (diff_c, diff_e) = local_diff.leadterm(Dz)
-#        if diff_e == 0:
-#            # remove the constant term from the local_diff
-#            local_diff -= local_diff.subs(Dz, 0)
-#            (diff_c, diff_e) = local_diff.leadterm(Dz)
-#
-#        # rp.sw_diff_coeff = complex(-1 * a / b)
-#        rp.sw_diff_coeff = complex(diff_c.n())
 
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):
@@ -1046,9 +1048,14 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
             # When studying D-type covers there may be situations
             # where two sheets collide at x=0 everywhere
             # Do not raise an error in this case.
+            # The same is true for E-type covers at the origin of the
+            # Coulomb branch
             if (
                 g_data.type == 'D' and min(map(abs, sorted_xs)) < accuracy
                 and len(sorted_xs) - len(unique_sorted_xs) == 1
+            ) or (
+                g_data.type == 'E' and min(map(abs, sorted_xs)) < accuracy
+                and len(sorted_xs) - len(unique_sorted_xs) == 2
             ):
                 return sorted_xs
             else:
@@ -1079,7 +1086,10 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
                           logger_name='loom'):
     # will only work if there are at most two sheets being 
     # too close two each other, not three or more.
-    # TODO: generalize to handle more gneral cases (if we need it at all)
+    # Unless there are three or more sheets all equal to zero
+    # In this case we assume it's a degenerate curve and we 
+    # sort those sheets accordingly.
+    # TODO: generalize to handle more general cases (if we need it at all)
     logger = logging.getLogger(logger_name)
     logger.debug('Resorting to tracking sheets by their derivatives')
 
@@ -1113,7 +1123,18 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
 
     for x_pair in trouble_xs:
         if len(x_pair) != 2:
-            raise Exception('Cannot handle this kind of sheet degeneracy')
+            # Check if we are dealing with a set of 
+            # sheets which are all (approximately) 0.0
+            if max(map(abs, x_pair)) < accuracy:
+                for x_pair_i in x_pair:
+                    correct_xy_pairs.update({x_pair_i: x_pair_i})
+            else:
+                # print 'x_pair = {}'.format(x_pair)
+                # print 'reference xs '
+                # print ref_xs
+                # print 'new xs'
+                # print new_xs
+                raise Exception('Cannot handle this kind of sheet degeneracy')
         else:
             closest_ys_0 = nsmallest(
                 2, new_xs, key=lambda x: abs(x - x_pair[0])
