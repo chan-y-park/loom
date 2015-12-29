@@ -15,32 +15,33 @@ import pdb
 from bokeh.io import save
 from loom.bokeh_plot import get_spectral_network_bokeh_plot
 
-passed_configs = [
-#    "/home/chan/loom/config/coset_A_3.ini",
-#    "/home/chan/loom/config/D_4_AD_from_A_1.ini",
-#    "/home/chan/loom/config/AD_SO_6.ini",
-#    "/home/chan/loom/config/pure_SO_4.ini",
-#    "/home/chan/loom/config/pure_SO_8.ini",
-#    "/home/chan/loom/config/D_3_AD_from_SU_4.ini",
-#    "/home/chan/loom/config/coset_A_3_2nd_rep.ini",
-#    "/home/chan/loom/config/AD_from_SU_4_N_f_2.ini",
-#    "/home/chan/loom/config/coset_A_4_2nd_rep.ini",
-#    "/home/chan/loom/config/default.ini",
-#    "/home/chan/loom/config/SU_4_N_f_1.ini",
-#    "/home/chan/loom/config/AD_from_pure_SU_4.ini",
-#    "/home/chan/loom/config/D_4_AD_from_SO_8.ini",
-#    "/home/chan/loom/config/coset_D_4.ini",
-#    "/home/chan/loom/config/coset_D_3.ini",
-#    "/home/chan/loom/config/pure_SO_6.ini",
-#    "/home/chan/loom/config/AD_SO_4.ini",
-#    "/home/chan/loom/config/seeding_type_II.ini",
-#    "/home/chan/loom/config/triangle_4.ini",
-#    "/home/chan/loom/config/D_4_AD_from_A_2.ini",
-#    "/home/chan/loom/config/pure_SU_2.ini",
-#    "/home/chan/loom/config/seeding_type_I.ini",
-#    "/home/chan/loom/config/seeding_type_III_A.ini",
-#    "/home/chan/loom/config/ex_issue_2.ini",
-]
+passed_configs = []
+# passed_configs = [
+#     "/home/chan/loom/config/coset_A_3.ini",
+#     "/home/chan/loom/config/D_4_AD_from_A_1.ini",
+#     "/home/chan/loom/config/AD_SO_6.ini",
+#     "/home/chan/loom/config/pure_SO_4.ini",
+#     "/home/chan/loom/config/pure_SO_8.ini",
+#     "/home/chan/loom/config/D_3_AD_from_SU_4.ini",
+#     "/home/chan/loom/config/coset_A_3_2nd_rep.ini",
+#     "/home/chan/loom/config/AD_from_SU_4_N_f_2.ini",
+#     "/home/chan/loom/config/coset_A_4_2nd_rep.ini",
+#     "/home/chan/loom/config/default.ini",
+#     "/home/chan/loom/config/SU_4_N_f_1.ini",
+#     "/home/chan/loom/config/AD_from_pure_SU_4.ini",
+#     "/home/chan/loom/config/D_4_AD_from_SO_8.ini",
+#     "/home/chan/loom/config/coset_D_4.ini",
+#     "/home/chan/loom/config/coset_D_3.ini",
+#     "/home/chan/loom/config/pure_SO_6.ini",
+#     "/home/chan/loom/config/AD_SO_4.ini",
+#     "/home/chan/loom/config/seeding_type_II.ini",
+#     "/home/chan/loom/config/triangle_4.ini",
+#     "/home/chan/loom/config/D_4_AD_from_A_2.ini",
+#     "/home/chan/loom/config/pure_SU_2.ini",
+#     "/home/chan/loom/config/seeding_type_I.ini",
+#     "/home/chan/loom/config/seeding_type_III_A.ini",
+#     "/home/chan/loom/config/ex_issue_2.ini",
+# ]
 
 logger_name = 'loom_test'
 
@@ -78,7 +79,4 @@ for file_path in config_file_paths:
                                         notebook=True)
     file_dir, file_name = os.path.split(file_path)
     name, ext = os.path.splitext(file_name)
-    save(
-        obj=p, filename='test_results/{}.html'.format(name), #resources=None,
-        title=name
-    )
+    save(obj=p, filename='test_results/{}.html'.format(name), title=name,)

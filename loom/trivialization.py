@@ -1,7 +1,7 @@
 import numpy
 import logging
 import sympy
-import pdb
+# import pdb
 
 from cmath import exp, pi, phase
 from sympy import oo
@@ -322,12 +322,8 @@ class SWDataWithTrivialization(SWDataBase):
             self.accuracy,
         )
 
-        logger.info(
-                'Ramification points arrange into {} branch points '
-                'at positions {}'.format(
-                    len(bpzs), bpzs
-                )
-            )
+        logger.info('Ramification points arrange into {} branch points '
+                    'at positions {}'.format(len(bpzs), bpzs))
 
         # z-coords of irregular punctures.
         ipzs = n_remove_duplicate(
@@ -548,10 +544,10 @@ class SWDataWithTrivialization(SWDataBase):
                     )
                     if sorted_ffr_xs == 'sorting failed':
                         logger.info(
-                                'Studying sheets near z = {} found sheets'
-                                '\n ffr_xs_0 = {} \n ffr_xs_0 = {}'
-                                .format(z, ffr_xs_0, ffr_xs_1)
-                            )
+                            'Studying sheets near z = {} found sheets'
+                            '\n ffr_xs_0 = {} \n ffr_xs_0 = {}'
+                            .format(z, ffr_xs_0, ffr_xs_1)
+                        )
                         raise Exception(
                             '\nCannot track the sheets!\n'
                             'Probably passing too close to a branch point '
@@ -787,8 +783,7 @@ class SWDataWithTrivialization(SWDataBase):
 
         n_sheets = len(initial_sheets)
 
-        logger.debug('Sorted sheets around locus {}'
-                          .format(sorted_sheets))
+        logger.debug('Sorted sheets around locus {}'.format(sorted_sheets))
         
         # NOTE: in the following basis vectors, i = 0 , ... , n-1
         def basis_e(i):
@@ -838,9 +833,9 @@ class SWDataWithTrivialization(SWDataBase):
             if is_single is True:
                 clusters.append([i])
 
-        #bp.enum_sh = enum_sh
+        # bp.enum_sh = enum_sh
         bp.groups = [c for c in clusters if len(c) > 1]
-        #bp.singles = [c[0] for c in clusters if len(c) == 1]
+        # bp.singles = [c[0] for c in clusters if len(c) == 1]
 
         bp.positive_roots = get_positive_roots_of_branch_point(
             bp, self.g_data, self.logger_name,
@@ -860,8 +855,10 @@ class SWDataWithTrivialization(SWDataBase):
 
         # XXX: Temporary analysis for D-type AD theories.
         for rp in bp.ffr_ramification_points:
-            if (rp.ramification_type == 'type_AD' or
-                rp.ramification_type == 'type_III'):
+            if (
+                rp.ramification_type == 'type_AD' or
+                rp.ramification_type == 'type_III'
+            ):
                 logger.warning('Temporary fix-up of the monodromy '
                                'for a D-type AD theory.')
                 # Find two diagonal elements and permute them.
@@ -878,7 +875,6 @@ class SWDataWithTrivialization(SWDataBase):
                 else:
                     RuntimeError('Unknown form of the monodromy at {}.'
                                  .format(bp.label))
-
 
     def analyze_irregular_singularity(self, irr_sing):
         logger = logging.getLogger(self.logger_name)

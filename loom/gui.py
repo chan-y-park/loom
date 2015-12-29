@@ -3,7 +3,7 @@ import logging
 import Tkinter as tk
 import tkFileDialog
 import multiprocessing
-import pdb
+# import pdb
 
 from StringIO import StringIO
 from Queue import Empty as QueueEmpty
@@ -20,6 +20,7 @@ LOGGING_FILE_PATH = os.path.join(
     'logs/gui_loom.log',
 )
 
+
 class GUILoom:
     def __init__(self, config_file_path, logging_level,):
         root = tk.Tk()
@@ -28,14 +29,13 @@ class GUILoom:
         # Put the window at the center.
         ws = root.winfo_screenwidth()
         hs = root.winfo_screenheight()
-        root.geometry('+{}+{}'.format(ws/2, hs/2))
+        root.geometry('+{}+{}'.format(ws / 2, hs / 2))
 
         # Tkinter root
         self.root = root
 
         # Logging handling
         self.logging_queue = multiprocessing.Queue()
-        #self.logger_name = 'loom.gui'
         self.logger_name = 'gui_loom'
         set_logging(
             logger_name=self.logger_name,
@@ -81,7 +81,6 @@ class GUILoom:
             ['size_of_large_step'],
             ['size_of_bp_neighborhood'],
             ['size_of_puncture_cutoff'],
-            #['size_of_ramification_pt_cutoff'],
             ['accuracy'],
             ['mass_limit'],
             ['phase'],
@@ -170,7 +169,6 @@ class GUILoom:
 #            variable=self.check['plot_on_cylinder']
 #        ).grid(row=grid_row, column=grid_col)
 
-
         # 'Generate' button
         grid_row += 1
         grid_col = 0
@@ -195,7 +193,6 @@ class GUILoom:
         ).grid(row=grid_row, column=grid_col)
 
         # 'Plot' button
-        #grid_col += 1
         self.button['plot'] = tk.Button(
             self.root,
             text='Plot',
@@ -209,7 +206,7 @@ class GUILoom:
         grid_col = 0
         self.log_text = tk.Text(self.root)
         self.log_text.config(
-            #spacing1=2,
+            # spacing1=2,
             spacing2=2,
             spacing3=2,
         )
@@ -239,7 +236,8 @@ class GUILoom:
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
-            import sys, traceback
+            import sys
+            import traceback
             print >> sys.stderr, 'logging_listener_process:'
             traceback.print_exc(file=sys.stderr)
         self.root.after(GUI_LOOP_DELAY, self.get_log)
@@ -248,17 +246,17 @@ class GUILoom:
         self.change_gui_state('off')
         self.log_text.delete('1.0', tk.END)
 
-        #toplevel = tk.Toplevel()
+        # toplevel = tk.Toplevel()
         file_opts = {
             'defaultextension': '.ini',
             'initialdir': os.curdir,
             'initialfile': 'config.ini',
-            #'parent': toplevel,
+            # 'parent': toplevel,
             'parent': self.root,
             'title': 'Select a configuration file to load.',
         }
         file_path = tkFileDialog.askopenfilename(**file_opts)
-        #toplevel.destroy()
+        # toplevel.destroy()
         if file_path == '' or file_path is None:
             self.change_gui_state('on')
             return None
@@ -275,17 +273,17 @@ class GUILoom:
     def menu_save_config_action(self):
         self.change_gui_state('off')
 
-        #toplevel = tk.Toplevel()
+        # toplevel = tk.Toplevel()
         file_opts = {
             'defaultextension': '.ini',
             'initialdir': os.curdir,
             'initialfile': 'config.ini',
-        #    'parent': toplevel,
+            # 'parent': toplevel,
             'parent': self.root,
             'title': 'Save the current configuration to a file.',
         }
         file_path = tkFileDialog.asksaveasfilename(**file_opts)
-        #toplevel.destroy()
+        # toplevel.destroy()
         if file_path == '' or file_path is None:
             self.change_gui_state('on')
             return None
@@ -302,16 +300,16 @@ class GUILoom:
         self.log_text.delete('1.0', tk.END)
         result_queue = multiprocessing.Queue()
 
-        #toplevel = tk.Toplevel()
+        # toplevel = tk.Toplevel()
         dir_opts = {
             'initialdir': os.curdir,
             'mustexist': False,
-        #    'parent': toplevel,
+            # 'parent': toplevel,
             'parent': self.root,
             'title': 'Select a directory that contains data files.',
         }
         data_dir = tkFileDialog.askdirectory(**dir_opts)
-        #toplevel.destroy()
+        # toplevel.destroy()
         if data_dir == '' or data_dir is None:
             self.change_gui_state('on')
             return (None, None)
@@ -529,7 +527,6 @@ class GUILoom:
         config_options = self.config.keys()
         for entry_row in self.entry_array:
             for config_option in entry_row:
-                entry_label = self.config.get_label(config_option)
                 value = self.config[config_option]
                 config_options.remove(config_option)
                 self.entry_var[config_option].set(value)
@@ -563,6 +560,7 @@ class GUILoom:
                     )
                     pass
 
+
 def open_gui(config_file_path=None, logging_level=None,):
     gui_loom = GUILoom(config_file_path, logging_level)
     gui_loom.create_widgets()
@@ -570,6 +568,7 @@ def open_gui(config_file_path=None, logging_level=None,):
     gui_loom.root.mainloop()
 
     return None 
+
 
 def quit_gui(gui_loom):
     gui_loom.root.destroy()

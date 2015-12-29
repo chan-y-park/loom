@@ -11,13 +11,11 @@ import logging
 import uuid
 import json
 import zipfile
-import numpy
-import bokeh
+# import bokeh
 
 from cStringIO import StringIO
 from io import BytesIO
 from Queue import Empty as QueueEmpty
-#sys.stdout = sys.stderr
 
 from api import (
     get_loom_dir,
@@ -30,6 +28,7 @@ from api import (
 )
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
+from plotting import get_legend
 
 # Flask configuration
 DEBUG = True
@@ -44,7 +43,6 @@ LOGGING_FILE_PATH = os.path.join(
 DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
-#LOOM_SERVER_URL = 'http://het-math2.physics.rutgers.edu/loom'
 BOKEH_CUSTOM_JS_PUBLIC_URL = (
     'http://het-math2.physics.rutgers.edu/loom/static/bokeh_callbacks.js'
 )
@@ -54,7 +52,6 @@ BOKEH_CUSTOM_JS_PUBLIC_URL = (
 # are in the same row of this array.
 config_options = [
     ['description'],
-    #['root_system', 'representation'],
     ['casimir_differentials'],
     ['differential_parameters'],
     ['regular_punctures'],
@@ -68,7 +65,6 @@ config_options = [
     ['size_of_large_step'],
     ['size_of_bp_neighborhood'],
     ['size_of_puncture_cutoff'],
-    #['size_of_ramification_pt_cutoff'],
     ['accuracy'],
     ['mass_limit'],
     ['phase'],
@@ -102,11 +98,9 @@ class LoomDB(object):
 
         if signum == signal.SIGINT:
             msg = 'LoomDB caught SIGINT; raises KeyboardInterrrupt.'
-            #e = KeyboardInterrupt(msg)
             e = KeyboardInterrupt
         elif signum == signal.SIGTERM:
             msg = 'LoomDB caught SIGTERM; raises SystemExit.'
-            #e = SystemExit(msg)
             e = SystemExit
 
         logger.warning(msg)
@@ -131,7 +125,6 @@ class LoomDB(object):
                         self.is_alive[process_uuid] = False
                     else:
                         to_delete.append(process_uuid)
-                        #self.finish_loom_process(process_uuid)
 
                         try:
                             # Flush the result queue.
@@ -205,10 +198,8 @@ class LoomDB(object):
         self.result_queues[process_uuid] = result_queue
 
         loom_process = multiprocessing.Process(
-            target = generate_spectral_network,
-            args=(
-                loom_config,
-            ),
+            target=generate_spectral_network,
+            args=(loom_config,),
             kwargs=dict(
                 n_processes=n_processes,
                 result_queue=result_queue,
@@ -376,6 +367,7 @@ class WebLoomApplication(flask.Flask):
         )
         self.loom_db = LoomDB()
 
+
 ###
 # View functions
 ###
@@ -396,24 +388,20 @@ def index():
             loom_contributors[i] = 'Pietro Longhi'
     return flask.render_template(
         'index.html',
-       loom_contributors=loom_contributors,     
+        loom_contributors=loom_contributors,     
     )
+
 
 def config(n_processes=None):
     # XXX: n_processes is a string.
     loom_config = None
     event_source_url = None
     text_area_content = '' 
-#    n_processes = None 
     process_uuid = None
 
     if flask.request.method == 'GET':
         # Load the default configuration.
         loom_config = get_loom_config()
-#        try:
-#            n_processes = flask.request.args['n']
-#        except KeyError:
-#            pass
 
     elif flask.request.method == 'POST':
         try:
@@ -435,7 +423,6 @@ def config(n_processes=None):
             process_uuid = str(uuid.uuid4())
             logger_name = get_logger_name(process_uuid)
             loom_config = get_loom_config(flask.request.form, logger_name) 
-            #app = flask.current_app._get_current_object()
             app = flask.current_app
             app.loom_db.start_loom_process(
                 process_uuid, logging.INFO, loom_config, eval(n_processes),
@@ -465,6 +452,7 @@ def logging_stream(process_uuid):
             app.loom_db.yield_log_message(process_uuid, logging.INFO),
             mimetype='text/event-stream',
         )
+
 
 def save_config():
     loom_config = get_loom_config(flask.request.form)
@@ -590,7 +578,7 @@ def keep_alive(process_uuid):
     app = flask.current_app
     try:
         is_alive = app.loom_db.is_alive
-        if is_alive[process_uuid] == False:
+        if is_alive[process_uuid] is False:
             is_alive[process_uuid] = True
         logger.debug(
             'is_alive[{}] = {}'
@@ -607,6 +595,7 @@ def admin():
     loom_db = app.loom_db
     pdb.set_trace()
     return ('', 204)
+
 
 def shutdown():
     app = flask.current_app
@@ -728,7 +717,12 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         spectral_network_data,
         plot_range=loom_config['plot_range'],
     )
-    legend = get_plot_legend(spectral_network_data.sw_data)
+    sw_data = spectral_network_data.sw_data
+    legend = get_legend(
+        g_data=sw_data.g_data,
+        branch_points=sw_data.branch_points,
+        irregular_singularities=sw_data.irregular_singularities,
+    )
 
     bokeh_custom_js_url = flask.url_for(
         'static', filename='bokeh_callbacks.js', key=int(time.time()),
@@ -741,7 +735,6 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
             'download_plot', process_uuid=process_uuid,
         )
     else:
-        #bokeh_custom_js_url = LOOM_SERVER_URL + bokeh_custom_js_url
         bokeh_custom_js_url = BOKEH_CUSTOM_JS_PUBLIC_URL
 
     return flask.render_template(
@@ -756,54 +749,6 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         loom_config=loom_config,
         config_options=config_options,
     )
-
-def get_plot_legend(sw_data):
-    legend = ''
-    g_data = sw_data.g_data
-    roots = g_data.roots
-    weights = g_data.weights
-    weight_pairs=[
-        [str('(mu_'+str(p[0])+', mu_'+str(p[1])+')') 
-         for p in g_data.ordered_weight_pairs(rt)]
-        for rt in roots
-    ]
-
-    legend += ('\t--- The Root System ---\n')
-    for i in range(len(roots)):
-        legend += (
-            'alpha_' + str(i) + ' : {}\n'.format(list(roots[i])) +
-            'ordered weight pairs : {}\n'.format(weight_pairs[i])
-        )
-
-    legend += ('\t--- The Weight System ---\n')
-    for i in range(len(weights)):
-        legend += (
-            'nu_' + str(i) + ' : {}\n'.format(list(weights[i]))
-        )
-
-    legend += ('\t--- The Branch Points ---\n')
-    for bp in sw_data.branch_points:
-        root_labels = []
-        for pr in bp.positive_roots:
-            for i, r in enumerate(roots):
-                if numpy.array_equal(pr, r):
-                    root_labels.append('alpha_{}'.format(i)) 
-        legend += (
-            '\n{}\n'.format(bp.label) +
-            'position : {}\n'.format(bp.z) +
-            'root type : {}\n'.format(root_labels) +
-            'monodromy matrix : \n{}\n'.format(bp.monodromy)
-        )
-
-    legend += ('\t--- The Irregular Singularities ---\n')
-    for irs in sw_data.irregular_singularities:
-        legend += (
-            '\n{}\n'.format(irs.label) +
-            'position : {}\n'.format(irs.z) + 
-            'monodomry matrix : \n{}\n'.format(irs.monodromy)
-        )
-
-    return legend
 
 
 def get_time_str():

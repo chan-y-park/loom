@@ -4,21 +4,20 @@ import numpy
 import sympy
 import ctypes
 import logging
-import pdb
+# import pdb
 import itertools
 
 from cmath import exp
 from scipy import integrate
 from s_wall import SWall, Joint, get_s_wall_seeds
 from misc import (
-    n_nearest_indices, is_root, get_turning_points, get_splits_with_overlap,
+    n_nearest_indices, get_turning_points, get_splits_with_overlap,
     get_descendant_roots, sort_roots,
 )
 from intersection import (
     NoIntersection, find_intersection_of_segments,
 )
 
-#CLIPPING_RADIUS = 30.0
 
 class SpectralNetwork:
     def __init__(
@@ -122,7 +121,7 @@ class SpectralNetwork:
                         M_0=M_0,
                         # TODO: change this to take bp itself.
                         parents=[bp.label],
-                        parent_roots = [root for root in bp.positive_roots],
+                        parent_roots=[root for root in bp.positive_roots],
                         label=label,
                         n_steps=n_steps,
                         logger_name=self.logger_name,
@@ -151,7 +150,6 @@ class SpectralNetwork:
                 logger.info('Growing S-wall #{}...'.format(i))
                 s_i.grow(
                     ode, bpzs, ppzs, config,
-                    #clipping_radius=CLIPPING_RADIUS,
                 )
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
@@ -169,8 +167,8 @@ class SpectralNetwork:
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
                 logger.info('No additional joint found: '
-                             'Stop growing this spectral network '
-                             'at iteration #{}.'.format(iteration))
+                            'Stop growing this spectral network '
+                            'at iteration #{}.'.format(iteration))
                 break
             elif iteration == num_of_iterations:
                 # Last iteration finished. Do not form new joints,
@@ -178,7 +176,7 @@ class SpectralNetwork:
                 break
             else:
                 logger.info('Growing S-walls in iteration #{} finished.'
-                             .format(iteration))
+                            .format(iteration))
 
             # Seed an S-wall for each new joint.
             for joint in new_joints:
@@ -214,7 +212,6 @@ class SpectralNetwork:
                     )
             logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
-
 
     def get_json_data(self):
         """
@@ -262,7 +259,7 @@ class SpectralNetwork:
 
         if (config['root_system'] in ['A1', ]):
             logger.info('There is no joint for the given root system {}.'
-                             .format(config['root_system']))
+                        .format(config['root_system']))
             return [] 
 
         new_s_wall = self.s_walls[new_s_wall_index]
@@ -281,7 +278,7 @@ class SpectralNetwork:
             # according to the trivialization, then
             # check the compatibility of a pair
             # of segments.
-            n_z_splits =  new_s_wall.get_splits(endpoints=True)
+            n_z_splits = new_s_wall.get_splits(endpoints=True)
             num_n_z_segs = len(new_s_wall.local_roots)
             p_z_splits = prev_s_wall.get_splits(endpoints=True)
             num_p_z_segs = len(prev_s_wall.local_roots)
@@ -472,14 +469,14 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 t_m -= 1
                 if t_m >= 0:
                     z_m = s_wall_z[t_m]
-                    if (p_z.real - bp.z.real)*(z_m.real - bp.z.real) > 0:
+                    if (p_z.real - bp.z.real) * (z_m.real - bp.z.real) > 0:
                         t = t_m
                         break
 
                 t_p += 1
                 if t_p <= t_max:
                     z_p = s_wall_z[t_p]
-                    if (p_z.real - bp.z.real)*(z_p.real - bp.z.real) > 0:
+                    if (p_z.real - bp.z.real) * (z_p.real - bp.z.real) > 0:
                         t = t_p
                         break
 
