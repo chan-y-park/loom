@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+"""
+Run all the configs in the /config folder (but not recursively).
+Generate a spectral network at a single phase
+and produce a Bokeh plot for each config in /test_results folder
+"""
 
 import os
 import sys
@@ -11,14 +16,14 @@ from bokeh.io import save
 from loom.bokeh_plot import get_spectral_network_bokeh_plot
 
 passed_configs = [
-    "/home/chan/loom/config/coset_A_3.ini",
-    "/home/chan/loom/config/D_4_AD_from_A_1.ini",
-    "/home/chan/loom/config/AD_SO_6.ini",
-    "/home/chan/loom/config/pure_SO_4.ini",
-    "/home/chan/loom/config/pure_SO_8.ini",
-    "/home/chan/loom/config/D_3_AD_from_SU_4.ini",
-    "/home/chan/loom/config/coset_A_3_2nd_rep.ini",
-    "/home/chan/loom/config/AD_from_SU_4_N_f_2.ini",
+#    "/home/chan/loom/config/coset_A_3.ini",
+#    "/home/chan/loom/config/D_4_AD_from_A_1.ini",
+#    "/home/chan/loom/config/AD_SO_6.ini",
+#    "/home/chan/loom/config/pure_SO_4.ini",
+#    "/home/chan/loom/config/pure_SO_8.ini",
+#    "/home/chan/loom/config/D_3_AD_from_SU_4.ini",
+#    "/home/chan/loom/config/coset_A_3_2nd_rep.ini",
+#    "/home/chan/loom/config/AD_from_SU_4_N_f_2.ini",
 #    "/home/chan/loom/config/coset_A_4_2nd_rep.ini",
 #    "/home/chan/loom/config/default.ini",
 #    "/home/chan/loom/config/SU_4_N_f_1.ini",
