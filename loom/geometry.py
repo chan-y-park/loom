@@ -412,24 +412,10 @@ class SWCurve:
         coeff_list = map(complex, sym_poly.all_coeffs())
         return numpy.roots(coeff_list)
 
-        # f_x_eq = self.num_eq.subs(z, z_0).evalf(n=ROOT_FINDING_PRECISION)
-        # # print '\n this is the f_x equation: {}'.format(f_x_eq)
-        # f_x_roots = sage_subprocess.solve_single_eq_x(
-        #     [f_x_eq],
-        #     precision=ROOT_FINDING_PRECISION,
-        # )
-        # # print 'at z = {}'.format(z_0)
-        # # print 'curve'
-        # # print f_x_eq
-        # # print 'roots'
-        # # print map(complex, f_x_roots)
-        # return map(complex, f_x_roots)
-
 
 class SWDiff:
-    def __init__(
-            self, v_str, g_data=None, diff_params=None, mt_params=None,
-            z_rotation=sympy.sympify('1'),):
+    def __init__(self, v_str, g_data=None, diff_params=None, mt_params=None,
+                 z_rotation=sympy.sympify('1'),):
         # sym_v is a SymPy expression. 
         self.sym_v = sympy.sympify(v_str)
         # num_v is from sym_v with its parameters 
@@ -509,8 +495,7 @@ class SWDataBase(object):
 
         logger.info(
             'Seiberg-Witten curve in the 1st fundamental '
-            'representation:\n(note: here x really stands for \lambda)'
-            '\n{} = 0\n(numerically\n{}=0\n)'
+            'representation:\n{} = 0\n(numerically\n{}=0\n)'
             .format(sympy.latex(self.ffr_curve.sym_eq),
                     sympy.latex(self.ffr_curve.num_eq))
         )
@@ -766,10 +751,6 @@ class SWDataBase(object):
                     break
                 
                 else:
-                    # This will block rotation of the z-plane
-                    # enable only for debugging purposes
-                    # rotate_z_plane = False
-                    #
                     logger.info(
                         'Some branch points or punctures '
                         'are vertically aligned.\n'
@@ -836,14 +817,6 @@ class SWDataBase(object):
         # NOTE: does this correspond to the 7th irrep for E7?
         #       We need that one for that algebra
         ffr_xs = self.ffr_curve.get_xs(z_0) 
-
-        ### MUST REMOVE: this is temporary
-        # if len(ffr_xs) != 27:
-        #     print '\n\nNot enough sheets! '
-        #     print 'at z = {}'.format(z_0)
-        #     print 'ffr xs = '
-        #     print ffr_xs
-        ###
 
         if algebra_type == 'A':
             # Can consider ffr_xs to be aligned according to ffr_weights,
