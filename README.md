@@ -1,5 +1,8 @@
 # ``loom``
-Python program to generate and analyze spectral networks
+A framework to generate and analyze spectral networks, including a GUI based on ``Tkinter`` and a web frontend based on ``flask``. ``loom`` is written in Python, Javascript, and C++.
+
+## Note for users and developers
+``stable`` is the branch to use for the study of spectral networks, ``master`` is a developmental branch that may contain up-to-date but unstable features.
 
 ## Overview
 ``loom`` has the following functionality.
@@ -10,21 +13,20 @@ Python program to generate and analyze spectral networks
 * Save and load generated data in JSON.
 * Plot spectral networks with interactive labeling.
 
+In addition, ``loom`` contains a web frontend that drives a WSGI application, which can be loaded from any web server that supports WSGI applications, including Apache. To see how the WSGI application looks like, visit
+* http://het-math2.physics.rutgers.edu/loom/ (stable)
+* http://chan.physics.rutgers.edu/loom/ (developmental)
+
 ## Screenshots
 
 ![loom screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_desktop.png "loom desktop")
 ![loom menu screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_menu.png "loom menu")
 ![loom plot screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_plot.png "loom plot")
 
-## To Do List
-### Core
-* 
-
-### GUI
-* 
-
 ## How to run ``loom``
 ``loom`` is expected to run on a Linux system. Although ``loom`` does not require any platform-specific library and therefore should run on any platform that runs Python 2.X in principle, it usually runs into a platform-specific problem when run on a platform other than Linux; for example, on Windows it has an issue with multiple processes, and on Mac it has an issue with TKinter GUI.
+
+To run ``loom``'s web frontend, the preparation is more involved, which will be posted here soon. In the meanwhile, please contact https://github.com/chan-y-park for the detail.
 
 ### Installation
 * The following instruction is based on Ubuntu 14.04 LTS.
