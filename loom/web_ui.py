@@ -1,4 +1,5 @@
 import os
+import subprocess
 import signal
 import multiprocessing
 import threading
@@ -379,7 +380,24 @@ class WebLoomApplication(flask.Flask):
 # View functions
 ###
 def index():
-    return flask.render_template('index.html')
+    ps = subprocess.Popen(
+        ['git', 'log', '--date-order', '--reverse', '--format="%aN"'], 
+        stdout=subprocess.PIPE,
+    )
+    loom_contributors_str = subprocess.check_output(
+        ['awk', '!x[$0]++'],
+        stdin=ps.stdout
+    ).strip().split("\n")
+    ps.wait()
+    loom_contributors = [name_str.strip('"')
+                         for name_str in loom_contributors_str]
+    for i, name in enumerate(loom_contributors):
+        if name == 'plonghi':
+            loom_contributors[i] = 'Pietro Longhi'
+    return flask.render_template(
+        'index.html',
+       loom_contributors=loom_contributors,     
+    )
 
 def config(n_processes=None):
     # XXX: n_processes is a string.

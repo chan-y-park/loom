@@ -5,9 +5,17 @@
     <p>This web page dynamically generates a spectral network in a representation of \(\mathfrak{g} = A_n, D_n, E_6\), or \(E_7\). For more detail, see
         <ul>
             <li> <a href=http://arxiv.org/abs/arXiv:1204.4824>Spectral networks [Gaiotto-Moore-Neitzke (2012)</a>
+            <li> <a href=http://arxiv.org/abs/arXiv:>ADE Spectral Networks [Longhi-Park (To Appear)</a>
         </ul>
     </p>
-    <p>loom is an open-source project for generating spectral networks. Its source code can be found at <a href=https://github.com/chan-y-park/loom>https://github.com/chan-y-park/loom</a>.
+    <p>loom is an open-source project for generating spectral networks. </p>
+    <p>The source code of loom can be found at <a href=https://github.com/chan-y-park/loom>https://github.com/chan-y-park/loom</a>.</p>
+    <p>List of contributors to loom in the order of the date of their first contribution:
+        <ul>
+{% for name in loom_contributors %}
+            <li>{{ name  }}</li>
+{% endfor %}
+        </ul>
     </p>
 
     <h2>How to use loom</h2>
