@@ -11,7 +11,7 @@ def child_sigint_handler(signum, frame):
 
 
 def child_sigterm_handler(signum, frame):
-    # print("SIGTERM catched by a child of loom.parallel.")
+    print("SIGTERM catched by a child of loom.parallel.")
     raise SystemExit("SIGTERM catched by a child of loom.parallel.")
 
 
@@ -21,7 +21,7 @@ def init_process():
     Take care of a keyboard interrupt and a SIGTERM.
     """
     signal.signal(signal.SIGINT, child_sigint_handler)
-    signal.signal(signal.SIGTERM, child_sigterm_handler)
+    #signal.signal(signal.SIGTERM, child_sigterm_handler)
 
 
 def a_child_process(

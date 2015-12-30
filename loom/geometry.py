@@ -2,7 +2,7 @@ import sympy
 import numpy
 import logging
 import copy
-# import pdb
+import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo
@@ -399,6 +399,7 @@ class SWCurve:
         self.num_eq = (self.num_eq
                        .subs(z, z_rotation * z)
                        .evalf(n=ROOT_FINDING_PRECISION, chop=True))
+        return self
 
     def get_xs(self, z_0):
         """
@@ -492,13 +493,13 @@ class SWDataBase(object):
                 z_rotation=self.z_plane_rotation,
                 ffr=True,
             )
-
-        logger.info(
-            'Seiberg-Witten curve in the 1st fundamental '
-            'representation:\n{} = 0\n(numerically\n{}=0\n)'
-            .format(sympy.latex(self.ffr_curve.sym_eq),
-                    sympy.latex(self.ffr_curve.num_eq))
-        )
+            self.diff = SWDiff(
+                'x',
+                g_data=self.g_data,
+                diff_params=diff_params,
+                mt_params=mt_params,
+                z_rotation=self.z_plane_rotation,
+            )
 
         # TODO: SWCurve in a general representation.
         if self.g_data.fundamental_representation_index == 1:
@@ -510,20 +511,20 @@ class SWDataBase(object):
             )
             self.curve = None
 
-        self.diff = SWDiff(
-            'x',
-            g_data=self.g_data,
-            diff_params=diff_params,
-            mt_params=mt_params,
-            z_rotation=self.z_plane_rotation,
+        # Display the content of SWDataBase.
+
+        logger.info(
+            'Seiberg-Witten curve in the 1st fundamental '
+            'representation:\n{} = 0\n(numerically\n{}=0\n)'
+            .format(sympy.latex(self.ffr_curve.sym_eq),
+                    sympy.latex(self.ffr_curve.num_eq))
         )
+
         logger.info(
             'Seiberg-Witten differential:\n{} dz\n(numerically\n{} dz\n)'
             .format(sympy.latex(self.diff.sym_v),
                     sympy.latex(self.diff.num_v))
         )
-
-        self.analyze_ffr_ramification_points()
 
         for rp in self.ffr_ramification_points:
             logger.info("{}: z = {}, x = {}, i = {}."
@@ -766,18 +767,25 @@ class SWDataBase(object):
                 'Could not find a suitable rotation for the z-plane.'
             )
 
-        # Set the z-rotation to numerical values.
+        # Apply the z-rotation to numerical attributes.
         self.z_plane_rotation = z_plane_rotation
+        self.ffr_curve = ffr_curve.set_z_rotation(z_plane_rotation)
+        self.diff = SWDiff(
+            'x',
+            g_data=self.g_data,
+            diff_params=diff_params,
+            mt_params=mt_params,
+            z_rotation=self.z_plane_rotation,
+        )
 
         for p in punctures + ffr_ramification_points:
             if p.z != oo:
                 p.z /= complex(z_plane_rotation)
         self.regular_punctures = regular_punctures
         self.irregular_punctures = irregular_punctures
-        self.ffr_ramification_points = ffr_ramification_points
 
-        ffr_curve.set_z_rotation(z_plane_rotation)
-        self.ffr_curve = ffr_curve
+        self.ffr_ramification_points = ffr_ramification_points
+        self.analyze_ffr_ramification_points()
 
         # Automatically configure various sizes 
         # if not configured manually.

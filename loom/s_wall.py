@@ -260,7 +260,7 @@ class SWall(object):
             #     [root.tolist() for root in multiple_roots]
             #     for multiple_roots in self.multiple_local_roots
             # ],
-            # 'local_weight_pairs': self.local_weight_pairs,
+            'local_weight_pairs': self.local_weight_pairs
         }
         # TODO: Remove the following after multiple_local_roots
         # becomes the default.
