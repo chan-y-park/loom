@@ -389,11 +389,18 @@ def index():
         stdin=ps.stdout
     ).strip().split("\n")
     ps.wait()
-    loom_contributors = [name_str.strip('"')
-                         for name_str in loom_contributors_str]
-    for i, name in enumerate(loom_contributors):
+
+    loom_contributors = []
+    for name_str in loom_contributors_str:
+        name = name_str.strip('"')
         if name == 'plonghi':
-            loom_contributors[i] = 'Pietro Longhi'
+            loom_contributors.append('Pietro Longhi')
+        elif name == 'chan':
+            if 'Chan Y. Park' not in loom_contributors:
+                loom_contributors.append('Chan Y. Park')
+        else:
+            loom_contributors.append(name)
+
     return flask.render_template(
         'index.html',
        loom_contributors=loom_contributors,     
