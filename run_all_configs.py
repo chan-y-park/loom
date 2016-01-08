@@ -15,6 +15,8 @@ import pdb
 from bokeh.io import save
 from loom.bokeh_plot import get_spectral_network_bokeh_plot
 
+TEST_RESULT_DIR = 'test_results'
+
 passed_configs = []
 # passed_configs = [
 #     "/home/chan/loom/config/coset_A_3.ini",
@@ -52,6 +54,9 @@ config_file_paths = glob.glob(
     )
 )
 
+if not os.path.exists(TEST_RESULT_DIR):
+    os.makedirs(TEST_RESULT_DIR)
+
 loom.set_logging(
     logger_name=logger_name,
     logging_level=logging.INFO,
@@ -79,4 +84,5 @@ for file_path in config_file_paths:
                                         notebook=True)
     file_dir, file_name = os.path.split(file_path)
     name, ext = os.path.splitext(file_name)
-    save(obj=p, filename='test_results/{}.html'.format(name), title=name,)
+    save(obj=p, filename='{}/{}.html'.format(TEST_RESULT_DIR, name),
+         title=name,)
