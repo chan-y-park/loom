@@ -9,7 +9,7 @@ from scipy import interpolate
 
 from geometry import find_xs_at_z_0
 from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,
-                  get_descendant_roots, sort_roots,)
+                  get_descendant_roots, sort_roots)
 
 x, z = sympy.symbols('x z')
 
@@ -104,6 +104,9 @@ SEED_PRECISION_MAX_DEPTH = 5
 class Joint:
     def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
                  logger_name='loom',):
+
+        self.data_attributes = ['z', 'M', 'parents', 'label', 'roots',
+                                'ode_xs']
         self.z = None
         self.M = None
         self.parents = None
@@ -215,6 +218,12 @@ class SWall(object):
         self.multiple_local_roots = None
         # local_weight_pairs is a list of pair of intgers.
         self.local_weight_pairs = []        
+
+        self.data_attributes = [
+            'z', 'M', 'x', 'parents', 'parent_roots', 'label', 
+            'cuts_intersections', 'root_basepoint',
+            'local_roots', 'multiple_local_roots', 'local_weight_pairs',
+        ]
 
     def __setitem__(self, t, data):
         """

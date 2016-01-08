@@ -29,17 +29,19 @@ from api import (
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
 from plotting import get_legend
+from misc import get_data_size_of
 
 # Flask configuration
 DEBUG = True
 SECRET_KEY = 'web_loom_key'
 PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
-LOGGING_FILE_PATH = os.path.join(
-    get_loom_dir(),
-    ('logs/web_loom_{}-{:02}-{:02} {:02}:{:02}:{:02}.log'
-     .format(*time.localtime(time.time())[:6])),
-)
+STAT_LOGGER_NAME = WEB_APP_NAME + '_stat'
+#LOGGING_FILE_PATH = os.path.join(
+#    get_loom_dir(),
+#    ('logs/web_loom_{}-{:02}-{:02} {:02}:{:02}:{:02}.log'
+#     .format(*time.localtime(time.time())[:6])),
+#)
 DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
@@ -109,12 +111,15 @@ class LoomDB(object):
 
     def db_manager(self):
         """
-        A child process that will manage the DB
+        A thread that will manage the DB
         and clean up data of previous clients.
         """
         logger_name = get_logger_name()
         logger = logging.getLogger(logger_name)
 
+        # Wait for DB_CLEANUP_CYCLE_SECS and do clean-ups.
+        # When self.db_manager_stop event is set,
+        # break the while-loop and finish all the processes.
         while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
             to_delete = []
             try:
@@ -180,6 +185,7 @@ class LoomDB(object):
 
     def start_loom_process(
         self, process_uuid, logging_level, loom_config, n_processes=None,
+        stat_info=None,
     ):
         if n_processes is None:
             n_processes = DEFAULT_NUM_PROCESSES
@@ -191,7 +197,6 @@ class LoomDB(object):
             logger_name=logger_name,
             logging_level=logging_level,
             logging_queue=logging_queue,
-            use_rotating_file_handler=True,
         )
 
         result_queue = multiprocessing.Queue()
@@ -205,6 +210,7 @@ class LoomDB(object):
                 result_queue=result_queue,
                 logging_queue=logging_queue,
                 logger_name=logger_name,
+                stat_info=stat_info,
             ),
         )
         self.loom_processes[process_uuid] = loom_process
@@ -360,10 +366,19 @@ class WebLoomApplication(flask.Flask):
     """
     def __init__(self, config_file, logging_level):
         super(WebLoomApplication, self).__init__(WEB_APP_NAME)
+        # Set a logger for loom that has a rotating file handler.
         set_logging(
             logger_name=WEB_APP_NAME,
             logging_level=logging_level,
-            logging_file_name=LOGGING_FILE_PATH,
+            #logging_file_name=LOGGING_FILE_PATH,
+            logging_file_name=get_logging_file_path(WEB_APP_NAME),
+            use_rotating_file_handler=True,
+        )
+        # Set a logger for recording the stat
+        # with a non-rotating file handler.
+        set_logging(
+            logger_name=STAT_LOGGER_NAME,
+            logging_file_name=get_logging_file_path(STAT_LOGGER_NAME),
         )
         self.loom_db = LoomDB()
 
@@ -372,6 +387,7 @@ class WebLoomApplication(flask.Flask):
 # View functions
 ###
 def index():
+    # Make a list of contributors from git logs.
     ps = subprocess.Popen(
         ['git', 'log', '--date-order', '--reverse', '--format="%aN"'], 
         stdout=subprocess.PIPE,
@@ -430,9 +446,18 @@ def config(n_processes=None):
             process_uuid = str(uuid.uuid4())
             logger_name = get_logger_name(process_uuid)
             loom_config = get_loom_config(flask.request.form, logger_name) 
+
+            user_ip = flask.request.remote_addr
+            # XXX: Use the following behind a Proxy server.
+            # user_ip = flask.request.environ.get('HTTP_X_REAL_IP',
+            #                                     request.remote_addr)
+            stat_info = [STAT_LOGGER_NAME, user_ip, process_uuid]
+
             app = flask.current_app
             app.loom_db.start_loom_process(
-                process_uuid, logging.INFO, loom_config, eval(n_processes),
+                process_uuid, logging.INFO, loom_config,
+                n_processes=eval(n_processes),
+                stat_info=stat_info,
             )
             event_source_url = flask.url_for(
                 'logging_stream', process_uuid=process_uuid,
@@ -480,6 +505,7 @@ def plot():
         process_uuid = flask.request.form['process_uuid']
         # Finish loom_process
         rv = loom_db.get_result(process_uuid)
+        loom_config, spectral_network_data = rv
 
     elif flask.request.method == 'GET':
         process_uuid = data_dir = flask.request.args['data']
@@ -489,9 +515,10 @@ def plot():
         rv = load_spectral_network(
             full_data_dir, logger_name=get_logger_name()
         )
+        loom_config, spectral_network_data = rv
         loom_db.result_queues[data_dir] = multiprocessing.Queue()
 
-    loom_config, spectral_network_data = rv
+    #loom_config, spectral_network_data = rv
 
     # Put data back into the queue for future use.
     loom_db.result_queues[process_uuid].put(rv)
@@ -511,7 +538,8 @@ def download_data(process_uuid):
     
     data['version'] = get_current_branch_version()
 
-    fp = StringIO()
+    #fp = StringIO()
+    fp = BytesIO()
     loom_config.parser.write(fp)
     fp.seek(0)
     data['config.ini'] = fp.read()
@@ -757,6 +785,10 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         config_options=config_options,
     )
 
-
-def get_time_str():
-    return '{}-{}-{} {}:{}:{}'.format(*time.localtime(time.time())[:6])
+def get_logging_file_path(logger_name):
+    logging_file_path = os.path.join(
+        get_loom_dir(),
+        ('logs/{}_{}-{:02}-{:02} {:02}:{:02}:{:02}.log'
+         .format(logger_name, *time.localtime(time.time())[:6])),
+    )
+    return logging_file_path

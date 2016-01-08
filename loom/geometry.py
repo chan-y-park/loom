@@ -70,7 +70,15 @@ class GData:
             self.set_from_json_data(json_data)
         else:
             self.set_from_sage(root_system, representation_str)
-        self.set_root_color_map()
+        self.root_color_map = self.get_root_color_map()
+
+        self.data_attributes = [
+            'root_system', 'type', 'rank', 
+            'fundamental_representation_index', 'highest_weight',
+            'ffr_weights', 'roots', 'positive_roots', 'weights',
+            'multiplicities', 'weight_basis', 'weight_coefficients',
+            'root_color_map',
+        ]
 
     def get_json_data(self):
         json_data = {
@@ -156,6 +164,7 @@ class GData:
             sage_data['weight_coefficients']
         )
 
+    # XXX: rename this to get_ordered_weight_pairs()
     def ordered_weight_pairs(self, root, ffr=False):
         """
         Return list of pairs of weight indices.
@@ -176,6 +185,7 @@ class GData:
 
         return pairs
 
+    # XXX: rename this to apply_weyl_monodromy()
     def weyl_monodromy(self, root, br_loc, direction, reverse=False):
         """
         Returns a new root of the segment of an S-wall
@@ -213,7 +223,7 @@ class GData:
         new_root = new_v_j - new_v_i
         return new_root
 
-    def set_root_color_map(self):
+    def get_root_color_map(self):
         """
         Create a mapping between a positive root and a color.
         A negative root will have the same color as the corresponding
@@ -232,12 +242,12 @@ class GData:
             )
             p_root_colors.append('#{:02x}{:02x}{:02x}'.format(r, g, b))
 
-        self.root_color_map = p_root_colors
+        return p_root_colors
 
     def get_root_color(self, root):
         logger = logging.getLogger(self.logger_name)
-        if self.root_color_map is None:
-            self.set_root_color_map()
+#        if self.root_color_map is None:
+#            self.set_root_color_map()
 
         for i, p_root in enumerate(self.positive_roots):
             if (
@@ -273,6 +283,11 @@ class RamificationPoint:
             self.is_puncture = is_puncture
         else:
             self.set_from_json_data(json_data)
+
+        self.data_attributes = [
+            'z', 'Ciz', 'x', 'i', 'label', 'ramification_type',
+            'sw_diff_coeff', 'is_puncture',
+        ]
 
     def __str__(self):
         return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
@@ -329,6 +344,8 @@ class Puncture:
         else:
             self.set_from_json_data(json_data)
 
+        self.data_attributes = ['z', 'Ciz', 'label',]
+
     def __eq__(self, other):
         return self.label == other.label
 
@@ -369,7 +386,7 @@ class SWCurve:
                  z_rotation=sympy.sympify('1'), ffr=False):
         self.sym_eq = None
         self.num_eq = None
-        self.g_data = g_data
+        #self.g_data = g_data
 
         if ffr is True:
             # Build a cover in the first fundamental representation.
@@ -394,6 +411,8 @@ class SWCurve:
                 'class SWCurve with a general representation '
                 'is not implemented yet.'
             )
+
+        self.data_attributes = ['sym_eq', 'num_eq']
 
     def set_z_rotation(self, z_rotation):
         self.num_eq = (self.num_eq
@@ -430,6 +449,8 @@ class SWDiff:
             .evalf(n=ROOT_FINDING_PRECISION, chop=True)
         )
 
+        self.data_attributes = ['sym_v', 'num_v']
+
 
 class SWDataBase(object):
     """
@@ -448,6 +469,12 @@ class SWDataBase(object):
     def __init__(self, config, logger_name='loom', json_data=None,):
         self.logger_name = logger_name
         logger = logging.getLogger(self.logger_name)
+
+        self.data_attributes = [
+            'g_data', 'regular_punctures', 'irregular_punctures',
+            'ffr_ramification_points', 'z_plane_rotation', 'accuracy',
+            'ffr_curve', 'curve', 'diff',
+        ]
 
         self.g_data = None
         self.regular_punctures = []

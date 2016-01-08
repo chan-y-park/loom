@@ -128,6 +128,11 @@ class BranchPoint:
         else:
             self.set_from_json_data(json_data, ffr_ramification_points,)
 
+        self.data_attributes = [
+            'z', 'label', 'monodromy', 'groups', 'positive_roots',
+            'order', 'ffr_ramification_points'
+        ]
+
     def get_json_data(self):
         json_data = {
             'z': ctor2(self.z),
@@ -182,6 +187,8 @@ class IrregularSingularity:
             self.z = r2toc(json_data['z'])
             self.label = json_data['label']
             self.monodromy = numpy.array(json_data['monodromy'])
+
+        self.data_attributes = ['z', 'label', 'monodromy']
 
     def get_json_data(self):
         json_data = {
@@ -270,6 +277,12 @@ class SWDataWithTrivialization(SWDataBase):
             self.set_trivialization()
         else:
             self.set_trivialization_from_json_data(json_data)
+
+        self.data_attributes += [
+            'branch_points', 'irregular_singularities', 'min_distance',
+            'min_horizontal_distance', 'base_point', 'reference_ffr_xs',
+            'reference_xs'
+        ]
 
     def get_json_data(self):
         json_data = super(SWDataWithTrivialization, self).get_json_data()

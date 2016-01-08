@@ -1,8 +1,10 @@
+import sys
+import types
 import itertools
 import numpy
 import sympy
 import warnings
-# import pdb
+import pdb
 
 from fractions import Fraction
 from sympy import limit, oo
@@ -346,3 +348,51 @@ def get_splits_with_overlap(splits):
         start = split
     new_splits.append((start, None))
     return new_splits
+
+
+def get_data_size_of(obj, debug=False):
+    if isinstance(obj, types.InstanceType) or 'loom' in str(type(obj)):
+        data_size = 0
+#        all_attributes = []
+#        for attr_name in dir(obj):
+#            if '__' in attr_name:
+#                continue
+#            else:
+#                all_attributes.append(attr_name)
+        try:
+            for attr_name in obj.data_attributes:
+                attr = getattr(obj, attr_name)
+                data_size += get_data_size_of(attr)
+#                all_attributes.remove(attr_name)
+        except AttributeError:
+#            print 'object = {} has no data_attributes.'.format(obj)
+            pass
+
+#        print 'object = {}'.format(obj)
+#        print 'remaining attributes = {}'.format(all_attributes)
+
+    elif isinstance(obj, list):
+        data_size = 0
+        for e in obj:
+            data_size += get_data_size_of(e)
+
+    elif isinstance(obj, (int, long, float, complex, str, unicode)):
+        data_size = sys.getsizeof(obj)
+
+    elif isinstance(obj, numpy.ndarray):
+        data_size = obj.nbytes
+
+    elif isinstance(obj, sympy.Basic):
+        data_size = sys.getsizeof(str(obj))
+
+    elif isinstance(
+        obj,
+        (types.BuiltinFunctionType, types.BuiltinMethodType,
+         types.MethodType, types.NoneType)
+    ):
+        data_size = 0
+    else:
+#        print 'skipping type({}) = {}'.format(obj, type(obj))
+        data_size = 0
+
+    return data_size

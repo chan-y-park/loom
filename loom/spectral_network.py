@@ -29,6 +29,7 @@ class SpectralNetwork:
         self.s_walls = []
         self.joints = []
         self.logger_name = logger_name
+        self.data_attributes = ['phase', 's_walls', 'joints']
 
     def grow(self, config, sw_data):
         """

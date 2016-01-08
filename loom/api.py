@@ -7,14 +7,18 @@ import logging
 import subprocess
 import signal
 import matplotlib
-# import pdb
+import pdb
 
+from logging.handlers import RotatingFileHandler
+#from io import StringIO
+from io import BytesIO
 from logutils_queue import QueueHandler
 from config import LoomConfig
 from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
+from misc import get_data_size_of
 
 
 class SpectralNetworkData:
@@ -26,6 +30,7 @@ class SpectralNetworkData:
     def __init__(self, sw_data, spectral_networks):
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
+        self.data_attributes = ['sw_data', 'spectral_networks']
 
 
 def get_logging_formatter(level):
@@ -58,7 +63,7 @@ def set_logging(
     if logging_file_name is not None:
         # Create a log file.
         if use_rotating_file_handler is True:
-            fh = logging.handlers.RotatingFileHandler(
+            fh = RotatingFileHandler(
                 logging_file_name,
                 mode='w',
                 maxBytes=(10 * 1024 * 1024),
@@ -258,6 +263,7 @@ def generate_spectral_network(
     result_queue=None,
     logging_queue=None,
     logger_name='loom',
+    stat_info=None,
 ):
     """
     Generate one or more spectral networks according to
@@ -325,6 +331,28 @@ def generate_spectral_network(
         except:
             logger.warn("Failed in putting a finish mark "
                         "in the logging queue.")
+
+    if stat_info is not None:
+        stat_logger_name, ip, uuid = stat_info 
+        # Make a zipped config file and record the stat.
+        config_file_name = '{}.ini'.format(uuid)
+        config_zipfile_path = os.path.join(
+            get_loom_dir(), 'logs', '{}.zip'.format(config_file_name),
+        )
+        config_fp = BytesIO()
+        config.parser.write(config_fp)
+        config_fp.seek(0)
+        with zipfile.ZipFile(config_zipfile_path, 'w') as zfp:
+            zip_info = zipfile.ZipInfo(config_file_name)
+            zip_info.date_time = time.localtime(time.time())[:6]
+            zip_info.compress_type = zipfile.ZIP_DEFLATED
+            zip_info.external_attr = 0777 << 16L
+            zfp.writestr(zip_info, config_fp.read())
+
+        data_size = get_data_size_of(spectral_network_data)
+
+        stat_logger = logging.getLogger(stat_logger_name)
+        stat_logger.info('{}, {}, {}'.format(ip, uuid, data_size))
 
     if result_queue is None:
         return spectral_network_data
