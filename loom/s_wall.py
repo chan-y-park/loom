@@ -124,6 +124,9 @@ class Joint:
         self.roots = roots
         self.ode_xs = ode_xs
 
+    def set_z_rotation(self, z_rotation):
+        self.z *= complex(z_rotation)
+
     def __eq__(self, other):
         return self.label == other.label
 
@@ -224,6 +227,9 @@ class SWall(object):
             'cuts_intersections', 'root_basepoint',
             'local_roots', 'multiple_local_roots', 'local_weight_pairs',
         ]
+
+    def set_z_rotation(self, z_rotation):
+        self.z *= complex(z_rotation)
 
     def __setitem__(self, t, data):
         """

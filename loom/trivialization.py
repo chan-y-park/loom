@@ -133,6 +133,10 @@ class BranchPoint:
             'order', 'ffr_ramification_points'
         ]
 
+    def set_z_rotation(self, z_rotation):
+        if self.z != oo:
+            self.z *= complex(z_rotation)
+
     def get_json_data(self):
         json_data = {
             'z': ctor2(self.z),
@@ -189,6 +193,10 @@ class IrregularSingularity:
             self.monodromy = numpy.array(json_data['monodromy'])
 
         self.data_attributes = ['z', 'label', 'monodromy']
+
+    def set_z_rotation(self, z_rotation):
+        if self.z != oo:
+            self.z *= complex(z_rotation)
 
     def get_json_data(self):
         json_data = {
@@ -272,17 +280,28 @@ class SWDataWithTrivialization(SWDataBase):
         self.base_point = None 
         self.reference_ffr_xs = None
         self.reference_xs = None
+        # self.branch_cut_angle = None
 
         if json_data is None:
             self.set_trivialization()
+            # self.branch_cut_angle = (pi / 2 -
+            #                          phase(complex(self.z_plane_rotation)))
         else:
             self.set_trivialization_from_json_data(json_data)
 
         self.data_attributes += [
             'branch_points', 'irregular_singularities', 'min_distance',
             'min_horizontal_distance', 'base_point', 'reference_ffr_xs',
-            'reference_xs'
+            'reference_xs', # 'branch_cut_angle'
         ]
+
+    def set_z_rotation(self, z_rotation):
+        super(SWDataWithTrivialization, self).set_z_rotation(z_rotation)
+
+        for p in (self.branch_points + self.irregular_singularities):
+            p.set_z_rotation(z_rotation)
+
+        self.base_point *= complex(z_rotation)
 
     def get_json_data(self):
         json_data = super(SWDataWithTrivialization, self).get_json_data()

@@ -289,8 +289,12 @@ class RamificationPoint:
             'sw_diff_coeff', 'is_puncture',
         ]
 
-    def __str__(self):
-        return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
+    def set_z_rotation(self, z_rotation):
+        if self.z != oo:
+            self.z *= complex(z_rotation)
+
+#    def __str__(self):
+#        return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
 
     def __eq__(self, other):
         return self.label == other.label
@@ -345,6 +349,10 @@ class Puncture:
             self.set_from_json_data(json_data)
 
         self.data_attributes = ['z', 'Ciz', 'label']
+
+    def set_z_rotation(self, z_rotation):
+        if self.z != oo:
+            self.z *= complex(z_rotation)
 
     def __eq__(self, other):
         return self.label == other.label
@@ -450,6 +458,12 @@ class SWDiff:
 
         self.data_attributes = ['sym_v', 'num_v']
 
+    def set_z_rotation(self, z_rotation):
+        self.num_v = (self.num_v
+                      .subs(z, z_rotation * z)
+                      .evalf(n=ROOT_FINDING_PRECISION, chop=True))
+        return self
+
 
 class SWDataBase(object):
     """
@@ -479,6 +493,10 @@ class SWDataBase(object):
         self.regular_punctures = []
         self.irregular_punctures = []
         self.ffr_ramification_points = None
+        # This rotation is applied when getting the trivialization.
+        # TODO: When rotating the z-plane back to the original place,
+        # set this to zero and introduce a new attribute to save
+        # the angle of the branch cuts.
         self.z_plane_rotation = None
         self.accuracy = config['accuracy']
 
@@ -558,6 +576,24 @@ class SWDataBase(object):
 
         for pct in self.regular_punctures + self.irregular_punctures:
             logger.info('{} at z={}'.format(pct.label, pct.z))
+
+    def set_z_rotation(self, z_rotation):
+        for p in (
+            self.regular_punctures + self.irregular_punctures +
+            self.ffr_ramification_points
+        ):
+            p.set_z_rotation(z_rotation)
+
+        if self.ffr_curve is not None:
+            self.ffr_curve.set_z_rotation(z_rotation)
+
+        if self.curve is not None:
+            self.curve.set_z_rotation(z_rotation)
+
+        if self.diff is not None:
+            self.diff.set_z_rotation(z_rotation)
+
+        # self.z_plane_rotation *= z_rotation
 
     def get_json_data(self):
         json_data = {
@@ -805,8 +841,9 @@ class SWDataBase(object):
         )
 
         for p in punctures + ffr_ramification_points:
-            if p.z != oo:
-                p.z /= complex(z_plane_rotation)
+#            if p.z != oo:
+#                p.z /= complex(z_plane_rotation)
+            p.set_z_rotation(z_plane_rotation)
         self.regular_punctures = regular_punctures
         self.irregular_punctures = irregular_punctures
 

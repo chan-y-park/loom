@@ -31,6 +31,12 @@ class SpectralNetwork:
         self.logger_name = logger_name
         self.data_attributes = ['phase', 's_walls', 'joints']
 
+    def set_z_rotation(self, z_rotation):
+        for s_wall in self.s_walls:
+            s_wall.set_z_rotation(z_rotation)
+        for joint in self.joints:
+            joint.set_z_rotation(z_rotation)
+
     def grow(self, config, sw_data):
         """
         Grow the spectral network by seeding SWall's
