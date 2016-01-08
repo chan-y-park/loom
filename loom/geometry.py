@@ -2,7 +2,7 @@ import sympy
 import numpy
 import logging
 import copy
-import pdb
+# import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo
@@ -344,7 +344,7 @@ class Puncture:
         else:
             self.set_from_json_data(json_data)
 
-        self.data_attributes = ['z', 'Ciz', 'label',]
+        self.data_attributes = ['z', 'Ciz', 'label']
 
     def __eq__(self, other):
         return self.label == other.label
@@ -386,7 +386,6 @@ class SWCurve:
                  z_rotation=sympy.sympify('1'), ffr=False):
         self.sym_eq = None
         self.num_eq = None
-        #self.g_data = g_data
 
         if ffr is True:
             # Build a cover in the first fundamental representation.

@@ -21,7 +21,7 @@ def init_process():
     Take care of a keyboard interrupt and a SIGTERM.
     """
     signal.signal(signal.SIGINT, child_sigint_handler)
-    #signal.signal(signal.SIGTERM, child_sigterm_handler)
+    # signal.signal(signal.SIGTERM, child_sigterm_handler)
 
 
 def a_child_process(

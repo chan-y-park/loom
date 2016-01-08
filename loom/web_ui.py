@@ -37,11 +37,6 @@ SECRET_KEY = 'web_loom_key'
 PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
 STAT_LOGGER_NAME = WEB_APP_NAME + '_stat'
-#LOGGING_FILE_PATH = os.path.join(
-#    get_loom_dir(),
-#    ('logs/web_loom_{}-{:02}-{:02} {:02}:{:02}:{:02}.log'
-#     .format(*time.localtime(time.time())[:6])),
-#)
 DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
@@ -185,7 +180,6 @@ class LoomDB(object):
 
     def start_loom_process(
         self, process_uuid, logging_level, loom_config, n_processes=None,
-        #stat_info=None,
     ):
         if n_processes is None:
             n_processes = DEFAULT_NUM_PROCESSES
@@ -210,7 +204,6 @@ class LoomDB(object):
                 result_queue=result_queue,
                 logging_queue=logging_queue,
                 logger_name=logger_name,
-                #stat_info=stat_info,
             ),
         )
         self.loom_processes[process_uuid] = loom_process
@@ -382,7 +375,6 @@ class WebLoomApplication(flask.Flask):
         set_logging(
             logger_name=WEB_APP_NAME,
             logging_level=logging_level,
-            #logging_file_name=LOGGING_FILE_PATH,
             logging_file_name=get_logging_file_path(WEB_APP_NAME),
             use_rotating_file_handler=True,
         )
@@ -469,7 +461,6 @@ def config(n_processes=None):
             app.loom_db.start_loom_process(
                 process_uuid, logging.INFO, loom_config,
                 n_processes=eval(n_processes),
-                #stat_info=stat_info,
             )
             event_source_url = flask.url_for(
                 'logging_stream', process_uuid=process_uuid,
@@ -517,7 +508,6 @@ def plot():
         process_uuid = flask.request.form['process_uuid']
         # Finish loom_process
         rv = loom_db.get_result(process_uuid)
-        loom_config, spectral_network_data = rv
 
     elif flask.request.method == 'GET':
         process_uuid = data_dir = flask.request.args['data']
@@ -527,10 +517,9 @@ def plot():
         rv = load_spectral_network(
             full_data_dir, logger_name=get_logger_name()
         )
-        loom_config, spectral_network_data = rv
         loom_db.result_queues[data_dir] = multiprocessing.Queue()
 
-    #loom_config, spectral_network_data = rv
+    loom_config, spectral_network_data = rv
 
     # Put data back into the queue for future use.
     loom_db.result_queues[process_uuid].put(rv)
@@ -550,7 +539,7 @@ def download_data(process_uuid):
     
     data['version'] = get_current_branch_version()
 
-    #fp = StringIO()
+    # fp = StringIO()
     fp = BytesIO()
     loom_config.parser.write(fp)
     fp.seek(0)
@@ -638,9 +627,9 @@ def keep_alive(process_uuid):
 
 def admin():
     # TODO: password-protect this page.
-    app = flask.current_app
-    loom_db = app.loom_db
-    pdb.set_trace()
+    # app = flask.current_app
+    # loom_db = app.loom_db
+    # pdb.set_trace()
     return ('', 204)
 
 

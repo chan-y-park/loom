@@ -7,24 +7,21 @@ import logging
 import subprocess
 import signal
 import matplotlib
-import pdb
+# import pdb
 
 from logging.handlers import RotatingFileHandler
-#from io import StringIO
-from io import BytesIO
 from logutils_queue import QueueHandler
 from config import LoomConfig
 from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
-from misc import get_data_size_of
 
 
 class SpectralNetworkData:
     """
     A container class of information relevant to
-    a set of spectral networks generated from a 
+    a set of spectral networks generated from a
     single Seiberg-Witten data.
     """
     def __init__(self, sw_data, spectral_networks):
@@ -45,8 +42,8 @@ def get_logging_formatter(level):
 
 def set_logging(
     logger_name='loom',
-    logging_level=logging.INFO, 
-    logging_queue=None, 
+    logging_level=logging.INFO,
+    logging_queue=None,
     logging_stream=None,
     logging_file_name=None,
     remove_handlers=True,
@@ -129,10 +126,10 @@ def load_spectral_network(
     result_queue=None,
     logger_name='loom',
 ):
-    logger = logging.getLogger(logger_name)
-    
     if data_dir is None:
         return (None, None)
+
+    logger = logging.getLogger(logger_name)
     logger.info('Opening data directory "{}"...'.format(data_dir))
 
     config = LoomConfig(logger_name=logger_name)
@@ -181,7 +178,7 @@ def load_spectral_network(
 
 
 def save_spectral_network(
-    config, 
+    config,
     spectral_network_data,
     data_dir=None,
     make_zipped_file=True,
@@ -207,7 +204,7 @@ def save_spectral_network(
 
     # Save version data.
     version_file_path = os.path.join(data_dir, 'version')
-    version = get_current_branch_version() 
+    version = get_current_branch_version()
     with open(version_file_path, 'w') as fp:
         fp.write(version)
 
@@ -239,7 +236,7 @@ def save_spectral_network(
         # Make a compressed data file.
         file_list = [config_file_path, sw_data_file_path]
         file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
-        zipped_file_name = os.path.basename(os.path.normpath(data_dir)) 
+        zipped_file_name = os.path.basename(os.path.normpath(data_dir))
         zipped_file_path = data_dir + '{}.zip'.format(zipped_file_name)
         logger.info('Save compressed data to {}.'.format(zipped_file_path))
         with zipfile.ZipFile(zipped_file_path, 'w',
@@ -263,7 +260,6 @@ def generate_spectral_network(
     result_queue=None,
     logging_queue=None,
     logger_name='loom',
-    #stat_info=None,
 ):
     """
     Generate one or more spectral networks according to
@@ -291,9 +287,9 @@ def generate_spectral_network(
             logger.info('Generate a single spectral network at theta = {}.'
                         .format(phase))
             spectral_network = SpectralNetwork(
-                phase=phase, 
+                phase=phase,
                 logger_name=logger_name,
-            ) 
+            )
 
             spectral_network.grow(config, sw)
 
@@ -303,11 +299,11 @@ def generate_spectral_network(
             logger.info('Generate multiple spectral networks.')
             logger.info('phases = {}.'.format(phase))
             spectral_networks = parallel_get_spectral_network(
-                sw, 
+                sw,
                 config,
                 n_processes,
                 logger_name=logger_name,
-            ) 
+            )
 
         end_time = time.time()
         end_date_time = (
@@ -332,29 +328,6 @@ def generate_spectral_network(
             logger.warn("Failed in putting a finish mark "
                         "in the logging queue.")
 
-#    if stat_info is not None:
-#        stat_logger_name, ip, uuid = stat_info 
-#        # Make a zipped config file and record the stat.
-#        config_file_name = '{}.ini'.format(uuid)
-#        config_zipfile_path = os.path.join(
-#            get_loom_dir(), 'logs', '{}.zip'.format(config_file_name),
-#        )
-#        config_fp = BytesIO()
-#        config.parser.write(config_fp)
-#        config_fp.seek(0)
-#        with zipfile.ZipFile(config_zipfile_path, 'w') as zfp:
-#            zip_info = zipfile.ZipInfo(config_file_name)
-#            zip_info.date_time = time.localtime(time.time())[:6]
-#            zip_info.compress_type = zipfile.ZIP_DEFLATED
-#            zip_info.external_attr = 0777 << 16L
-#            zfp.writestr(zip_info, config_fp.read())
-#
-#        data_size = get_data_size_of(spectral_network_data)
-#
-#        stat_logger = logging.getLogger(stat_logger_name)
-#        stat_logger.info('{}, {}, {}'.format(ip, uuid, data_size))
-#        logger.info('Finished saving stat log.'.format(end_date_time))
-#
     if result_queue is None:
         return spectral_network_data
     else:
@@ -392,15 +365,14 @@ def make_spectral_network_plot(
         logger.info('Generating the plot of a spectral network '
                     '@ theta = {}...'.format(spectral_network.phase))
         plot_legend = spectral_network_plot.draw(
-            spectral_network, 
+            spectral_network,
             sw_data.branch_points,
-            punctures=(sw_data.regular_punctures + 
+            punctures=(sw_data.regular_punctures +
                        sw_data.irregular_punctures),
             irregular_singularities=sw_data.irregular_singularities,
             g_data=sw_data.g_data,
             **kwargs
         )
-        
         logger.info(plot_legend)
 
     if show_plot is True:

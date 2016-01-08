@@ -25,16 +25,16 @@ def get_spectral_network_bokeh_plot(
     plot_width = 800
     plot_height = plot_width
 
-    x_min = min([min([min([z.real for z in s_wall.z]) 
+    x_min = min([min([min([z.real for z in s_wall.z])
                       for s_wall in sn.s_walls])
                  for sn in spectral_networks])
-    x_max = max([max([max([z.real for z in s_wall.z]) 
+    x_max = max([max([max([z.real for z in s_wall.z])
                       for s_wall in sn.s_walls])
                  for sn in spectral_networks])
-    y_min = min([min([min([z.imag for z in s_wall.z]) 
+    y_min = min([min([min([z.imag for z in s_wall.z])
                       for s_wall in sn.s_walls])
                  for sn in spectral_networks])
-    y_max = max([max([max([z.imag for z in s_wall.z]) 
+    y_max = max([max([max([z.imag for z in s_wall.z])
                       for s_wall in sn.s_walls])
                  for sn in spectral_networks])
     if plot_range is None:
@@ -56,11 +56,11 @@ def get_spectral_network_bokeh_plot(
     # Prepare a bokeh Figure.
     plot_idx_ds = ColumnDataSource({'i': ['0']})
     bokeh_figure = figure(
-        tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(), 
+        tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(),
                PreviewSaveTool(), hover],
         plot_width=plot_width,
         plot_height=plot_height,
-        title=None, 
+        title=None,
         x_range=plot_x_range,
         y_range=plot_y_range,
     )
@@ -150,7 +150,7 @@ def get_spectral_network_bokeh_plot(
                 a_i = int(numpy.floor(len(z_r) / 2.0))
                 a_angle = pi
                 a_angle = (
-                    phase((z_r[a_i] - z_r[a_i - 1]) + 
+                    phase((z_r[a_i] - z_r[a_i - 1]) +
                           1j * (z_i[a_i] - z_i[a_i - 1]))
                     - (pi / 2.0)
                 )
@@ -228,15 +228,15 @@ def get_spectral_network_bokeh_plot(
         'redraw_arrows_button': redraw_arrows_button,
         'show_data_points_button': show_data_points_button,
         'hide_data_points_button': hide_data_points_button,
-    } 
+    }
 
     if len(spectral_networks) > 1:
         # Add a slider.
-        slider = Slider(start=0, end=len(spectral_networks) - 1, 
+        slider = Slider(start=0, end=len(spectral_networks) - 1,
                         value=0, step=1, title="plot index")
         slider.callback = CustomJS(
             args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds,
-                  'dpds': dpds, 'hover': hover}, 
+                  'dpds': dpds, 'hover': hover},
             code="slider(cb_obj, cds, snds, plot_idx_ds, dpds, hover);",
         )
         plot = vform(bokeh_figure, slider, width=plot_width,)
