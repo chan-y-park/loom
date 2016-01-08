@@ -185,7 +185,7 @@ class LoomDB(object):
 
     def start_loom_process(
         self, process_uuid, logging_level, loom_config, n_processes=None,
-        stat_info=None,
+        #stat_info=None,
     ):
         if n_processes is None:
             n_processes = DEFAULT_NUM_PROCESSES
@@ -210,7 +210,7 @@ class LoomDB(object):
                 result_queue=result_queue,
                 logging_queue=logging_queue,
                 logger_name=logger_name,
-                stat_info=stat_info,
+                #stat_info=stat_info,
             ),
         )
         self.loom_processes[process_uuid] = loom_process
@@ -305,6 +305,18 @@ class LoomDB(object):
             # Result queue has the data returned from the loom_process.
             rv = result_queue.get()
             logger.info('Finished generating spectral network data.')
+
+            # Start a thread to record a stat log.
+            user_ip = flask.request.remote_addr
+            # XXX: Use the following behind a Proxy server.
+            # user_ip = flask.request.environ.get('HTTP_X_REAL_IP',
+            #                                     request.remote_addr)
+            stat_thread = threading.Thread(
+                target=record_stat,
+                args=(rv, STAT_LOGGER_NAME, user_ip, process_uuid),
+            )
+            stat_thread.start()
+
             self.finish_loom_process(process_uuid)
             return rv 
 
@@ -447,17 +459,17 @@ def config(n_processes=None):
             logger_name = get_logger_name(process_uuid)
             loom_config = get_loom_config(flask.request.form, logger_name) 
 
-            user_ip = flask.request.remote_addr
-            # XXX: Use the following behind a Proxy server.
-            # user_ip = flask.request.environ.get('HTTP_X_REAL_IP',
-            #                                     request.remote_addr)
-            stat_info = [STAT_LOGGER_NAME, user_ip, process_uuid]
+#            user_ip = flask.request.remote_addr
+#            # XXX: Use the following behind a Proxy server.
+#            # user_ip = flask.request.environ.get('HTTP_X_REAL_IP',
+#            #                                     request.remote_addr)
+#            stat_info = [STAT_LOGGER_NAME, user_ip, process_uuid]
 
             app = flask.current_app
             app.loom_db.start_loom_process(
                 process_uuid, logging.INFO, loom_config,
                 n_processes=eval(n_processes),
-                stat_info=stat_info,
+                #stat_info=stat_info,
             )
             event_source_url = flask.url_for(
                 'logging_stream', process_uuid=process_uuid,
@@ -785,6 +797,7 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         config_options=config_options,
     )
 
+
 def get_logging_file_path(logger_name):
     logging_file_path = os.path.join(
         get_loom_dir(),
@@ -792,3 +805,27 @@ def get_logging_file_path(logger_name):
          .format(logger_name, *time.localtime(time.time())[:6])),
     )
     return logging_file_path
+
+
+def record_stat(rv, stat_logger_name, ip, uuid):
+    config, spectral_network_data = rv
+    # Make a zipped config file and record the stat.
+    config_file_name = '{}.ini'.format(uuid)
+    config_zipfile_path = os.path.join(
+        get_loom_dir(), 'logs', '{}.zip'.format(config_file_name),
+    )
+    config_fp = BytesIO()
+    config.parser.write(config_fp)
+    config_fp.seek(0)
+    with zipfile.ZipFile(config_zipfile_path, 'w') as zfp:
+        zip_info = zipfile.ZipInfo(config_file_name)
+        zip_info.date_time = time.localtime(time.time())[:6]
+        zip_info.compress_type = zipfile.ZIP_DEFLATED
+        zip_info.external_attr = 0777 << 16L
+        zfp.writestr(zip_info, config_fp.read())
+
+    data_size = get_data_size_of(spectral_network_data)
+
+    stat_logger = logging.getLogger(stat_logger_name)
+    stat_logger.info('{}, {}, {}'.format(ip, uuid, data_size))
+

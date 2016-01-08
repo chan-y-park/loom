@@ -263,7 +263,7 @@ def generate_spectral_network(
     result_queue=None,
     logging_queue=None,
     logger_name='loom',
-    stat_info=None,
+    #stat_info=None,
 ):
     """
     Generate one or more spectral networks according to
@@ -332,28 +332,29 @@ def generate_spectral_network(
             logger.warn("Failed in putting a finish mark "
                         "in the logging queue.")
 
-    if stat_info is not None:
-        stat_logger_name, ip, uuid = stat_info 
-        # Make a zipped config file and record the stat.
-        config_file_name = '{}.ini'.format(uuid)
-        config_zipfile_path = os.path.join(
-            get_loom_dir(), 'logs', '{}.zip'.format(config_file_name),
-        )
-        config_fp = BytesIO()
-        config.parser.write(config_fp)
-        config_fp.seek(0)
-        with zipfile.ZipFile(config_zipfile_path, 'w') as zfp:
-            zip_info = zipfile.ZipInfo(config_file_name)
-            zip_info.date_time = time.localtime(time.time())[:6]
-            zip_info.compress_type = zipfile.ZIP_DEFLATED
-            zip_info.external_attr = 0777 << 16L
-            zfp.writestr(zip_info, config_fp.read())
-
-        data_size = get_data_size_of(spectral_network_data)
-
-        stat_logger = logging.getLogger(stat_logger_name)
-        stat_logger.info('{}, {}, {}'.format(ip, uuid, data_size))
-
+#    if stat_info is not None:
+#        stat_logger_name, ip, uuid = stat_info 
+#        # Make a zipped config file and record the stat.
+#        config_file_name = '{}.ini'.format(uuid)
+#        config_zipfile_path = os.path.join(
+#            get_loom_dir(), 'logs', '{}.zip'.format(config_file_name),
+#        )
+#        config_fp = BytesIO()
+#        config.parser.write(config_fp)
+#        config_fp.seek(0)
+#        with zipfile.ZipFile(config_zipfile_path, 'w') as zfp:
+#            zip_info = zipfile.ZipInfo(config_file_name)
+#            zip_info.date_time = time.localtime(time.time())[:6]
+#            zip_info.compress_type = zipfile.ZIP_DEFLATED
+#            zip_info.external_attr = 0777 << 16L
+#            zfp.writestr(zip_info, config_fp.read())
+#
+#        data_size = get_data_size_of(spectral_network_data)
+#
+#        stat_logger = logging.getLogger(stat_logger_name)
+#        stat_logger.info('{}, {}, {}'.format(ip, uuid, data_size))
+#        logger.info('Finished saving stat log.'.format(end_date_time))
+#
     if result_queue is None:
         return spectral_network_data
     else:
