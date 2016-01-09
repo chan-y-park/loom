@@ -29,6 +29,11 @@ class SpectralNetworkData:
         self.spectral_networks = spectral_networks
         self.data_attributes = ['sw_data', 'spectral_networks']
 
+    def set_z_rotation(self, z_rotation):
+        self.sw_data.set_z_rotation(z_rotation)
+        for sn in self.spectral_networks:
+            sn.set_z_rotation(z_rotation)
+
 
 def get_logging_formatter(level):
     if level == logging.DEBUG:
