@@ -135,7 +135,7 @@ class BranchPoint:
 
     def set_z_rotation(self, z_rotation):
         if self.z != oo:
-            self.z *= complex(z_rotation)
+            self.z /= complex(z_rotation)
 
     def get_json_data(self):
         json_data = {
@@ -196,7 +196,7 @@ class IrregularSingularity:
 
     def set_z_rotation(self, z_rotation):
         if self.z != oo:
-            self.z *= complex(z_rotation)
+            self.z /= complex(z_rotation)
 
     def get_json_data(self):
         json_data = {
@@ -301,7 +301,7 @@ class SWDataWithTrivialization(SWDataBase):
         for p in (self.branch_points + self.irregular_singularities):
             p.set_z_rotation(z_rotation)
 
-        self.base_point *= complex(z_rotation)
+        self.base_point /= complex(z_rotation)
 
     def get_json_data(self):
         json_data = super(SWDataWithTrivialization, self).get_json_data()

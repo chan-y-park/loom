@@ -291,7 +291,7 @@ class RamificationPoint:
 
     def set_z_rotation(self, z_rotation):
         if self.z != oo:
-            self.z *= complex(z_rotation)
+            self.z /= complex(z_rotation)
 
 #    def __str__(self):
 #        return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
@@ -352,7 +352,7 @@ class Puncture:
 
     def set_z_rotation(self, z_rotation):
         if self.z != oo:
-            self.z *= complex(z_rotation)
+            self.z /= complex(z_rotation)
 
     def __eq__(self, other):
         return self.label == other.label

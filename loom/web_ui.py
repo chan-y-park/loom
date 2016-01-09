@@ -758,8 +758,9 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
     sw_data = spectral_network_data.sw_data
 
     initial_phase = '{:.3f}'.format(
-        (spectral_network_data.spectral_networks[0].phase -
-         phase(sw_data.z_plane_rotation)) / pi
+#        (spectral_network_data.spectral_networks[0].phase +
+#         phase(sw_data.z_plane_rotation)) / pi
+        spectral_network_data.spectral_networks[0].phase / pi
     )
 
     legend = get_legend(

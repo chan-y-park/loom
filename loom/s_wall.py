@@ -125,7 +125,7 @@ class Joint:
         self.ode_xs = ode_xs
 
     def set_z_rotation(self, z_rotation):
-        self.z *= complex(z_rotation)
+        self.z /= complex(z_rotation)
 
     def __eq__(self, other):
         return self.label == other.label
@@ -229,7 +229,7 @@ class SWall(object):
         ]
 
     def set_z_rotation(self, z_rotation):
-        self.z *= complex(z_rotation)
+        self.z /= complex(z_rotation)
 
     def __setitem__(self, t, data):
         """
