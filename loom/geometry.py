@@ -146,7 +146,7 @@ class GData:
                 self.fundamental_representation_index = None 
                 logger.warning('{} is not a fundamental representation.'
                                .format(representation_str))
-                
+
         sage_data = sage_subprocess.get_g_data(
             root_system, 
             self.highest_weight,
@@ -206,7 +206,7 @@ class GData:
                 monodromy_matrix = (
                     numpy.linalg.inv(br_loc.monodromy).astype(int)
                 )
-                
+
         pair_0 = self.ordered_weight_pairs(root)[0]
         v_i_ind = pair_0[0]
         v_j_ind = pair_0[1]
@@ -246,8 +246,6 @@ class GData:
 
     def get_root_color(self, root):
         logger = logging.getLogger(self.logger_name)
-#        if self.root_color_map is None:
-#            self.set_root_color_map()
 
         for i, p_root in enumerate(self.positive_roots):
             if (
@@ -841,8 +839,6 @@ class SWDataBase(object):
         )
 
         for p in punctures + ffr_ramification_points:
-#            if p.z != oo:
-#                p.z /= complex(z_plane_rotation)
             p.set_z_rotation(z_plane_rotation)
         self.regular_punctures = regular_punctures
         self.irregular_punctures = irregular_punctures
@@ -2034,4 +2030,3 @@ def align_sheets_for_e_6_ffr(
             raise ValueError('Duplicate identification of sheets and weights')
             
     return sorted_sheets
-

@@ -284,15 +284,13 @@ class SWDataWithTrivialization(SWDataBase):
 
         if json_data is None:
             self.set_trivialization()
-            # self.branch_cut_angle = (pi / 2 -
-            #                          phase(complex(self.z_plane_rotation)))
         else:
             self.set_trivialization_from_json_data(json_data)
 
         self.data_attributes += [
             'branch_points', 'irregular_singularities', 'min_distance',
             'min_horizontal_distance', 'base_point', 'reference_ffr_xs',
-            'reference_xs', # 'branch_cut_angle'
+            'reference_xs'
         ]
 
     def set_z_rotation(self, z_rotation):
@@ -1323,5 +1321,3 @@ def keep_linearly_independent_vectors(vector_list):
             independent_list.append(v)
 
     return independent_list
-
-

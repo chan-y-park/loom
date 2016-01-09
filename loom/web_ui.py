@@ -4,7 +4,7 @@ import signal
 import multiprocessing
 import threading
 import time
-import pdb
+# import pdb
 import flask
 import sys
 import logging
@@ -30,7 +30,7 @@ from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
 from plotting import get_legend
 from misc import get_data_size_of
-from cmath import phase, pi
+from cmath import pi
 
 # Flask configuration
 DEBUG = True
@@ -452,12 +452,6 @@ def config(n_processes=None):
             logger_name = get_logger_name(process_uuid)
             loom_config = get_loom_config(flask.request.form, logger_name) 
 
-#            user_ip = flask.request.remote_addr
-#            # XXX: Use the following behind a Proxy server.
-#            # user_ip = flask.request.environ.get('HTTP_X_REAL_IP',
-#            #                                     request.remote_addr)
-#            stat_info = [STAT_LOGGER_NAME, user_ip, process_uuid]
-
             app = flask.current_app
             app.loom_db.start_loom_process(
                 process_uuid, logging.INFO, loom_config,
@@ -758,8 +752,6 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
     sw_data = spectral_network_data.sw_data
 
     initial_phase = '{:.3f}'.format(
-#        (spectral_network_data.spectral_networks[0].phase +
-#         phase(sw_data.z_plane_rotation)) / pi
         spectral_network_data.spectral_networks[0].phase / pi
     )
 
@@ -827,4 +819,3 @@ def record_stat(rv, stat_logger_name, ip, uuid):
 
     stat_logger = logging.getLogger(stat_logger_name)
     stat_logger.info('{}, {}, {}'.format(ip, uuid, data_size))
-

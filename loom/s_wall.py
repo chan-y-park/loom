@@ -1161,6 +1161,3 @@ def e_6_compatible(i, j):
         return True
     else:
         return False
-
-
-

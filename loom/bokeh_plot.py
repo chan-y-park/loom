@@ -24,7 +24,6 @@ def get_spectral_network_bokeh_plot(
     sw_data = spectral_network_data.sw_data
 
     z_rotation = complex(sw_data.z_plane_rotation)
-    # branch_cut_angle = (pi / 2) - phase(complex(z_rotation))
     spectral_network_data.set_z_rotation(1/z_rotation)
 
     plot_width = 800
@@ -101,8 +100,6 @@ def get_spectral_network_bokeh_plot(
     bcds = ColumnDataSource({'xs': [], 'ys': []})
     for bl in sw_data.branch_points + sw_data.irregular_singularities:
         y_r = (2j * y_max) * z_rotation
-        #bcds.data['xs'].append([bl.z.real, bl.z.real])
-        #bcds.data['ys'].append([bl.z.imag, y_max])
         bcds.data['xs'].append([bl.z.real, bl.z.real + y_r.real])
         bcds.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
 
@@ -144,10 +141,7 @@ def get_spectral_network_bokeh_plot(
     })
 
     for sn in spectral_networks:
-        sn_phase = '{:.3f}'.format(
-#            (sn.phase + phase(sw_data.z_plane_rotation)) / pi
-            sn.phase / pi
-        )
+        sn_phase = '{:.3f}'.format(sn.phase / pi)
         pds.data['phase'].append(sn_phase)
 
         sn_data = {}
@@ -253,6 +247,7 @@ def get_spectral_network_bokeh_plot(
         # Add a slider.
         slider = Slider(start=0, end=len(spectral_networks) - 1,
                         value=0, step=1, title="plot index")
+
         custom_js_args = {
             'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds,
             'dpds': dpds, 'pds': pds, 'hover': hover
@@ -266,11 +261,6 @@ def get_spectral_network_bokeh_plot(
                            'pds, hover);')
 
         slider.callback = CustomJS(args=custom_js_args, code=custom_js_code)
-#        slider.callback = CustomJS(
-#            args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds,
-#                  'dpds': dpds, 'hover': hover},
-#            code="slider(cb_obj, cds, snds, plot_idx_ds, dpds, hover);",
-#        )
         plot = vform(bokeh_figure, slider, width=plot_width,)
     else:
         plot = bokeh_figure

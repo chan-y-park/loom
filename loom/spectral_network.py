@@ -553,4 +553,3 @@ def get_joint_data(descendant_roots, z, sw_data):
         joint_data.append((root, ode_xs))
 
     return joint_data
- 

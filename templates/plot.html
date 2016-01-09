@@ -10,8 +10,6 @@
     {{ script|safe }}
 {% endblock %}
 {% block body %}
-<!--<div style="width:900px; margin:20px; padding:10px; 
-            border:1px solid black;">-->
 
 <div class="container">
     <h2>Plot</h2>
@@ -23,7 +21,6 @@
         <li>Use the mouse wheel to zoom in or out the plot, 
             drag the plot to move it.</li>
     </ul>
-    <!--<h3>\(\theta = (\)<span id="phase"></span>\()\pi\)</h3>-->
     <div class="row">
         <div class="col-md-9" style="width:800px; margin:10px;">
 {{ div['plot']|safe }}
@@ -40,10 +37,6 @@
         document.getElementById("phase").innerHTML = document.getElementById("initial_phase").innerHTML;
     </script>
 </div>
-<!--
-        <textarea id="plot_info_textarea" name="plot_info" rows=4 cols=80>
-        </textarea>
--->
 <div class="container">
 {% if download_data_url %}
     <form class="form-inline" id="download_form" method="post">
