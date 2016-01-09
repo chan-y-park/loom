@@ -79,10 +79,14 @@ for file_path in config_file_paths:
         continue
     logger.info('Testing {}...'.format(file_path))
     c = loom.load_config(file_path, logger_name=logger_name)
-    d = loom.generate(c, phase=1.0, logger_name=logger_name)
-    p = get_spectral_network_bokeh_plot(d, plot_range=c['plot_range'],
-                                        notebook=True)
+    d = loom.generate(c, phase=[0.01, 3.14, 4], logger_name=logger_name)
+
     file_dir, file_name = os.path.split(file_path)
     name, ext = os.path.splitext(file_name)
+    data_dir = '{}/{}'.format(TEST_RESULT_DIR, name)
+    loom.save(c, d, data_dir=data_dir)
+    c, d = loom.load(data_dir=data_dir)
+    p = get_spectral_network_bokeh_plot(d, plot_range=c['plot_range'],
+                                        notebook=True)
     save(obj=p, filename='{}/{}.html'.format(TEST_RESULT_DIR, name),
          title=name,)

@@ -22,10 +22,11 @@ function hide_data_points(cds, dpds, hover) {
     dpds.trigger('change');
 }
 
-function slider(cb_obj, cds, snds, plot_idx_ds, dpds, hover) {
+function slider(cb_obj, cds, snds, plot_idx_ds, dpds, pds, hover) {
     var cd = cds.get('data');
     var snd = snds.get('data');
     var dpd = dpds.get('data');
+    var pd = pds.get('data');
     var current_plot_idx = plot_idx_ds.get('data');
     var plot_idx = cb_obj.get('value');
 
@@ -39,6 +40,7 @@ function slider(cb_obj, cds, snds, plot_idx_ds, dpds, hover) {
     cds.trigger('change');
     plot_idx_ds.trigger('change');
     hide_data_points(cds, dpds, hover);
+    document.getElementById("phase").innerHTML = pd['phase'][plot_idx];
 }
 
 function redraw_arrows(cds, x_range, y_range) {
@@ -86,8 +88,8 @@ function redraw_arrows(cds, x_range, y_range) {
         }
         cd['arrow_x'][i] = a_x;
         cd['arrow_y'][i] = a_y;
-        var Dx = x[a_i] - x[a_i - 1]
-        var Dy = y[a_i] - y[a_i - 1]
+        var Dx = x[a_i] - x[a_i - 1];
+        var Dy = y[a_i] - y[a_i - 1];
         cd['arrow_angle'][i] = Math.atan2(Dy, Dx) - (Math.PI / 2);
     }
     cds.trigger('change');

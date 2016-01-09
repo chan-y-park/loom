@@ -181,7 +181,7 @@ def save_spectral_network(
     config,
     spectral_network_data,
     data_dir=None,
-    make_zipped_file=True,
+    make_zipped_file=False,
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
@@ -236,6 +236,7 @@ def save_spectral_network(
         # Make a compressed data file.
         file_list = [config_file_path, sw_data_file_path]
         file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
+        # TODO: the following routine for getting zipped_file_name has a bug.
         zipped_file_name = os.path.basename(os.path.normpath(data_dir))
         zipped_file_path = data_dir + '{}.zip'.format(zipped_file_name)
         logger.info('Save compressed data to {}.'.format(zipped_file_path))

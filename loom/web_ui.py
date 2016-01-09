@@ -30,6 +30,7 @@ from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
 from plotting import get_legend
 from misc import get_data_size_of
+from cmath import phase, pi
 
 # Flask configuration
 DEBUG = True
@@ -753,17 +754,24 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         spectral_network_data,
         plot_range=loom_config['plot_range'],
     )
+
     sw_data = spectral_network_data.sw_data
+
+    initial_phase = '{:.3f}'.format(
+        (spectral_network_data.spectral_networks[0].phase -
+         phase(sw_data.z_plane_rotation)) / pi
+    )
+
     legend = get_legend(
         g_data=sw_data.g_data,
         branch_points=sw_data.branch_points,
         irregular_singularities=sw_data.irregular_singularities,
     )
 
-    bokeh_custom_js_url = flask.url_for(
-        'static', filename='bokeh_callbacks.js', key=int(time.time()),
-    )
     if download is False:
+        bokeh_custom_js_url = flask.url_for(
+            'static', filename='bokeh_callbacks.js', key=int(time.time()),
+        )
         download_data_url = flask.url_for(
             'download_data', process_uuid=process_uuid,
         )
@@ -784,6 +792,7 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         download_plot_url=download_plot_url,
         loom_config=loom_config,
         config_options=config_options,
+        initial_phase=initial_phase,
     )
 
 
