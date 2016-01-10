@@ -78,16 +78,7 @@ class NetworkPlotBase(object):
                       color='k', markerfacecolor='none', 
                       label=labels['irregular_singularities'][i],)
 
-        # Plot branch cuts, vertically.
-#        for i, bp in enumerate(branch_points):
-#            bpx, bpy = bp
-#            axes.plot([bpx, bpx], [bpy, axes.get_ylim()[1]], ':', color='k', 
-#                      label='Cut of ' + labels['branch_points'][i],)
-#
-#        for i, irr_sing in enumerate(irregular_singularities):
-#            isx, isy = irr_sing
-#            axes.plot([isx, isx], [isy, axes.get_ylim()[1]], ':', color='k', 
-#                      label='Cut of ' + labels['irregular_singularities'][i],)
+        # Plot branch cuts according to the z-plane rotation.
         y_r = (2j * axes.get_ylim()[1]) * z_rotation
 
         for i, bp in enumerate(branch_points):
