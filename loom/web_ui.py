@@ -41,9 +41,6 @@ STAT_LOGGER_NAME = 'stat_of_' + WEB_APP_NAME
 DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
-#BOKEH_CUSTOM_JS_PUBLIC_URL = (
-#    'http://het-math2.physics.rutgers.edu/loom/static/bokeh_callbacks.js'
-#)
 
 # Array of config options. 
 # Entries that will be placed in the same row
@@ -391,6 +388,7 @@ class WebLoomApplication(flask.Flask):
 ###
 # View functions
 ###
+
 def index():
     # Make a list of contributors from git logs.
     ps = subprocess.Popen(
