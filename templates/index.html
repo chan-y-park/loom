@@ -2,7 +2,7 @@
 {% block body %}
 <div style="width:800px; margin:20px 20px 20px 20px">
     <p>loom front page</p>
-    <p>This web page dynamically generates a spectral network in a representation of \(\mathfrak{g} = A_n, D_n, E_6\), or \(E_7\). For more detail, see
+    <p>This web page dynamically generates a spectral network in a representation of \(\mathfrak{g} = \mathrm{A}_n, \mathrm{D}_n, \mathrm{E}_6\), or \(\mathrm{E}_7\). For more detail, see
         <ul>
             <li> <a href=http://arxiv.org/abs/arXiv:1204.4824>Spectral networks [Gaiotto-Moore-Neitzke (2012)</a>
             <li> <a href=http://arxiv.org/abs/arXiv:>ADE Spectral Networks [Longhi-Park] (To Appear)</a>
@@ -39,14 +39,24 @@
             by clicking "Download data" and "Download plot" buttons.</li>
     </ul>
 
-    <h2>Examples</h2>
+    <h2>Examples of spectral networks</h2>
     <ul>
-        <li><a href="{{ url_for('plot') }}?data=pure_SU_2">Spectral networks of pure SU(2) gauge theory at the origin of the Coulomb branch</a>
+        <li><a href="{{ url_for('plot') }}?data=pure_SU_2">Pure \(\mathrm{SU}(2)\) gauge theory at the origin of the Coulomb branch</a>
         <br/><img src="static/pure_SU_2.png" height=200 width=200>
-        <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3">Spectral networks of an Argyres-Douglas fixed point theory from pure SU(3) gauge theory, with the minimal BPS spectrum</a>
+        <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3">An Argyres-Douglas fixed point theory from pure \(\mathrm{SU}(3)\) gauge theory, with the minimal BPS spectrum</a>
         <br/><img src="static/AD_from_pure_SU_3.png" height=200 width=200>
-        <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3_after_wc">Spectral networks of an Argyres-Douglas fixed point theory from pure SU(3) gauge theory, with the maximal BPS spectrum</a>
+        <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3_after_wc">An Argyres-Douglas fixed point theory from pure \(\mathrm{SU}(3)\) gauge theory, with the maximal BPS spectrum</a>
         <br/><img src="static/AD_from_pure_SU_3_after_wc.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=pure_SO_6">Pure \(\mathrm{SO}(6)\) gauge theory at the origin of the Coulomb branch</a>
+        <br/><img src="static/pure_SO_6.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=pure_SO_8">Pure \(\mathrm{SO}(8)\) gauge theory at the origin of the Coulomb branch</a>
+        <br/><img src="static/pure_SO_8.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=pure_E_6">Pure \(\mathrm{E}_6\) gauge theory at the origin of the Coulomb branch</a>
+        <br/><img src="static/pure_E_6.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=D_4_AD_from_SO_8_min_BPS">An Argyres-Douglas fixed point theory from pure \(\mathrm{SO}(8)\) gauge theory, with the minimal BPS spectrum</a>
+        <br/><img src="static/D_4_AD_from_SO_8_min_BPS.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=D_4_AD_from_SO_8_max_BPS_sym">An Argyres-Douglas fixed point theory from pure \(\mathrm{SO}(8)\) gauge theory, with the maximal and symmetric BPS spectrum</a>
+        <br/><img src="static/D_4_AD_from_SO_8_max_BPS_sym.png" height=200 width=200>
     </ul>
     </ul>
     </ul>
