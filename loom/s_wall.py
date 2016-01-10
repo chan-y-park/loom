@@ -136,9 +136,14 @@ class Joint:
             'M': ctor2(self.M),
             'parents': [parent for parent in self.parents],
             'label': self.label,
-            'roots': [root.tolist() for root in self.roots],
+            # XXX: Enable the following once self.root is deprecated.
+            # 'roots': [root.tolist() for root in self.roots],
             'ode_xs': [ctor2(x) for x in self.ode_xs],
         }
+        if self.roots is not None:
+            json_data['roots'] = [root.tolist() for root in self.roots]
+        elif self.root is not None:
+            json_data['roots'] = [self.root.tolist()]
         return json_data
 
     def set_from_json_data(self, json_data):

@@ -5,9 +5,14 @@
         rel="stylesheet" type="text/css">
     <script src="http://cdn.pydata.org/bokeh/release/bokeh-0.10.0.min.js">
     </script>
+<!--
     <script src="{{ bokeh_custom_js_url }}">
     </script>
-    {{ script|safe }}
+-->
+    <script>
+    {{ bokeh_custom_script | safe }}
+    </script>
+    {{ bokeh_plot_script | safe }}
 {% endblock %}
 {% block body %}
 

@@ -255,10 +255,11 @@ def get_spectral_network_bokeh_plot(
         custom_js_code = ''
         if notebook is True:
             with open('static/bokeh_callbacks.js', 'r') as fp:
-                custom_js_code = fp.read()
+                custom_js_code += fp.read()
                 custom_js_code += '\n'
-        custom_js_code += ('slider(cb_obj, cds, snds, plot_idx_ds, dpds, '
-                           'pds, hover);')
+        custom_js_code += (
+            'slider(cb_obj, cds, snds, plot_idx_ds, dpds, pds, hover);'
+        )
 
         slider.callback = CustomJS(args=custom_js_args, code=custom_js_code)
         plot = vform(bokeh_figure, slider, width=plot_width,)

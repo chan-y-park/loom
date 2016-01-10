@@ -37,13 +37,13 @@ DEBUG = True
 SECRET_KEY = 'web_loom_key'
 PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
-STAT_LOGGER_NAME = WEB_APP_NAME + '_stat'
+STAT_LOGGER_NAME = 'stat_of_' + WEB_APP_NAME
 DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
-BOKEH_CUSTOM_JS_PUBLIC_URL = (
-    'http://het-math2.physics.rutgers.edu/loom/static/bokeh_callbacks.js'
-)
+#BOKEH_CUSTOM_JS_PUBLIC_URL = (
+#    'http://het-math2.physics.rutgers.edu/loom/static/bokeh_callbacks.js'
+#)
 
 # Array of config options. 
 # Entries that will be placed in the same row
@@ -744,7 +744,7 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
     download_data_url = download_plot_url = None
 
     # Make a Bokeh plot
-    script, div = get_spectral_network_bokeh_plot(
+    bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
     )
@@ -762,25 +762,29 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
     )
 
     if download is False:
-        bokeh_custom_js_url = flask.url_for(
-            'static', filename='bokeh_callbacks.js', key=int(time.time()),
-        )
+#        bokeh_custom_js_url = flask.url_for(
+#            'static', filename='bokeh_callbacks.js', key=int(time.time()),
+#        )
         download_data_url = flask.url_for(
             'download_data', process_uuid=process_uuid,
         )
         download_plot_url = flask.url_for(
             'download_plot', process_uuid=process_uuid,
         )
-    else:
-        bokeh_custom_js_url = BOKEH_CUSTOM_JS_PUBLIC_URL
+#    else:
+#        bokeh_custom_js_url = BOKEH_CUSTOM_JS_PUBLIC_URL
+
+    with open('static/bokeh_callbacks.js', 'r') as fp:
+        bokeh_custom_script = fp.read()
 
     return flask.render_template(
         'plot.html',
         process_uuid=process_uuid,
-        script=script,
+        bokeh_plot_script=bokeh_plot_script,
         div=div,
         plot_legend=legend,
-        bokeh_custom_js_url=bokeh_custom_js_url,
+        #bokeh_custom_js_url=bokeh_custom_js_url,
+        bokeh_custom_script=bokeh_custom_script,
         download_data_url=download_data_url,
         download_plot_url=download_plot_url,
         loom_config=loom_config,
