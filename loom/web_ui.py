@@ -11,7 +11,6 @@ import logging
 import uuid
 import json
 import zipfile
-# import bokeh
 
 from cStringIO import StringIO
 from io import BytesIO
@@ -389,6 +388,7 @@ class WebLoomApplication(flask.Flask):
 # View functions
 ###
 
+
 def index():
     # Make a list of contributors from git logs.
     ps = subprocess.Popen(
@@ -641,6 +641,7 @@ def shutdown():
 # Entry point
 ###
 
+
 def get_application(config_file, logging_level):
     application = WebLoomApplication(config_file, logging_level)
     application.config.from_object(__name__)
@@ -689,6 +690,7 @@ def get_application(config_file, logging_level):
         methods=['GET'],
     )
     return application
+
 
 ###
 # Misc. web UIs
@@ -740,14 +742,19 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
                          download=False,):
 
     download_data_url = download_plot_url = None
+    sw_data = spectral_network_data.sw_data
 
+    # Rotate the z-plane into the location defined by the curve.
+    z_rotation = complex(sw_data.z_plane_rotation)
+    spectral_network_data.set_z_rotation(1/z_rotation)
     # Make a Bokeh plot
     bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
     )
-
-    sw_data = spectral_network_data.sw_data
+    # Set the z-plane rotation back.
+    # TODO: Decide whether to save a rotated data or a raw data.
+    spectral_network_data.set_z_rotation(z_rotation)
 
     initial_phase = '{:.3f}'.format(
         spectral_network_data.spectral_networks[0].phase / pi
@@ -760,17 +767,12 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
     )
 
     if download is False:
-#        bokeh_custom_js_url = flask.url_for(
-#            'static', filename='bokeh_callbacks.js', key=int(time.time()),
-#        )
         download_data_url = flask.url_for(
             'download_data', process_uuid=process_uuid,
         )
         download_plot_url = flask.url_for(
             'download_plot', process_uuid=process_uuid,
         )
-#    else:
-#        bokeh_custom_js_url = BOKEH_CUSTOM_JS_PUBLIC_URL
 
     with open('static/bokeh_callbacks.js', 'r') as fp:
         bokeh_custom_script = fp.read()
@@ -781,7 +783,6 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         bokeh_plot_script=bokeh_plot_script,
         div=div,
         plot_legend=legend,
-        #bokeh_custom_js_url=bokeh_custom_js_url,
         bokeh_custom_script=bokeh_custom_script,
         download_data_url=download_data_url,
         download_plot_url=download_plot_url,

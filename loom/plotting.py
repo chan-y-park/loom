@@ -28,7 +28,8 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         plot_data_points=False,
         plot_on_cylinder=False,
         C=[[1, 0], [0, 1]],
-        g_data=None
+        g_data=None,
+        z_rotation=1,
     ):
         
         labels = {'branch_points': [], 'joints': [], 'punctures': [],
@@ -146,6 +147,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             labels=labels,
             plot_joints=plot_joints,
             plot_data_points=plot_data_points,
+            z_rotation=z_rotation,
         )
 
         return plot_legend

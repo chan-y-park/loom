@@ -22,9 +22,7 @@ def get_spectral_network_bokeh_plot(
 ):
     spectral_networks = spectral_network_data.spectral_networks
     sw_data = spectral_network_data.sw_data
-
     z_rotation = complex(sw_data.z_plane_rotation)
-    spectral_network_data.set_z_rotation(1/z_rotation)
 
     plot_width = 800
     plot_height = plot_width

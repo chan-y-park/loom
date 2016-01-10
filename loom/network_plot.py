@@ -1,8 +1,6 @@
 # import pdb
 import mpldatacursor
 
-# from math import pi
-
 
 class NetworkPlotBase(object):
     def __init__(self, matplotlib_figure=None, plot_range=None,):
@@ -19,7 +17,7 @@ class NetworkPlotBase(object):
         self, phase=None, branch_points=None, joints=None, punctures=None,
         irregular_singularities=None, walls=None, wall_segments=None, 
         wall_colors=None, labels=None, plot_joints=False,
-        plot_data_points=False,
+        plot_data_points=False, z_rotation=1,
     ):
         """
         branch_points = [[bpx, bpy], ...]
@@ -81,14 +79,27 @@ class NetworkPlotBase(object):
                       label=labels['irregular_singularities'][i],)
 
         # Plot branch cuts, vertically.
+#        for i, bp in enumerate(branch_points):
+#            bpx, bpy = bp
+#            axes.plot([bpx, bpx], [bpy, axes.get_ylim()[1]], ':', color='k', 
+#                      label='Cut of ' + labels['branch_points'][i],)
+#
+#        for i, irr_sing in enumerate(irregular_singularities):
+#            isx, isy = irr_sing
+#            axes.plot([isx, isx], [isy, axes.get_ylim()[1]], ':', color='k', 
+#                      label='Cut of ' + labels['irregular_singularities'][i],)
+        y_r = (2j * axes.get_ylim()[1]) * z_rotation
+
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot([bpx, bpx], [bpy, axes.get_ylim()[1]], ':', color='k', 
+            axes.plot([bpx, bpx + y_r.real], [bpy, bpy + y_r.imag], 
+                      ':', color='k', 
                       label='Cut of ' + labels['branch_points'][i],)
 
         for i, irr_sing in enumerate(irregular_singularities):
             isx, isy = irr_sing
-            axes.plot([isx, isx], [isy, axes.get_ylim()[1]], ':', color='k', 
+            axes.plot([isx, isx + y_r.real], [isy, isy + y_r.imag],
+                      ':', color='k', 
                       label='Cut of ' + labels['irregular_singularities'][i],)
    
         # Plot joints.
