@@ -4,17 +4,19 @@
     <p>loom generates a spectral network in a representation of \(\mathfrak{g} = \mathrm{A}_n, \mathrm{D}_n, \mathrm{E}_6\), or \(\mathrm{E}_7\). For more detail, see
         <ul>
             <li> <a href=http://arxiv.org/abs/arXiv:1204.4824>Spectral networks [Gaiotto-Moore-Neitzke (2012)</a>
-            <li> <a href=http://arxiv.org/abs/arXiv:>ADE Spectral Networks [Longhi-Park] (To Appear)</a>
+            <li> <a href=http://arxiv.org/abs/arXiv:>ADE Spectral Networks [Longhi-Park] (2016)</a>
         </ul>
     </p>
     <p>loom is an open-source project. </p>
-    <p>The source code of loom can be found at <a href=https://github.com/chan-y-park/loom>https://github.com/chan-y-park/loom</a>.</p>
+    <p>The source code of loom can be found at <a href=http://github.com/chan-y-park/loom>http://github.com/chan-y-park/loom</a>.</p>
     <p>List of contributors to loom in the order of the date of their first contribution:
         <ul>
 {% for name in loom_contributors %}
             <li>{{ name  }}</li>
 {% endfor %}
         </ul>
+    </p>
+    <p>If you have any question using this website and/or loom, please contact one of the contributors or post it on <a href="https://github.com/chan-y-park/loom/issues">the GitHub issues page</a>. 
     </p>
 
     <h2>How to use loom using a web user interface</h2>
@@ -24,6 +26,10 @@
         <li>In the <a href="{{ url_for('config') }}">configuration page</a> 
             input the data for a 4d \(\mathcal{N} = 2\) class \(\mathcal{S}\)
             theory to study.</li>
+        <li>loom will grow a spectral network by producing data points,
+        	the number of which is (number of steps) \(\times\) (number of iterations).
+        	loom stops growing an S-wall when it either reaches the maximum number
+        	of data points or when the S-wall reaches the mass limit.</li>
         <li>Configuration data can be saved as a file, which can be loaded
             at the <a href="{{ url_for('config') }}">configuration page</a>.
             </li>

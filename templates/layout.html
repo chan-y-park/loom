@@ -4,21 +4,27 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
     <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script src="http://code.jquery.com/jquery-latest.js"></script>
-    {% if process_uuid %}
     <script>
+        jQuery(document).ready(function(){
+            jQuery('#hideshow').on('click', function(event) {        
+                jQuery('#advanced_config_options').toggle('show');
+            });
+        });
+{% if process_uuid %}
         var keepAlive = setInterval(function () {
             $.get("{{ url_for('keep_alive', process_uuid=process_uuid)}}")
         }, 3000);
-    {% if event_source_url %}
+{% endif %}
+
+{% if event_source_url %}
         var source = new EventSource("{{ event_source_url }}");
 
         source.addEventListener('key_error', function(e) {
             clearInterval(keepAlive);
             source.close();
         }, false);
-    {% endif %}
+{% endif %}
     </script>
-    {% endif %}
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-wdith, initial-scale=1">
     {% block head %}

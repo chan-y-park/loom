@@ -50,20 +50,22 @@ config_options = [
     ['differential_parameters'],
     ['regular_punctures'],
     ['irregular_punctures'],
-    ['mt_params'], 
-    ['ramification_point_finding_method'],
     ['plot_range'],
     ['num_of_steps'],
     ['num_of_iterations'],
+    ['mass_limit'],
+    ['phase'],
+]
+
+advanced_config_options = [
+    ['mt_params'], 
+    ['ramification_point_finding_method'],
     ['size_of_small_step'],
     ['size_of_large_step'],
     ['size_of_bp_neighborhood'],
     ['size_of_puncture_cutoff'],
     ['accuracy'],
-    ['mass_limit'],
-    ['phase'],
 ]
-
 
 # TODO: kill an orphaned process gracefully.
 class LoomDB(object):
@@ -465,6 +467,7 @@ def config(n_processes=None):
     return flask.render_template(
         'config.html',
         config_options=config_options,
+        advanced_config_options=advanced_config_options,
         loom_config=loom_config,
         n_processes=n_processes,
         process_uuid=process_uuid,
@@ -788,6 +791,7 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         download_plot_url=download_plot_url,
         loom_config=loom_config,
         config_options=config_options,
+        advanced_config_options=advanced_config_options,
         initial_phase=initial_phase,
     )
 
