@@ -8,7 +8,7 @@ from scipy import interpolate
 
 from geometry import find_xs_at_z_0, align_sheets_for_e_6_ffr
 from misc import (
-    cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root
+    cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root, n_nearest
 )
 
 x, z = sympy.symbols('x z')
@@ -659,11 +659,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     # max_r_i = max([rp.i for rp in branch_point.ffr_ramification_points])
     min_dt = 1.0
     ffr_ram_pts = branch_point.ffr_ramification_points
-    delta_x = 0.5 * min(
-        [abs(rp_1.x - rp_2.x) for rp_1 in ffr_ram_pts for rp_2 in ffr_ram_pts 
-        if rp_1.x != rp_2.x]
-    )
-
+    
     for rp in ffr_ram_pts:
         z_0 = rp.z
         x_0 = rp.x
@@ -844,8 +840,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     # just pick those sheets that are close enough 
                     # to the ramification point
                     x_s = n_nearest(all_x_s, x_0, r_i)
-                    print '\n\nThese are the closest sheets to ramification point '.format(x_0)
-                    print x_s
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
                     x_i_x_j_phases = []
