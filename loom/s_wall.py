@@ -658,8 +658,13 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     seeds = []
     # max_r_i = max([rp.i for rp in branch_point.ffr_ramification_points])
     min_dt = 1.0
+    ffr_ram_pts = branch_point.ffr_ramification_points
+    delta_x = 0.5 * min(
+        [abs(rp_1.x - rp_2.x) for rp_1 in ffr_ram_pts for rp_2 in ffr_ram_pts 
+        if rp_1.x != rp_2.x]
+    )
 
-    for rp in branch_point.ffr_ramification_points:
+    for rp in ffr_ram_pts:
         z_0 = rp.z
         x_0 = rp.x
         r_i = rp.i
@@ -832,34 +837,19 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 dt = initial_seed_size * 0.1 ** (precision_level)
                 if dt < min_dt:
                     min_dt = dt
-                # z_1 = z_0 + accuracy * zeta
                 z_1 = z_0 + dt * zeta
 
                 if rp_type == 'type_I':
-                    x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
-                    # print '\n\nat z_1={} the sheets are {}'.format(z_1, x_s)
+                    all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
+                    # just pick those sheets that are close enough 
+                    # to the ramification point
+                    x_s = [y for y in all_x_s if abs(x_0 - y) < delta_x]
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
                     x_i_x_j_phases = []
                     for i, x_i in enumerate(x_s): 
                         for j, x_j in enumerate(x_s):
                             if i != j:
-                                # v_i = complex(
-                                #     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
-                                # )
-                                # v_j = complex(
-                                #     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
-                                # )
-                                # if (v_j - v_i) != 0:
-                                #     ij_factor = (
-                                #         -1.0 * exp(1j * theta) / (x_j - x_i)
-                                #     )
-                                #     x_i_x_j_phases.append(
-                                #         [
-                                #             (ij_factor) / abs(ij_factor), 
-                                #             [x_i, x_j]
-                                #         ]
-                                #     )
                                 ij_factor = (
                                     -1.0 * exp(1j * theta) / (x_j - x_i)
                                 )
@@ -895,24 +885,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                 abs(x_j - x_i) > x_accuracy 
                                 and abs(x_j + x_i) > x_accuracy
                             ):
-                                # v_i = complex(
-                                #     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
-                                # )
-                                # v_j = complex(
-                                #     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
-                                # )
-                                # ij_factor = (
-                                #     -1.0 * exp(1j * theta) / (v_j - v_i)
-                                # )
-                                # # ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
-                                # x_i_x_j_phases.append(
-                                #     [(ij_factor) / abs(ij_factor), [x_i, x_j]]
-                                # )
-
                                 ij_factor = (
                                     -1.0 * exp(1j * theta) / (x_j - x_i)
                                 )
-                                # ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
                                 x_i_x_j_phases.append(
                                     [(ij_factor) / abs(ij_factor), [x_i, x_j]]
                                 )
@@ -939,27 +914,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                         for j, x_j in enumerate(aligned_xs):
                             w_j = sw.g_data.weights[j]
                             if is_root(w_j - w_i, sw.g_data):
-                                # v_i = complex(
-                                #     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
-                                # )
-                                # v_j = complex(
-                                #     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
-                                # )
-                                # # print '\n\ni ={}, j={}'.format(i,j)
-                                # # print 'w_j - w_i = {}'.format(w_j -w_i)
-                                # # print 'x_j - x_i = {}'.format(x_j -x_i)
-                                # # print 'v_j - v_i = {}'.format(v_j -v_i)
-                                # if (v_j - v_i) != 0:
-                                #     ij_factor = (
-                                #         -1.0 * exp(1j * theta) / (v_j - v_i)
-                                #     )
-                                #     x_i_x_j_phases.append(
-                                #         [
-                                #             (ij_factor) / abs(ij_factor), 
-                                #             [x_i, x_j]
-                                #         ]
-                                #     )
-
                                 ij_factor = (
                                     -1.0 * exp(1j * theta) / (x_j - x_i)
                                 )
