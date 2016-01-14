@@ -448,13 +448,14 @@ class SWDiff:
             z_rotation=None,):
         # sym_v is a SymPy expression. 
         self.sym_v = sympy.sympify(v_str)
-        
+
         # num_v is from sym_v with its parameters 
         # substituted with numerical values.
         # NOTE: We apply PSL2C only to the numerical curve
         # for the simplicity of analysis.
         Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
         dCiz = Ciz.diff(z)
+        self.jac = dCiz
         self.num_v = (
             (self.sym_v.subs(z, Ciz) * dCiz).subs(diff_params)
             .evalf(n=ROOT_FINDING_PRECISION, chop=True)

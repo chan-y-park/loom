@@ -1042,18 +1042,18 @@ class SWDataWithTrivialization(SWDataBase):
         rp_type = None
         num_eq = self.ffr_curve.num_eq
 
-        # use Dz = z - rp.z & Dx = x - rp.x
-        Dz, Dx = sympy.symbols('Dz, Dx')
+        # use dz = z - rp.z & dx = x - rp.x
+        dz, dx = sympy.symbols('dz, dx')
         local_curve = (
-            num_eq.subs(x, rp.x + Dx).subs(z, rp.z + Dz)
-            .series(Dx, 0, rp.i + 1).removeO()
-            .series(Dz, 0, 2).removeO()
+            num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
+            .series(dx, 0, rp.i + 1).removeO()
+            .series(dz, 0, 2).removeO()
         )
         logger.debug('\nlocal curve = {}\n'.format(local_curve))
             
         # Classify which type of ramification point
         # type_I: ADE type with x_0 != 0
-        #   #   i.e. F ~ a z + b x^k
+        #   i.e. F ~ a z + b x^k    (in local coordinates)
         # type_II: D-type with x_0 = 0, but nonedgenerate
         #   i.e. F ~ a z + b x^2r   with r=rank(g)
         # type_III: D-type with x_0 = 0, degenerate
@@ -1081,17 +1081,17 @@ class SWDataWithTrivialization(SWDataBase):
         elif (
             self.g_data.type == 'D' and abs(rp.x) < zero_threshold
             and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > zero_threshold
+            and abs(local_curve.n().subs(dx, 0).coeff(dz)) > zero_threshold
         ):
             rp_type = 'type_II'
         elif (
             self.g_data.type == 'D' and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
+            and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
         ):
             rp_type = 'type_III'
         elif (
             self.g_data.type == 'E' and self.g_data.rank == 6
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
+            and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
         ):
             rp_type = 'type_IV'
         else:
@@ -1102,7 +1102,7 @@ class SWDataWithTrivialization(SWDataBase):
             logger.info('ramification index {}'.format(rp.i))
             logger.info(
                 'local curve {}'
-                .format(abs(local_curve.n().subs(Dx, 0).coeff(Dz)))
+                .format(abs(local_curve.n().subs(dx, 0).coeff(dz)))
             )
             raise Exception(
                 'Cannot handle this type of ramification point'.format(
@@ -1110,22 +1110,17 @@ class SWDataWithTrivialization(SWDataBase):
                 )
             )
 
-        ###### PL -- RESTART HERE: in general the curve is not of the types I, II, III, IV
-        ###### More generally one could have things like 3. x^2 + (0. + 0.5 I) z - (0. + 1.41421 I) x z
-        ###### In this case, it is necessary to account for the mixed terms xz.
-        ###### Need to think this through a bit more, see mathematica file for how to deal with this.
-
         if rp_type == 'type_I' or rp_type == 'type_II':
-            a = local_curve.n().subs(Dx, 0).coeff(Dz)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
+            a = local_curve.n().subs(dx, 0).coeff(dz)
+            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
 
         elif rp_type == 'type_III':
-            a = local_curve.n().coeff(Dz).coeff(Dx, 2)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
+            a = local_curve.n().coeff(dz).coeff(dx, 2)
+            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
 
         elif rp_type == 'type_IV':
-            a = local_curve.n().coeff(Dz).coeff(Dx, 15)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
+            a = local_curve.n().coeff(dz).coeff(dx, 15)
+            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
         
         logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
             [rp.z, rp.x], rp_type)
@@ -1133,6 +1128,39 @@ class SWDataWithTrivialization(SWDataBase):
 
         rp.ramification_type = rp_type    
         rp.sw_diff_coeffs_a_b = [complex(a), complex(b)]
+
+        ##### THE CORRECT WAY TO COMPUTE THE LEADING COEFFICIENT
+        ##### BY TAKING INTO ACOCUNT THE PSL2C TRANSFORMATION OF Z-PLANE
+        # the relation of these should be that 
+        # sw_diff_coeff = (-a / b)^{1/k} * (self.diff.jac)^{-1}
+        # for a degree-k ramification point
+        # because F ~ a z + b x^k so \lambda ~ x dz ~ (-a/b)^{1/k} (dz/dz') dz'
+
+        # here num_v is essentially: x * (dz'/dz), where the last factor 
+        # is the jacobian from z-plane rotations or PSL2C transformations.
+        num_v = self.diff.num_v  
+
+        # dx_dz = dx(dz) is the local form of x (the local 
+        # coiordinate around the ramification point) as a function of z
+        # (also intended as a local coordinate near a ramification point)
+        dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
+        
+        # now we plug this into num_v, in a neighborhood of x_0
+        # we have x = x_0 + dx_dz.
+        local_diff = (
+            num_v.subs(x, rp.x + dx_dz).subs(z, rp.z + dz)
+            .series(dz, 0, 1).removeO()
+        )
+
+        # get the coefficient and the exponent of the leading term
+        (diff_c, diff_e) = local_diff.leadterm(dz)
+        if diff_e == 0:
+            # remove the constant term from the local_diff
+            local_diff -= local_diff.subs(dz, 0)
+            (diff_c, diff_e) = local_diff.leadterm(dz)
+
+        # rp.sw_diff_coeff = complex(-1 * a / b)
+        rp.sw_diff_coeff = complex(diff_c.n())
         
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):

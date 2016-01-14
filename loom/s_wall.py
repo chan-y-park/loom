@@ -665,16 +665,24 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     for rp in ffr_ram_pts:
         z_0 = rp.z
         x_0 = rp.x
+        lambda_0 = complex(x_0 * sw.diff.jac.subs(z, z_0))
+        print '\n\nx_0 = {}'.format(x_0)
+        print '\n\nlambda_0 = {}'.format(lambda_0)
         r_i = rp.i
         rp_type = rp.ramification_type
-        # sw_diff_coeff = rp.sw_diff_coeff
+        sw_diff_coeff = rp.sw_diff_coeff
         sw_diff_coeffs_a_b = rp.sw_diff_coeffs_a_b
+
         logger.debug('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
         logger.debug('Ramification index = {}'.format(r_i))
         logger.debug('Ramification type = {}'.format(rp_type))
+        # logger.debug(
+        #     'leading coefficients of SW diff: a = {}\t b={}\n'
+        #     .format(sw_diff_coeffs_a_b[0], sw_diff_coeffs_a_b[1])
+        # )
         logger.debug(
-            'leading coefficients of SW diff: a = {}\t b={}\n'
-            .format(sw_diff_coeffs_a_b[0], sw_diff_coeffs_a_b[1])
+            'leading coefficient of SW diff: {}\t'
+            .format(sw_diff_coeff)
         )
 
         # Construct the seeding points for the branch point
