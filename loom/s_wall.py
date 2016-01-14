@@ -665,9 +665,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     for rp in ffr_ram_pts:
         z_0 = rp.z
         x_0 = rp.x
-        lambda_0 = complex(x_0 * sw.diff.jac.subs(z, z_0))
-        print '\n\nx_0 = {}'.format(x_0)
-        print '\n\nlambda_0 = {}'.format(lambda_0)
         r_i = rp.i
         rp_type = rp.ramification_type
         sw_diff_coeff = rp.sw_diff_coeff
@@ -873,28 +870,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     min_dt = dt
                 z_1 = z_0 + dt * zeta
 
-                ### OLD - using a, b
-                # if rp_type == 'type_I':
-                #     all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
-                #     # just pick those sheets that are close enough 
-                #     # to the ramification point
-                #     x_s = n_nearest(all_x_s, x_0, r_i)
-                #     # a list of the type
-                #     # [... [phase, [x_i, x_j]] ...]
-                #     x_i_x_j_phases = []
-                #     for i, x_i in enumerate(x_s): 
-                #         for j, x_j in enumerate(x_s):
-                #             if i != j:
-                #                 ij_factor = (
-                #                     -1.0 * exp(1j * theta) / (x_j - x_i)
-                #                 )
-                #                 x_i_x_j_phases.append(
-                #                     [
-                #                         (ij_factor) / abs(ij_factor), 
-                #                         [x_i, x_j]
-                #                     ]
-                #                 )
-                
                 if rp_type == 'type_I':
                     all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                     # just pick those sheets that are close enough 
@@ -906,10 +881,15 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     for i, x_i in enumerate(x_s): 
                         for j, x_j in enumerate(x_s):
                             if i != j:
-                                lambda_i = x_i * sw.diff.jac.subs(x, x_i).subs(z, z_1)
-                                lambda_j = x_j * sw.diff.jac.subs(x, x_j).subs(z, z_1)
+                                lambda_i = (
+                                    sw.diff.num_v.subs(x, x_i).subs(z, z_1)
+                                )
+                                lambda_j = (
+                                    sw.diff.num_v.subs(x, x_j).subs(z, z_1)
+                                )
                                 ij_factor = (
-                                    -1.0 * exp(1j * theta) / (lambda_j - lambda_i)
+                                    -1.0 * exp(1j * theta) 
+                                    / (lambda_j - lambda_i)
                                 )
                                 x_i_x_j_phases.append(
                                     [

@@ -1159,7 +1159,6 @@ class SWDataWithTrivialization(SWDataBase):
             local_diff -= local_diff.subs(dz, 0)
             (diff_c, diff_e) = local_diff.leadterm(dz)
 
-        # rp.sw_diff_coeff = complex(-1 * a / b)
         rp.sw_diff_coeff = complex(diff_c.n())
         
 

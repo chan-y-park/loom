@@ -402,7 +402,6 @@ def get_ode(sw, phase, accuracy):
     df_dx = f.diff(x)
     # F = -(\partial f / \partial z) / (\partial f / \partial x).
     F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
-    # Do we need to call sw.diff? Or can we just use the values of x_i's?
     v = sympy.lambdify((z, x), sw.diff.num_v)
 
     def ode_f(t, z_x1_x2_M):
