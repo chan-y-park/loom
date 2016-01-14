@@ -608,6 +608,8 @@ def get_s_wall_root(z, ffr_xs, sw_data):
     return sw_data.g_data.ffr_weights[j] - sw_data.g_data.ffr_weights[i]
 
 
+###### TO DO: MERGE THE FOLLOWING TWO FUNCTIONS
+
 def get_intermediate_z_point(z_1, z_2, bp_z_med):
     """
     get the intermediate point between z_1 and z_2

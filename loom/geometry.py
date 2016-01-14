@@ -448,6 +448,7 @@ class SWDiff:
             z_rotation=None,):
         # sym_v is a SymPy expression. 
         self.sym_v = sympy.sympify(v_str)
+        
         # num_v is from sym_v with its parameters 
         # substituted with numerical values.
         # NOTE: We apply PSL2C only to the numerical curve
