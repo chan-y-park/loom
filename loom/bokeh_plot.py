@@ -18,14 +18,15 @@ from misc import get_splits_with_overlap
 def get_spectral_network_bokeh_plot(
     spectral_network_data, plot_range=None,
     plot_joints=False, plot_data_points=False, plot_on_cylinder=False,
+    plot_width=800, plot_height=800,
     notebook=False,
 ):
     spectral_networks = spectral_network_data.spectral_networks
     sw_data = spectral_network_data.sw_data
     z_rotation = complex(sw_data.z_plane_rotation)
 
-    plot_width = 800
-    plot_height = plot_width
+    plot_width = plot_width
+    plot_height = plot_height
 
     x_min = min([min([min([z.real for z in s_wall.z])
                       for s_wall in sn.s_walls])
