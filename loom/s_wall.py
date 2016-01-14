@@ -843,7 +843,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                     # just pick those sheets that are close enough 
                     # to the ramification point
-                    x_s = [y for y in all_x_s if abs(x_0 - y) < delta_x]
+                    x_s = n_nearest(all_x_s, x_0, r_i)
+                    print '\n\nThese are the closest sheets to ramification point '.format(x_0)
+                    print x_s
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
                     x_i_x_j_phases = []
