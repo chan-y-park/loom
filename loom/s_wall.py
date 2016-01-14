@@ -645,6 +645,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     to extract the seed data.
     We thus stick to (any)one ramification point of the 
     fundamental representation to get the seeds.
+    It is assumed that we are working in the first 
+    fundamental representation of the Lie algebra.
     """
     logger = logging.getLogger(logger_name)
 
@@ -842,22 +844,31 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     for i, x_i in enumerate(x_s): 
                         for j, x_j in enumerate(x_s):
                             if i != j:
-                                v_i = complex(
-                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                # v_i = complex(
+                                #     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                # )
+                                # v_j = complex(
+                                #     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                # )
+                                # if (v_j - v_i) != 0:
+                                #     ij_factor = (
+                                #         -1.0 * exp(1j * theta) / (x_j - x_i)
+                                #     )
+                                #     x_i_x_j_phases.append(
+                                #         [
+                                #             (ij_factor) / abs(ij_factor), 
+                                #             [x_i, x_j]
+                                #         ]
+                                #     )
+                                ij_factor = (
+                                    -1.0 * exp(1j * theta) / (x_j - x_i)
                                 )
-                                v_j = complex(
-                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                x_i_x_j_phases.append(
+                                    [
+                                        (ij_factor) / abs(ij_factor), 
+                                        [x_i, x_j]
+                                    ]
                                 )
-                                if (v_j - v_i) != 0:
-                                    ij_factor = (
-                                        -1.0 * exp(1j * theta) / (v_j - v_i)
-                                    )
-                                    x_i_x_j_phases.append(
-                                        [
-                                            (ij_factor) / abs(ij_factor), 
-                                            [x_i, x_j]
-                                        ]
-                                    )
 
                 elif rp_type == 'type_II' or rp_type == 'type_III':
                     # we assume that the ramification index is maximal
@@ -884,14 +895,22 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                 abs(x_j - x_i) > x_accuracy 
                                 and abs(x_j + x_i) > x_accuracy
                             ):
-                                v_i = complex(
-                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
-                                )
-                                v_j = complex(
-                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
-                                )
+                                # v_i = complex(
+                                #     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                # )
+                                # v_j = complex(
+                                #     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                # )
+                                # ij_factor = (
+                                #     -1.0 * exp(1j * theta) / (v_j - v_i)
+                                # )
+                                # # ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
+                                # x_i_x_j_phases.append(
+                                #     [(ij_factor) / abs(ij_factor), [x_i, x_j]]
+                                # )
+
                                 ij_factor = (
-                                    -1.0 * exp(1j * theta) / (v_j - v_i)
+                                    -1.0 * exp(1j * theta) / (x_j - x_i)
                                 )
                                 # ij_factor = -1.0 * exp(1j*theta)/(x_j - x_i)
                                 x_i_x_j_phases.append(
@@ -920,26 +939,36 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                         for j, x_j in enumerate(aligned_xs):
                             w_j = sw.g_data.weights[j]
                             if is_root(w_j - w_i, sw.g_data):
-                                v_i = complex(
-                                    sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                # v_i = complex(
+                                #     sw.diff.num_v.subs([(z, z_1), (x, x_i)])
+                                # )
+                                # v_j = complex(
+                                #     sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                # )
+                                # # print '\n\ni ={}, j={}'.format(i,j)
+                                # # print 'w_j - w_i = {}'.format(w_j -w_i)
+                                # # print 'x_j - x_i = {}'.format(x_j -x_i)
+                                # # print 'v_j - v_i = {}'.format(v_j -v_i)
+                                # if (v_j - v_i) != 0:
+                                #     ij_factor = (
+                                #         -1.0 * exp(1j * theta) / (v_j - v_i)
+                                #     )
+                                #     x_i_x_j_phases.append(
+                                #         [
+                                #             (ij_factor) / abs(ij_factor), 
+                                #             [x_i, x_j]
+                                #         ]
+                                #     )
+
+                                ij_factor = (
+                                    -1.0 * exp(1j * theta) / (x_j - x_i)
                                 )
-                                v_j = complex(
-                                    sw.diff.num_v.subs([(z, z_1), (x, x_j)])
+                                x_i_x_j_phases.append(
+                                    [
+                                        (ij_factor) / abs(ij_factor), 
+                                        [x_i, x_j]
+                                    ]
                                 )
-                                # print '\n\ni ={}, j={}'.format(i,j)
-                                # print 'w_j - w_i = {}'.format(w_j -w_i)
-                                # print 'x_j - x_i = {}'.format(x_j -x_i)
-                                # print 'v_j - v_i = {}'.format(v_j -v_i)
-                                if (v_j - v_i) != 0:
-                                    ij_factor = (
-                                        -1.0 * exp(1j * theta) / (v_j - v_i)
-                                    )
-                                    x_i_x_j_phases.append(
-                                        [
-                                            (ij_factor) / abs(ij_factor), 
-                                            [x_i, x_j]
-                                        ]
-                                    )
 
                 closest_pair = sorted(
                     x_i_x_j_phases, key=lambda p: abs(p[0] - zeta)
