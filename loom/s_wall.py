@@ -687,6 +687,33 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
         # Construct the seeding points for the branch point
         # by studying the type of ramification structure of the r.p.
+
+        ### OLD - using a, b
+        # if rp_type == 'type_I':
+        #     phases = [exp(2 * pi * 1j * float(i) / r_i) for i in range(r_i)]
+        #     phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+            
+        #     omega = exp(2.0 * pi * 1j * float(r_i) / float(r_i + 1))
+
+        #     a, b = sw_diff_coeffs_a_b
+        #     dz_phases = ([
+        #         (1.0 / cpow((-1.0 * a / b), 1, r_i + 1)) *
+        #         exp(1j * theta * float(r_i) / (r_i + 1)) *
+        #         ((-1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
+        #         for i in range(r_i) for j in range(r_i) 
+        #         for s in range(r_i + 1) if i != j
+        #     ])
+
+        #     norm_dz_phases = [d / abs(d) for d in dz_phases]
+        #     # these are the normalized phases of the seeds
+        #     # with respect to the branch point:
+        #     zetas = remove_duplicate(
+        #         norm_dz_phases, lambda p1, p2: abs(p1 - p2) < (accuracy)
+        #     )
+
+        #     print 'a = {}\nb = {}'.format(a, b)
+        #     print 'phases = {}'.format(zetas)
+
         if rp_type == 'type_I':
             phases = [exp(2 * pi * 1j * float(i) / r_i) for i in range(r_i)]
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
@@ -695,7 +722,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
             a, b = sw_diff_coeffs_a_b
             dz_phases = ([
-                (1.0 / cpow((-1.0 * a / b), 1, r_i + 1)) *
+                (1.0 / cpow((sw_diff_coeff), r_i, r_i + 1)) *
                 exp(1j * theta * float(r_i) / (r_i + 1)) *
                 ((-1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
                 for i in range(r_i) for j in range(r_i) 
@@ -712,6 +739,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             print 'a = {}\nb = {}'.format(a, b)
             print 'phases = {}'.format(zetas)
         
+        ### TODO - use sw_diff_coeff for these other types as well
         elif rp_type == 'type_II':
             if r_i % 2 == 1:
                 raise Exception('Cannot have a type II ramification point' +
@@ -845,6 +873,28 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     min_dt = dt
                 z_1 = z_0 + dt * zeta
 
+                ### OLD - using a, b
+                # if rp_type == 'type_I':
+                #     all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
+                #     # just pick those sheets that are close enough 
+                #     # to the ramification point
+                #     x_s = n_nearest(all_x_s, x_0, r_i)
+                #     # a list of the type
+                #     # [... [phase, [x_i, x_j]] ...]
+                #     x_i_x_j_phases = []
+                #     for i, x_i in enumerate(x_s): 
+                #         for j, x_j in enumerate(x_s):
+                #             if i != j:
+                #                 ij_factor = (
+                #                     -1.0 * exp(1j * theta) / (x_j - x_i)
+                #                 )
+                #                 x_i_x_j_phases.append(
+                #                     [
+                #                         (ij_factor) / abs(ij_factor), 
+                #                         [x_i, x_j]
+                #                     ]
+                #                 )
+                
                 if rp_type == 'type_I':
                     all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                     # just pick those sheets that are close enough 
@@ -856,13 +906,15 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     for i, x_i in enumerate(x_s): 
                         for j, x_j in enumerate(x_s):
                             if i != j:
+                                lambda_i = x_i * sw.diff.jac.subs(x, x_i).subs(z, z_1)
+                                lambda_j = x_j * sw.diff.jac.subs(x, x_j).subs(z, z_1)
                                 ij_factor = (
-                                    -1.0 * exp(1j * theta) / (x_j - x_i)
+                                    -1.0 * exp(1j * theta) / (lambda_j - lambda_i)
                                 )
                                 x_i_x_j_phases.append(
                                     [
                                         (ij_factor) / abs(ij_factor), 
-                                        [x_i, x_j]
+                                        [lambda_i, lambda_j]
                                     ]
                                 )
 
