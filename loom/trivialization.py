@@ -1119,11 +1119,10 @@ class SWDataWithTrivialization(SWDataBase):
             b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
             dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 2)
 
-        ### TODO: Review this with E6, make checks
         elif rp_type == 'type_IV':
             a = local_curve.n().coeff(dz).coeff(dx, 15)
             b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 3)
+            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, 12)
         
         logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
             [rp.z, rp.x], rp_type)
