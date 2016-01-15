@@ -2,8 +2,6 @@ import logging
 import numpy
 import sympy
 
-import cmath ###FIXME: REMOVE AFTER DEBUG
-
 from cmath import exp, pi
 from math import floor
 from scipy import interpolate
@@ -227,10 +225,7 @@ class SWall(object):
         branch_point_zs,
         puncture_point_zs,
         config,
-        sw,
-        phase,
     ):
-        #### FIXME: remove last arguments after finish debugging
         bpzs = branch_point_zs
         ppzs = puncture_point_zs
         num_of_steps = config['num_of_steps']
@@ -274,15 +269,6 @@ class SWall(object):
             z_i = y_i[0]
             M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
             self[step] = y_i
-
-        print 'Evolution of {}'.format(self.label)
-        x, z = sympy.symbols('x z')
-        v = sympy.lambdify((z, x), sw.diff.num_v)
-        for i in range(5):            
-            print "\nz = {}".format(self.z[i])
-            print "(x_i, x_j) = {}".format(self.x[i])
-            print "(lambda_i, lambda_j) = {}".format([v(z_i, self.x[i][0]), v(z_i, self.x[i][1])])
-            print "phase of derivative in ode: {}".format(cmath.phase(exp(phase * 1j) / (v(z_i, self.x[i][0]) - v(z_i, self.x[i][1]))))
 
     def determine_root_types(self, sw_data, cutoff_radius=0,):
         """
@@ -719,10 +705,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             zetas = remove_duplicate(
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < (accuracy)
             )
-
-            print 'a = {}\nb = {}'.format(a, b)
-            print 'phases = {}'.format(zetas)
-            print 'angles = {}'.format(map(cmath.phase, zetas))
         
         elif rp_type == 'type_II':
             if r_i % 2 == 1:
@@ -782,12 +764,11 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 (phases[i] + phases[j]) * numpy.sign(i - j) 
                 for i in range(r_k)
             ] for j in range(r_k)]
-            # print 'phi = {}'.format(phi)
+
             omega = exp(
                 2.0 * pi * 1j * float(2 * r_k - 2) / float(2 * r_k - 1)
             )
 
-            # a, b = sw_diff_coeffs_a_b
             dz_phases = ([
                 (1.0 / cpow(sw_diff_coeff, 2 * r_k - 2, 2 * r_k - 1)) *
                 exp(1j * theta * float(2 * r_k - 2) / (2 * r_k - 1)) *
@@ -820,11 +801,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 phases[i] - phases[j] for i in range(13) 
             ] for j in range(13)]
 
-            # print 'phi = {}'.format(phi)
             omega = exp(
                 2.0 * pi * 1j / 13.0
             )
-            # a, b = sw_diff_coeffs_a_b
             dz_phases = ([
                 (1.0 / cpow(sw_diff_coeff, 12, 13)) *
                 exp(1j * theta * 12.0 / 13.0) *
@@ -868,10 +847,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     for i, x_i in enumerate(x_s): 
                         for j, x_j in enumerate(x_s):
                             if i != j:
-                                lambda_i = (
+                                lambda_i = complex(
                                     sw.diff.num_v.subs(x, x_i).subs(z, z_1)
                                 )
-                                lambda_j = (
+                                lambda_j = complex(
                                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
                                 )
                                 ij_factor = (
@@ -889,11 +868,17 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
                     # order of magnitude of expected separation 
                     # of sheets at z_1
-                    dx = abs(a / b) * (dt ** (1.0 / float(r_i)))
+                    if rp_type == 'type_II':
+                        dx = (
+                            abs(cpow(sw_diff_coeff, 2 * r_k)) 
+                            * (dt ** (1.0 / float(r_i)))
+                        )
+                    else:
+                        dx = (
+                            abs(cpow(sw_diff_coeff, 2 * r_k - 2)) 
+                            * (dt ** (1.0 / float(r_i)))
+                        )
                     x_accuracy = min([accuracy, dx])
-                    # OLD
-                    # dx = abs(sw_diff_coeff) * (dt ** (1.0 / float(r_i)))
-                    # x_accuracy = min([accuracy, dx])
 
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
@@ -907,10 +892,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                 abs(x_j - x_i) > x_accuracy 
                                 and abs(x_j + x_i) > x_accuracy
                             ):
-                                lambda_i = (
+                                lambda_i = complex(
                                     sw.diff.num_v.subs(x, x_i).subs(z, z_1)
                                 )
-                                lambda_j = (
+                                lambda_j = complex(
                                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
                                 )
                                 ij_factor = (
@@ -943,10 +928,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                         for j, x_j in enumerate(aligned_xs):
                             w_j = sw.g_data.weights[j]
                             if is_root(w_j - w_i, sw.g_data):
-                                lambda_i = (
+                                lambda_i = complex(
                                     sw.diff.num_v.subs(x, x_i).subs(z, z_1)
                                 )
-                                lambda_j = (
+                                lambda_j = complex(
                                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
                                 )
                                 ij_factor = (
@@ -994,7 +979,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(min_dt / 100))
     logger.debug('Number of S-walls emanating = {}'.format(len(seeds)))
     logger.debug('these are the seeds {}\n'.format(seeds))
-    print '\nthese are the seeds {}\n'.format(seeds)
     branch_point.seeds = seeds
     return seeds
 
