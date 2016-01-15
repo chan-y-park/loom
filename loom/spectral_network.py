@@ -146,7 +146,8 @@ class SpectralNetwork:
                 s_i = self.s_walls[i]
                 logger.info('Growing S-wall #{}...'.format(i))
                 s_i.grow(
-                    ode, bpzs, ppzs, config,
+                    ode, bpzs, ppzs, config, 
+                    sw_data, self.phase,
                     # clipping_radius=CLIPPING_RADIUS,
                 )
                 # Cut the grown S-walls at the intersetions with branch cuts

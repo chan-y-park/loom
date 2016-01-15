@@ -2,6 +2,8 @@ import logging
 import numpy
 import sympy
 
+import cmath ###FIXME: REMOVE AFTER DEBUG
+
 from cmath import exp, pi
 from math import floor
 from scipy import interpolate
@@ -225,7 +227,10 @@ class SWall(object):
         branch_point_zs,
         puncture_point_zs,
         config,
+        sw,
+        phase,
     ):
+        #### FIXME: remove last arguments after finish debugging
         bpzs = branch_point_zs
         ppzs = puncture_point_zs
         num_of_steps = config['num_of_steps']
@@ -269,6 +274,15 @@ class SWall(object):
             z_i = y_i[0]
             M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
             self[step] = y_i
+
+        print 'Evolution of {}'.format(self.label)
+        x, z = sympy.symbols('x z')
+        v = sympy.lambdify((z, x), sw.diff.num_v)
+        for i in range(5):            
+            print "\nz = {}".format(self.z[i])
+            print "(x_i, x_j) = {}".format(self.x[i])
+            print "(lambda_i, lambda_j) = {}".format([v(z_i, self.x[i][0]), v(z_i, self.x[i][1])])
+            print "phase of derivative in ode: {}".format(cmath.phase(exp(phase * 1j) / (v(z_i, self.x[i][0]) - v(z_i, self.x[i][1]))))
 
     def determine_root_types(self, sw_data, cutoff_radius=0,):
         """
@@ -686,6 +700,35 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
         # by studying the type of ramification structure of the r.p.
 
         ### OLD - using a, b
+        # if rp_type == 'type_I':
+        #     phases = [exp(2 * pi * 1j * float(i) / r_i) for i in range(r_i)]
+        #     phi = [[p1 - p2 for p1 in phases] for p2 in phases]
+            
+        #     omega = exp(2.0 * pi * 1j * float(r_i) / float(r_i + 1))
+
+        #     a, b = sw_diff_coeffs_a_b
+        #     dz_phases = ([
+        #         (1.0 / cpow((-1.0 * a / b), 1, r_i + 1)) *
+        #         exp(1j * theta * float(r_i) / (r_i + 1)) *
+        #         ((-1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
+        #         for i in range(r_i) for j in range(r_i) 
+        #         for s in range(r_i + 1) if i != j
+        #     ])
+
+        #     norm_dz_phases = [d / abs(d) for d in dz_phases]
+        #     # these are the normalized phases of the seeds
+        #     # with respect to the branch point:
+        #     zetas = remove_duplicate(
+        #         norm_dz_phases, lambda p1, p2: abs(p1 - p2) < (accuracy)
+        #     )
+
+        #     print '\nramification point at z = {}'.format(z_0)
+        #     print 'a = {}\nb = {}'.format(a, b)
+        #     print 'phases = {}'.format(zetas)
+        #     print 'angles = {}'.format(map(cmath.phase, zetas))
+
+        ### NEW - use sw_diff_coeff
+
         if rp_type == 'type_I':
             phases = [exp(2 * pi * 1j * float(i) / r_i) for i in range(r_i)]
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
@@ -694,7 +737,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
             a, b = sw_diff_coeffs_a_b
             dz_phases = ([
-                (1.0 / cpow((-1.0 * a / b), 1, r_i + 1)) *
+                (1.0 / cpow((sw_diff_coeff), r_i, r_i + 1)) *
                 exp(1j * theta * float(r_i) / (r_i + 1)) *
                 ((-1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
                 for i in range(r_i) for j in range(r_i) 
@@ -710,33 +753,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
             print 'a = {}\nb = {}'.format(a, b)
             print 'phases = {}'.format(zetas)
-
-        ### NEW - use sw_diff_coeff
-
-        # if rp_type == 'type_I':
-        #     phases = [exp(2 * pi * 1j * float(i) / r_i) for i in range(r_i)]
-        #     phi = [[p1 - p2 for p1 in phases] for p2 in phases]
-            
-        #     omega = exp(2.0 * pi * 1j * float(r_i) / float(r_i + 1))
-
-        #     a, b = sw_diff_coeffs_a_b
-        #     dz_phases = ([
-        #         (1.0 / cpow((sw_diff_coeff), r_i, r_i + 1)) *
-        #         exp(1j * theta * float(r_i) / (r_i + 1)) *
-        #         ((-1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
-        #         for i in range(r_i) for j in range(r_i) 
-        #         for s in range(r_i + 1) if i != j
-        #     ])
-
-        #     norm_dz_phases = [d / abs(d) for d in dz_phases]
-        #     # these are the normalized phases of the seeds
-        #     # with respect to the branch point:
-        #     zetas = remove_duplicate(
-        #         norm_dz_phases, lambda p1, p2: abs(p1 - p2) < (accuracy)
-        #     )
-
-        #     print 'a = {}\nb = {}'.format(a, b)
-        #     print 'phases = {}'.format(zetas)
+            print 'angles = {}'.format(map(cmath.phase, zetas))
         
         ### TODO - decide whether to use sw_diff_coeff for these other types as well
         elif rp_type == 'type_II':
@@ -873,28 +890,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 z_1 = z_0 + dt * zeta
 
                 ### OLD - use x_i, x_j and a, b
-                if rp_type == 'type_I':
-                    all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
-                    # just pick those sheets that are close enough 
-                    # to the ramification point
-                    x_s = n_nearest(all_x_s, x_0, r_i)
-                    # a list of the type
-                    # [... [phase, [x_i, x_j]] ...]
-                    x_i_x_j_phases = []
-                    for i, x_i in enumerate(x_s): 
-                        for j, x_j in enumerate(x_s):
-                            if i != j:
-                                ij_factor = (
-                                    -1.0 * exp(1j * theta) 
-                                    / (x_j - x_i)
-                                )
-                                x_i_x_j_phases.append(
-                                    [
-                                        (ij_factor) / abs(ij_factor), 
-                                        [x_i, x_j]
-                                    ]
-                                )
-                ### NEW -use sw_diff_coeff
                 # if rp_type == 'type_I':
                 #     all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
                 #     # just pick those sheets that are close enough 
@@ -906,22 +901,44 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 #     for i, x_i in enumerate(x_s): 
                 #         for j, x_j in enumerate(x_s):
                 #             if i != j:
-                #                 lambda_i = (
-                #                     sw.diff.num_v.subs(x, x_i).subs(z, z_1)
-                #                 )
-                #                 lambda_j = (
-                #                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
-                #                 )
                 #                 ij_factor = (
                 #                     -1.0 * exp(1j * theta) 
-                #                     / (lambda_j - lambda_i)
+                #                     / (x_j - x_i)
                 #                 )
                 #                 x_i_x_j_phases.append(
                 #                     [
                 #                         (ij_factor) / abs(ij_factor), 
-                #                         [lambda_i, lambda_j]
+                #                         [x_i, x_j]
                 #                     ]
                 #                 )
+                ### NEW -use sw_diff_coeff
+                if rp_type == 'type_I':
+                    all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
+                    # just pick those sheets that are close enough 
+                    # to the ramification point
+                    x_s = n_nearest(all_x_s, x_0, r_i)
+                    # a list of the type
+                    # [... [phase, [x_i, x_j]] ...]
+                    x_i_x_j_phases = []
+                    for i, x_i in enumerate(x_s): 
+                        for j, x_j in enumerate(x_s):
+                            if i != j:
+                                lambda_i = (
+                                    sw.diff.num_v.subs(x, x_i).subs(z, z_1)
+                                )
+                                lambda_j = (
+                                    sw.diff.num_v.subs(x, x_j).subs(z, z_1)
+                                )
+                                ij_factor = (
+                                    -1.0 * exp(1j * theta) 
+                                    / (lambda_j - lambda_i)
+                                )
+                                x_i_x_j_phases.append(
+                                    [
+                                        (ij_factor) / abs(ij_factor), 
+                                        [x_i, x_j]
+                                    ]
+                                )
 
                 elif rp_type == 'type_II' or rp_type == 'type_III':
                     # we assume that the ramification index is maximal
@@ -1024,6 +1041,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(min_dt / 100))
     logger.debug('Number of S-walls emanating = {}'.format(len(seeds)))
     logger.debug('these are the seeds {}\n'.format(seeds))
+    print '\nthese are the seeds {}\n'.format(seeds)
     branch_point.seeds = seeds
     return seeds
 
