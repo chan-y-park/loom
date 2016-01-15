@@ -1050,6 +1050,7 @@ class SWDataWithTrivialization(SWDataBase):
             .series(dz, 0, 2).removeO()
         )
         logger.debug('\nlocal curve = {}\n'.format(local_curve))
+        print '\nlocal curve = {}\n'.format(local_curve)
             
         # Classify which type of ramification point
         # type_I: ADE type with x_0 != 0
@@ -1110,17 +1111,24 @@ class SWDataWithTrivialization(SWDataBase):
                 )
             )
 
+        # dx_dz = dx(dz) is the local form of x (the local 
+        # coiordinate around the ramification point) as a function of z
+        # (also intended as a local coordinate near a ramification point)
         if rp_type == 'type_I' or rp_type == 'type_II':
             a = local_curve.n().subs(dx, 0).coeff(dz)
             b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
 
         elif rp_type == 'type_III':
             a = local_curve.n().coeff(dz).coeff(dx, 2)
             b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 2)
 
+        ### TODO: Review this with E6, make checks
         elif rp_type == 'type_IV':
             a = local_curve.n().coeff(dz).coeff(dx, 15)
             b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 3)
         
         logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
             [rp.z, rp.x], rp_type)
@@ -1129,10 +1137,9 @@ class SWDataWithTrivialization(SWDataBase):
         rp.ramification_type = rp_type    
         rp.sw_diff_coeffs_a_b = [complex(a), complex(b)]
 
-        ##### THE CORRECT WAY TO COMPUTE THE LEADING COEFFICIENT
-        ##### BY TAKING INTO ACOCUNT THE PSL2C TRANSFORMATION OF Z-PLANE
-        # the relation of these should be that 
-        # sw_diff_coeff = (-a / b)^{1/k} * (self.diff.jac)^{-1}
+        # Now we compute the SW differential actual coefficient.
+        # The relation of this to a, b should be that 
+        # sw_diff_coeff = (-a / b)^{1/k} * (self.diff.jac)^{+/-1}
         # for a degree-k ramification point
         # because F ~ a z + b x^k so \lambda ~ x dz ~ (-a/b)^{1/k} (dz/dz') dz'
 
@@ -1140,11 +1147,6 @@ class SWDataWithTrivialization(SWDataBase):
         # is the jacobian from z-plane rotations or PSL2C transformations.
         num_v = self.diff.num_v  
 
-        # dx_dz = dx(dz) is the local form of x (the local 
-        # coiordinate around the ramification point) as a function of z
-        # (also intended as a local coordinate near a ramification point)
-        dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
-        
         # now we plug this into num_v, in a neighborhood of x_0
         # we have x = x_0 + dx_dz.
         local_diff = (
@@ -1160,6 +1162,7 @@ class SWDataWithTrivialization(SWDataBase):
             (diff_c, diff_e) = local_diff.leadterm(dz)
 
         rp.sw_diff_coeff = complex(diff_c.n())
+        print 'ramification point is of type {}'.format(rp_type)
         
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):
