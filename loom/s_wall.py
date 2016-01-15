@@ -670,17 +670,14 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
         rp_type = rp.ramification_type
         sw_diff_coeff = rp.sw_diff_coeff
         sw_diff_coeffs_a_b = rp.sw_diff_coeffs_a_b
-        print '\n\nz_0 = {}'.format(z_0)
-        print 'a and b coeffieicnts: {}'.format(sw_diff_coeffs_a_b)
-        print 'sw diff coeff: {}'.format(sw_diff_coeff)
 
         logger.debug('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
         logger.debug('Ramification index = {}'.format(r_i))
         logger.debug('Ramification type = {}'.format(rp_type))
-        # logger.debug(
-        #     'leading coefficients of SW diff: a = {}\t b={}\n'
-        #     .format(sw_diff_coeffs_a_b[0], sw_diff_coeffs_a_b[1])
-        # )
+        logger.debug(
+            'leading coefficients of SW diff: a = {}\t b={}\n'
+            .format(sw_diff_coeffs_a_b[0], sw_diff_coeffs_a_b[1])
+        )
         logger.debug(
             'leading coefficient of SW diff: {}\t'
             .format(sw_diff_coeff)
@@ -762,8 +759,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 exp(2 * pi * 1j * float(i) / (2.0 * (r_k - 1))) 
                 for i in range(r_k - 1)
             ] + [0.0]
-            # print 'range(r_k - 1) = {}'.format(range(r_k - 1))
-            # print 'phases_1 = {}'.format(phases)
 
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
             psi = [[
@@ -797,8 +792,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             zetas = remove_duplicate(
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < accuracy
             )
-            print 'phases = {}'.format(zetas)
-            print 'k = {}'.format(r_k)
 
         elif rp_type == 'type_IV':
             phases = [
@@ -873,7 +866,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     # we assume that the ramification index is maximal
                     # therefore we ask for all the sheets at z_1.
                     x_s = find_xs_at_z_0(sw, z_1, ffr=True)
-                    print 'xs = {}'.format(x_s)
 
                     # order of magnitude of expected separation 
                     # of sheets at z_1
@@ -914,7 +906,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                 x_i_x_j_phases.append(
                                     [(ij_factor) / abs(ij_factor), [x_i, x_j]]
                                 )
-                    print 'xi_xj_phases = {}'.format(x_i_x_j_phases)
 
                 elif rp_type == 'type_IV':
                     x_s = find_xs_at_z_0(

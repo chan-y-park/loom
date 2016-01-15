@@ -471,7 +471,6 @@ class SWDataWithTrivialization(SWDataBase):
             #     near_degenerate_branch_locus=near_degenerate_branch_locus
             # )
             ffr_xs_1 = self.ffr_curve.get_xs(z) 
-            # print ffr_xs_1
 
             # if it's not a path to branch point, check tracking
             if is_path_to_bp is False:
@@ -635,9 +634,6 @@ class SWDataWithTrivialization(SWDataBase):
         sheet_tracks = self.get_sheets_along_path(z_path)
         final_xs = [s_t[-1] for s_t in sheet_tracks]
         final_sheets = [[i, x] for i, x in enumerate(final_xs)]
-
-        # print 'the initial sheets: {}'.format(initial_sheets)
-        # print 'the final sheets: {}'.format(final_sheets)
 
         # Now we compare the initial and final sheets 
         # to extract the monodromy permutation
@@ -1050,7 +1046,6 @@ class SWDataWithTrivialization(SWDataBase):
             .series(dz, 0, 2).removeO()
         )
         logger.debug('\nlocal curve = {}\n'.format(local_curve))
-        print '\nlocal curve = {}\n'.format(local_curve)
             
         # Classify which type of ramification point
         # type_I: ADE type with x_0 != 0
@@ -1162,7 +1157,6 @@ class SWDataWithTrivialization(SWDataBase):
             (diff_c, diff_e) = local_diff.leadterm(dz)
 
         rp.sw_diff_coeff = complex(diff_c.n())
-        print 'ramification point is of type {}'.format(rp_type)
         
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):
@@ -1406,11 +1400,6 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
                 for x_pair_i in x_pair:
                     correct_xy_pairs.update({x_pair_i: x_pair_i})
             else:
-                # print 'x_pair = {}'.format(x_pair)
-                # print 'reference xs '
-                # print ref_xs
-                # print 'new xs'
-                # print new_xs
                 raise Exception('Cannot handle this kind of sheet degeneracy')
         else:
             closest_ys_0 = nsmallest(
