@@ -140,7 +140,10 @@ class SpectralNetwork:
         punctures = sw_data.regular_punctures + sw_data.irregular_punctures
         ppzs = [p.z for p in punctures]
 
-        bpzs = [bp.z for bp in sw_data.branch_points]
+#        bpzs = [bp.z for bp in sw_data.branch_points]
+        # TODO: There are branch cuts also from irregular singularities. 
+        bpzs = [bp.z for bp in sw_data.branch_points +
+                sw_data.irregular_singularities]
         
         n_finished_s_walls = 0 
         iteration = 1
