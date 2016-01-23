@@ -14,11 +14,7 @@ from cmath import log
 class LocalDiffError(Exception):
     def __init__(self, value):
         self.value = value
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> results_for_note
     def __str__(self):
         return repr(self.value)
 
@@ -26,11 +22,7 @@ class LocalDiffError(Exception):
 class GetSWallSeedsError(Exception):
     def __init__(self, value):
         self.value = value
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> results_for_note
     def __str__(self):
         return repr(self.value)
 
@@ -38,11 +30,7 @@ class GetSWallSeedsError(Exception):
 class NNearestError(Exception):
     def __init__(self, value):
         self.value = value
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> results_for_note
     def __str__(self):
         return repr(self.value)
 
@@ -50,11 +38,7 @@ class NNearestError(Exception):
 class UnravelError(Exception):
     def __init__(self, value):
         self.value = value
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> results_for_note
     def __str__(self):
         return repr(self.value)
 
@@ -64,11 +48,7 @@ def ctor2(complex_number):
 
 
 def r2toc(real_tuple):
-<<<<<<< HEAD
     return (real_tuple[0] + (1j * real_tuple[1]))
-=======
-    return (real_tuple[0] + 1j * real_tuple[1])
->>>>>>> results_for_note
 
 
 def get_root_multiplicity(coefficients, root_0, accuracy):
@@ -86,14 +66,9 @@ def get_root_multiplicity(coefficients, root_0, accuracy):
 
 
 def cpow(base, exponent_numerator, exponent_denominator=1):
-<<<<<<< HEAD
-    return (complex(base) ** 
-            complex(Fraction(exponent_numerator, exponent_denominator)))
-=======
     return complex(base) ** complex(
         Fraction(exponent_numerator, exponent_denominator)
     )
->>>>>>> results_for_note
 
 
 def gather(a_list, compare):
@@ -209,25 +184,14 @@ def put_on_cylinder(z, mt_params=None):
     Put PSL2C-transformed z-coords
     onto the original cylinder.
     """
-<<<<<<< HEAD
     return (log(PSL2C(mt_params, z, inverse=True, numerical=True)) / 1.0j)
-
-
-# TODO by chan: use numba?
-def delete_duplicates(l, key=None, accuracy=False):
-    seen = set()
-    uniq = []
-    if (key is None) and (accuracy is None):
-=======
-    return log(PSL2C(mt_params, z, inverse=True, numerical=True)) / 1.0j
 
 
 # chan: TODO: use numba?
 def delete_duplicates(l, key=None, accuracy=False):
     seen = set()
     uniq = []
-    if key is None and accuracy is None:
->>>>>>> results_for_note
+    if (key is None) and (accuracy is None):
         for x in l:
             if not isinstance(x, (int, bool, str, unicode)):
                 warnings.warn('delete_duplicates(): testing the membership'
@@ -235,17 +199,10 @@ def delete_duplicates(l, key=None, accuracy=False):
             if x not in seen:
                 uniq.append(x)
                 seen.add(x)
-<<<<<<< HEAD
     elif (key is None) and (accuracy is not None):
         uniq = n_remove_duplicate(l, accuracy)
 
     elif (key is not None) and (accuracy is None):
-=======
-    elif key is None and accuracy is not None:
-        uniq = n_remove_duplicate(l, accuracy)
-
-    elif key is not None and accuracy is None:
->>>>>>> results_for_note
         for x in l:
             if key(x) not in seen:
                 uniq.append(x)
@@ -296,7 +253,6 @@ def is_root(np_array, g_data):
     return ans
 
 
-<<<<<<< HEAD
 def get_descendant_roots(parent_roots, g_data):
     descendant_roots = []
 
@@ -345,7 +301,8 @@ def sort_roots(roots, g_data):
             break
 
     return sorted_roots
-=======
+
+
 def is_weyl_monodromy(sheet_permutation_matrix, g_data):
     ans = True
     for r in g_data.roots:
@@ -363,7 +320,6 @@ def is_weyl_monodromy(sheet_permutation_matrix, g_data):
         ) is False:
             ans = False
     return ans
->>>>>>> results_for_note
 
 
 def get_turning_points(zs):
