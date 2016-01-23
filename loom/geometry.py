@@ -1,10 +1,6 @@
 import sympy
 import numpy
 import logging
-<<<<<<< HEAD
-=======
-# import warnings
->>>>>>> results_for_note
 import copy
 # import pdb
 import sympy.mpmath as mpmath
@@ -189,14 +185,10 @@ class GData:
 
         return pairs
 
-<<<<<<< HEAD
     # XXX: rename this to apply_weyl_monodromy()
-    def weyl_monodromy(self, root, br_loc, direction, reverse=False):
-=======
     def weyl_monodromy(
         self, root, br_loc, direction, reverse=False, perm_matrix=None
     ):
->>>>>>> results_for_note
         """
         Returns a new root of the segment of an S-wall
         when it crosses a branch cut from a brancing locus
@@ -204,23 +196,6 @@ class GData:
         An option to use directly a sheet permutation matrix is also 
         given, by specifying the corresponding argument.
         """
-<<<<<<< HEAD
-        if reverse is False:
-            if direction == 'ccw':
-                monodromy_matrix = br_loc.monodromy
-            elif direction == 'cw':
-                monodromy_matrix = (
-                    numpy.linalg.inv(br_loc.monodromy).astype(int)
-                )
-        elif reverse is True:
-            if direction == 'cw':
-                monodromy_matrix = br_loc.monodromy
-            elif direction == 'ccw':
-                monodromy_matrix = (
-                    numpy.linalg.inv(br_loc.monodromy).astype(int)
-                )
-
-=======
         if perm_matrix is None:
             if reverse is False:
                 if direction == 'ccw':
@@ -252,7 +227,6 @@ class GData:
                         numpy.linalg.inv(perm_matrix).astype(int)
                     )
                 
->>>>>>> results_for_note
         pair_0 = self.ordered_weight_pairs(root)[0]
         v_i_ind = pair_0[0]
         v_j_ind = pair_0[1]
@@ -279,12 +253,6 @@ class GData:
         num_p_roots = len(p_roots)
         p_root_colors = []
         for i in range(num_p_roots):
-<<<<<<< HEAD
-=======
-            # r, g, b, alpha = mpl_color_map.jet(
-            #     (i / float(n_rts)), bytes=True
-            # )
->>>>>>> results_for_note
             try:
                 color_map = mpl_color_map.viridis
             except AttributeError:
@@ -599,7 +567,6 @@ class SWDataBase(object):
                 z_rotation=self.z_plane_rotation,
                 ffr=True,
             )
-<<<<<<< HEAD
             self.diff = SWDiff(
                 'x',
                 g_data=self.g_data,
@@ -607,16 +574,6 @@ class SWDataBase(object):
                 mt_params=mt_params,
                 z_rotation=self.z_plane_rotation,
             )
-=======
-
-        logger.info(
-            'Seiberg-Witten curve in the 1st fundamental '
-            'representation:\n(note: here x really stands for \lambda)'
-            '\n{} = 0\n(numerically\n{}=0\n)'
-            .format(sympy.latex(self.ffr_curve.sym_eq),
-                    sympy.latex(self.ffr_curve.num_eq))
-        )
->>>>>>> results_for_note
 
         # TODO: SWCurve in a general representation.
         if self.g_data.fundamental_representation_index == 1:
@@ -632,7 +589,8 @@ class SWDataBase(object):
 
         logger.info(
             'Seiberg-Witten curve in the 1st fundamental '
-            'representation:\n{} = 0\n(numerically\n{}=0\n)'
+            'representation:\n(note: here x really stands for \lambda)'
+            '\n{} = 0\n(numerically\n{}=0\n)'
             .format(sympy.latex(self.ffr_curve.sym_eq),
                     sympy.latex(self.ffr_curve.num_eq))
         )
@@ -801,6 +759,10 @@ class SWDataBase(object):
             )
             ffr_ramification_points.append(rp)
 
+        logger.debug('These are the punctures:')
+        for pct in punctures:
+            logger.debug('{} at z={}'.format(pct.label, pct.z))
+
         for pi_div in range(max_pi_div + 1):
             if pi_div == 0:
                 # we study the case of no rotations at all.
@@ -834,66 +796,6 @@ class SWDataBase(object):
                 # parameters such as masses, and stokes data for irregular 
                 # singularities.)
                 
-<<<<<<< HEAD
-=======
-                regular_punctures = get_punctures_from_config(
-                    config['regular_punctures'], 'Regular puncture',
-                    diff_params, mt_params, z_plane_rotation,
-                )
-                irregular_punctures = get_punctures_from_config(
-                    config['irregular_punctures'], 'Irregular puncture',
-                    diff_params, mt_params, z_plane_rotation,
-                )
-
-                ffr_curve = SWCurve(
-                    casimir_differentials=casimir_differentials, 
-                    g_data=self.g_data,
-                    diff_params=diff_params,
-                    mt_params=mt_params,
-                    z_rotation=z_plane_rotation,
-                    ffr=True,
-                )
-
-                logger.info(
-                    'Calculating ramification points of '
-                    'the Seiberg-Witten curve '
-                    'in the first fundamental rep.'
-                )
-            
-                punctures = regular_punctures + irregular_punctures
-
-                ffr_ramification_points = []
-                sols = get_ramification_points(
-                    curve=ffr_curve, 
-                    diff_params=diff_params,
-                    mt_params=mt_params,
-                    accuracy=self.accuracy, 
-                    punctures=punctures,
-                    g_data=self.g_data,
-                    logger_name=self.logger_name,
-                )
-                
-                for z_i, (x_j, m_x) in sols:
-                    rp = RamificationPoint(
-                        # Note: if we substitute z' = c z in F(x,z)=0,
-                        # where c is a phase, the position of punctures 
-                        # and branch points will rotate contravariantly
-                        # z_pt -> c^{-1} z_pt
-                        z=(PSL2C(mt_params, z_i, numerical=True) /
-                           complex(z_plane_rotation)),
-                        Ciz=z_i, 
-                        x=x_j, 
-                        i=m_x, 
-                        label=('ramification point #{}'
-                               .format(len(ffr_ramification_points)))
-                    )
-                    ffr_ramification_points.append(rp)
-
-                logger.debug('These are the punctures:')
-                for pct in punctures:
-                    logger.debug('{} at z={}'.format(pct.label, pct.z))
-
->>>>>>> results_for_note
                 # Now check if the z-plane needs to be rotated
 
                 # Note: if we substitute z' = c z in F(x,z)=0,
@@ -1501,14 +1403,6 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
             # )
             
             # The following goes with the 3rd presentation of the SW curve.
-<<<<<<< HEAD
-            q_1 = q_1_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                                 phi_8=phi[8], phi_9=phi[9])
-            p_1 = p_1_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                                 phi_8=phi[8], phi_9=phi[9])
-            p_2 = p_2_str.format(phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                                 phi_8=phi[8], phi_9=phi[9])
-=======
             q_1 = q_1_str.format(
                 phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
                 phi_8=phi[8], phi_9=phi[9]
@@ -1521,7 +1415,6 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
                 phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
                 phi_8=phi[8], phi_9=phi[9]
             )
->>>>>>> results_for_note
             q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
             curve_str = (
                 '(1/2)*(x^3)*({phi_12})^2 - ({q_1})*({phi_12}) + ({q_2})'
@@ -1568,18 +1461,10 @@ def get_ramification_points_using_system_of_eqs(
     if len(f_n_factors) > 1:
         # TODO: check Casimir differentials too?
         if (
-<<<<<<< HEAD
-            g_data.type == 'D' and
-            len(f_n_factors) == 2 and
-            (x, 2) in f_n_factors
-        ):
-            eq_1 = sympy.simplify(f_n / (x ** 2))
-=======
             g_data.type == 'D' and len(eq_1_factors) == 2 
             and (x, 2) in eq_1_factors
         ):
             eq_1 = sympy.simplify(eq_1 / x ** 2)
->>>>>>> results_for_note
         else:
             logger.warning('The curve to find ramification points'
                            'has an unknown factorization: {} = {}.'
@@ -1927,15 +1812,6 @@ def align_sheets_for_e_6_ffr(
             < SHEET_NULL_TOLERANCE
         )
         gathered_sheets = gather(sheets, have_same_r)  
-<<<<<<< HEAD
-        # print 'the sheets'
-        # print sheets
-        # print 'gathered sheets {}'.format(gathered_sheets)
-        # print len(gathered_sheets)
-        # print 'radii'
-        # print map(abs, gathered_sheets.keys())
-=======
->>>>>>> results_for_note
 
         if len(gathered_sheets) != 3:
             print 'The following sheets appear: '
@@ -1948,13 +1824,6 @@ def align_sheets_for_e_6_ffr(
 
         # radii of the three circles
         r_0, r_1, r_2 = sorted(map(abs, gathered_sheets.keys()))
-<<<<<<< HEAD
-        # print 'radii'
-        # print r_0
-        # print r_1
-        # print r_2
-=======
->>>>>>> results_for_note
 
         # build the three groups of sheets
         g_0 = gathered_sheets.values()[0]

@@ -97,14 +97,9 @@ def get_spectral_network_bokeh_plot(
 
     bcds = ColumnDataSource({'xs': [], 'ys': []})
     for bl in sw_data.branch_points + sw_data.irregular_singularities:
-<<<<<<< HEAD
         y_r = (2j * y_max) * z_rotation
         bcds.data['xs'].append([bl.z.real, bl.z.real + y_r.real])
         bcds.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
-=======
-        bcds.data['xs'].append([bl.z.real, bl.z.real])
-        bcds.data['ys'].append([bl.z.imag, y_max])
->>>>>>> results_for_note
 
     bokeh_figure.x(
         'x', 'y', size=10, color="#e6550D", line_width=3, source=bpds,
