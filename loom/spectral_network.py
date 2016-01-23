@@ -21,11 +21,6 @@ from intersection import (
     NoIntersection, find_intersection_of_segments,
 )
 
-<<<<<<< HEAD
-=======
-# CLIPPING_RADIUS = 30.0
-
->>>>>>> results_for_note
 
 class SpectralNetwork:
     def __init__(
@@ -164,12 +159,7 @@ class SpectralNetwork:
                 s_i = self.s_walls[i]
                 logger.info('Growing S-wall #{}...'.format(i))
                 s_i.grow(
-<<<<<<< HEAD
-                    ode, bpzs, ppzs, config,
-=======
                     ode, bpzs, ppzs, config, 
-                    # clipping_radius=CLIPPING_RADIUS,
->>>>>>> results_for_note
                 )
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
@@ -186,32 +176,21 @@ class SpectralNetwork:
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
-<<<<<<< HEAD
-                logger.info('No additional joint found: '
-                            'Stop growing this spectral network '
-                            'at iteration #{}.'.format(iteration))
-=======
                 logger.info(
                     'No additional joint found: '
                     'Stop growing this spectral network '
                     'at iteration #{}.'.format(iteration)
                 )
->>>>>>> results_for_note
                 break
             elif iteration == num_of_iterations:
                 # Last iteration finished. Do not form new joints,
                 # and do not seed additional S-walls, either.
                 break
             else:
-<<<<<<< HEAD
-                logger.info('Growing S-walls in iteration #{} finished.'
-                            .format(iteration))
-=======
                 logger.info(
                     'Growing S-walls in iteration #{} finished.'
                     .format(iteration)
                 )
->>>>>>> results_for_note
 
             # Seed an S-wall for each new joint.
             for joint in new_joints:
@@ -293,15 +272,10 @@ class SpectralNetwork:
         new_joints = []
 
         if (config['root_system'] in ['A1', ]):
-<<<<<<< HEAD
-            logger.info('There is no joint for the given root system {}.'
-                        .format(config['root_system']))
-=======
             logger.info(
                 'There is no joint for the given root system {}.'
                 .format(config['root_system'])
             )
->>>>>>> results_for_note
             return [] 
 
         new_s_wall = self.s_walls[new_s_wall_index]
@@ -414,7 +388,6 @@ class SpectralNetwork:
                             accuracy,
                         )
 
-<<<<<<< HEAD
                     # TODO: need to put the joint into the parent
                     # S-walls?
 
@@ -463,28 +436,6 @@ class SpectralNetwork:
                                 roots=sort_roots(roots, sw_data.g_data),
                             )
                         )
-                    
-=======
-                        # TODO: need to put the joint into the parent
-                        # S-walls?
-
-                        logger.debug('Joint at z = {}'.format(ip_z))
-
-                        if is_root(prev_s_wall.get_root_at_t(t_p) +
-                                   new_s_wall.get_root_at_t(t_n), 
-                                   sw_data.g_data,) is True:
-                            new_joints.append(
-                                Joint(
-                                    z=ip_z, 
-                                    s_wall_1=prev_s_wall,
-                                    s_wall_2=new_s_wall,                         
-                                    t_1=t_p, 
-                                    t_2=t_n,
-                                    sw_data=sw_data,
-                                )
-                            )
-
->>>>>>> results_for_note
         return new_joints
 
 
@@ -566,10 +517,10 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 t_m -= 1
                 if t_m >= 0:
                     z_m = s_wall_z[t_m]
-<<<<<<< HEAD
-                    if (p_z.real - bp.z.real) * (z_m.real - bp.z.real) > 0:
-                        t = t_m
-=======
+#### FIXME: REMOVE AFTER MERGING AND TESTING
+                    # if (p_z.real - bp.z.real) * (z_m.real - bp.z.real) > 0:
+                    #     t = t_m
+####
                     if (
                         (p_z.real - bp.z.real) * (z_m.real - bp.z.real) > 0
                         and abs(s_wall_z[t_m].real - bp.z.real) > accuracy
@@ -577,16 +528,16 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                     ):
                         # print 'z_m e dalla stessa parte di p_z'
                         t_before = t_m
->>>>>>> results_for_note
+
                         break
 
                 t_p += 1
                 if t_p <= t_max:
                     z_p = s_wall_z[t_p]
-<<<<<<< HEAD
-                    if (p_z.real - bp.z.real) * (z_p.real - bp.z.real) > 0:
-                        t = t_p
-=======
+#### FIXME: REMOVE AFTER MERGING AND TESTING
+                    # if (p_z.real - bp.z.real) * (z_p.real - bp.z.real) > 0:
+                    #     t = t_p
+####
                     if (
                         (p_z.real - bp.z.real) * (z_p.real - bp.z.real) > 0
                         and abs(s_wall_z[t_p].real - bp.z.real) > accuracy
@@ -594,7 +545,6 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                     ):
                         # print 'z_p e dalla stessa parte di p_z'
                         t_after = t_p
->>>>>>> results_for_note
                         break
 
             if t_m == 0 and t_p == t_max:

@@ -263,6 +263,11 @@ def get_descendant_roots(parent_roots, g_data):
             root_sum = root_1 + root_2
             if is_root(root_sum, g_data):
                 # XXX: Needs review --- why no multiple descendant roots?
+                # Pietro: Also need some care in how we chack that sum of 
+                # roots is a root: we should "pair up" one root from 
+                # parent 1 with exactly one root from parent 2.
+                # Moreover, the roots of the descendant wall must all 
+                # be mutually orthogonal. Need to check all these things.
                 found = False
                 for prev_root in prev_roots + root_buffer:
                     if numpy.array_equal(prev_root, root_sum):
