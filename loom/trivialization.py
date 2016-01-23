@@ -763,6 +763,10 @@ class SWDataWithTrivialization(SWDataBase):
                         is_higher_bp is True and (
                             higher_bp_type == 'type_II' 
                             or higher_bp_type == 'type_III'
+                            # FIXME: remove this after removing 'type_AD' 
+                            # placeholder
+                            or higher_bp_type == 'type_AD'
+
                         ) or is_irr_sing is True
                     ):
                         # Should decide case-by-case whether to employ 

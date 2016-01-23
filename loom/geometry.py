@@ -300,6 +300,7 @@ class RamificationPoint:
             # in the trivializatio module.
             self.ramification_type = None
             self.sw_diff_coeff = None
+            self.sw_diff_coeffs_a_b = [None, None]
             self.is_puncture = is_puncture
         else:
             self.set_from_json_data(json_data)
@@ -1161,6 +1162,12 @@ class SWDataBase(object):
                 a = local_curve.n().coeff(dz).coeff(dx, 15)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
                 dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, 12)
+
+            # FIXME: temporary patch until type_AD is removed
+            elif rp_type == 'type_AD':
+                a = local_curve.n().subs(dx, 0).coeff(dz)
+                b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+                dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
             
             logger.debug(
                 '\nThe ramification point at (z,x)={} is of {}'.format(
