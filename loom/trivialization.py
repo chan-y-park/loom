@@ -666,263 +666,486 @@ class SWDataWithTrivialization(SWDataBase):
             # where two sheets collide at x=0 everywhere
             # Do not raise an error in this case.
             # Likewise for E-type
+
             # TODO: Merge the handling of these two cases
-            if (
-                self.g_data.type == 'D' and 
-                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
-                and len(sorted_sheets) - len(uniq) == 1
-            ):
-                # If two sheets are equal (and both zero) then the integer
-                # labels they got assigned in sorting above may be the same,
-                # this would lead to a singular permutation matrix
-                # and must be corrected, as follows.
-                int_labels = [s[0] for s in sorted_sheets]
-                uniq_labels = list(set(int_labels))
-                labels_multiplicities = [
-                    len([i for i, x in enumerate(int_labels) if x == u]) 
-                    for u in uniq_labels
-                ]
-                multiple_labels = []
-                for i, u in enumerate(uniq_labels):
-                    if labels_multiplicities[i] > 1:
-                        if labels_multiplicities[i] == 2:
-                            multiple_labels.append(u)
-                        else:
-                            logger.debug(
-                                'int labels = {}'.format(int_labels)
-                            )
-                            logger.debug(
-                                'multiple labels = {}'
-                                .format(multiple_labels)
-                            )
-                            raise Exception('Too many degenerate sheets')
-                if len(multiple_labels) != 1:
-                    raise Exception(
-                        'Cannot determine which sheets are' +
-                        'degenerate, tracking will fail.'
-                    )
+            # if (
+            #     self.g_data.type == 'D' and 
+            #     min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
+            #     and len(sorted_sheets) - len(uniq) == 1
+            # ):
+            #     # If two sheets are equal (and both zero) then the integer
+            #     # labels they got assigned in sorting above may be the same,
+            #     # this would lead to a singular permutation matrix
+            #     # and must be corrected, as follows.
+            #     int_labels = [s[0] for s in sorted_sheets]
+            #     uniq_labels = list(set(int_labels))
+            #     labels_multiplicities = [
+            #         len([i for i, x in enumerate(int_labels) if x == u]) 
+            #         for u in uniq_labels
+            #     ]
+            #     multiple_labels = []
+            #     for i, u in enumerate(uniq_labels):
+            #         if labels_multiplicities[i] > 1:
+            #             if labels_multiplicities[i] == 2:
+            #                 multiple_labels.append(u)
+            #             else:
+            #                 logger.debug(
+            #                     'int labels = {}'.format(int_labels)
+            #                 )
+            #                 logger.debug(
+            #                     'multiple labels = {}'
+            #                     .format(multiple_labels)
+            #                 )
+            #                 raise Exception('Too many degenerate sheets')
+            #     if len(multiple_labels) != 1:
+            #         raise Exception(
+            #             'Cannot determine which sheets are' +
+            #             'degenerate, tracking will fail.'
+            #         )
 
-                # missing_label = [
-                #     i for i in range(len(int_labels)) if 
-                #     (i not in int_labels)
-                # ][0]
-                double_sheets = [
-                    i for i, s in enumerate(sorted_sheets) 
-                    if s[0] == multiple_labels[0]
-                ]
+            #     double_sheets = [
+            #         i for i, s in enumerate(sorted_sheets) 
+            #         if s[0] == multiple_labels[0]
+            #     ]
 
-                corrected_sheets = sorted_sheets 
-                if is_higher_bp is False and is_irr_sing is False:
-                    corrected_sheets[double_sheets[0]] = (
-                        initial_sheets[double_sheets[0]]
-                    )
-                    corrected_sheets[double_sheets[1]] = (
-                        initial_sheets[double_sheets[1]]
-                    )
-                elif (
-                    is_higher_bp is True and (
-                        higher_bp_type == 'type_II' 
-                        or higher_bp_type == 'type_III'
-                    ) or is_irr_sing is True
-                ):
-                    # Should decide case-by-case whether to employ 
-                    # (0,1) -> (0,1) or (0,1) -> (1,0)
-                    # One way to do so would be to pick each of them, and 
-                    # construct the whole monodromy, then see if applying 
-                    # the monodromy to every root gives back a root
-                    # By direct checks, only one of the two options works
-                    # so there should be no ambiguity left.
+            #     corrected_sheets = sorted_sheets 
+            #     if is_higher_bp is False and is_irr_sing is False:
+            #         corrected_sheets[double_sheets[0]] = (
+            #             initial_sheets[double_sheets[0]]
+            #         )
+            #         corrected_sheets[double_sheets[1]] = (
+            #             initial_sheets[double_sheets[1]]
+            #         )
+            #     elif (
+            #         is_higher_bp is True and (
+            #             higher_bp_type == 'type_II' 
+            #             or higher_bp_type == 'type_III'
+            #         ) or is_irr_sing is True
+            #     ):
+            #         # Should decide case-by-case whether to employ 
+            #         # (0,1) -> (0,1) or (0,1) -> (1,0)
+            #         # One way to do so would be to pick each of them, and 
+            #         # construct the whole monodromy, then see if applying 
+            #         # the monodromy to every root gives back a root
+            #         # By direct checks, only one of the two options works
+            #         # so there should be no ambiguity left.
 
-                    # TODO: print a warning if BOTH options give a Weyl 
-                    # sheet matrix, because in that case there may be 
-                    # ambiguity
+            #         # TODO: print a warning if BOTH options give a Weyl 
+            #         # sheet matrix, because in that case there may be 
+            #         # ambiguity
 
-                    # UPDATE: Disabling the option 0. Because in these types 
-                    # of ramification points there should be no sheet that
-                    # remains fixed by the permutation
-                    # Keep it in comment in case we encounter trouble
+            #         # UPDATE: Disabling the option 0. Because in these types 
+            #         # of ramification points there should be no sheet that
+            #         # remains fixed by the permutation
+            #         # Keep it in comment in case we encounter trouble
 
-                    # corrected_sheets_0 = [s for s in corrected_sheets]
-                    corrected_sheets_1 = [s for s in corrected_sheets]
+            #         # corrected_sheets_0 = [s for s in corrected_sheets]
+            #         corrected_sheets_1 = [s for s in corrected_sheets]
 
-                    # corrected_sheets_0[double_sheets[0]] = (
-                    #     initial_sheets[double_sheets[0]]
-                    # )
-                    # corrected_sheets_0[double_sheets[1]] = (
-                    #     initial_sheets[double_sheets[1]]
-                    # )
+            #         # corrected_sheets_0[double_sheets[0]] = (
+            #         #     initial_sheets[double_sheets[0]]
+            #         # )
+            #         # corrected_sheets_0[double_sheets[1]] = (
+            #         #     initial_sheets[double_sheets[1]]
+            #         # )
 
-                    corrected_sheets_1[double_sheets[0]] = (
-                        initial_sheets[double_sheets[1]]
-                    )
-                    corrected_sheets_1[double_sheets[1]] = (
-                        initial_sheets[double_sheets[0]]
-                    )
+            #         corrected_sheets_1[double_sheets[0]] = (
+            #             initial_sheets[double_sheets[1]]
+            #         )
+            #         corrected_sheets_1[double_sheets[1]] = (
+            #             initial_sheets[double_sheets[0]]
+            #         )
 
-                    # m_0 = build_monodromy_matrix(
-                    #     initial_sheets, corrected_sheets_0
-                    # )
-                    m_1 = build_monodromy_matrix(
-                        initial_sheets, corrected_sheets_1
-                    )
+            #         # m_0 = build_monodromy_matrix(
+            #         #     initial_sheets, corrected_sheets_0
+            #         # )
+            #         m_1 = build_monodromy_matrix(
+            #             initial_sheets, corrected_sheets_1
+            #         )
 
-                    # if is_weyl_monodromy(m_0, self.g_data):
-                    #     corrected_sheets = corrected_sheets_0
-                    if is_weyl_monodromy(m_1, self.g_data):
-                        corrected_sheets = corrected_sheets_1
-                    else:
-                        raise Exception(
-                            'Failed to assign a Weyl-type monodromy.'
-                        )
+            #         # if is_weyl_monodromy(m_0, self.g_data):
+            #         #     corrected_sheets = corrected_sheets_0
+            #         if is_weyl_monodromy(m_1, self.g_data):
+            #             corrected_sheets = corrected_sheets_1
+            #         else:
+            #             raise Exception(
+            #                 'Failed to assign a Weyl-type monodromy.'
+            #             )
                     
-                else:
-                    raise Exception(
-                        'higher-type ramification points for D-type '
-                        'theories can only be of types II or III'
-                    )
-                sorted_sheets = corrected_sheets
-                pass
+            #     else:
+            #         raise Exception(
+            #             'higher-type ramification points for D-type '
+            #             'theories can only be of types II or III'
+            #         )
+            #     sorted_sheets = corrected_sheets
+            #     pass
 
-            elif (
-                self.g_data.type == 'E' and 
-                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
-                and len(sorted_sheets) - len(uniq) == 2
-            ):
-                # If THREE sheets are equal (and all zero) then the integer
-                # labels they got assigned in sorting above may be the same,
-                # this would lead to a singular permutation matrix
-                # and must be corrected, as follows.
-                int_labels = [s[0] for s in sorted_sheets]
-                uniq_labels = list(set(int_labels))
-                labels_multiplicities = [
-                    len([i for i, x in enumerate(int_labels) if x == u]) 
-                    for u in uniq_labels
-                ]
-                multiple_labels = []
-                for i, u in enumerate(uniq_labels):
-                    if labels_multiplicities[i] > 1:
-                        if labels_multiplicities[i] == 3:
-                            multiple_labels.append(u)
-                        else:
-                            logger.debug(
-                                'int labels = {}'.format(int_labels)
-                            )
-                            logger.debug(
-                                'multiple labels = {}'
-                                .format(multiple_labels)
-                            )
-                            raise Exception('Too many degenerate sheets')
-                if len(multiple_labels) != 1:
-                    raise Exception(
-                        'Cannot determine which sheets are' +
-                        'degenerate, tracking will fail.'
-                    )
+            # elif (
+            #     self.g_data.type == 'E' and 
+            #     min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
+            #     and len(sorted_sheets) - len(uniq) == 2
+            # ):
+            #     # If THREE sheets are equal (and all zero) then the integer
+            #     # labels they got assigned in sorting above may be the same,
+            #     # this would lead to a singular permutation matrix
+            #     # and must be corrected, as follows.
+            #     int_labels = [s[0] for s in sorted_sheets]
+            #     uniq_labels = list(set(int_labels))
+            #     labels_multiplicities = [
+            #         len([i for i, x in enumerate(int_labels) if x == u]) 
+            #         for u in uniq_labels
+            #     ]
+            #     multiple_labels = []
+            #     for i, u in enumerate(uniq_labels):
+            #         if labels_multiplicities[i] > 1:
+            #             if labels_multiplicities[i] == 3:
+            #                 multiple_labels.append(u)
+            #             else:
+            #                 logger.debug(
+            #                     'int labels = {}'.format(int_labels)
+            #                 )
+            #                 logger.debug(
+            #                     'multiple labels = {}'
+            #                     .format(multiple_labels)
+            #                 )
+            #                 raise Exception('Too many degenerate sheets')
+            #     if len(multiple_labels) != 1:
+            #         raise Exception(
+            #             'Cannot determine which sheets are' +
+            #             'degenerate, tracking will fail.'
+            #         )
 
-                # missing_label = [
-                #     i for i in range(len(int_labels)) if 
-                #     (i not in int_labels)
-                # ][0]
-                triple_sheets = [
-                    i for i, s in enumerate(sorted_sheets) 
-                    if s[0] == multiple_labels[0]
-                ]
+            #     # missing_label = [
+            #     #     i for i in range(len(int_labels)) if 
+            #     #     (i not in int_labels)
+            #     # ][0]
+            #     triple_sheets = [
+            #         i for i, s in enumerate(sorted_sheets) 
+            #         if s[0] == multiple_labels[0]
+            #     ]
 
-                corrected_sheets = sorted_sheets 
-                if is_higher_bp is False and is_irr_sing is False:
-                    corrected_sheets[triple_sheets[0]] = (
-                        initial_sheets[triple_sheets[0]]
-                    )
-                    corrected_sheets[triple_sheets[1]] = (
-                        initial_sheets[triple_sheets[1]]
-                    )
-                    corrected_sheets[triple_sheets[2]] = (
-                        initial_sheets[triple_sheets[2]]
-                    )
+            #     corrected_sheets = sorted_sheets 
+            #     if is_higher_bp is False and is_irr_sing is False:
+            #         corrected_sheets[triple_sheets[0]] = (
+            #             initial_sheets[triple_sheets[0]]
+            #         )
+            #         corrected_sheets[triple_sheets[1]] = (
+            #             initial_sheets[triple_sheets[1]]
+            #         )
+            #         corrected_sheets[triple_sheets[2]] = (
+            #             initial_sheets[triple_sheets[2]]
+            #         )
 
-                elif (
-                    (is_higher_bp is True and higher_bp_type == 'type_IV')
-                    or is_irr_sing is True
-                ):
-                    # Should decide case-by-case whether to employ 
-                    # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
-                    # One way to do so would be to pick each of them, and 
-                    # construct the whole monodromy, then see if applying 
-                    # the monodromy to every root gives back a root
-                    # By direct checks, only one of the two options works
-                    # so there should be no ambiguity left.
+            #     elif (
+            #         (is_higher_bp is True and higher_bp_type == 'type_IV')
+            #         or is_irr_sing is True
+            #     ):
+            #         # Should decide case-by-case whether to employ 
+            #         # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
+            #         # One way to do so would be to pick each of them, and 
+            #         # construct the whole monodromy, then see if applying 
+            #         # the monodromy to every root gives back a root
+            #         # By direct checks, only one of the two options works
+            #         # so there should be no ambiguity left.
                     
-                    # TODO: print a warning if BOTH options give a Weyl 
-                    # sheet matrix, because in that case there may be 
-                    # ambiguity
+            #         # TODO: print a warning if BOTH options give a Weyl 
+            #         # sheet matrix, because in that case there may be 
+            #         # ambiguity
 
-                    # UPDATE: Disabling the option 0. Because in these types 
-                    # of ramification points there should be no sheet that
-                    # remains fixed by the permutation
-                    # Keep it in comment in case we encounter trouble
+            #         # UPDATE: Disabling the option 0. Because in these types 
+            #         # of ramification points there should be no sheet that
+            #         # remains fixed by the permutation
+            #         # Keep it in comment in case we encounter trouble
 
-                    # corrected_sheets_0 = [s for s in corrected_sheets]
-                    corrected_sheets_1 = [s for s in corrected_sheets]
-                    corrected_sheets_2 = [s for s in corrected_sheets]
+            #         # corrected_sheets_0 = [s for s in corrected_sheets]
+            #         corrected_sheets_1 = [s for s in corrected_sheets]
+            #         corrected_sheets_2 = [s for s in corrected_sheets]
 
-                    # corrected_sheets_0[triple_sheets[0]] = (
-                    #     initial_sheets[triple_sheets[0]]
-                    # )
-                    # corrected_sheets_0[triple_sheets[1]] = (
-                    #     initial_sheets[triple_sheets[1]]
-                    # )
-                    # corrected_sheets_0[triple_sheets[2]] = (
-                    #     initial_sheets[triple_sheets[2]]
-                    # )
+            #         # corrected_sheets_0[triple_sheets[0]] = (
+            #         #     initial_sheets[triple_sheets[0]]
+            #         # )
+            #         # corrected_sheets_0[triple_sheets[1]] = (
+            #         #     initial_sheets[triple_sheets[1]]
+            #         # )
+            #         # corrected_sheets_0[triple_sheets[2]] = (
+            #         #     initial_sheets[triple_sheets[2]]
+            #         # )
 
-                    corrected_sheets_1[triple_sheets[0]] = (
-                        initial_sheets[triple_sheets[1]]
-                    )
-                    corrected_sheets_1[triple_sheets[1]] = (
-                        initial_sheets[triple_sheets[2]]
-                    )
-                    corrected_sheets_1[triple_sheets[2]] = (
-                        initial_sheets[triple_sheets[0]]
-                    )
+            #         corrected_sheets_1[triple_sheets[0]] = (
+            #             initial_sheets[triple_sheets[1]]
+            #         )
+            #         corrected_sheets_1[triple_sheets[1]] = (
+            #             initial_sheets[triple_sheets[2]]
+            #         )
+            #         corrected_sheets_1[triple_sheets[2]] = (
+            #             initial_sheets[triple_sheets[0]]
+            #         )
 
-                    corrected_sheets_2[triple_sheets[0]] = (
-                        initial_sheets[triple_sheets[2]]
-                    )
-                    corrected_sheets_2[triple_sheets[1]] = (
-                        initial_sheets[triple_sheets[0]]
-                    )
-                    corrected_sheets_2[triple_sheets[2]] = (
-                        initial_sheets[triple_sheets[1]]
-                    )
+            #         corrected_sheets_2[triple_sheets[0]] = (
+            #             initial_sheets[triple_sheets[2]]
+            #         )
+            #         corrected_sheets_2[triple_sheets[1]] = (
+            #             initial_sheets[triple_sheets[0]]
+            #         )
+            #         corrected_sheets_2[triple_sheets[2]] = (
+            #             initial_sheets[triple_sheets[1]]
+            #         )
 
-                    # m_0 = build_monodromy_matrix(
-                    #     initial_sheets, corrected_sheets_0
-                    # )
-                    m_1 = build_monodromy_matrix(
-                        initial_sheets, corrected_sheets_1
-                    )
-                    m_2 = build_monodromy_matrix(
-                        initial_sheets, corrected_sheets_2
-                    )
+            #         # m_0 = build_monodromy_matrix(
+            #         #     initial_sheets, corrected_sheets_0
+            #         # )
+            #         m_1 = build_monodromy_matrix(
+            #             initial_sheets, corrected_sheets_1
+            #         )
+            #         m_2 = build_monodromy_matrix(
+            #             initial_sheets, corrected_sheets_2
+            #         )
 
-                    # if is_weyl_monodromy(m_0, self.g_data):
-                    #     corrected_sheets = corrected_sheets_0
-                    if is_weyl_monodromy(m_1, self.g_data):
-                        corrected_sheets = corrected_sheets_1
-                    elif is_weyl_monodromy(m_2, self.g_data):
-                        corrected_sheets = corrected_sheets_2
-                    else:
-                        raise Exception(
-                            'Failed to assign a Weyl-type monodromy.'
-                        )
+            #         # if is_weyl_monodromy(m_0, self.g_data):
+            #         #     corrected_sheets = corrected_sheets_0
+            #         if is_weyl_monodromy(m_1, self.g_data):
+            #             corrected_sheets = corrected_sheets_1
+            #         elif is_weyl_monodromy(m_2, self.g_data):
+            #             corrected_sheets = corrected_sheets_2
+            #         else:
+            #             raise Exception(
+            #                 'Failed to assign a Weyl-type monodromy.'
+            #             )
                         
-                else:
+            #     else:
+            #         raise Exception(
+            #             'higher-type ramification points for E-type '
+            #             'theories can only be of types IV. Found {}'
+            #             .format(higher_bp_type)
+            #         )
+            #     sorted_sheets = corrected_sheets
+            #     pass
+
+            if (
+                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy 
+            ) and (
+                self.g_data.type == 'D' len(sorted_sheets) - len(uniq) == 1
+            ) or (
+                self.g_data.type == 'E' and len(sorted_sheets) - len(uniq) == 2
+            ):
+                # If two or more sheets are equal (and both zero) then the 
+                # (integer) labels they got assigned in sorting above may 
+                # be the same, this would lead to a singular permutation matrix
+                # and must be corrected, as follows.
+                int_labels = [s[0] for s in sorted_sheets]
+                uniq_labels = list(set(int_labels))
+                labels_multiplicities = [
+                    len([i for i, x in enumerate(int_labels) if x == u]) 
+                    for u in uniq_labels
+                ]
+                multiple_labels = []
+                for i, u in enumerate(uniq_labels):
+                    if labels_multiplicities[i] > 1:
+                        if (
+                            labels_multiplicities[i] == 2 
+                            and self.g_data.type == 'D'
+                        ) or (
+                            labels_multiplicities[i] == 3 
+                            and self.g_data.type == 'E'
+                        ):
+                            multiple_labels.append(u)
+                        else:
+                            logger.debug(
+                                'int labels = {}'.format(int_labels)
+                            )
+                            logger.debug(
+                                'multiple labels = {}'
+                                .format(multiple_labels)
+                            )
+                            raise Exception('Too many degenerate sheets')
+                if len(multiple_labels) != 1:
                     raise Exception(
-                        'higher-type ramification points for E-type '
-                        'theories can only be of types IV. Found {}'
-                        .format(higher_bp_type)
+                        'Cannot determine which sheets are' +
+                        'degenerate, tracking will fail.'
                     )
-                sorted_sheets = corrected_sheets
-                pass
+
+                if self.g_data.type == 'D':
+                    double_sheets = [
+                        i for i, s in enumerate(sorted_sheets) 
+                        if s[0] == multiple_labels[0]
+                    ]
+
+                    corrected_sheets = sorted_sheets 
+                    if is_higher_bp is False and is_irr_sing is False:
+                        corrected_sheets[double_sheets[0]] = (
+                            initial_sheets[double_sheets[0]]
+                        )
+                        corrected_sheets[double_sheets[1]] = (
+                            initial_sheets[double_sheets[1]]
+                        )
+                    elif (
+                        is_higher_bp is True and (
+                            higher_bp_type == 'type_II' 
+                            or higher_bp_type == 'type_III'
+                        ) or is_irr_sing is True
+                    ):
+                        # Should decide case-by-case whether to employ 
+                        # (0,1) -> (0,1) or (0,1) -> (1,0)
+                        # One way to do so would be to pick each of them, and 
+                        # construct the whole monodromy, then see if applying 
+                        # the monodromy to every root gives back a root
+                        # By direct checks, only one of the two options works
+                        # so there should be no ambiguity left.
+
+                        # TODO: print a warning if BOTH options give a Weyl 
+                        # sheet matrix, because in that case there may be 
+                        # ambiguity
+
+                        # UPDATE: Disabling the option 0. Because in these 
+                        # types  of ramification points there should be no 
+                        # sheet that remains fixed by the permutation.
+                        # Keep it in comment in case we encounter trouble
+
+                        # corrected_sheets_0 = [s for s in corrected_sheets]
+                        corrected_sheets_1 = [s for s in corrected_sheets]
+
+                        # corrected_sheets_0[double_sheets[0]] = (
+                        #     initial_sheets[double_sheets[0]]
+                        # )
+                        # corrected_sheets_0[double_sheets[1]] = (
+                        #     initial_sheets[double_sheets[1]]
+                        # )
+
+                        corrected_sheets_1[double_sheets[0]] = (
+                            initial_sheets[double_sheets[1]]
+                        )
+                        corrected_sheets_1[double_sheets[1]] = (
+                            initial_sheets[double_sheets[0]]
+                        )
+
+                        # m_0 = build_monodromy_matrix(
+                        #     initial_sheets, corrected_sheets_0
+                        # )
+                        m_1 = build_monodromy_matrix(
+                            initial_sheets, corrected_sheets_1
+                        )
+
+                        # if is_weyl_monodromy(m_0, self.g_data):
+                        #     corrected_sheets = corrected_sheets_0
+                        if is_weyl_monodromy(m_1, self.g_data):
+                            corrected_sheets = corrected_sheets_1
+                        else:
+                            raise Exception(
+                                'Failed to assign a Weyl-type monodromy.'
+                            )
+                        
+                    else:
+                        raise Exception(
+                            'higher-type ramification points for D-type '
+                            'theories can only be of types II or III'
+                        )
+                    sorted_sheets = corrected_sheets
+                    pass
+
+                elif self.g_data == 'E':
+                    triple_sheets = [
+                        i for i, s in enumerate(sorted_sheets) 
+                        if s[0] == multiple_labels[0]
+                    ]
+
+                    corrected_sheets = sorted_sheets 
+                    if is_higher_bp is False and is_irr_sing is False:
+                        corrected_sheets[triple_sheets[0]] = (
+                            initial_sheets[triple_sheets[0]]
+                        )
+                        corrected_sheets[triple_sheets[1]] = (
+                            initial_sheets[triple_sheets[1]]
+                        )
+                        corrected_sheets[triple_sheets[2]] = (
+                            initial_sheets[triple_sheets[2]]
+                        )
+
+                    elif (
+                        (is_higher_bp is True and higher_bp_type == 'type_IV')
+                        or is_irr_sing is True
+                    ):
+                        # Should decide case-by-case whether to employ 
+                        # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
+                        # One way to do so would be to pick each of them, and 
+                        # construct the whole monodromy, then see if applying 
+                        # the monodromy to every root gives back a root
+                        # By direct checks, only one of the two options works
+                        # so there should be no ambiguity left.
+                        
+                        # TODO: print a warning if BOTH options give a Weyl 
+                        # sheet matrix, because in that case there may be 
+                        # ambiguity
+
+                        # UPDATE: Disabling the option 0. 
+                        # Because in these types of ramification points
+                        # there should be no sheet that remains fixed by 
+                        # the permutation.
+                        # Keep this in comment in case we encounter trouble
+
+                        # corrected_sheets_0 = [s for s in corrected_sheets]
+                        corrected_sheets_1 = [s for s in corrected_sheets]
+                        corrected_sheets_2 = [s for s in corrected_sheets]
+
+                        # corrected_sheets_0[triple_sheets[0]] = (
+                        #     initial_sheets[triple_sheets[0]]
+                        # )
+                        # corrected_sheets_0[triple_sheets[1]] = (
+                        #     initial_sheets[triple_sheets[1]]
+                        # )
+                        # corrected_sheets_0[triple_sheets[2]] = (
+                        #     initial_sheets[triple_sheets[2]]
+                        # )
+
+                        corrected_sheets_1[triple_sheets[0]] = (
+                            initial_sheets[triple_sheets[1]]
+                        )
+                        corrected_sheets_1[triple_sheets[1]] = (
+                            initial_sheets[triple_sheets[2]]
+                        )
+                        corrected_sheets_1[triple_sheets[2]] = (
+                            initial_sheets[triple_sheets[0]]
+                        )
+
+                        corrected_sheets_2[triple_sheets[0]] = (
+                            initial_sheets[triple_sheets[2]]
+                        )
+                        corrected_sheets_2[triple_sheets[1]] = (
+                            initial_sheets[triple_sheets[0]]
+                        )
+                        corrected_sheets_2[triple_sheets[2]] = (
+                            initial_sheets[triple_sheets[1]]
+                        )
+
+                        # m_0 = build_monodromy_matrix(
+                        #     initial_sheets, corrected_sheets_0
+                        # )
+                        m_1 = build_monodromy_matrix(
+                            initial_sheets, corrected_sheets_1
+                        )
+                        m_2 = build_monodromy_matrix(
+                            initial_sheets, corrected_sheets_2
+                        )
+
+                        # if is_weyl_monodromy(m_0, self.g_data):
+                        #     corrected_sheets = corrected_sheets_0
+                        if is_weyl_monodromy(m_1, self.g_data):
+                            corrected_sheets = corrected_sheets_1
+                        elif is_weyl_monodromy(m_2, self.g_data):
+                            corrected_sheets = corrected_sheets_2
+                        else:
+                            raise Exception(
+                                'Failed to assign a Weyl-type monodromy.'
+                            )
+                            
+                    else:
+                        raise Exception(
+                            'higher-type ramification points for E-type '
+                            'theories can only be of types IV. Found {}'
+                            .format(higher_bp_type)
+                        )
+                    sorted_sheets = corrected_sheets
+                    pass
+
 
             else:
                 raise ValueError(

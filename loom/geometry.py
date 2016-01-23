@@ -1321,16 +1321,6 @@ def get_ramification_points_using_discriminant(
 ):
     logger = logging.getLogger(logger_name)
     sols = []    
-    
-    # Old way -- keep until testing is complete:
-    # f = curve.sym_eq
-    # Make f into the form of rf = f_n/f_d
-    # rf = sympy.cancel(f)
-    # rf = sympy.cancel(f.subs(subs_dict))
-    # f_n, f_d = rf.as_numer_denom()
-    # subs_dict = copy.deepcopy(diff_params)
-    
-    # New way:
     f = curve.sym_eq
     # Make f into the form of rf = f_n/f_d
     subs_dict = copy.deepcopy(diff_params)
@@ -1352,7 +1342,7 @@ def get_ramification_points_using_discriminant(
             D_z = sympy.discriminant(f_n.subs(subs_dict) / x, x)
         if g_data.type == 'D':
             D_z = sympy.discriminant(f_n.subs(subs_dict) / (x ** 2), x)
-        # NOTE: think through possible generalizations here,
+        # TODO: think through possible generalizations here,
         # this is only handling certain special cases with E_6
         # i.e. the maximally degenerate branch-point, occurring 
         # at the origin of the coulomb branch of pure E_6 SYM
