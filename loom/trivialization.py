@@ -1472,11 +1472,6 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
 
     # Finally, cleanup the duplicates, 
     # as well as the roots which are not linearly independent
-    # TODO: Check if we really need to remove linearly depedent 
-    # roots. Isn't it part of the information a branch pt carries?
-    # Pietro: the information of the branch point is the vector space
-    # spanned by these roots. Therefore only linearly independent ones 
-    # are needed.
     return numpy.array(
         keep_linearly_independent_vectors(vanishing_positive_roots)
     )
