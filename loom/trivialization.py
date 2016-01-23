@@ -818,7 +818,8 @@ class SWDataWithTrivialization(SWDataBase):
                     else:
                         raise Exception(
                             'higher-type ramification points for D-type '
-                            'theories can only be of types II or III'
+                            'theories can only be of types II or III. '
+                            'Found {} instead'.format(higher_bp_type)
                         )
                     sorted_sheets = corrected_sheets
                     pass

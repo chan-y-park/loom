@@ -1488,8 +1488,9 @@ def get_ramification_points_using_system_of_eqs(
     if len(f_n_factors) > 1:
         # TODO: check Casimir differentials too?
         if (
-            g_data.type == 'D' and len(eq_1_factors) == 2 
-            and (x, 2) in eq_1_factors
+            g_data.type == 'D' and
+            len(f_n_factors) == 2 and
+            (x, 2) in f_n_factors
         ):
             eq_1 = sympy.simplify(eq_1 / x ** 2)
         else:
