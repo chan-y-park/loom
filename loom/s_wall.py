@@ -792,35 +792,6 @@ def get_s_wall_root(z, ffr_xs, sw_data):
     return sw_data.g_data.ffr_weights[j] - sw_data.g_data.ffr_weights[i]
 
 
-###### TO DO: MERGE THE FOLLOWING TWO FUNCTIONS
-
-def get_intermediate_z_point(z_1, z_2, bp_z_med):
-    """
-    get the intermediate point between z_1 and z_2
-    in correspondence of the real part of z_med
-    """
-    # FIXME: division by zero may happend when x_1 and x_2 are too close.
-    x_1 = z_1.real
-    y_1 = z_1.imag
-    x_2 = z_2.real
-    y_2 = z_2.imag
-    x_med = bp_z_med.real
-    slope = (y_2 - y_1) / (x_2 - x_1)
-    y_med = y_1 + slope * (x_med - x_1)
-    return x_med + 1j * y_med
-
-
-def get_intermediate_value(v_1, v_2, z_1, z_2, z_med):
-    """
-    Along an S-wall, get the intermediate value between v_1 and v_2
-    in correspondence of z_med
-    """
-    # FIXME: division by zero may happend when z_1 and z_2 are too close.
-    slope = (v_2 - v_1) / (z_2 - z_1)
-    v_med = v_1 + slope * (z_med - z_1)
-    return v_med
-
-
 def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     """
     S-walls are seeded from branch points.
@@ -1236,3 +1207,33 @@ def e_6_compatible(i, j):
         return True
     else:
         return False
+
+
+# TODO: Merge the following two functions?
+def get_intermediate_z_point(z_1, z_2, bp_z_med):
+    """
+    get the intermediate point between z_1 and z_2
+    in correspondence of the real part of z_med
+    """
+    # FIXME: division by zero may happend when x_1 and x_2 are too close.
+    x_1 = z_1.real
+    y_1 = z_1.imag
+    x_2 = z_2.real
+    y_2 = z_2.imag
+    x_med = bp_z_med.real
+    slope = (y_2 - y_1) / (x_2 - x_1)
+    y_med = y_1 + slope * (x_med - x_1)
+    return x_med + 1j * y_med
+
+
+def get_intermediate_value(v_1, v_2, z_1, z_2, z_med):
+    """
+    Along an S-wall, get the intermediate value between v_1 and v_2
+    in correspondence of z_med
+    """
+    # FIXME: division by zero may happend when z_1 and z_2 are too close.
+    slope = (v_2 - v_1) / (z_2 - z_1)
+    v_med = v_1 + slope * (z_med - z_1)
+    return v_med
+
+    
