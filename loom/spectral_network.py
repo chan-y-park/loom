@@ -4,20 +4,20 @@ import numpy
 import sympy
 import ctypes
 import logging
-import pdb
+# import pdb
 import itertools
 
 from cmath import exp
 from scipy import integrate
 from s_wall import SWall, Joint, get_s_wall_seeds
 from misc import (
-    n_nearest_indices, is_root, get_turning_points, get_splits_with_overlap
+    n_nearest_indices, get_turning_points, get_splits_with_overlap,
+    get_descendant_roots, sort_roots,
 )
 from intersection import (
     NoIntersection, find_intersection_of_segments,
 )
 
-#CLIPPING_RADIUS = 30.0
 
 class SpectralNetwork:
     def __init__(
@@ -29,6 +29,13 @@ class SpectralNetwork:
         self.s_walls = []
         self.joints = []
         self.logger_name = logger_name
+        self.data_attributes = ['phase', 's_walls', 'joints']
+
+    def set_z_rotation(self, z_rotation):
+        for s_wall in self.s_walls:
+            s_wall.set_z_rotation(z_rotation)
+        for joint in self.joints:
+            joint.set_z_rotation(z_rotation)
 
     def grow(self, config, sw_data):
         """
@@ -119,7 +126,9 @@ class SpectralNetwork:
                         z_0=z_0,
                         x_0=x_0,
                         M_0=M_0,
+                        # TODO: change this to take bp itself.
                         parents=[bp.label],
+                        parent_roots=[root for root in bp.positive_roots],
                         label=label,
                         n_steps=n_steps,
                         logger_name=self.logger_name,
@@ -136,6 +145,7 @@ class SpectralNetwork:
         n_finished_s_walls = 0 
         iteration = 1
         while(iteration <= num_of_iterations):
+            logger.info('Start iteration #{}...'.format(iteration))
             """
             Iterate until there is no new joint
             or for a specified number of iterations.
@@ -147,7 +157,6 @@ class SpectralNetwork:
                 logger.info('Growing S-wall #{}...'.format(i))
                 s_i.grow(
                     ode, bpzs, ppzs, config,
-                    #clipping_radius=CLIPPING_RADIUS,
                 )
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
@@ -165,8 +174,8 @@ class SpectralNetwork:
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
                 logger.info('No additional joint found: '
-                             'Stop growing this spectral network '
-                             'at iteration #{}.'.format(iteration))
+                            'Stop growing this spectral network '
+                            'at iteration #{}.'.format(iteration))
                 break
             elif iteration == num_of_iterations:
                 # Last iteration finished. Do not form new joints,
@@ -174,7 +183,7 @@ class SpectralNetwork:
                 break
             else:
                 logger.info('Growing S-walls in iteration #{} finished.'
-                             .format(iteration))
+                            .format(iteration))
 
             # Seed an S-wall for each new joint.
             for joint in new_joints:
@@ -201,6 +210,8 @@ class SpectralNetwork:
                             x_0=joint.ode_xs,
                             M_0=joint.M,
                             parents=joint.parents,
+                            # XXX: parent_roots != (roots of parents)
+                            parent_roots=joint.roots,
                             label=label,
                             n_steps=n_steps,
                             logger_name=self.logger_name,
@@ -208,7 +219,6 @@ class SpectralNetwork:
                     )
             logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
-
 
     def get_json_data(self):
         """
@@ -226,13 +236,13 @@ class SpectralNetwork:
         """
         Load the spectral network data from a JSON-compatible file.
         """
-        branch_points = sw_data.branch_points
+        branch_loci = sw_data.branch_points + sw_data.irregular_singularities
 
         self.phase = json_data['phase']
 
         for s_wall_data in json_data['s_walls']:
             an_s_wall = SWall(logger_name=self.logger_name,)
-            an_s_wall.set_from_json_data(s_wall_data, branch_points)
+            an_s_wall.set_from_json_data(s_wall_data, branch_loci)
             self.s_walls.append(an_s_wall)
 
         for joint_data in json_data['joints']:
@@ -256,7 +266,7 @@ class SpectralNetwork:
 
         if (config['root_system'] in ['A1', ]):
             logger.info('There is no joint for the given root system {}.'
-                             .format(config['root_system']))
+                        .format(config['root_system']))
             return [] 
 
         new_s_wall = self.s_walls[new_s_wall_index]
@@ -275,7 +285,7 @@ class SpectralNetwork:
             # according to the trivialization, then
             # check the compatibility of a pair
             # of segments.
-            n_z_splits =  new_s_wall.get_splits(endpoints=True)
+            n_z_splits = new_s_wall.get_splits(endpoints=True)
             num_n_z_segs = len(new_s_wall.local_roots)
             p_z_splits = prev_s_wall.get_splits(endpoints=True)
             num_p_z_segs = len(prev_s_wall.local_roots)
@@ -288,10 +298,16 @@ class SpectralNetwork:
                 p_z_i = p_z_splits[p_z_seg_i]
                 p_z_f = p_z_splits[p_z_seg_i + 1]
 
-                n_seg_root = new_s_wall.local_roots[n_z_seg_i]
-                p_seg_root = prev_s_wall.local_roots[p_z_seg_i]
+#                n_seg_root = new_s_wall.local_roots[n_z_seg_i]
+#                p_seg_root = prev_s_wall.local_roots[p_z_seg_i]
+                descendant_roots = get_descendant_roots(
+                    (prev_s_wall.multiple_local_roots[p_z_seg_i] +
+                     new_s_wall.multiple_local_roots[n_z_seg_i]),
+                    sw_data.g_data,
+                )
 
-                if not is_root(p_seg_root + n_seg_root, sw_data.g_data):
+#                if not is_root(p_seg_root + n_seg_root, sw_data.g_data):
+                if len(descendant_roots) == 0:
                     # The two segments are not compatible for
                     # forming a joint.
                     continue
@@ -347,22 +363,52 @@ class SpectralNetwork:
                     # TODO: need to put the joint into the parent
                     # S-walls?
 
-                    logger.debug('Joint at z = {}'.format(ip_z))
+                    logger.debug('Intersection at z = {}'.format(ip_z))
 
-                    if is_root(prev_s_wall.get_root_at_t(t_p) +
-                               new_s_wall.get_root_at_t(t_n), 
-                               sw_data.g_data,) is True:
+                    # TODO: check if the following descendant-roots
+                    # finding is necessary, note that we calculate
+                    # descendant roots above.
+                    descendant_roots = get_descendant_roots(
+                        (prev_s_wall.get_roots_at_t(t_p) +
+                         new_s_wall.get_roots_at_t(t_n)),
+                        sw_data.g_data,
+                    )
+
+                    joint_data = get_joint_data(
+                        descendant_roots, ip_z, sw_data
+                    )
+                    # The following assumes that \lambda = x dz.
+                    # Group joint data according to x_1 - x_2,
+                    # which determines the trajectory of an S-wall.
+
+                    # joint_data_groups = [(roots, ode_xs), ...]
+                    joint_data_groups = []
+                    for root, ode_xs in joint_data:
+                        new_joint_data_group = True
+                        Dx = ode_xs[0] - ode_xs[1]
+                        for joint_data_group in joint_data_groups:
+                            group_roots, group_ode_xs = joint_data_group
+                            group_Dx = group_ode_xs[0] - group_ode_xs[1]
+                            if abs(Dx - group_Dx) < accuracy:
+                                new_joint_data_group = False
+                                group_roots.append(root)
+                                break
+                        if new_joint_data_group is True:
+                            joint_data_groups.append(([root], ode_xs))
+
+                    joint_M = prev_s_wall.M[t_p] + new_s_wall.M[t_n]
+                    joint_parents = [prev_s_wall.label, new_s_wall.label]
+                    for roots, ode_xs in joint_data_groups:
                         new_joints.append(
                             Joint(
-                                z=ip_z, 
-                                s_wall_1=prev_s_wall,
-                                s_wall_2=new_s_wall,                         
-                                t_1=t_p, 
-                                t_2=t_n,
-                                sw_data=sw_data,
+                                z=ip_z,
+                                M=joint_M,
+                                ode_xs=ode_xs,
+                                parents=joint_parents,
+                                roots=sort_roots(roots, sw_data.g_data),
                             )
                         )
-
+                    
         return new_joints
 
 
@@ -430,14 +476,14 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 t_m -= 1
                 if t_m >= 0:
                     z_m = s_wall_z[t_m]
-                    if (p_z.real - bp.z.real)*(z_m.real - bp.z.real) > 0:
+                    if (p_z.real - bp.z.real) * (z_m.real - bp.z.real) > 0:
                         t = t_m
                         break
 
                 t_p += 1
                 if t_p <= t_max:
                     z_p = s_wall_z[t_p]
-                    if (p_z.real - bp.z.real)*(z_p.real - bp.z.real) > 0:
+                    if (p_z.real - bp.z.real) * (z_p.real - bp.z.real) > 0:
                         t = t_p
                         break
 
@@ -485,3 +531,25 @@ def find_intersections_of_curves(a_zs, b_zs, accuracy):
                 pass
 
     return intersections
+
+
+def get_joint_data(descendant_roots, z, sw_data):
+    """
+    From a set of descendant roots find a set of joint data,
+        [(root, ode_xs), ...].
+    """
+    joint_data = []
+    for root in descendant_roots:
+        # FIXME: The following, including self.ode_xs, can be removed
+        # once the seeding of an S-wall is done by using a root.
+        ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
+        ffr_new_wall_weight_pairs = (
+            sw_data.g_data.ordered_weight_pairs(root, ffr=True)
+        )
+        ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
+        ode_x1 = ffr_xs_at_z[ffr_w_p_0[0]]
+        ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
+        ode_xs = [ode_x1, ode_x2]
+        joint_data.append((root, ode_xs))
+
+    return joint_data

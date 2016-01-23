@@ -1,26 +1,21 @@
 import logging
 import numpy
 import sympy
-import pdb
+# import pdb
 
 from cmath import exp, pi
 from math import floor
 from scipy import interpolate
 
 from geometry import find_xs_at_z_0
-from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,)
+from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,
+                  get_descendant_roots, sort_roots)
 
 x, z = sympy.symbols('x z')
 
-# TODO: Generalize this.
 # Number of x's at a fixed z
 NUM_ODE_XS_OVER_Z = 2
 
-# FIXME: Use the configuration data 'branch_point_cutoff'
-# within a disc of such radius from any branch point,
-# the intersection of a S-wall originating from there
-# with the corresponding cut, will be ignored.
-#BRANCH_POINT_RADIUS = 0.01 
 
 # Desired precision on the phase of seeds
 # Warning: setting it too small will bring the seeding point
@@ -28,19 +23,95 @@ NUM_ODE_XS_OVER_Z = 2
 SEED_PHASE_PRECISION = 0.001
 SEED_PRECISION_MAX_DEPTH = 5
 
-# FIXME: Use the configuration data 'puncture_cutoff'
-# cut S-walls if they get too close to punctures
-#PUNCTURE_RADIUS = 0.001
+
+# XXX: Left for the convenience of merging.
+# class Joint:
+#     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
+#                  t_1=None, t_2=None, sw_data=None, logger_name='loom',):
+#         self.z = None
+#         self.M = None
+#         self.parents = None
+#         self.label = None
+#         self.root = None
+#         self.ode_xs = None
+# 
+#         if z is None:
+#             # Return without setting attributes.
+#             return
+# 
+#         self.z = z
+#         self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
+#         self.parents = [s_wall_1.label, s_wall_2.label]
+#         self.label = [s_wall_1.label, s_wall_2.label]
+# 
+#         alpha_1 = s_wall_1.get_root_at_t(t_1)
+#         alpha_2 = s_wall_2.get_root_at_t(t_2) 
+#         self.root = alpha_1 + alpha_2
+# 
+#         # FIXME: The following, including self.ode_xs, can be removed
+#         # once the seeding of an S-wall is done by using a root.
+#         ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
+#         ffr_new_wall_weight_pairs = (
+#             sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
+#         )
+#         ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
+#         ode_x1 = ffr_xs_at_z[ffr_w_p_0[0]]
+#         ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
+#         self.ode_xs = [ode_x1, ode_x2]
+# 
+#     def __eq__(self, other):
+#         return self.label == other.label
+# 
+#     def get_json_data(self):
+#         json_data = {
+#             'z': ctor2(self.z),
+#             'M': ctor2(self.M),
+#             'parents': [parent for parent in self.parents],
+#             'label': self.label,
+#             'root': self.root.tolist(),
+#             'ode_xs': [ctor2(x) for x in self.ode_xs],
+#         }
+#         return json_data
+# 
+#     def set_from_json_data(self, json_data):
+#         self.z = r2toc(json_data['z'])
+#         self.M = r2toc(json_data['M'])
+#         self.parents = [parent for parent in json_data['parents']]
+#         self.label = json_data['label']
+#         self.root = numpy.array(json_data['root'])
+#         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
+# 
+#     def is_equal_to(self, other, accuracy):
+#         if(abs(self.z - other.z) > accuracy):
+#             return False
+# 
+#         if numpy.array_equal(self.root, other.root) is not True:
+#             return False
+# 
+#         if(abs(self.M - other.M) > accuracy):
+#             return False
+# 
+#         # FIXME: Probably the following comparison is not needed 
+#         # after comparing the roots of two S-walls.
+#         # Decide whether to do the comparison or not.
+#         for i in range(NUM_ODE_XS_OVER_Z):
+#             if abs(self.ode_xs[i] - other.ode_xs[i]) > accuracy:
+#                 return False
+# 
+#         return True
 
 
 class Joint:
-    def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
-                 t_1=None, t_2=None, sw_data=None, logger_name='loom',):
+    def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
+                 logger_name='loom',):
+
+        self.data_attributes = ['z', 'M', 'parents', 'label', 'roots',
+                                'ode_xs']
         self.z = None
         self.M = None
         self.parents = None
         self.label = None
-        self.root = None
+        self.roots = None
         self.ode_xs = None
 
         if z is None:
@@ -48,24 +119,13 @@ class Joint:
             return
 
         self.z = z
-        self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
-        self.parents = [s_wall_1.label, s_wall_2.label]
-        self.label = [s_wall_1.label, s_wall_2.label]
+        self.M = M
+        self.parents = parents 
+        self.roots = roots
+        self.ode_xs = ode_xs
 
-        alpha_1 = s_wall_1.get_root_at_t(t_1)
-        alpha_2 = s_wall_2.get_root_at_t(t_2) 
-        self.root = alpha_1 + alpha_2
-
-        # FIXME: The following, including self.ode_xs, can be removed
-        # once the seeding of an S-wall is done by using a root.
-        ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
-        ffr_new_wall_weight_pairs = (
-            sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
-        )
-        ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
-        ode_x1 = ffr_xs_at_z[ffr_w_p_0[0]]
-        ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
-        self.ode_xs = [ode_x1, ode_x2]
+    def set_z_rotation(self, z_rotation):
+        self.z /= complex(z_rotation)
 
     def __eq__(self, other):
         return self.label == other.label
@@ -76,9 +136,14 @@ class Joint:
             'M': ctor2(self.M),
             'parents': [parent for parent in self.parents],
             'label': self.label,
-            'root': self.root.tolist(),
+            # XXX: Enable the following once self.root is deprecated.
+            # 'roots': [root.tolist() for root in self.roots],
             'ode_xs': [ctor2(x) for x in self.ode_xs],
         }
+        if self.roots is not None:
+            json_data['roots'] = [root.tolist() for root in self.roots]
+        elif self.root is not None:
+            json_data['roots'] = [self.root.tolist()]
         return json_data
 
     def set_from_json_data(self, json_data):
@@ -86,18 +151,26 @@ class Joint:
         self.M = r2toc(json_data['M'])
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
-        self.root = numpy.array(json_data['root'])
+        # TODO: remove Joint.root & the following exception handling.
+        try:
+            self.roots = [numpy.array(root) for root in json_data['roots']]
+        except KeyError:
+            self.root = numpy.array(json_data['root'])
         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
 
     def is_equal_to(self, other, accuracy):
         if(abs(self.z - other.z) > accuracy):
             return False
 
-        if numpy.array_equal(self.root, other.root) is not True:
-            return False
-
         if(abs(self.M - other.M) > accuracy):
             return False
+
+        if len(self.roots) != len(other.roots):
+            return False
+
+        for i in range(len(self.roots)):
+            if numpy.array_equal(self.roots[i], other.roots[i]) is not True:
+                return False
 
         # FIXME: Probably the following comparison is not needed 
         # after comparing the roots of two S-walls.
@@ -117,7 +190,8 @@ class Joint:
 
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, M_0=None, parents=None,
-                 label=None, n_steps=None, logger_name='loom'):
+                 parent_roots=None, label=None, n_steps=None,
+                 logger_name='loom'):
         """
         SWall.z is a NumPy array of length n_steps+1,
         where z[t] is the base coordinate.
@@ -142,14 +216,25 @@ class SWall(object):
             self.x[0] = x_0
             self.M[0] = M_0
         self.parents = parents
+        self.parent_roots = parent_roots
         self.label = label
 
         # cuts_intersections = [[b_pt_idx, i, '(c)cw'], ...]
         self.cuts_intersections = []
         self.root_basepoint = []
         self.local_roots = []
+        self.multiple_local_roots = None
         # local_weight_pairs is a list of pair of intgers.
         self.local_weight_pairs = []        
+
+        self.data_attributes = [
+            'z', 'M', 'x', 'parents', 'parent_roots', 'label', 
+            'cuts_intersections', 'root_basepoint',
+            'local_roots', 'multiple_local_roots', 'local_weight_pairs',
+        ]
+
+    def set_z_rotation(self, z_rotation):
+        self.z /= complex(z_rotation)
 
     def __setitem__(self, t, data):
         """
@@ -185,15 +270,28 @@ class SWall(object):
             'parents': [parent for parent in self.parents],
             'label': self.label,
             'cuts_intersections': [
-                [bp.label, t, d]
-                for bp, t, d in self.cuts_intersections
+                [br_loc.label, t, d]
+                for br_loc, t, d in self.cuts_intersections
             ],
             'local_roots': [root.tolist() for root in self.local_roots],
-            'local_weight_pairs': self.local_weight_pairs,
+            # TODO: Restore the following after multiple_local_roots
+            # becomes the default.
+            # 'multiple_local_roots': [
+            #     [root.tolist() for root in multiple_roots]
+            #     for multiple_roots in self.multiple_local_roots
+            # ],
+            'local_weight_pairs': self.local_weight_pairs
         }
+        # TODO: Remove the following after multiple_local_roots
+        # becomes the default.
+        if self.multiple_local_roots is not None:
+            json_data['multiple_local_roots'] = [
+                [root.tolist() for root in multiple_roots]
+                for multiple_roots in self.multiple_local_roots
+            ]
         return json_data
 
-    def set_from_json_data(self, json_data, branch_points):
+    def set_from_json_data(self, json_data, branch_loci):
         self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
         self.M = numpy.array([r2toc(M_t) for M_t in json_data['M']])
         self.x = numpy.array(
@@ -202,11 +300,20 @@ class SWall(object):
         self.parents = [parent for parent in json_data['parents']]
         self.label = json_data['label']
         self.cuts_intersections = []
-        for bp_label, t, d in json_data['cuts_intersections']:
-            for bp in branch_points:
-                if bp_label == bp.label:
-                    self.cuts_intersections.append([bp, t, d])
+        for br_loc_label, t, d in json_data['cuts_intersections']:
+            for br_loc in branch_loci:
+                if br_loc_label == br_loc.label:
+                    self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = numpy.array(json_data['local_roots'])
+        # TODO: Remove the following exception handling
+        # after multiple_local_roots becomes the default.
+        try:
+            self.multiple_local_roots = [
+                [numpy.array(root) for root in multiple_roots]
+                for multiple_roots in json_data['multiple_local_roots']
+            ]
+        except KeyError:
+            pass
         self.local_weight_pairs = json_data['local_weight_pairs']
 
     def get_splits(self, endpoints=False):
@@ -342,18 +449,22 @@ class SWall(object):
                 # branch cut emanating from its parent branch-point
                 # if such intersections happens within a short 
                 # distance from the starting point.
-                if (br_loc.__class__.__name__ == 'BranchPoint' and
+                if (
+                    br_loc.__class__.__name__ == 'BranchPoint' and
                     br_loc.label == self.parents[0] and 
-                    (abs(br_loc.z - self.z[t]) < cutoff_radius)):
+                    (abs(br_loc.z - self.z[t]) < cutoff_radius)
+                ):
                     continue
 
                 # Check that the intersection actually happens
                 # and is not an artifact of the interpolation used above
                 # which could become an extrapolation
-                x_p = self.z[t - 1].real
+                x_p = self.z[t].real
                 x_n = self.z[t + 1].real
                 if not ((x_p < br_loc_x < x_n) or (x_n < br_loc_x < x_p)):
-                    logger.info('Drop a fake cut intersection.')
+                    logger.warning(
+                        '*** warning *** Drop a fake cut intersection.'
+                    )
                     continue
 
                 # Add 
@@ -452,7 +563,85 @@ class SWall(object):
                 self.local_roots.insert(0, new_root)
                 self.local_weight_pairs.insert(0, new_weight_pairs)
 
-    def get_root_at_t(self, t):
+        root_0 = self.local_roots[0]
+        if len(self.cuts_intersections) > 0:
+            t_0 = floor(self.cuts_intersections[0][1] / 2)
+        z_0 = self.z[t_0]
+        ode_xs_0 = self.x[t_0]
+        Dx_0 = ode_xs_0[0] - ode_xs_0[1]
+
+        if (t_0 + 1) < len(self.z):
+            ode_xs_1 = self.x[t_0 + 1]
+        elif t_0 > 0:
+            ode_xs_1 = self.x[t_0 - 1]
+        else:
+            RuntimeError('Length of z = {}: too short.'.format(len(self.z)))
+        dx = max(abs(ode_xs_0[0] - ode_xs_1[0]),
+                 abs(ode_xs_0[1] - ode_xs_1[1]),)
+
+        ffr_xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=True).values()
+
+        if len(self.parent_roots) == 1:
+            self.multiple_local_roots = [[root] for root in self.local_roots]
+        elif len(self.parent_roots) > 1:
+            multiple_local_roots_0 = [root_0]
+            all_roots_from_parents = (self.parent_roots + 
+                                      [-root for root in self.parent_roots])
+            descendant_roots = get_descendant_roots(all_roots_from_parents,
+                                                    sw_data.g_data,)
+            all_roots_from_parents += descendant_roots
+            for root in all_roots_from_parents:
+                if numpy.array_equal(root_0, root):
+                    continue
+                else:
+                    wall_weight_pairs = (
+                        sw_data.g_data.ordered_weight_pairs(
+                            root, ffr=True
+                        )
+                    )
+                    ffr_w_p_0 = wall_weight_pairs[0]
+                    ode_x1 = ffr_xs_at_z_0[ffr_w_p_0[0]]
+                    ode_x2 = ffr_xs_at_z_0[ffr_w_p_0[1]]
+                    Dx = ode_x1 - ode_x2
+                    if abs(Dx - Dx_0) < dx:
+                        multiple_local_roots_0.append(root)
+            self.multiple_local_roots = [
+                sort_roots(multiple_local_roots_0, sw_data.g_data)
+            ]
+            # We prepared all the base roots, 
+            # now we find how they change 
+            # as the S-wall crosses cuts.
+            for k in range(len(self.cuts_intersections)):
+                br_loc, t, direction = self.cuts_intersections[k]
+                new_roots = [] 
+                for current_root in self.multiple_local_roots[k]:
+                    new_root = g_data.weyl_monodromy(
+                        current_root, br_loc, direction
+                    )
+                    new_roots.append(new_root)
+                self.multiple_local_roots.append(new_roots)
+        else:
+            raise RuntimeError('Parent of {} has no root.'
+                               .format(self.label))
+
+#    def get_root_at_t(self, t):
+#        """
+#        Given an integer t which parametrizes a point 
+#        of the trajectory in proper time, return the local 
+#        root at that point.
+#        """
+#        if t < 0 or t > (len(self.z) - 1):
+#            raise ValueError
+#        else:
+#            closed_splits = self.get_splits() + [len(self.z) - 1]
+#            for i, sp in enumerate(closed_splits):
+#                if t <= sp:
+#                    return self.local_roots[i]
+#                    break
+#                else:
+#                    pass
+
+    def get_roots_at_t(self, t):
         """
         Given an integer t which parametrizes a point 
         of the trajectory in proper time, return the local 
@@ -464,7 +653,7 @@ class SWall(object):
             closed_splits = self.get_splits() + [len(self.z) - 1]
             for i, sp in enumerate(closed_splits):
                 if t <= sp:
-                    return self.local_roots[i]
+                    return self.multiple_local_roots[i]
                     break
                 else:
                     pass
@@ -657,7 +846,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
         # Construct the seeding points for the branch point
         # by studying the type of ramification structure of the r.p.
-        if rp_type == 'type_I':
+        if rp_type == 'type_AD':
+            continue
+        elif rp_type == 'type_I':
             phases = [exp(2 * pi * 1j * float(i) / r_i) for i in range(r_i)]
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
             
@@ -769,7 +960,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 phases[i] - phases[j] for i in range(13) 
             ] for j in range(13)]
 
-            # print 'phi = {}'.format(phi)
             omega = exp(
                 2.0 * pi * 1j / 13.0
             )
@@ -779,7 +969,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                 ((1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
                 (omega ** s)
                 for i in range(13) for j in range(13) 
-                for s in range(13) if (i !=j and e_6_compatible(i, j))
+                for s in range(13) if (i != j and e_6_compatible(i, j))
             ])
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
@@ -941,17 +1131,17 @@ def left_right(l, point):
     determines whether x increases or decreases at that point, 
     returning repsectively 'left' or 'right'
     """
-    if point > len(l)-1:
+    if point > len(l) - 1:
         raise ValueError(
             'Can\'t determine direction, point doesnt belong to list!'
         )
     elif point > 0:
-        if l[point-1].real < l[point].real:
+        if l[point - 1].real < l[point].real:
             return 'right'
         else:
             return 'left'
     elif point == 0:
-        if l[point].real < l[point+1].real:
+        if l[point].real < l[point + 1].real:
             return 'right'
         else:
             return 'left'
@@ -969,12 +1159,10 @@ def e_6_compatible(i, j):
     a given weight with other weights.
     """
     dist = abs(i - j) % 12
-    if ((0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
+    if (
+        (0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
         (i == 12 or j == 12)
     ):
         return True
     else:
         return False
-
-
-

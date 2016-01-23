@@ -1,7 +1,6 @@
-import pdb
+# import pdb
 import mpldatacursor
 
-from math import pi
 
 class NetworkPlotBase(object):
     def __init__(self, matplotlib_figure=None, plot_range=None,):
@@ -18,7 +17,7 @@ class NetworkPlotBase(object):
         self, phase=None, branch_points=None, joints=None, punctures=None,
         irregular_singularities=None, walls=None, wall_segments=None, 
         wall_colors=None, labels=None, plot_joints=False,
-        plot_data_points=False,
+        plot_data_points=False, z_rotation=1,
     ):
         """
         branch_points = [[bpx, bpy], ...]
@@ -49,7 +48,7 @@ class NetworkPlotBase(object):
             y_min, y_max = axes.get_ylim()
             self.plot_range = [[x_min, x_max], [y_min, y_max]]
 
-        axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
+        # axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
 
         # Plot wall segments.
         for i, wall in enumerate(wall_segments):
@@ -68,38 +67,31 @@ class NetworkPlotBase(object):
         # Plot branch points.
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot(
-                        bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
-                        color='k', 
-                        label=labels['branch_points'][i],
-                    )
+            axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
+                      color='k', 
+                      label=labels['branch_points'][i],)
 
         # Plot irregular singularities
         for i, irr_sing in enumerate(irregular_singularities):
             isx, isy = irr_sing
-            axes.plot(
-                    isx, isy,  'o', markeredgewidth=2, markersize=8, 
-                    color='k', markerfacecolor='none', 
-                    label=labels['irregular_singularities'][i],
-                )
+            axes.plot(isx, isy, 'o', markeredgewidth=2, markersize=8,
+                      color='k', markerfacecolor='none', 
+                      label=labels['irregular_singularities'][i],)
 
-        # Plot branch cuts, vertically.
+        # Plot branch cuts according to the z-plane rotation.
+        y_r = (2j * axes.get_ylim()[1]) * z_rotation
+
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot(
-                    [bpx, bpx], [bpy, axes.get_ylim()[1]], ':', 
-                    color='k', 
-                    label='Cut of '+labels['branch_points'][i],
-                )
+            axes.plot([bpx, bpx + y_r.real], [bpy, bpy + y_r.imag], 
+                      ':', color='k', 
+                      label='Cut of ' + labels['branch_points'][i],)
 
         for i, irr_sing in enumerate(irregular_singularities):
             isx, isy = irr_sing
-            axes.plot(
-                    [isx, isx], [isy, axes.get_ylim()[1]], ':', 
-                    color='k', 
-                    label='Cut of '+labels['irregular_singularities'][i],
-                )
-
+            axes.plot([isx, isx + y_r.real], [isy, isy + y_r.imag],
+                      ':', color='k', 
+                      label='Cut of ' + labels['irregular_singularities'][i],)
    
         # Plot joints.
         if plot_joints is True:
@@ -112,14 +104,11 @@ class NetworkPlotBase(object):
         for i, p in enumerate(punctures):
             px, py = p
             axes.plot(px, py, 'o', markeredgewidth=2, markersize=8, 
-                        color='k', markerfacecolor='none', 
-                        label=labels['punctures'][i],
-                    )
-
+                      color='k', markerfacecolor='none',
+                      label=labels['punctures'][i],)
 
         axes.set_visible(False)
         self.plots.append(axes)
-
 
     def autoscale(self):
         min_x_min = None
@@ -154,12 +143,11 @@ class NetworkPlotBase(object):
             axes=self.plots[self.current_plot_idx],
             formatter='{label}'.format,
             tolerance=4,
-            #hover=True,
-            #display='single',
+            # hover=True,
+            # display='single',
             display='multiple',
             draggable=True,
         )
-
 
     def change_current_plot(self, new_plot_idx):
         if new_plot_idx == self.current_plot_idx:
@@ -175,18 +163,16 @@ class NetworkPlotBase(object):
         # Update the index variable for the currently displayed plot.
         self.current_plot_idx = new_plot_idx
 
-
     def show_prev_plot(self, event):
         if self.data_cursor is not None:
             self.data_cursor.hide().disable()
-        self.change_current_plot(self.current_plot_idx-1)
+        self.change_current_plot(self.current_plot_idx - 1)
         self.set_data_cursor()
         self.figure.show()
-
 
     def show_next_plot(self, event):
         if self.data_cursor is not None:
             self.data_cursor.hide().disable()
-        self.change_current_plot(self.current_plot_idx+1)
+        self.change_current_plot(self.current_plot_idx + 1)
         self.set_data_cursor()
         self.figure.show()

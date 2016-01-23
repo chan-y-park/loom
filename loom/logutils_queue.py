@@ -50,15 +50,13 @@ from the :mod:`multiprocessing` module.
 version here is for use with earlier Python versions.
 """
 import logging
-###
-# XXX: chan
-#try:
-#    import Queue as queue
-#except ImportError:
-#    import queue
-#import threading
-# XXX: chan
-###
+# XXX: commented out by chan
+# try:
+#     import Queue as queue
+# except ImportError:
+#     import queue
+# import threading
+
 
 class QueueHandler(logging.Handler):
     """
@@ -87,7 +85,7 @@ class QueueHandler(logging.Handler):
         
         :param record: The record to enqueue.
         """
-        #self.queue.put_nowait(record)  # XXX: modified by chan
+        # self.queue.put_nowait(record)  # XXX: modified by chan
         self.queue.put(record)
 
     def prepare(self, record):
@@ -131,132 +129,130 @@ class QueueHandler(logging.Handler):
             raise
         except:
             self.handleError(record)
-###
-# XXX: chan
-#class QueueListener(object):
-#    """
-#    This class implements an internal threaded listener which watches for
-#    LogRecords being added to a queue, removes them and passes them to a
-#    list of handlers for processing.
-#            
-#    :param record: The queue to listen to.
-#    :param handlers: The handlers to invoke on everything received from
-#                     the queue.
-#    """
-#    _sentinel = None
-#
-#    def __init__(self, queue, *handlers):
-#        """
-#        Initialise an instance with the specified queue and
-#        handlers.
-#        """
-#        self.queue = queue
-#        self.handlers = handlers
-#        self._stop = threading.Event()
-#        self._thread = None
-#
-#    def dequeue(self, block):
-#        """
-#        Dequeue a record and return it, optionally blocking.
-#
-#        The base implementation uses :meth:`~queue.Queue.get`. You may want to
-#        override this method if you want to use timeouts or work with custom
-#        queue implementations.
-#        
-#        :param block: Whether to block if the queue is empty. If `False` and
-#                      the queue is empty, an :class:`~queue.Empty` exception
-#                      will be thrown.
-#        """
-#        return self.queue.get(block)
-#
-#    def start(self):
-#        """
-#        Start the listener.
-#
-#        This starts up a background thread to monitor the queue for
-#        LogRecords to process.
-#        """
-#        self._thread = t = threading.Thread(target=self._monitor)
-#        t.setDaemon(True)
-#        t.start()
-#
-#    def prepare(self , record):
-#        """
-#        Prepare a record for handling.
-#
-#        This method just returns the passed-in record. You may want to
-#        override this method if you need to do any custom marshalling or
-#        manipulation of the record before passing it to the handlers.
-#        
-#        :param record: The record to prepare.
-#        """
-#        return record
-#
-#    def handle(self, record):
-#        """
-#        Handle a record.
-#
-#        This just loops through the handlers offering them the record
-#        to handle.
-#
-#        :param record: The record to handle.
-#        """
-#        record = self.prepare(record)
-#        for handler in self.handlers:
-#            handler.handle(record)
-#
-#    def _monitor(self):
-#        """
-#        Monitor the queue for records, and ask the handler
-#        to deal with them.
-#
-#        This method runs on a separate, internal thread.
-#        The thread will terminate if it sees a sentinel object in the queue.
-#        """
-#        q = self.queue
-#        has_task_done = hasattr(q, 'task_done')
-#        while not self._stop.isSet():
-#            try:
-#                record = self.dequeue(True)
-#                if record is self._sentinel:
-#                    break
-#                self.handle(record)
-#                if has_task_done:
-#                    q.task_done()
-#            except queue.Empty:
-#                pass
-#        # There might still be records in the queue.
-#        while True:
-#            try:
-#                record = self.dequeue(False)
-#                if record is self._sentinel:
-#                    break
-#                self.handle(record)
-#                if has_task_done:
-#                    q.task_done()
-#            except queue.Empty:
-#                break
-#
-#    def enqueue_sentinel(self):
-#        """
-#        Writes a sentinel to the queue to tell the listener to quit. This
-#        implementation uses ``put_nowait()``.  You may want to override this
-#        method if you want to use timeouts or work with custom queue
-#        implementations.
-#        """
-#        self.queue.put_nowait(self._sentinel)
-#
-#    def stop(self):
-#        """
-#        Stop the listener.
-#
-#        This asks the thread to terminate, and then waits for it to do so.
-#        Note that if you don't call this before your application exits, there
-#        may be some records still left on the queue, which won't be processed.
-#        """
-#        self._stop.set()
-#        self.enqueue_sentinel()
-#        self._thread.join()
-#        self._thread = None
-# XXX: chan
-###
+
+# XXX: commented out by chan
+# class QueueListener(object):
+#     """
+#     This class implements an internal threaded listener which watches for
+#     LogRecords being added to a queue, removes them and passes them to a
+#     list of handlers for processing.
+#             
+#     :param record: The queue to listen to.
+#     :param handlers: The handlers to invoke on everything received from
+#                      the queue.
+#     """
+#     _sentinel = None
+# 
+#     def __init__(self, queue, *handlers):
+#         """
+#         Initialise an instance with the specified queue and
+#         handlers.
+#         """
+#         self.queue = queue
+#         self.handlers = handlers
+#         self._stop = threading.Event()
+#         self._thread = None
+# 
+#     def dequeue(self, block):
+#         """
+#         Dequeue a record and return it, optionally blocking.
+# 
+#         The base implementation uses :meth:`~queue.Queue.get`. You may want to
+#         override this method if you want to use timeouts or work with custom
+#         queue implementations.
+#         
+#         :param block: Whether to block if the queue is empty. If `False` and
+#                       the queue is empty, an :class:`~queue.Empty` exception
+#                       will be thrown.
+#         """
+#         return self.queue.get(block)
+# 
+#     def start(self):
+#         """
+#         Start the listener.
+# 
+#         This starts up a background thread to monitor the queue for
+#         LogRecords to process.
+#         """
+#         self._thread = t = threading.Thread(target=self._monitor)
+#         t.setDaemon(True)
+#         t.start()
+# 
+#     def prepare(self , record):
+#         """
+#         Prepare a record for handling.
+# 
+#         This method just returns the passed-in record. You may want to
+#         override this method if you need to do any custom marshalling or
+#         manipulation of the record before passing it to the handlers.
+#         
+#         :param record: The record to prepare.
+#         """
+#         return record
+# 
+#     def handle(self, record):
+#         """
+#         Handle a record.
+# 
+#         This just loops through the handlers offering them the record
+#         to handle.
+# 
+#         :param record: The record to handle.
+#         """
+#         record = self.prepare(record)
+#         for handler in self.handlers:
+#             handler.handle(record)
+# 
+#     def _monitor(self):
+#         """
+#         Monitor the queue for records, and ask the handler
+#         to deal with them.
+# 
+#         This method runs on a separate, internal thread.
+#         The thread will terminate if it sees a sentinel object in the queue.
+#         """
+#         q = self.queue
+#         has_task_done = hasattr(q, 'task_done')
+#         while not self._stop.isSet():
+#             try:
+#                 record = self.dequeue(True)
+#                 if record is self._sentinel:
+#                     break
+#                 self.handle(record)
+#                 if has_task_done:
+#                     q.task_done()
+#             except queue.Empty:
+#                 pass
+#         # There might still be records in the queue.
+#         while True:
+#             try:
+#                 record = self.dequeue(False)
+#                 if record is self._sentinel:
+#                     break
+#                 self.handle(record)
+#                 if has_task_done:
+#                     q.task_done()
+#             except queue.Empty:
+#                 break
+# 
+#     def enqueue_sentinel(self):
+#         """
+#         Writes a sentinel to the queue to tell the listener to quit. This
+#         implementation uses ``put_nowait()``.  You may want to override this
+#         method if you want to use timeouts or work with custom queue
+#         implementations.
+#         """
+#         self.queue.put_nowait(self._sentinel)
+# 
+#     def stop(self):
+#         """
+#         Stop the listener.
+# 
+#         This asks the thread to terminate, and then waits for it to do so.
+#         Note that if you don't call this before your application exits, there
+#         may be some records still left on the queue, which won't be processed.
+#         """
+#         self._stop.set()
+#         self.enqueue_sentinel()
+#         self._thread.join()
+#         self._thread = None

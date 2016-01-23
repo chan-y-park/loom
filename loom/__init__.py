@@ -20,6 +20,12 @@ else:
     print('Use default backend defined in matplotlibrc: '
           '{}'.format(matplotlib.rcParams['backend']))
 
+# matplotlib configuration
+matplotlib.rcParams['figure.figsize'] = [8.0, 8.0]
+matplotlib.rcParams['savefig.format'] = 'pdf'
+matplotlib.rcParams['savefig.bbox'] = 'tight'
+matplotlib.rcParams['savefig.pad_inches'] = 0.0
+
 from api import get_loom_dir
 from api import set_logging
 from api import generate_spectral_network as generate

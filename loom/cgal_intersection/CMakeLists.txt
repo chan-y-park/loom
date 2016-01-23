@@ -55,3 +55,5 @@ endif()
 # ##########################################################
 
 add_library(cgal_intersection SHARED cgal_intersection.cpp)
+# add_library(cgal_test STATIC cgal_test.cpp)
+add_executable(cgal_test cgal_test.cpp)

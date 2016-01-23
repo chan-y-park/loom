@@ -1,20 +1,35 @@
 {% extends "layout.html" %}
 {% block body %}
 <div style="width:800px; margin:20px 20px 20px 20px">
-    <p>loom front page</p>
-    <p>This web page dynamically generates a spectral network in a representation of \(\mathfrak{g} = A_n, D_n, E_6\), or \(E_7\). For more detail, see
+    <p>loom generates a spectral network in a representation of \(\mathfrak{g} = \mathrm{A}_n, \mathrm{D}_n, \mathrm{E}_6\), or \(\mathrm{E}_7\). For more detail, see
         <ul>
             <li> <a href=http://arxiv.org/abs/arXiv:1204.4824>Spectral networks [Gaiotto-Moore-Neitzke (2012)</a>
+            <li> <a href=http://arxiv.org/abs/arXiv:>ADE Spectral Networks [Longhi-Park] (2016)</a>
         </ul>
     </p>
+    <p>loom is an open-source project. </p>
+    <p>The source code of loom can be found at <a href=http://github.com/chan-y-park/loom>http://github.com/chan-y-park/loom</a>.</p>
+    <p>List of contributors to loom in the order of the date of their first contribution:
+        <ul>
+{% for name in loom_contributors %}
+            <li>{{ name  }}</li>
+{% endfor %}
+        </ul>
+    </p>
+    <p>If you have any question using this website and/or loom, please contact one of the contributors or post it on <a href="https://github.com/chan-y-park/loom/issues">the GitHub issues page</a>. 
+    </p>
 
-    <h2>How to use loom</h2>
+    <h2>How to use loom using a web user interface</h2>
     <ul>
         <li>Go to the <a href="{{ url_for('config') }}">configuration page</a>
             to generate spectral networks.</li>
         <li>In the <a href="{{ url_for('config') }}">configuration page</a> 
             input the data for a 4d \(\mathcal{N} = 2\) class \(\mathcal{S}\)
             theory to study.</li>
+        <li>loom will grow a spectral network by producing data points,
+        	the number of which is (number of steps) \(\times\) (number of iterations).
+        	loom stops growing an S-wall when it either reaches the maximum number
+        	of data points or when the S-wall reaches the mass limit.</li>
         <li>Configuration data can be saved as a file, which can be loaded
             at the <a href="{{ url_for('config') }}">configuration page</a>.
             </li>
@@ -26,17 +41,29 @@
             take from a few seconds to a few minutes according to the size
             of the data and the internet speed.</li>
         <li>In the plot page, you can download the data and the plot
-            by clicking "Download data" and "Download plot" buttons.<.li>
+            by clicking "Download data" and "Download plot" buttons.</li>
     </ul>
 
-    <h2>Examples</h2>
+    <h2>Examples of spectral networks</h2>
     <ul>
-        <li><a href="{{ url_for('plot') }}?data=pure_SU_2">Spectral networks of pure SU(2) gauge theory at the origin of the Coulomb branch</a>
+        <li><a href="{{ url_for('plot') }}?data=pure_SU_2">Pure \(\mathrm{SU}(2)\) gauge theory at the origin of the Coulomb branch</a>
         <br/><img src="static/pure_SU_2.png" height=200 width=200>
-        <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3">Spectral networks of an Argyres-Douglas fixed point theory from pure SU(3) gauge theory, with the minimal BPS spectrum</a>
+        <li><a href="{{ url_for('plot') }}?data=pure_SU_3">Pure \(\mathrm{SU}(3)\) gauge theory at the origin of the Coulomb branch</a>
+        <br/><img src="static/pure_SU_3.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3">An Argyres-Douglas fixed point theory from pure \(\mathrm{SU}(3)\) gauge theory, with the minimal BPS spectrum</a>
         <br/><img src="static/AD_from_pure_SU_3.png" height=200 width=200>
-        <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3_after_wc">Spectral networks of an Argyres-Douglas fixed point theory from pure SU(3) gauge theory, with the maximal BPS spectrum</a>
+        <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3_after_wc">An Argyres-Douglas fixed point theory from pure \(\mathrm{SU}(3)\) gauge theory, with the maximal BPS spectrum</a>
         <br/><img src="static/AD_from_pure_SU_3_after_wc.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=pure_SO_6">Pure \(\mathrm{SO}(6)\) gauge theory at the origin of the Coulomb branch</a>
+        <br/><img src="static/pure_SO_6.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=pure_SO_8">Pure \(\mathrm{SO}(8)\) gauge theory at the origin of the Coulomb branch</a>
+        <br/><img src="static/pure_SO_8.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=pure_E_6">Pure \(\mathrm{E}_6\) gauge theory at the origin of the Coulomb branch</a>
+        <br/><img src="static/pure_E_6.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=D_4_AD_from_SO_8_min_BPS">An Argyres-Douglas fixed point theory from pure \(\mathrm{SO}(8)\) gauge theory, with the minimal BPS spectrum</a>
+        <br/><img src="static/D_4_AD_from_SO_8_min_BPS.png" height=200 width=200>
+        <li><a href="{{ url_for('plot') }}?data=D_4_AD_from_SO_8_max_BPS_sym">An Argyres-Douglas fixed point theory from pure \(\mathrm{SO}(8)\) gauge theory, with the maximal and symmetric BPS spectrum</a>
+        <br/><img src="static/D_4_AD_from_SO_8_max_BPS_sym.png" height=200 width=200>
     </ul>
     </ul>
     </ul>

@@ -1,7 +1,7 @@
 import numpy
 import logging
 import sympy
-import pdb
+# import pdb
 
 from cmath import exp, pi, phase
 from sympy import oo
@@ -128,6 +128,15 @@ class BranchPoint:
         else:
             self.set_from_json_data(json_data, ffr_ramification_points,)
 
+        self.data_attributes = [
+            'z', 'label', 'monodromy', 'groups', 'positive_roots',
+            'order', 'ffr_ramification_points'
+        ]
+
+    def set_z_rotation(self, z_rotation):
+        if self.z != oo:
+            self.z /= complex(z_rotation)
+
     def get_json_data(self):
         json_data = {
             'z': ctor2(self.z),
@@ -179,9 +188,15 @@ class IrregularSingularity:
             self.label = label
             self.monodromy = None
         else:
-            self.z = json_data['z']
+            self.z = r2toc(json_data['z'])
             self.label = json_data['label']
             self.monodromy = numpy.array(json_data['monodromy'])
+
+        self.data_attributes = ['z', 'label', 'monodromy']
+
+    def set_z_rotation(self, z_rotation):
+        if self.z != oo:
+            self.z /= complex(z_rotation)
 
     def get_json_data(self):
         json_data = {
@@ -265,11 +280,26 @@ class SWDataWithTrivialization(SWDataBase):
         self.base_point = None 
         self.reference_ffr_xs = None
         self.reference_xs = None
+        # self.branch_cut_angle = None
 
         if json_data is None:
             self.set_trivialization()
         else:
             self.set_trivialization_from_json_data(json_data)
+
+        self.data_attributes += [
+            'branch_points', 'irregular_singularities', 'min_distance',
+            'min_horizontal_distance', 'base_point', 'reference_ffr_xs',
+            'reference_xs'
+        ]
+
+    def set_z_rotation(self, z_rotation):
+        super(SWDataWithTrivialization, self).set_z_rotation(z_rotation)
+
+        for p in (self.branch_points + self.irregular_singularities):
+            p.set_z_rotation(z_rotation)
+
+        self.base_point /= complex(z_rotation)
 
     def get_json_data(self):
         json_data = super(SWDataWithTrivialization, self).get_json_data()
@@ -322,12 +352,8 @@ class SWDataWithTrivialization(SWDataBase):
             self.accuracy,
         )
 
-        logger.info(
-                'Ramification points arrange into {} branch points '
-                'at positions {}'.format(
-                    len(bpzs), bpzs
-                )
-            )
+        logger.info('Ramification points arrange into {} branch points '
+                    'at positions {}'.format(len(bpzs), bpzs))
 
         # z-coords of irregular punctures.
         ipzs = n_remove_duplicate(
@@ -410,10 +436,11 @@ class SWDataWithTrivialization(SWDataBase):
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
 
-        # Analyze ramification points
-        for bp in self.branch_points:
-            for rp in bp.ffr_ramification_points:
-                self.analyze_ffr_ramification_point(rp)
+# XXX: Moved to SWDataBase.
+#        # Analyze ramification points
+#        for bp in self.branch_points:
+#            for rp in bp.ffr_ramification_points:
+#                self.analyze_ffr_ramification_point(rp)
 
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
@@ -796,8 +823,7 @@ class SWDataWithTrivialization(SWDataBase):
 
         n_sheets = len(initial_sheets)
 
-        logger.debug('Sorted sheets around locus {}'
-                          .format(sorted_sheets))
+        logger.debug('Sorted sheets around locus {}'.format(sorted_sheets))
         
         # NOTE: in the following basis vectors, i = 0 , ... , n-1
         def basis_e(i):
@@ -847,9 +873,9 @@ class SWDataWithTrivialization(SWDataBase):
             if is_single is True:
                 clusters.append([i])
 
-        #bp.enum_sh = enum_sh
+        # bp.enum_sh = enum_sh
         bp.groups = [c for c in clusters if len(c) > 1]
-        #bp.singles = [c[0] for c in clusters if len(c) == 1]
+        # bp.singles = [c[0] for c in clusters if len(c) == 1]
 
         bp.positive_roots = get_positive_roots_of_branch_point(
             bp, self.g_data, self.logger_name,
@@ -867,6 +893,29 @@ class SWDataWithTrivialization(SWDataBase):
             if abs(rp.z - bp.z) < self.accuracy
         ]
 
+        # XXX: Temporary analysis for D-type AD theories.
+        for rp in bp.ffr_ramification_points:
+            if (
+                rp.ramification_type == 'type_AD' or
+                rp.ramification_type == 'type_III'
+            ):
+                logger.warning('Temporary fix-up of the monodromy '
+                               'for a D-type AD theory.')
+                # Find two diagonal elements and permute them.
+                indices = []
+                for i, row_i in enumerate(bp.monodromy):
+                    if row_i[i] == 1:
+                        indices.append(i)
+                if len(indices) == 2:
+                    i, j = indices
+                    bp.monodromy[i][i] = 0
+                    bp.monodromy[j][j] = 0
+                    bp.monodromy[i][j] = 1
+                    bp.monodromy[j][i] = 1
+                else:
+                    RuntimeError('Unknown form of the monodromy at {}.'
+                                 .format(bp.label))
+
     def analyze_irregular_singularity(self, irr_sing):
         logger = logging.getLogger(self.logger_name)
         logger.info(
@@ -876,105 +925,8 @@ class SWDataWithTrivialization(SWDataBase):
         path_around_z = get_path_around(irr_sing.z, self.base_point, self)
         irr_sing.monodromy = self.get_sheet_monodromy(path_around_z)
     
-    def analyze_ffr_ramification_point(self, rp):
-        logger = logging.getLogger(self.logger_name)
-        logger.info(
-            "Analyzing a ramification point at z = {}, x={}."
-            .format(rp.z, rp.x)
-        )
-        rp_type = None
-        num_eq = self.ffr_curve.num_eq
-
-        # use Dz = z - rp.z & Dx = x - rp.x
-        Dz, Dx = sympy.symbols('Dz, Dx')
-        local_curve = (
-            num_eq.subs(x, rp.x + Dx).subs(z, rp.z + Dz)
-            .series(Dx, 0, rp.i + 1).removeO()
-            .series(Dz, 0, 2).removeO()
-        )
-        logger.debug('\nlocal curve = {}\n'.format(local_curve))
-            
-        # Classify which type of ramification point
-        # type_I: ADE type with x_0 != 0
-        #   #   i.e. F ~ a z + b x^k
-        # type_II: D-type with x_0 = 0, but nonedgenerate
-        #   i.e. F ~ a z + b x^2r   with r=rank(g)
-        # type_III: D-type with x_0 = 0, degenerate
-        #   i.e. F ~ x^2 (a z + b x^(2r-2))
-        # type IV: Other case.
-        # More cases may be added in the future, in particular 
-        # for degenerations of E_6 or E_7 curves.
-
-        zero_threshold = self.accuracy * 100
-        if (self.g_data.type == 'A' or 
-            ((self.g_data.type == 'D' or self.g_data.type == 'E') and 
-                abs(rp.x) > zero_threshold)):
-            rp_type = 'type_I'
-        elif (
-            self.g_data.type == 'D' and abs(rp.x) < zero_threshold
-            and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) > zero_threshold
-        ):
-            rp_type = 'type_II'
-        elif (
-            self.g_data.type == 'D' and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
-        ):
-            rp_type = 'type_III'
-        elif (
-            self.g_data.type == 'E' and self.g_data.rank == 6
-            and abs(local_curve.n().subs(Dx, 0).coeff(Dz)) < zero_threshold
-        ):
-            rp_type = 'type_IV'
-        else:
-            rp_type = 'type_V'
-            logger.info(
-                'Lie algebra {}'.format(self.g_data.type, self.g_data.rank)
-            )
-            logger.info('ramification index {}'.format(rp.i))
-            logger.info(
-                'local curve {}'
-                .format(abs(local_curve.n().subs(Dx, 0).coeff(Dz)))
-            )
-            raise Exception(
-                'Cannot handle this type of ramification point'.format(
-                    local_curve
-                )
-            )
-
-        if rp_type == 'type_I' or rp_type == 'type_II':
-            a = local_curve.n().subs(Dx, 0).coeff(Dz)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-
-        elif rp_type == 'type_III':
-            a = local_curve.n().coeff(Dz).coeff(Dx, 2)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-
-        elif rp_type == 'type_IV':
-            a = local_curve.n().coeff(Dz).coeff(Dx, 15)
-            b = local_curve.n().subs(Dz, 0).coeff(Dx ** rp.i)
-        
-        logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
-            [rp.z, rp.x], rp_type)
-        )
-        rp.ramification_type = rp_type
-
-        num_v = self.diff.num_v
-        # Dx = Dx(Dz)
-        Dx_Dz = (-1.0 * (a / b) * Dz) ** sympy.Rational(1, rp.i)
-        local_diff = (
-            num_v.subs(x, rp.x + Dx_Dz).subs(z, rp.z + Dz)
-            .series(Dz, 0, 1).removeO()
-        )
-        # get the coefficient and the exponent of the leading term
-        (diff_c, diff_e) = local_diff.leadterm(Dz)
-        if diff_e == 0:
-            # remove the constant term from the local_diff
-            local_diff -= local_diff.subs(Dz, 0)
-            (diff_c, diff_e) = local_diff.leadterm(Dz)
-
-        # rp.sw_diff_coeff = complex(-1 * a / b)
-        rp.sw_diff_coeff = complex(diff_c.n())
+# XXX: Moved to SWDataBase
+#    def analyze_ffr_ramification_point(self, rp):
 
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):
@@ -1400,5 +1352,3 @@ def keep_linearly_independent_vectors(vector_list):
             independent_list.append(v)
 
     return independent_list
-
-

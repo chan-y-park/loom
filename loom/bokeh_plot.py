@@ -1,5 +1,6 @@
 import numpy
 import bokeh
+# import pdb
 
 from cmath import phase, pi
 from sympy import oo
@@ -7,10 +8,12 @@ from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
 from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
                           ResetTool, PreviewSaveTool)
-from bokeh.models.widgets import Button, Toggle
+from bokeh.models.widgets import Button
+# from bokeh.models.widgets import Toggle
 from bokeh.plotting import figure
 
 from misc import get_splits_with_overlap
+
 
 def get_spectral_network_bokeh_plot(
     spectral_network_data, plot_range=None,
@@ -19,19 +22,21 @@ def get_spectral_network_bokeh_plot(
 ):
     spectral_networks = spectral_network_data.spectral_networks
     sw_data = spectral_network_data.sw_data
+    z_rotation = complex(sw_data.z_plane_rotation)
+
     plot_width = 800
     plot_height = plot_width
 
-    x_min = min([min([min([z.real for z in s_wall.z]) 
+    x_min = min([min([min([z.real for z in s_wall.z])
                       for s_wall in sn.s_walls])
                  for sn in spectral_networks])
-    x_max = max([max([max([z.real for z in s_wall.z]) 
+    x_max = max([max([max([z.real for z in s_wall.z])
                       for s_wall in sn.s_walls])
                  for sn in spectral_networks])
-    y_min = min([min([min([z.imag for z in s_wall.z]) 
+    y_min = min([min([min([z.imag for z in s_wall.z])
                       for s_wall in sn.s_walls])
                  for sn in spectral_networks])
-    y_max = max([max([max([z.imag for z in s_wall.z]) 
+    y_max = max([max([max([z.imag for z in s_wall.z])
                       for s_wall in sn.s_walls])
                  for sn in spectral_networks])
     if plot_range is None:
@@ -53,11 +58,11 @@ def get_spectral_network_bokeh_plot(
     # Prepare a bokeh Figure.
     plot_idx_ds = ColumnDataSource({'i': ['0']})
     bokeh_figure = figure(
-        tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(), 
+        tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(),
                PreviewSaveTool(), hover],
         plot_width=plot_width,
         plot_height=plot_height,
-        title=None, 
+        title=None,
         x_range=plot_x_range,
         y_range=plot_y_range,
     )
@@ -79,7 +84,6 @@ def get_spectral_network_bokeh_plot(
 
     # Data source for branch points & cuts.
     bpds = ColumnDataSource({'x': [], 'y': [], 'label': [], 'root': []})
-    bcds = ColumnDataSource({'xs': [], 'ys': []})
     for bp in sw_data.branch_points:
         if bp.z == oo:
             continue
@@ -90,8 +94,12 @@ def get_spectral_network_bokeh_plot(
         for root in bp.positive_roots:
             root_label += str(root.tolist()) + ', '
         bpds.data['root'].append(root_label[:-2])
-        bcds.data['xs'].append([bp.z.real, bp.z.real])
-        bcds.data['ys'].append([bp.z.imag, y_max])
+
+    bcds = ColumnDataSource({'xs': [], 'ys': []})
+    for bl in sw_data.branch_points + sw_data.irregular_singularities:
+        y_r = (2j * y_max) * z_rotation
+        bcds.data['xs'].append([bl.z.real, bl.z.real + y_r.real])
+        bcds.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
 
     bokeh_figure.x(
         'x', 'y', size=10, color="#e6550D", line_width=3, source=bpds,
@@ -120,12 +128,20 @@ def get_spectral_network_bokeh_plot(
         'y': [],
     })
 
+    # Data source for phases
+    pds = ColumnDataSource({
+        'phase': [],
+    })
+
     # Data source containing all the spectral networks
     snds = ColumnDataSource({
         'spectral_networks': [],
     })
 
     for sn in spectral_networks:
+        sn_phase = '{:.3f}'.format(sn.phase / pi)
+        pds.data['phase'].append(sn_phase)
+
         sn_data = {}
         sn_data['xs'] = []
         sn_data['ys'] = []
@@ -145,8 +161,8 @@ def get_spectral_network_bokeh_plot(
                 a_i = int(numpy.floor(len(z_r) / 2.0))
                 a_angle = pi
                 a_angle = (
-                    phase((z_r[a_i] - z_r[a_i - 1]) + 
-                          1j*(z_i[a_i] - z_i[a_i - 1]))
+                    phase((z_r[a_i] - z_r[a_i - 1]) +
+                          1j * (z_i[a_i] - z_i[a_i - 1]))
                     - (pi / 2.0)
                 )
                 sn_data['xs'].append(z_r)
@@ -157,19 +173,29 @@ def get_spectral_network_bokeh_plot(
                 sn_data['arrow_x'].append(z_r[a_i])
                 sn_data['arrow_y'].append(z_i[a_i])
                 sn_data['arrow_angle'].append(a_angle)
-            for root in s_wall.local_roots:
-                sn_data['label'].append(str(s_wall.label))
-                sn_data['root'].append(str(root.tolist()))
-                sn_data['color'].append(sw_data.g_data.get_root_color(root))
+            # XXX: temporary routine to label multiple roots.
+            if s_wall.multiple_local_roots is not None:
+                for roots in s_wall.multiple_local_roots:
+                    sn_data['label'].append(str(s_wall.label))
+                    root_label = ''
+                    for root in roots:
+                        root_label += str(root.tolist()) + ', '
+                    sn_data['root'].append(root_label[:-2])
+                    sn_data['color'].append(
+                        sw_data.g_data.get_root_color(roots[0])
+                    )
+            else:
+                for root in s_wall.local_roots:
+                    sn_data['label'].append(str(s_wall.label))
+                    sn_data['root'].append(str(root.tolist()))
+                    sn_data['color'].append(sw_data.g_data
+                                            .get_root_color(root))
 
         snds.data['spectral_networks'].append(sn_data)
 
     # Initialization of the current plot data source.
     for key in cds.data.keys():
         cds.data[key] = snds.data['spectral_networks'][0][key]
-
-    #dpds.data['x'] = numpy.concatenate([x for x in cds.data['xs']]) 
-    #dpds.data['y'] = numpy.concatenate([y for y in cds.data['ys']]) 
 
     bokeh_figure.scatter(x='x', y='y', alpha=0.5, source=dpds,)
 
@@ -182,15 +208,12 @@ def get_spectral_network_bokeh_plot(
         size=8, source=cds,
     )
 
-    # Callbacks after resizing the plot.
-    #bokeh_figure.x_range.callback = bokeh_figure.y_range.callback
-
     # 'Redraw arrows' button.
     redraw_arrows_button = Button(
         label='Redraw arrows',
         callback=CustomJS(
             args={'cds': cds, 'x_range': bokeh_figure.x_range,
-                  'y_range': bokeh_figure.y_range,},
+                  'y_range': bokeh_figure.y_range},
             code='redraw_arrows(cds, x_range, y_range);',
         ),
     )
@@ -200,7 +223,7 @@ def get_spectral_network_bokeh_plot(
         label='Show data points',
     )
     show_data_points_button.callback = CustomJS(
-        args={'cds': cds, 'dpds': dpds, 'hover': hover,},
+        args={'cds': cds, 'dpds': dpds, 'hover': hover},
         code="show_data_points(cds, dpds, hover);",
     )
 
@@ -209,24 +232,34 @@ def get_spectral_network_bokeh_plot(
         label='Hide data points',
     )
     hide_data_points_button.callback = CustomJS(
-        args={'cds': cds, 'dpds': dpds, 'hover': hover,},
+        args={'cds': cds, 'dpds': dpds, 'hover': hover},
         code="hide_data_points(cds, dpds, hover);",
     )
     bokeh_obj = {
         'redraw_arrows_button': redraw_arrows_button,
         'show_data_points_button': show_data_points_button,
         'hide_data_points_button': hide_data_points_button,
-    } 
+    }
 
     if len(spectral_networks) > 1:
         # Add a slider.
-        slider = Slider(start=0, end=len(spectral_networks)-1, 
-                        value=0, step=1, title="plot index",)
-        slider.callback = CustomJS(
-            args={'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds,
-                  'dpds': dpds, 'hover': hover,}, 
-            code="slider(cb_obj, cds, snds, plot_idx_ds, dpds, hover);",
+        slider = Slider(start=0, end=len(spectral_networks) - 1,
+                        value=0, step=1, title="plot index")
+
+        custom_js_args = {
+            'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds,
+            'dpds': dpds, 'pds': pds, 'hover': hover
+        }
+        custom_js_code = ''
+        if notebook is True:
+            with open('static/bokeh_callbacks.js', 'r') as fp:
+                custom_js_code += fp.read()
+                custom_js_code += '\n'
+        custom_js_code += (
+            'slider(cb_obj, cds, snds, plot_idx_ds, dpds, pds, hover);'
         )
+
+        slider.callback = CustomJS(args=custom_js_args, code=custom_js_code)
         plot = vform(bokeh_figure, slider, width=plot_width,)
     else:
         plot = bokeh_figure

@@ -4,8 +4,9 @@ import logging
 
 from spectral_network import SpectralNetwork
 
+
 def child_sigint_handler(signum, frame):
-    print("SIGINT catched by a child of loom.parallel.")
+    # print("SIGINT catched by a child of loom.parallel.")
     raise KeyboardInterrupt("SIGINT catched by a child of loom.parallel.")
 
 
@@ -20,7 +21,7 @@ def init_process():
     Take care of a keyboard interrupt and a SIGTERM.
     """
     signal.signal(signal.SIGINT, child_sigint_handler)
-    signal.signal(signal.SIGTERM, child_sigterm_handler)
+    # signal.signal(signal.SIGTERM, child_sigterm_handler)
 
 
 def a_child_process(
@@ -37,8 +38,7 @@ def a_child_process(
     shared_n_started_spectral_networks.value += 1
     job_id = shared_n_started_spectral_networks.value
     logger.info('Start generating spectral network #{}/{}: theta = {}.'
-                 .format(job_id, theta_n, phase)
-    )
+                .format(job_id, theta_n, phase))
    
     try:
         spectral_network = SpectralNetwork(
@@ -58,8 +58,7 @@ def a_child_process(
 
     shared_n_finished_spectral_networks.value += 1
     logger.info('Finished generating spectral network #{}/{}.'
-                 .format(shared_n_finished_spectral_networks.value, theta_n)
-    )
+                .format(shared_n_finished_spectral_networks.value, theta_n))
 
     return spectral_network
 
@@ -74,7 +73,7 @@ def parallel_get_spectral_network(
     spectral_network_list = []
 
     theta_i, theta_f, theta_n = config['phase']
-    phases = [(float(theta_i) + i * float(theta_f - theta_i) / (theta_n-1))
+    phases = [(float(theta_i) + i * float(theta_f - theta_i) / (theta_n - 1))
               for i in range(theta_n)]
 
     manager = multiprocessing.Manager()
@@ -91,18 +90,18 @@ def parallel_get_spectral_network(
             n_processes = n_cpu - (-n_processes)
         else:
             logger.warning('The number of CPUs is smaller than {}.'
-                            .format(-config['n_processes']))
+                           .format(-config['n_processes']))
             logger.warning('Set n_processes to 1.')
             n_processes = 1
     elif (n_cpu < n_processes):
             logger.warning('The number of CPUs is smaller than {}.'
-                            .format(config['n_processes']))
+                           .format(config['n_processes']))
             logger.warning('Set n_processes to {}.'.format(n_cpu))
             n_processes = n_cpu
 
     # Use n_processes CPUs.
     multiprocessing.freeze_support()
-    pool =  multiprocessing.Pool(n_processes, init_process)
+    pool = multiprocessing.Pool(n_processes, init_process)
     logger.info('Number of processes in the pool: {}'.format(n_processes))
 
     try:

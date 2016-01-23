@@ -1,22 +1,20 @@
 import os
+import subprocess
 import signal
 import multiprocessing
 import threading
 import time
-import pdb
+# import pdb
 import flask
 import sys
 import logging
 import uuid
 import json
 import zipfile
-import numpy
-import bokeh
 
 from cStringIO import StringIO
 from io import BytesIO
 from Queue import Empty as QueueEmpty
-#sys.stdout = sys.stderr
 
 from api import (
     get_loom_dir,
@@ -29,48 +27,45 @@ from api import (
 )
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
+from plotting import get_legend
+from misc import get_data_size_of
+from cmath import pi
 
 # Flask configuration
 DEBUG = True
 SECRET_KEY = 'web_loom_key'
 PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
-LOGGING_FILE_PATH = os.path.join(
-    get_loom_dir(),
-    ('logs/web_loom_{}-{:02}-{:02} {:02}:{:02}:{:02}.log'
-     .format(*time.localtime(time.time())[:6])),
-)
+STAT_LOGGER_NAME = 'stat_of_' + WEB_APP_NAME
 DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 60
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
-LOOM_SERVER_URL = 'http://het-math2.physics.rutgers.edu/loom'
-
 
 # Array of config options. 
 # Entries that will be placed in the same row
 # are in the same row of this array.
 config_options = [
     ['description'],
-    #['root_system', 'representation'],
     ['casimir_differentials'],
     ['differential_parameters'],
     ['regular_punctures'],
     ['irregular_punctures'],
-    ['mt_params'], 
-    ['ramification_point_finding_method'],
     ['plot_range'],
     ['num_of_steps'],
     ['num_of_iterations'],
-    ['size_of_small_step'],
-    ['size_of_large_step'],
-    ['size_of_bp_neighborhood'],
-    ['size_of_puncture_cutoff'],
-    #['size_of_ramification_pt_cutoff'],
-    ['accuracy'],
     ['mass_limit'],
     ['phase'],
 ]
 
+advanced_config_options = [
+    ['mt_params'], 
+    ['ramification_point_finding_method'],
+    ['size_of_small_step'],
+    ['size_of_large_step'],
+    ['size_of_bp_neighborhood'],
+    ['size_of_puncture_cutoff'],
+    ['accuracy'],
+]
 
 # TODO: kill an orphaned process gracefully.
 class LoomDB(object):
@@ -99,11 +94,9 @@ class LoomDB(object):
 
         if signum == signal.SIGINT:
             msg = 'LoomDB caught SIGINT; raises KeyboardInterrrupt.'
-            #e = KeyboardInterrupt(msg)
             e = KeyboardInterrupt
         elif signum == signal.SIGTERM:
             msg = 'LoomDB caught SIGTERM; raises SystemExit.'
-            #e = SystemExit(msg)
             e = SystemExit
 
         logger.warning(msg)
@@ -112,12 +105,15 @@ class LoomDB(object):
 
     def db_manager(self):
         """
-        A child process that will manage the DB
+        A thread that will manage the DB
         and clean up data of previous clients.
         """
         logger_name = get_logger_name()
         logger = logging.getLogger(logger_name)
 
+        # Wait for DB_CLEANUP_CYCLE_SECS and do clean-ups.
+        # When self.db_manager_stop event is set,
+        # break the while-loop and finish all the processes.
         while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
             to_delete = []
             try:
@@ -128,7 +124,6 @@ class LoomDB(object):
                         self.is_alive[process_uuid] = False
                     else:
                         to_delete.append(process_uuid)
-                        #self.finish_loom_process(process_uuid)
 
                         try:
                             # Flush the result queue.
@@ -195,17 +190,14 @@ class LoomDB(object):
             logger_name=logger_name,
             logging_level=logging_level,
             logging_queue=logging_queue,
-            use_rotating_file_handler=True,
         )
 
         result_queue = multiprocessing.Queue()
         self.result_queues[process_uuid] = result_queue
 
         loom_process = multiprocessing.Process(
-            target = generate_spectral_network,
-            args=(
-                loom_config,
-            ),
+            target=generate_spectral_network,
+            args=(loom_config,),
             kwargs=dict(
                 n_processes=n_processes,
                 result_queue=result_queue,
@@ -305,6 +297,18 @@ class LoomDB(object):
             # Result queue has the data returned from the loom_process.
             rv = result_queue.get()
             logger.info('Finished generating spectral network data.')
+
+            # Start a thread to record a stat log.
+            user_ip = flask.request.remote_addr
+            # XXX: Use the following behind a Proxy server.
+            # user_ip = flask.request.environ.get('HTTP_X_REAL_IP',
+            #                                     request.remote_addr)
+            stat_thread = threading.Thread(
+                target=record_stat,
+                args=(rv, STAT_LOGGER_NAME, user_ip, process_uuid),
+            )
+            stat_thread.start()
+
             self.finish_loom_process(process_uuid)
             return rv 
 
@@ -366,34 +370,66 @@ class WebLoomApplication(flask.Flask):
     """
     def __init__(self, config_file, logging_level):
         super(WebLoomApplication, self).__init__(WEB_APP_NAME)
+        # Set a logger for loom that has a rotating file handler.
         set_logging(
             logger_name=WEB_APP_NAME,
             logging_level=logging_level,
-            logging_file_name=LOGGING_FILE_PATH,
+            logging_file_name=get_logging_file_path(WEB_APP_NAME),
+            use_rotating_file_handler=True,
+        )
+        # Set a logger for recording the stat
+        # with a non-rotating file handler.
+        set_logging(
+            logger_name=STAT_LOGGER_NAME,
+            logging_file_name=get_logging_file_path(STAT_LOGGER_NAME),
         )
         self.loom_db = LoomDB()
+
 
 ###
 # View functions
 ###
+
+
 def index():
-    return flask.render_template('index.html')
+    # Make a list of contributors from git logs.
+    ps = subprocess.Popen(
+        ['git', 'log', '--date-order', '--reverse', '--format="%aN"'], 
+        stdout=subprocess.PIPE,
+    )
+    loom_contributors_str = subprocess.check_output(
+        ['awk', '!x[$0]++'],
+        stdin=ps.stdout
+    ).strip().split("\n")
+    ps.wait()
+
+    loom_contributors = []
+    for name_str in loom_contributors_str:
+        name = name_str.strip('"')
+        if name == 'plonghi':
+            loom_contributors.append('Pietro Longhi')
+        elif name == 'chan':
+            if 'Chan Y. Park' not in loom_contributors:
+                loom_contributors.append('Chan Y. Park')
+        else:
+            loom_contributors.append(name)
+
+    return flask.render_template(
+        'index.html',
+        loom_contributors=loom_contributors,     
+    )
+
 
 def config(n_processes=None):
     # XXX: n_processes is a string.
     loom_config = None
     event_source_url = None
     text_area_content = '' 
-#    n_processes = None 
     process_uuid = None
 
     if flask.request.method == 'GET':
         # Load the default configuration.
         loom_config = get_loom_config()
-#        try:
-#            n_processes = flask.request.args['n']
-#        except KeyError:
-#            pass
 
     elif flask.request.method == 'POST':
         try:
@@ -415,10 +451,11 @@ def config(n_processes=None):
             process_uuid = str(uuid.uuid4())
             logger_name = get_logger_name(process_uuid)
             loom_config = get_loom_config(flask.request.form, logger_name) 
-            #app = flask.current_app._get_current_object()
+
             app = flask.current_app
             app.loom_db.start_loom_process(
-                process_uuid, logging.INFO, loom_config, eval(n_processes),
+                process_uuid, logging.INFO, loom_config,
+                n_processes=eval(n_processes),
             )
             event_source_url = flask.url_for(
                 'logging_stream', process_uuid=process_uuid,
@@ -430,6 +467,7 @@ def config(n_processes=None):
     return flask.render_template(
         'config.html',
         config_options=config_options,
+        advanced_config_options=advanced_config_options,
         loom_config=loom_config,
         n_processes=n_processes,
         process_uuid=process_uuid,
@@ -445,6 +483,7 @@ def logging_stream(process_uuid):
             app.loom_db.yield_log_message(process_uuid, logging.INFO),
             mimetype='text/event-stream',
         )
+
 
 def save_config():
     loom_config = get_loom_config(flask.request.form)
@@ -496,7 +535,8 @@ def download_data(process_uuid):
     
     data['version'] = get_current_branch_version()
 
-    fp = StringIO()
+    # fp = StringIO()
+    fp = BytesIO()
     loom_config.parser.write(fp)
     fp.seek(0)
     data['config.ini'] = fp.read()
@@ -555,6 +595,13 @@ def download_plot(process_uuid):
     )
 
 
+def download_E6_E7_data():
+    return flask.send_file(
+        'data/E6_E7_data.tar.gz',
+        as_attachment=True,
+    )
+
+
 def keep_alive(process_uuid):
     """
     Receive heartbeats from clients.
@@ -563,7 +610,7 @@ def keep_alive(process_uuid):
     app = flask.current_app
     try:
         is_alive = app.loom_db.is_alive
-        if is_alive[process_uuid] == False:
+        if is_alive[process_uuid] is False:
             is_alive[process_uuid] = True
         logger.debug(
             'is_alive[{}] = {}'
@@ -576,10 +623,11 @@ def keep_alive(process_uuid):
 
 def admin():
     # TODO: password-protect this page.
-    app = flask.current_app
-    loom_db = app.loom_db
-    pdb.set_trace()
+    # app = flask.current_app
+    # loom_db = app.loom_db
+    # pdb.set_trace()
     return ('', 204)
+
 
 def shutdown():
     app = flask.current_app
@@ -595,6 +643,7 @@ def shutdown():
 ###
 # Entry point
 ###
+
 
 def get_application(config_file, logging_level):
     application = WebLoomApplication(config_file, logging_level)
@@ -632,6 +681,10 @@ def get_application(config_file, logging_level):
         methods=['GET'],
     )
     application.add_url_rule(
+        '/E6_E7_data', 'download_E6_E7_data', download_E6_E7_data,
+        methods=['GET'],
+    )
+    application.add_url_rule(
         '/admin', 'admin', admin,
         methods=['GET'],
     )
@@ -640,6 +693,7 @@ def get_application(config_file, logging_level):
         methods=['GET'],
     )
     return application
+
 
 ###
 # Misc. web UIs
@@ -691,17 +745,30 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
                          download=False,):
 
     download_data_url = download_plot_url = None
+    sw_data = spectral_network_data.sw_data
 
+    # Rotate the z-plane into the location defined by the curve.
+    z_rotation = complex(sw_data.z_plane_rotation)
+    spectral_network_data.set_z_rotation(1/z_rotation)
     # Make a Bokeh plot
-    script, div = get_spectral_network_bokeh_plot(
+    bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
     )
-    legend = get_plot_legend(spectral_network_data.sw_data)
+    # Set the z-plane rotation back.
+    # TODO: Decide whether to save a rotated data or a raw data.
+    spectral_network_data.set_z_rotation(z_rotation)
 
-    bokeh_custom_js_url = flask.url_for(
-        'static', filename='bokeh_callbacks.js', key=int(time.time()),
+    initial_phase = '{:.3f}'.format(
+        spectral_network_data.spectral_networks[0].phase / pi
     )
+
+    legend = get_legend(
+        g_data=sw_data.g_data,
+        branch_points=sw_data.branch_points,
+        irregular_singularities=sw_data.irregular_singularities,
+    )
+
     if download is False:
         download_data_url = flask.url_for(
             'download_data', process_uuid=process_uuid,
@@ -709,70 +776,53 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         download_plot_url = flask.url_for(
             'download_plot', process_uuid=process_uuid,
         )
-    else:
-        bokeh_custom_js_url = LOOM_SERVER_URL + bokeh_custom_js_url
+
+    with open('static/bokeh_callbacks.js', 'r') as fp:
+        bokeh_custom_script = fp.read()
 
     return flask.render_template(
         'plot.html',
         process_uuid=process_uuid,
-        script=script,
+        bokeh_plot_script=bokeh_plot_script,
         div=div,
         plot_legend=legend,
-        bokeh_custom_js_url=bokeh_custom_js_url,
+        bokeh_custom_script=bokeh_custom_script,
         download_data_url=download_data_url,
         download_plot_url=download_plot_url,
         loom_config=loom_config,
         config_options=config_options,
+        advanced_config_options=advanced_config_options,
+        initial_phase=initial_phase,
     )
 
-def get_plot_legend(sw_data):
-    legend = ''
-    g_data = sw_data.g_data
-    roots = g_data.roots
-    weights = g_data.weights
-    weight_pairs=[
-        [str('(mu_'+str(p[0])+', mu_'+str(p[1])+')') 
-         for p in g_data.ordered_weight_pairs(rt)]
-        for rt in roots
-    ]
 
-    legend += ('\t--- The Root System ---\n')
-    for i in range(len(roots)):
-        legend += (
-            'alpha_' + str(i) + ' : {}\n'.format(list(roots[i])) +
-            'ordered weight pairs : {}\n'.format(weight_pairs[i])
-        )
-
-    legend += ('\t--- The Weight System ---\n')
-    for i in range(len(weights)):
-        legend += (
-            'nu_' + str(i) + ' : {}\n'.format(list(weights[i]))
-        )
-
-    legend += ('\t--- The Branch Points ---\n')
-    for bp in sw_data.branch_points:
-        root_labels = []
-        for pr in bp.positive_roots:
-            for i, r in enumerate(roots):
-                if numpy.array_equal(pr, r):
-                    root_labels.append('alpha_{}'.format(i)) 
-        legend += (
-            '\n{}\n'.format(bp.label) +
-            'position : {}\n'.format(bp.z) +
-            'root type : {}\n'.format(root_labels) +
-            'monodromy matrix : \n{}\n'.format(bp.monodromy)
-        )
-
-    legend += ('\t--- The Irregular Singularities ---\n')
-    for irs in sw_data.irregular_singularities:
-        legend += (
-            '\n{}\n'.format(irs.label) +
-            'position : {}\n'.format(irs.z) + 
-            'monodomry matrix : \n{}\n'.format(irs.monodromy)
-        )
-
-    return legend
+def get_logging_file_path(logger_name):
+    logging_file_path = os.path.join(
+        get_loom_dir(),
+        ('logs/{}_{}-{:02}-{:02} {:02}:{:02}:{:02}.log'
+         .format(logger_name, *time.localtime(time.time())[:6])),
+    )
+    return logging_file_path
 
 
-def get_time_str():
-    return '{}-{}-{} {}:{}:{}'.format(*time.localtime(time.time())[:6])
+def record_stat(rv, stat_logger_name, ip, uuid):
+    config, spectral_network_data = rv
+    # Make a zipped config file and record the stat.
+    config_file_name = '{}.ini'.format(uuid)
+    config_zipfile_path = os.path.join(
+        get_loom_dir(), 'logs', '{}.zip'.format(config_file_name),
+    )
+    config_fp = BytesIO()
+    config.parser.write(config_fp)
+    config_fp.seek(0)
+    with zipfile.ZipFile(config_zipfile_path, 'w') as zfp:
+        zip_info = zipfile.ZipInfo(config_file_name)
+        zip_info.date_time = time.localtime(time.time())[:6]
+        zip_info.compress_type = zipfile.ZIP_DEFLATED
+        zip_info.external_attr = 0777 << 16L
+        zfp.writestr(zip_info, config_fp.read())
+
+    data_size = get_data_size_of(spectral_network_data)
+
+    stat_logger = logging.getLogger(stat_logger_name)
+    stat_logger.info('{}, {}, {}'.format(ip, uuid, data_size))

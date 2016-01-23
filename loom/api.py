@@ -7,8 +7,9 @@ import logging
 import subprocess
 import signal
 import matplotlib
-import pdb
+# import pdb
 
+from logging.handlers import RotatingFileHandler
 from logutils_queue import QueueHandler
 from config import LoomConfig
 from trivialization import SWDataWithTrivialization
@@ -20,12 +21,18 @@ from plotting import NetworkPlot, NetworkPlotTk
 class SpectralNetworkData:
     """
     A container class of information relevant to
-    a set of spectral networks generated from a 
+    a set of spectral networks generated from a
     single Seiberg-Witten data.
     """
     def __init__(self, sw_data, spectral_networks):
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
+        self.data_attributes = ['sw_data', 'spectral_networks']
+
+    def set_z_rotation(self, z_rotation):
+        self.sw_data.set_z_rotation(z_rotation)
+        for sn in self.spectral_networks:
+            sn.set_z_rotation(z_rotation)
 
 
 def get_logging_formatter(level):
@@ -40,8 +47,8 @@ def get_logging_formatter(level):
 
 def set_logging(
     logger_name='loom',
-    logging_level=logging.INFO, 
-    logging_queue=None, 
+    logging_level=logging.INFO,
+    logging_queue=None,
     logging_stream=None,
     logging_file_name=None,
     remove_handlers=True,
@@ -58,10 +65,10 @@ def set_logging(
     if logging_file_name is not None:
         # Create a log file.
         if use_rotating_file_handler is True:
-            fh = logging.handlers.RotatingFileHandler(
+            fh = RotatingFileHandler(
                 logging_file_name,
                 mode='w',
-                maxBytes=10*1024*1024,
+                maxBytes=(10 * 1024 * 1024),
                 backupCount=10,
             )
         else:
@@ -124,11 +131,10 @@ def load_spectral_network(
     result_queue=None,
     logger_name='loom',
 ):
-    logger = logging.getLogger(logger_name)
-    
-
     if data_dir is None:
         return (None, None)
+
+    logger = logging.getLogger(logger_name)
     logger.info('Opening data directory "{}"...'.format(data_dir))
 
     config = LoomConfig(logger_name=logger_name)
@@ -177,10 +183,10 @@ def load_spectral_network(
 
 
 def save_spectral_network(
-    config, 
+    config,
     spectral_network_data,
     data_dir=None,
-    make_zipped_file=True,
+    make_zipped_file=False,
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
@@ -203,7 +209,7 @@ def save_spectral_network(
 
     # Save version data.
     version_file_path = os.path.join(data_dir, 'version')
-    version = get_current_branch_version() 
+    version = get_current_branch_version()
     with open(version_file_path, 'w') as fp:
         fp.write(version)
 
@@ -235,7 +241,9 @@ def save_spectral_network(
         # Make a compressed data file.
         file_list = [config_file_path, sw_data_file_path]
         file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
-        zipped_file_path = data_dir + '.zip'
+        # TODO: the following routine for getting zipped_file_name has a bug.
+        zipped_file_name = os.path.basename(os.path.normpath(data_dir))
+        zipped_file_path = data_dir + '{}.zip'.format(zipped_file_name)
         logger.info('Save compressed data to {}.'.format(zipped_file_path))
         with zipfile.ZipFile(zipped_file_path, 'w',
                              zipfile.ZIP_DEFLATED) as fp:
@@ -285,9 +293,9 @@ def generate_spectral_network(
             logger.info('Generate a single spectral network at theta = {}.'
                         .format(phase))
             spectral_network = SpectralNetwork(
-                phase=phase, 
+                phase=phase,
                 logger_name=logger_name,
-            ) 
+            )
 
             spectral_network.grow(config, sw)
 
@@ -297,11 +305,11 @@ def generate_spectral_network(
             logger.info('Generate multiple spectral networks.')
             logger.info('phases = {}.'.format(phase))
             spectral_networks = parallel_get_spectral_network(
-                sw, 
+                sw,
                 config,
                 n_processes,
                 logger_name=logger_name,
-            ) 
+            )
 
         end_time = time.time()
         end_date_time = (
@@ -359,20 +367,28 @@ def make_spectral_network_plot(
             plot_range=plot_range,
         )
 
+    # Rotate the z-plane into the location defined by the curve.
+    z_rotation = complex(sw_data.z_plane_rotation)
+    spectral_network_data.set_z_rotation(1/z_rotation)
+
     for spectral_network in spectral_networks:
         logger.info('Generating the plot of a spectral network '
                     '@ theta = {}...'.format(spectral_network.phase))
         plot_legend = spectral_network_plot.draw(
-            spectral_network, 
+            spectral_network,
             sw_data.branch_points,
-            punctures=(sw_data.regular_punctures + 
+            punctures=(sw_data.regular_punctures +
                        sw_data.irregular_punctures),
             irregular_singularities=sw_data.irregular_singularities,
             g_data=sw_data.g_data,
+            z_rotation=z_rotation,
             **kwargs
         )
-        
         logger.info(plot_legend)
+
+    # Set the z-plane rotation back.
+    # TODO: Decide whether to save a rotated data or a raw data.
+    spectral_network_data.set_z_rotation(z_rotation)
 
     if show_plot is True:
         spectral_network_plot.show()

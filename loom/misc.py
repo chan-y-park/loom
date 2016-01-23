@@ -1,7 +1,11 @@
+import sys
+import types
+import itertools
 import numpy
 import sympy
-#import logging
 import warnings
+# import pdb
+
 from fractions import Fraction
 from sympy import limit, oo
 from cmath import log
@@ -10,6 +14,7 @@ from cmath import log
 class LocalDiffError(Exception):
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
 
@@ -17,6 +22,7 @@ class LocalDiffError(Exception):
 class GetSWallSeedsError(Exception):
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
 
@@ -24,6 +30,7 @@ class GetSWallSeedsError(Exception):
 class NNearestError(Exception):
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
 
@@ -31,6 +38,7 @@ class NNearestError(Exception):
 class UnravelError(Exception):
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
 
@@ -40,7 +48,7 @@ def ctor2(complex_number):
 
 
 def r2toc(real_tuple):
-    return (real_tuple[0]+1j*real_tuple[1])
+    return (real_tuple[0] + (1j * real_tuple[1]))
 
 
 def get_root_multiplicity(coefficients, root_0, accuracy):
@@ -58,8 +66,9 @@ def get_root_multiplicity(coefficients, root_0, accuracy):
 
 
 def cpow(base, exponent_numerator, exponent_denominator=1):
-    return complex(base)**complex(Fraction(exponent_numerator,
-                                           exponent_denominator))
+    return (complex(base) ** 
+            complex(Fraction(exponent_numerator, exponent_denominator)))
+
 
 def gather(a_list, compare):
     """
@@ -156,10 +165,10 @@ def PSL2C(C, z, inverse=False, numerical=False):
     if numerical is True:
         numer = complex(a) * complex(z) + complex(b)
         denom = complex(c) * complex(z) + complex(d)
-        return numer/denom
+        return numer / denom
     else:
         u = sympy.symbols('u')
-        Cu = (a*u+b)/(c*u+d)
+        Cu = (a * u + b) / (c * u + d)
 
         if z == oo:
             Cz = limit(Cu, u, z)
@@ -174,14 +183,14 @@ def put_on_cylinder(z, mt_params=None):
     Put PSL2C-transformed z-coords
     onto the original cylinder.
     """
-    return log(PSL2C(mt_params, z, inverse=True, numerical=True))/1.0j
+    return (log(PSL2C(mt_params, z, inverse=True, numerical=True)) / 1.0j)
 
 
-### chan: TODO: use numba?
+# TODO by chan: use numba?
 def delete_duplicates(l, key=None, accuracy=False):
     seen = set()
     uniq = []
-    if key==None and accuracy==None:
+    if (key is None) and (accuracy is None):
         for x in l:
             if not isinstance(x, (int, bool, str, unicode)):
                 warnings.warn('delete_duplicates(): testing the membership'
@@ -189,10 +198,10 @@ def delete_duplicates(l, key=None, accuracy=False):
             if x not in seen:
                 uniq.append(x)
                 seen.add(x)
-    elif key==None and accuracy != None:
+    elif (key is None) and (accuracy is not None):
         uniq = n_remove_duplicate(l, accuracy)
 
-    elif key!=None and accuracy == None:
+    elif (key is not None) and (accuracy is None):
         for x in l:
             if key(x) not in seen:
                 uniq.append(x)
@@ -243,6 +252,56 @@ def is_root(np_array, g_data):
     return ans
 
 
+def get_descendant_roots(parent_roots, g_data):
+    descendant_roots = []
+
+    while True:
+        root_buffer = []
+        prev_roots = parent_roots + descendant_roots
+        for root_1, root_2 in itertools.combinations(prev_roots, 2):
+            root_sum = root_1 + root_2
+            if is_root(root_sum, g_data):
+                # XXX: Needs review --- why no multiple descendant roots?
+                found = False
+                for prev_root in prev_roots + root_buffer:
+                    if numpy.array_equal(prev_root, root_sum):
+                        found = True
+                        break
+                if found is False:
+                    root_buffer.append(root_sum)
+        if len(root_buffer) == 0:
+            break
+        descendant_roots += root_buffer
+
+    return descendant_roots
+
+
+def sort_roots(roots, g_data):
+    """
+    Sort roots according to g_data.positive_roots,
+    assuming no repetition in roots, and assuming
+    all the roots are either positive or negative.
+    """
+    root_indices = range(len(roots))
+    sorted_roots = []
+    for g_data_root in g_data.positive_roots:
+        found = False
+        for i in root_indices:
+            if (
+                numpy.array_equal(g_data_root, roots[i]) or
+                numpy.array_equal(-g_data_root, roots[i])
+            ):
+                found = True
+                sorted_roots.append(roots[i])
+                break
+        if found is True:
+            root_indices.remove(i)
+        if len(root_indices) == 0:
+            break
+
+    return sorted_roots
+
+
 def get_turning_points(zs):
     """
     Return a list of indices of turning points of a curve on the z-plane,
@@ -291,3 +350,37 @@ def get_splits_with_overlap(splits):
     return new_splits
 
 
+def get_data_size_of(obj, debug=False):
+    if isinstance(obj, types.InstanceType) or 'loom' in str(type(obj)):
+        data_size = 0
+        try:
+            for attr_name in obj.data_attributes:
+                attr = getattr(obj, attr_name)
+                data_size += get_data_size_of(attr)
+        except AttributeError:
+            pass
+
+    elif isinstance(obj, list):
+        data_size = 0
+        for e in obj:
+            data_size += get_data_size_of(e)
+
+    elif isinstance(obj, (int, long, float, complex, str, unicode)):
+        data_size = sys.getsizeof(obj)
+
+    elif isinstance(obj, numpy.ndarray):
+        data_size = obj.nbytes
+
+    elif isinstance(obj, sympy.Basic):
+        data_size = sys.getsizeof(str(obj))
+
+    elif isinstance(
+        obj,
+        (types.BuiltinFunctionType, types.BuiltinMethodType,
+         types.MethodType, types.NoneType)
+    ):
+        data_size = 0
+    else:
+        data_size = 0
+
+    return data_size

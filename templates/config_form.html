@@ -49,8 +49,8 @@
                  value="{{ loom_config['representation']}}">
             </div>
         </div>
-    {% for row in config_options %}
-        {% for option in row %}
+{% for row in config_options %}
+    {% for option in row %}
         <div class="form-group">
             <div class="col-xs-3">
                 <label for="{{ option }}_text" class="control-label">
@@ -63,8 +63,8 @@
                  value="{{ loom_config[option] }}">
             </div>
         </div>
-        {% endfor %}
     {% endfor %}
+{% endfor %}
         <input type="hidden" name="n_processes" 
         {% if n_processes is not none %}
          value="{{ n_processes }}"
@@ -72,17 +72,26 @@
          value="4"
         {% endif %}
         >
-<!--
+        <input type='button' id='hideshow' value='Show/hide advanced options'>
+        <div id="advanced_config_options">
+{% for row in advanced_config_options %}
+    {% for option in row %}
         <div class="form-group">
             <div class="col-xs-3">
-                <label for="phase_text" class="control-label">Phase</label>
+                <label for="{{ option }}_text" class="control-label">
+                    {{ loom_config.get_label(option) }}
+                </label>
             </div>
             <div class="col-xs-5">
                 <input type="text" class="form-control"
-                 name="phase" id="phase_text" value="1.0">
+                 name="{{ option }}" id="{{ option }}_text"
+                 value="{{ loom_config[option] }}">
             </div>
         </div>
--->
+    {% endfor %}
+{% endfor %}
+        </div>
+        <script>jQuery('#advanced_config_options').toggle('show');</script>
     </form>
     <form action="" class="form-horizontal" 
      method="post" enctype="multipart/form-data">

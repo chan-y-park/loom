@@ -4,14 +4,16 @@ A general intersection module.
 Objects and functions to find intersections of real 1-dim curves
 on a real 2-dim plane.
 """
-#import logging
+
+import logging
 import numpy
+# import pdb
+
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq, newton
 from sympy import Interval
 from itertools import combinations
 
-import pdb
 
 class NoIntersection(Exception):
     """
@@ -115,18 +117,18 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=1e-1,
     delta_f12 = lambda x: f1(x) - f2(x)
 
     try:
-        #logging.debug('try brentq.')
+        logging.debug('try brentq.')
         intersection_x = brentq(delta_f12, x_range.start, x_range.end)
         intersection_y = f1(intersection_x)
 
     except ValueError:
 
-        x0 = 0.5*(x_range.start + x_range.end)
+        x0 = 0.5 * (x_range.start + x_range.end)
 
         try:
-            #logging.debug('try newton with x0 = %.8f.', x0)
+            logging.debug('try newton with x0 = %.8f.', x0)
             intersection_x = newton(delta_f12, x0, maxiter=newton_maxiter)
-            #logging.debug('intersection_x = %.8f.', intersection_x)
+            logging.debug('intersection_x = %.8f.', intersection_x)
         except ValueError:
             # newton() searches for x outside the interpolation domain.
             # Declare no intersection.

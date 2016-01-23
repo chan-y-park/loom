@@ -5,38 +5,42 @@
         rel="stylesheet" type="text/css">
     <script src="http://cdn.pydata.org/bokeh/release/bokeh-0.10.0.min.js">
     </script>
-    <script src="{{ bokeh_custom_js_url }}">
+
+    <script>
+    {{ bokeh_custom_script | safe }}
     </script>
-    {{ script|safe }}
+
+    {{ bokeh_plot_script | safe }}
+
 {% endblock %}
 {% block body %}
-<!--<div style="width:900px; margin:20px; padding:10px; 
-            border:1px solid black;">-->
 
 <div class="container">
     <h2>Plot</h2>
     <ul style="width:800px;">
-        <li> Place the mouse cursor onto an arrow, a cross, or a circle 
-             to display the information of the \(\mathcal{S}\)-wall,
-             the branch point, or the puncture, respectively. </li>
-        <li> Weights and roots are shown in an orthonomal basis. </li>
-        <li> Use the mouse wheel to zoom in or out the plot. </li>
+        <li>Place the mouse cursor onto an arrow, a cross, or a circle 
+            to display the information of the \(\mathcal{S}\)-wall,
+            the branch point, or the puncture, respectively.</li>
+        <li>Weights and roots are shown in an orthonomal basis.</li>
+        <li>Use the mouse wheel to zoom in or out the plot, 
+            drag the plot to move it.</li>
     </ul>
     <div class="row">
         <div class="col-md-9" style="width:800px; margin:10px;">
 {{ div['plot']|safe }}
         </div>
         <div class="col-md-2" style="padding-top:80px;">
+            <p id="initial_phase" hidden>{{ initial_phase }}</p>
+            <h3>\(\theta = (\)<span id="phase"></span>\()\pi\)</h3>
 {{ div['redraw_arrows_button']|safe }}
 {{ div['show_data_points_button']|safe }}
 {{ div['hide_data_points_button']|safe }}
         </div>
     </div>
+    <script type="text/javascript">
+        document.getElementById("phase").innerHTML = document.getElementById("initial_phase").innerHTML;
+    </script>
 </div>
-<!--
-        <textarea id="plot_info_textarea" name="plot_info" rows=4 cols=80>
-        </textarea>
--->
 <div class="container">
 {% if download_data_url %}
     <form class="form-inline" id="download_form" method="post">
