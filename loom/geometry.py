@@ -1056,10 +1056,6 @@ class SWDataBase(object):
 
     def analyze_ffr_ramification_points(self):
         logger = logging.getLogger(self.logger_name)
-        logger.info(
-            "Analyzing a ramification point at z = {}, x={}."
-            .format(rp.z, rp.x)
-        )
         rp_type = None
         num_eq = self.ffr_curve.num_eq
 
