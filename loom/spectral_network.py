@@ -4,10 +4,7 @@ import numpy
 import sympy
 import ctypes
 import logging
-<<<<<<< HEAD
-# import pdb
-=======
->>>>>>> results_for_note
+
 import itertools
 
 from cmath import exp

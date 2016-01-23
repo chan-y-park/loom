@@ -1054,7 +1054,7 @@ class SWDataBase(object):
 
             return list(xs)
 
-    def analyze_ffr_ramification_point(self, rp):
+    def analyze_ffr_ramification_points(self):
         logger = logging.getLogger(self.logger_name)
         logger.info(
             "Analyzing a ramification point at z = {}, x={}."
@@ -1065,122 +1065,141 @@ class SWDataBase(object):
 
         # use dz = z - rp.z & dx = x - rp.x
         dz, dx = sympy.symbols('dz, dx')
-        local_curve = (
-            num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
-            .series(dx, 0, rp.i + 1).removeO()
-            .series(dz, 0, 2).removeO()
-        )
-        logger.debug('\nlocal curve = {}\n'.format(local_curve))
+        for rp in self.ffr_ramification_points:
+            logger.info(
+                "Analyzing a ramification point at z = {}, x={}."
+                .format(rp.z, rp.x)
+            )
+            local_curve = (
+                num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
+                .series(dx, 0, rp.i + 1).removeO()
+                .series(dz, 0, 2).removeO()
+            )
+            logger.debug('\nlocal curve = {}\n'.format(local_curve))
+                
+            # Classify which type of ramification point
+            # type_I: ADE type with x_0 != 0
+            #   i.e. F ~ a z + b x^k    (in local coordinates)
+            # type_II: D-type with x_0 = 0, but nonedgenerate
+            #   i.e. F ~ a z + b x^2r   with r=rank(g)
+            # type_III: D-type with x_0 = 0, degenerate
+            #   i.e. F ~ x^2 (a z + b x^(2r-2))
+            # type_IV: E6-type with x_0 = 0, degenerate
+            #   i.e. F ~ x^3 (a z + b x^(...))
+            # type V: Other case.
+            # More cases may be added in the future, in particular 
+            # for degenerations of E_6 or E_7 curves.
             
-        # Classify which type of ramification point
-        # type_I: ADE type with x_0 != 0
-        #   i.e. F ~ a z + b x^k    (in local coordinates)
-        # type_II: D-type with x_0 = 0, but nonedgenerate
-        #   i.e. F ~ a z + b x^2r   with r=rank(g)
-        # type_III: D-type with x_0 = 0, degenerate
-        #   i.e. F ~ x^2 (a z + b x^(2r-2))
-        # type_IV: E6-type with x_0 = 0, degenerate
-        #   i.e. F ~ x^3 (a z + b x^(...))
-        # type V: Other case.
-        # More cases may be added in the future, in particular 
-        # for degenerations of E_6 or E_7 curves.
-        
-        zero_threshold = self.accuracy * 100
-        if (
-            self.g_data.type == 'A' or (
-                (self.g_data.type == 'D' or self.g_data.type == 'E') and 
-                abs(rp.x) > zero_threshold
-            ) or (
-                self.g_data.type == 'D' and rp.i == 2 
-                and abs(rp.x) < zero_threshold
-            ) or (
-                self.g_data.type == 'E' and (rp.i == 2 or rp.i == 3) 
-                and abs(rp.x) < zero_threshold
-            )
-        ):
-            rp_type = 'type_I'
-        elif (
-            self.g_data.type == 'D' and abs(rp.x) < zero_threshold
-            and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(dx, 0).coeff(dz)) > zero_threshold
-        ):
-            rp_type = 'type_II'
-        elif (
-            self.g_data.type == 'D' and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
-        ):
-            rp_type = 'type_III'
-        elif (
-            self.g_data.type == 'E' and self.g_data.rank == 6
-            and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
-        ):
-            rp_type = 'type_IV'
-        else:
-            rp_type = 'type_V'
-            logger.info(
-                'Lie algebra {}'.format(self.g_data.type, self.g_data.rank)
-            )
-            logger.info('ramification index {}'.format(rp.i))
-            logger.info(
-                'local curve {}'
-                .format(abs(local_curve.n().subs(dx, 0).coeff(dz)))
-            )
-            raise Exception(
-                'Cannot handle this type of ramification point'.format(
-                    local_curve
+            # TODO: avoid using self.* repeatedly, define a local variable.
+            zero_threshold = self.accuracy * 100
+            g_data = self.g_data
+            # XXX: Temporary case for D-type AD theories.
+            if (
+                g_data.type == 'D' and rp.i == 4 and abs(rp.x) < zero_threshold
+            ):
+                # No need to grow S-walls from this ramification point,
+                # there will be another ramification point that gives
+                # the same S-wall. This ramification point is a placeholder.
+                rp.ramification_type = 'type_AD'
+                rp.sw_diff_coeff = None 
+                continue
+            elif (
+                g_data.type == 'A' or (
+                    (g_data.type == 'D' or g_data.type == 'E') and 
+                    abs(rp.x) > zero_threshold
+                ) or (
+                    g_data.type == 'D' and rp.i == 2 
+                    and abs(rp.x) < zero_threshold
+                ) or (
+                    g_data.type == 'E' and (rp.i == 2 or rp.i == 3) 
+                    and abs(rp.x) < zero_threshold
                 )
+            ):
+                rp_type = 'type_I'
+            elif (
+                g_data.type == 'D' and abs(rp.x) < zero_threshold
+                and 2 * g_data.rank == rp.i
+                and abs(local_curve.n().subs(dx, 0).coeff(dz)) > zero_threshold
+            ):
+                rp_type = 'type_II'
+            elif (
+                g_data.type == 'D' and 2 * g_data.rank == rp.i
+                and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
+            ):
+                rp_type = 'type_III'
+            elif (
+                g_data.type == 'E' and g_data.rank == 6
+                and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
+            ):
+                rp_type = 'type_IV'
+            else:
+                rp_type = 'type_V'
+                logger.info(
+                    'Lie algebra {}'.format(g_data.type, g_data.rank)
+                )
+                logger.info('ramification index {}'.format(rp.i))
+                logger.info(
+                    'local curve {}'
+                    .format(abs(local_curve.n().subs(dx, 0).coeff(dz)))
+                )
+                raise Exception(
+                    'Cannot handle this type of ramification point'.format(
+                        local_curve
+                    )
+                )
+
+            # dx_dz = dx(dz) is the local form of x (the local 
+            # coiordinate around the ramification point) as a function of z
+            # (also intended as a local coordinate near a ramification point)
+            if rp_type == 'type_I' or rp_type == 'type_II':
+                a = local_curve.n().subs(dx, 0).coeff(dz)
+                b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+                dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
+
+            elif rp_type == 'type_III':
+                a = local_curve.n().coeff(dz).coeff(dx, 2)
+                b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+                dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 2)
+
+            elif rp_type == 'type_IV':
+                a = local_curve.n().coeff(dz).coeff(dx, 15)
+                b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+                dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, 12)
+            
+            logger.debug(
+                '\nThe ramification point at (z,x)={} is of {}'.format(
+                [rp.z, rp.x], rp_type)
             )
 
-        # dx_dz = dx(dz) is the local form of x (the local 
-        # coiordinate around the ramification point) as a function of z
-        # (also intended as a local coordinate near a ramification point)
-        if rp_type == 'type_I' or rp_type == 'type_II':
-            a = local_curve.n().subs(dx, 0).coeff(dz)
-            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
+            rp.ramification_type = rp_type    
+            rp.sw_diff_coeffs_a_b = [complex(a), complex(b)]
 
-        elif rp_type == 'type_III':
-            a = local_curve.n().coeff(dz).coeff(dx, 2)
-            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 2)
+            # Now we compute the SW differential actual coefficient.
+            # The relation of this to a, b should be that 
+            # sw_diff_coeff = (-a / b)^{1/k} * (self.diff.jac)^{+/-1}
+            # for a degree-k ramification point
+            # because F ~ a z + b x^k so 
+            # \lambda ~ x dz ~ (-a/b)^{1/k} (dz/dz') dz'
 
-        elif rp_type == 'type_IV':
-            a = local_curve.n().coeff(dz).coeff(dx, 15)
-            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, 12)
-        
-        logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
-            [rp.z, rp.x], rp_type)
-        )
+            # here num_v is essentially: x * (dz'/dz), where the last factor 
+            # is the jacobian from z-plane rotations or PSL2C transformations.
+            num_v = self.diff.num_v  
 
-        rp.ramification_type = rp_type    
-        rp.sw_diff_coeffs_a_b = [complex(a), complex(b)]
+            # now we plug this into num_v, in a neighborhood of x_0
+            # we have x = x_0 + dx_dz.
+            local_diff = (
+                num_v.subs(x, rp.x + dx_dz).subs(z, rp.z + dz)
+                .series(dz, 0, 1).removeO()
+            )
 
-        # Now we compute the SW differential actual coefficient.
-        # The relation of this to a, b should be that 
-        # sw_diff_coeff = (-a / b)^{1/k} * (self.diff.jac)^{+/-1}
-        # for a degree-k ramification point
-        # because F ~ a z + b x^k so \lambda ~ x dz ~ (-a/b)^{1/k} (dz/dz') dz'
-
-        # here num_v is essentially: x * (dz'/dz), where the last factor 
-        # is the jacobian from z-plane rotations or PSL2C transformations.
-        num_v = self.diff.num_v  
-
-        # now we plug this into num_v, in a neighborhood of x_0
-        # we have x = x_0 + dx_dz.
-        local_diff = (
-            num_v.subs(x, rp.x + dx_dz).subs(z, rp.z + dz)
-            .series(dz, 0, 1).removeO()
-        )
-
-        # get the coefficient and the exponent of the leading term
-        (diff_c, diff_e) = local_diff.leadterm(dz)
-        if diff_e == 0:
-            # remove the constant term from the local_diff
-            local_diff -= local_diff.subs(dz, 0)
+            # get the coefficient and the exponent of the leading term
             (diff_c, diff_e) = local_diff.leadterm(dz)
+            if diff_e == 0:
+                # remove the constant term from the local_diff
+                local_diff -= local_diff.subs(dz, 0)
+                (diff_c, diff_e) = local_diff.leadterm(dz)
 
-        rp.sw_diff_coeff = complex(diff_c.n())
+            rp.sw_diff_coeff = complex(diff_c.n())
 
 
 def get_punctures_from_config(
