@@ -1,48 +1,27 @@
 import logging
 import numpy
 import sympy
-<<<<<<< HEAD
-# import pdb
-=======
->>>>>>> results_for_note
 
 from cmath import exp, pi
 from math import floor
 from scipy import interpolate
 
-<<<<<<< HEAD
-from geometry import find_xs_at_z_0
-from misc import (cpow, remove_duplicate, ctor2, r2toc, delete_duplicates,
-                  get_descendant_roots, sort_roots)
-=======
 from geometry import find_xs_at_z_0, align_sheets_for_e_6_ffr
 from misc import (
     cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root, 
-    n_nearest
+    get_descendant_roots, sort_roots, n_nearest
 )
->>>>>>> results_for_note
 
 x, z = sympy.symbols('x z')
 
 # Number of x's at a fixed z
 NUM_ODE_XS_OVER_Z = 2
 
-<<<<<<< HEAD
-=======
-# FIXME: Use the configuration data 'branch_point_cutoff'
-# within a disc of such radius from any branch point,
-# the intersection of a S-wall originating from there
-# with the corresponding cut, will be ignored.
-# BRANCH_POINT_RADIUS = 0.01 
->>>>>>> results_for_note
-
 # Desired precision on the phase of seeds
 # Warning: setting it too small will bring the seeding point
 # too close to a branch point.
 SEED_PHASE_PRECISION = 0.001
 SEED_PRECISION_MAX_DEPTH = 5
-
-<<<<<<< HEAD
 
 # XXX: Left for the convenience of merging.
 # class Joint:
@@ -119,12 +98,6 @@ SEED_PRECISION_MAX_DEPTH = 5
 #                 return False
 # 
 #         return True
-=======
-# FIXME: Use the configuration data 'puncture_cutoff'
-# cut S-walls if they get too close to punctures
-# PUNCTURE_RADIUS = 0.001
->>>>>>> results_for_note
-
 
 class Joint:
     def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
@@ -1263,7 +1236,3 @@ def e_6_compatible(i, j):
         return True
     else:
         return False
-<<<<<<< HEAD
-=======
-
->>>>>>> results_for_note

@@ -48,12 +48,6 @@ class NetworkPlotBase(object):
             y_min, y_max = axes.get_ylim()
             self.plot_range = [[x_min, x_max], [y_min, y_max]]
 
-<<<<<<< HEAD
-        # axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
-=======
-        #axes.set_title('phase = ({:.4f})pi'.format(phase/pi))
->>>>>>> results_for_note
-
         # Plot wall segments.
         for i, wall in enumerate(wall_segments):
             for j, segment in enumerate(wall):
