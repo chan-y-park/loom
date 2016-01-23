@@ -43,7 +43,7 @@ print (sols_str, sols_mul, messages)
 ### This gives better numerics.
 ### But for computing the discriminant, 
 ### the above method is actually often better.
-### This is because we only se the discriminant 
+### This is because we only use the discriminant 
 ### Method for highly degenerate curves, and then 
 ### it can be solved exactly.
 #

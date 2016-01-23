@@ -1,7 +1,10 @@
 import numpy
 import logging
 import sympy
+<<<<<<< HEAD
 # import pdb
+=======
+>>>>>>> results_for_note
 
 from cmath import exp, pi, phase
 from sympy import oo
@@ -11,7 +14,9 @@ from pprint import pprint
 from heapq import nsmallest
 
 from geometry import SWDataBase
-from misc import n_remove_duplicate, ctor2, r2toc
+from misc import (
+    n_remove_duplicate, ctor2, r2toc, delete_duplicates, is_weyl_monodromy
+)
 
 x, z = sympy.symbols('x z')
 
@@ -19,11 +24,11 @@ x, z = sympy.symbols('x z')
 # TODO: set both of the following automatically: e.g. using the
 # minimal_distance attribute of the SW fibration
 
-# number of steps used to track the sheets along a leg 
+# number of steps used to track the sheets along a leg
 # the path used to trivialize the cover at any given point
 N_PATH_TO_PT = 100
 
-# number of steps for each SEGMENT of the path around a 
+# number of steps for each SEGMENT of the path around a
 # branching point (either branch-point, or irregular singularity)
 N_PATH_AROUND_PT = 60
 # N_PATH_AROUND_PT = 100
@@ -44,7 +49,7 @@ class BranchPoint:
     """
     The BranchPoint class.
 
-    This class is strictly related to the 
+    This class is strictly related to the
     cover corresponding to the first fundamental
     representation.
 
@@ -54,8 +59,8 @@ class BranchPoint:
     z :
         The position of the branch point on the z-plane
 
-    trivialization : 
-        The trivialization of the cover to which the 
+    trivialization :
+        The trivialization of the cover to which the
         branch point is associated.
 
     groups :
@@ -67,50 +72,50 @@ class BranchPoint:
         other sheet.
 
     enum_sh :
-        The enumerated sheets at the branch point. 
-        A list of pairs [i, x] where i is the sheet 
-        identifier referring to the reference sheets 
+        The enumerated sheets at the branch point.
+        A list of pairs [i, x] where i is the sheet
+        identifier referring to the reference sheets
         of the trivialization class; x is the corresponding
         coordinate in the fiber above the branch point.
 
     path_to_bp - UNAVAILABLE :
         A path running from the basepoint of the trivialization
         to the branch point without crossing any branch cut.
-    
+
     sheet_tracks_to_bp - UNAVAILABLE :
         A list of sheet tracks, i.e. the x-values of each
         sheet as it is tracked along a path that runs to
-        the branch point, to determine collision structure 
+        the branch point, to determine collision structure
         of the various sheets.
-    
+
     positive_roots :
-        A minimal list of positive roots characterizing the 
+        A minimal list of positive roots characterizing the
         groups of colliding sheets at the branch point.
-    
+
     path_around_bp - UNAVAILABLE :
         A path encircling the branch point and no one else,
         used to compute the monodromy.
-    
+
     sheet_tracks_around_bp - UNAVAILABLE :
         A list of sheet tracks, i.e. the x-values of each
-        sheet as it is tracked along a path that runs around 
+        sheet as it is tracked along a path that runs around
         the branch point, to determine the monodromy.
-    
-    monodromy : 
+
+    monodromy :
         The monodromy matrix acting on the column vector
         of sheets (hence, acting FROM the left).
-        Sheets are ordered according to the reference 
+        Sheets are ordered according to the reference
         sheets of the trivialization.
-    
-    order : 
-        At a branch point, the dual of the higgs field 
+
+    order :
+        At a branch point, the dual of the higgs field
         lies on the boundary of a Weyl chamber.
         In general, it will li at the intersection of
         k of the walls delimiting the chamber.
         The order of the branch point is then k + 1.
 
     ffr_ramification_points :
-        A list of all ramification point objects, which 
+        A list of all ramification point objects, which
         lie in the fiber above the branch point.
 
     """
@@ -120,11 +125,12 @@ class BranchPoint:
             self.label = None
             self.monodromy = None
 
-            self.groups = None 
-            self.positive_roots = None 
+            self.groups = None
+            self.positive_roots = None
             self.order = None
 
             self.ffr_ramification_points = None
+            self.seeds = []
         else:
             self.set_from_json_data(json_data, ffr_ramification_points,)
 
@@ -148,6 +154,7 @@ class BranchPoint:
             'ffr_ramification_points': [
                 rp.label for rp in self.ffr_ramification_points
             ],
+            # 'seeds': map(ctor2, self.seeds),
         }
         return json_data
 
@@ -159,11 +166,12 @@ class BranchPoint:
         self.positive_roots = numpy.array(json_data['positive_roots'])
         self.order = json_data['order']
         self.ffr_ramification_points = []
+        # self.seeds = map(r2toc, json_data['seeds'])
         for rp_label in json_data['ffr_ramification_points']:
             for rp in ffr_ramification_points:
                 if rp_label == rp.label:
                     self.ffr_ramification_points.append(rp)
-            
+
     def print_info(self):
         print(
             "---------------------------------------------------------\n"
@@ -205,7 +213,7 @@ class IrregularSingularity:
             'monodromy': self.monodromy.tolist(),
         }
         return json_data
-        
+
     def print_info(self):
         print(
             "---------------------------------------------------------\n"
@@ -221,7 +229,7 @@ class IrregularSingularity:
 # TODO: Use g_data.weights at the base point as labels of sheets,
 # instead of integer indicies. Just a conceptual issue, because
 # the integer indicies are labeling g_data.weights in the same order.
-# PL: not sure if we want to do that: for a human interface, 
+# PL: not sure if we want to do that: for a human interface,
 # labeling by integers is much more readable.
 class SWDataWithTrivialization(SWDataBase):
     """
@@ -230,24 +238,24 @@ class SWDataWithTrivialization(SWDataBase):
 
     Arguments
     ---------
-    
-    sw_data : 
-        an object of the type SWData, whose attribute 'curve' 
+
+    sw_data :
+        an object of the type SWData, whose attribute 'curve'
         should correspond to the curve in the FIRST fundamental
         representation of the Lie algebra
-    
-    ffr_ramification_points : 
+
+    ffr_ramification_points :
         a list of objects of the type RamificationPoint, corresponding
         to the given Seiberg-Witten curve in the first fundamental rep.
 
     Attributes & Methods
     --------------------
 
-    base_point : 
+    base_point :
         the base point of the trivialization
 
     reference_ffr_xs :
-        a list of x's 
+        a list of x's
             [x_0, x_1, ..., x_i, ...]
         where 'i' is an integer label for the sheet,
         and 'x' is its position in the fiber of T^*C 
@@ -352,8 +360,17 @@ class SWDataWithTrivialization(SWDataBase):
             self.accuracy,
         )
 
+<<<<<<< HEAD
         logger.info('Ramification points arrange into {} branch points '
                     'at positions {}'.format(len(bpzs), bpzs))
+=======
+        logger.info(
+            'Ramification points arrange into {} branch points '
+            'at positions {}'.format(
+                len(bpzs), bpzs
+            )
+        )
+>>>>>>> results_for_note
 
         # z-coords of irregular punctures.
         ipzs = n_remove_duplicate(
@@ -414,7 +431,9 @@ class SWDataWithTrivialization(SWDataBase):
             self.base_point,
         )
 
-        # Construct the list of branch points
+        # Construct the list of branch points. 
+        # Also assign them the respective ramification points 
+        # and analyze them
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
             bp.label = 'Branch point #{}'.format(i)
@@ -436,12 +455,15 @@ class SWDataWithTrivialization(SWDataBase):
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
 
+<<<<<<< HEAD
 # XXX: Moved to SWDataBase.
 #        # Analyze ramification points
 #        for bp in self.branch_points:
 #            for rp in bp.ffr_ramification_points:
 #                self.analyze_ffr_ramification_point(rp)
 
+=======
+>>>>>>> results_for_note
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
     def get_sheets_along_path(
@@ -497,7 +519,6 @@ class SWDataWithTrivialization(SWDataBase):
             #     near_degenerate_branch_locus=near_degenerate_branch_locus
             # )
             ffr_xs_1 = self.ffr_curve.get_xs(z) 
-            # print ffr_xs_1
 
             # if it's not a path to branch point, check tracking
             if is_path_to_bp is False:
@@ -584,10 +605,10 @@ class SWDataWithTrivialization(SWDataBase):
                         )
                         if sorted_ffr_xs == 'sorting failed':
                             logger.info(
-                                    'Studying sheets near z = {} found sheets'
-                                    '\n ffr_xs_0 = {} \n ffr_xs_1 = {}'
-                                    .format(z, ffr_xs_0, ffr_xs_1_s)
-                                )
+                                'Studying sheets near z = {} found sheets'
+                                '\n ffr_xs_0 = {} \n ffr_xs_1 = {}'
+                                .format(z, ffr_xs_0, ffr_xs_1_s)
+                            )
                             raise Exception(
                                 '\nCannot track the sheets!\n'
                                 'Probably passing too close to a branch point'
@@ -640,7 +661,10 @@ class SWDataWithTrivialization(SWDataBase):
         return final_sheets
 
     # TODO: Review this method.
-    def get_sheet_monodromy(self, z_path):
+    def get_sheet_monodromy(
+        self, z_path, is_higher_bp=False, higher_bp_type=None,
+        is_irr_sing=False
+    ):
         """
         Compares the x-coordinates of sheets at the 
         beginning and at the end of a CLOSED path.
@@ -658,9 +682,6 @@ class SWDataWithTrivialization(SWDataBase):
         sheet_tracks = self.get_sheets_along_path(z_path)
         final_xs = [s_t[-1] for s_t in sheet_tracks]
         final_sheets = [[i, x] for i, x in enumerate(final_xs)]
-
-        # print 'the initial sheets: {}'.format(initial_sheets)
-        # print 'the final sheets: {}'.format(final_sheets)
 
         # Now we compare the initial and final sheets 
         # to extract the monodromy permutation
@@ -693,15 +714,16 @@ class SWDataWithTrivialization(SWDataBase):
             # where two sheets collide at x=0 everywhere
             # Do not raise an error in this case.
             # Likewise for E-type
-            # TODO: Merge the handling of these two cases
             if (
-                self.g_data.type == 'D' and 
-                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
-                and len(sorted_sheets) - len(uniq) == 1
+                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy 
+            ) and (
+                self.g_data.type == 'D' and len(sorted_sheets) - len(uniq) == 1
+            ) or (
+                self.g_data.type == 'E' and len(sorted_sheets) - len(uniq) == 2
             ):
-                # If two sheets are equal (and both zero) then the integer
-                # labels they got assigned in sorting above may be the same,
-                # this would lead to a singular permutation matrix
+                # If two or more sheets are equal (and both zero) then the 
+                # (integer) labels they got assigned in sorting above may 
+                # be the same, this would lead to a singular permutation matrix
                 # and must be corrected, as follows.
                 int_labels = [s[0] for s in sorted_sheets]
                 uniq_labels = list(set(int_labels))
@@ -712,7 +734,13 @@ class SWDataWithTrivialization(SWDataBase):
                 multiple_labels = []
                 for i, u in enumerate(uniq_labels):
                     if labels_multiplicities[i] > 1:
-                        if labels_multiplicities[i] == 2:
+                        if (
+                            labels_multiplicities[i] == 2 
+                            and self.g_data.type == 'D'
+                        ) or (
+                            labels_multiplicities[i] == 3 
+                            and self.g_data.type == 'E'
+                        ):
                             multiple_labels.append(u)
                         else:
                             logger.debug(
@@ -729,81 +757,188 @@ class SWDataWithTrivialization(SWDataBase):
                         'degenerate, tracking will fail.'
                     )
 
-                # missing_label = [
-                #     i for i in range(len(int_labels)) if 
-                #     (i not in int_labels)
-                # ][0]
-                double_sheets = [
-                    i for i, s in enumerate(sorted_sheets) 
-                    if s[0] == multiple_labels[0]
-                ]
+                if self.g_data.type == 'D':
+                    double_sheets = [
+                        i for i, s in enumerate(sorted_sheets) 
+                        if s[0] == multiple_labels[0]
+                    ]
 
-                corrected_sheets = sorted_sheets 
-                corrected_sheets[double_sheets[0]] = (
-                    initial_sheets[double_sheets[0]]
-                )
-                corrected_sheets[double_sheets[1]] = (
-                    initial_sheets[double_sheets[1]]
-                )
-                sorted_sheets = corrected_sheets
-                pass
+                    corrected_sheets = sorted_sheets 
+                    if is_higher_bp is False and is_irr_sing is False:
+                        corrected_sheets[double_sheets[0]] = (
+                            initial_sheets[double_sheets[0]]
+                        )
+                        corrected_sheets[double_sheets[1]] = (
+                            initial_sheets[double_sheets[1]]
+                        )
+                    elif (
+                        is_higher_bp is True and (
+                            higher_bp_type == 'type_II' 
+                            or higher_bp_type == 'type_III'
+                        ) or is_irr_sing is True
+                    ):
+                        # Should decide case-by-case whether to employ 
+                        # (0,1) -> (0,1) or (0,1) -> (1,0)
+                        # One way to do so would be to pick each of them, and 
+                        # construct the whole monodromy, then see if applying 
+                        # the monodromy to every root gives back a root
+                        # By direct checks, only one of the two options works
+                        # so there should be no ambiguity left.
 
-            elif (
-                self.g_data.type == 'E' and 
-                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
-                and len(sorted_sheets) - len(uniq) == 2
-            ):
-                # If THREE sheets are equal (and all zero) then the integer
-                # labels they got assigned in sorting above may be the same,
-                # this would lead to a singular permutation matrix
-                # and must be corrected, as follows.
-                int_labels = [s[0] for s in sorted_sheets]
-                uniq_labels = list(set(int_labels))
-                labels_multiplicities = [
-                    len([i for i, x in enumerate(int_labels) if x == u]) 
-                    for u in uniq_labels
-                ]
-                multiple_labels = []
-                for i, u in enumerate(uniq_labels):
-                    if labels_multiplicities[i] > 1:
-                        if labels_multiplicities[i] == 3:
-                            multiple_labels.append(u)
+                        # TODO: print a warning if BOTH options give a Weyl 
+                        # sheet matrix, because in that case there may be 
+                        # ambiguity
+
+                        # UPDATE: Disabling the option 0. Because in these 
+                        # types  of ramification points there should be no 
+                        # sheet that remains fixed by the permutation.
+                        # Keep it in comment in case we encounter trouble
+
+                        # corrected_sheets_0 = [s for s in corrected_sheets]
+                        corrected_sheets_1 = [s for s in corrected_sheets]
+
+                        # corrected_sheets_0[double_sheets[0]] = (
+                        #     initial_sheets[double_sheets[0]]
+                        # )
+                        # corrected_sheets_0[double_sheets[1]] = (
+                        #     initial_sheets[double_sheets[1]]
+                        # )
+
+                        corrected_sheets_1[double_sheets[0]] = (
+                            initial_sheets[double_sheets[1]]
+                        )
+                        corrected_sheets_1[double_sheets[1]] = (
+                            initial_sheets[double_sheets[0]]
+                        )
+
+                        # m_0 = build_monodromy_matrix(
+                        #     initial_sheets, corrected_sheets_0
+                        # )
+                        m_1 = build_monodromy_matrix(
+                            initial_sheets, corrected_sheets_1
+                        )
+
+                        # if is_weyl_monodromy(m_0, self.g_data):
+                        #     corrected_sheets = corrected_sheets_0
+                        if is_weyl_monodromy(m_1, self.g_data):
+                            corrected_sheets = corrected_sheets_1
                         else:
-                            logger.debug(
-                                'int labels = {}'.format(int_labels)
+                            raise Exception(
+                                'Failed to assign a Weyl-type monodromy.'
                             )
-                            logger.debug(
-                                'multiple labels = {}'
-                                .format(multiple_labels)
+                        
+                    else:
+                        raise Exception(
+                            'higher-type ramification points for D-type '
+                            'theories can only be of types II or III'
+                        )
+                    sorted_sheets = corrected_sheets
+                    pass
+
+                elif self.g_data == 'E':
+                    triple_sheets = [
+                        i for i, s in enumerate(sorted_sheets) 
+                        if s[0] == multiple_labels[0]
+                    ]
+
+                    corrected_sheets = sorted_sheets 
+                    if is_higher_bp is False and is_irr_sing is False:
+                        corrected_sheets[triple_sheets[0]] = (
+                            initial_sheets[triple_sheets[0]]
+                        )
+                        corrected_sheets[triple_sheets[1]] = (
+                            initial_sheets[triple_sheets[1]]
+                        )
+                        corrected_sheets[triple_sheets[2]] = (
+                            initial_sheets[triple_sheets[2]]
+                        )
+
+                    elif (
+                        (is_higher_bp is True and higher_bp_type == 'type_IV')
+                        or is_irr_sing is True
+                    ):
+                        # Should decide case-by-case whether to employ 
+                        # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
+                        # One way to do so would be to pick each of them, and 
+                        # construct the whole monodromy, then see if applying 
+                        # the monodromy to every root gives back a root
+                        # By direct checks, only one of the two options works
+                        # so there should be no ambiguity left.
+                        
+                        # TODO: print a warning if BOTH options give a Weyl 
+                        # sheet matrix, because in that case there may be 
+                        # ambiguity
+
+                        # UPDATE: Disabling the option 0. 
+                        # Because in these types of ramification points
+                        # there should be no sheet that remains fixed by 
+                        # the permutation.
+                        # Keep this in comment in case we encounter trouble
+
+                        # corrected_sheets_0 = [s for s in corrected_sheets]
+                        corrected_sheets_1 = [s for s in corrected_sheets]
+                        corrected_sheets_2 = [s for s in corrected_sheets]
+
+                        # corrected_sheets_0[triple_sheets[0]] = (
+                        #     initial_sheets[triple_sheets[0]]
+                        # )
+                        # corrected_sheets_0[triple_sheets[1]] = (
+                        #     initial_sheets[triple_sheets[1]]
+                        # )
+                        # corrected_sheets_0[triple_sheets[2]] = (
+                        #     initial_sheets[triple_sheets[2]]
+                        # )
+
+                        corrected_sheets_1[triple_sheets[0]] = (
+                            initial_sheets[triple_sheets[1]]
+                        )
+                        corrected_sheets_1[triple_sheets[1]] = (
+                            initial_sheets[triple_sheets[2]]
+                        )
+                        corrected_sheets_1[triple_sheets[2]] = (
+                            initial_sheets[triple_sheets[0]]
+                        )
+
+                        corrected_sheets_2[triple_sheets[0]] = (
+                            initial_sheets[triple_sheets[2]]
+                        )
+                        corrected_sheets_2[triple_sheets[1]] = (
+                            initial_sheets[triple_sheets[0]]
+                        )
+                        corrected_sheets_2[triple_sheets[2]] = (
+                            initial_sheets[triple_sheets[1]]
+                        )
+
+                        # m_0 = build_monodromy_matrix(
+                        #     initial_sheets, corrected_sheets_0
+                        # )
+                        m_1 = build_monodromy_matrix(
+                            initial_sheets, corrected_sheets_1
+                        )
+                        m_2 = build_monodromy_matrix(
+                            initial_sheets, corrected_sheets_2
+                        )
+
+                        # if is_weyl_monodromy(m_0, self.g_data):
+                        #     corrected_sheets = corrected_sheets_0
+                        if is_weyl_monodromy(m_1, self.g_data):
+                            corrected_sheets = corrected_sheets_1
+                        elif is_weyl_monodromy(m_2, self.g_data):
+                            corrected_sheets = corrected_sheets_2
+                        else:
+                            raise Exception(
+                                'Failed to assign a Weyl-type monodromy.'
                             )
-                            raise Exception('Too many degenerate sheets')
-                if len(multiple_labels) != 1:
-                    raise Exception(
-                        'Cannot determine which sheets are' +
-                        'degenerate, tracking will fail.'
-                    )
+                            
+                    else:
+                        raise Exception(
+                            'higher-type ramification points for E-type '
+                            'theories can only be of types IV. Found {}'
+                            .format(higher_bp_type)
+                        )
+                    sorted_sheets = corrected_sheets
+                    pass
 
-                # missing_label = [
-                #     i for i in range(len(int_labels)) if 
-                #     (i not in int_labels)
-                # ][0]
-                triple_sheets = [
-                    i for i, s in enumerate(sorted_sheets) 
-                    if s[0] == multiple_labels[0]
-                ]
-
-                corrected_sheets = sorted_sheets 
-                corrected_sheets[triple_sheets[0]] = (
-                    initial_sheets[triple_sheets[0]]
-                )
-                corrected_sheets[triple_sheets[1]] = (
-                    initial_sheets[triple_sheets[1]]
-                )
-                corrected_sheets[triple_sheets[2]] = (
-                    initial_sheets[triple_sheets[2]]
-                )
-                sorted_sheets = corrected_sheets
-                pass
 
             else:
                 raise ValueError(
@@ -814,6 +949,7 @@ class SWDataWithTrivialization(SWDataBase):
         else:
             pass
 
+<<<<<<< HEAD
         # Now we have tree lists:
         # initial_sheets = [[0, x_0], [1, x_1], ...]
         # final_sheets = [[0, x'_0], [1, x'_1], ...]
@@ -838,7 +974,17 @@ class SWDataWithTrivialization(SWDataBase):
         perm_matrix = numpy.array(perm_list)
 
         logger.debug('Permutation matrix {}'.format(perm_matrix))
+=======
+        logger.debug(
+            'Sorted sheets around locus {}'.format(sorted_sheets)
+        )
+>>>>>>> results_for_note
 
+        perm_matrix = build_monodromy_matrix(initial_sheets, sorted_sheets)
+        if is_weyl_monodromy(perm_matrix, self.g_data) is False:
+            raise Exception('Failed to assign a Weyl-type monodromy.')
+        else:
+            logger.info('Sheet monodromy is of Weyl type')
         return perm_matrix
 
     def analyze_branch_point(self, bp):
@@ -882,17 +1028,12 @@ class SWDataWithTrivialization(SWDataBase):
         )
         bp.order = len(bp.positive_roots) + 1
         
-        logger.info("Computing the monodromy")
-        path_around_bp = get_path_around(bp.z, self.base_point, self,)
-        bp.monodromy = self.get_sheet_monodromy(path_around_bp)
-        # TODO: it would be good to make a check here, e.g. on the 
-        # relation between vanishing roots and the monodromy.
-
         bp.ffr_ramification_points = [
             rp for rp in self.ffr_ramification_points
             if abs(rp.z - bp.z) < self.accuracy
         ]
 
+<<<<<<< HEAD
         # XXX: Temporary analysis for D-type AD theories.
         for rp in bp.ffr_ramification_points:
             if (
@@ -915,6 +1056,35 @@ class SWDataWithTrivialization(SWDataBase):
                 else:
                     RuntimeError('Unknown form of the monodromy at {}.'
                                  .format(bp.label))
+=======
+        # Analyze ramification points
+        for rp in bp.ffr_ramification_points:
+            self.analyze_ffr_ramification_point(rp)
+
+        ramification_types = ([
+            rp.ramification_type for rp in bp.ffr_ramification_points 
+            if rp.ramification_type != 'type_I'
+        ])
+
+        logger.info("Computing the monodromy")
+        path_around_bp = get_path_around(bp.z, self.base_point, self,)
+
+        if len(ramification_types) == 0:
+            bp.monodromy = self.get_sheet_monodromy(path_around_bp)
+        else:
+            if len(delete_duplicates(ramification_types)) == 1:
+                bp.monodromy = self.get_sheet_monodromy(
+                    path_around_bp, 
+                    is_higher_bp=True, higher_bp_type=ramification_types[0]
+                )
+            else:
+                raise Exception(
+                    'Multiple ramification types for BP at z = {}'.format(bp.z)
+                )
+
+        # TODO: it would be good to make a check here, e.g. on the 
+        # relation between vanishing roots and the monodromy.
+>>>>>>> results_for_note
 
     def analyze_irregular_singularity(self, irr_sing):
         logger = logging.getLogger(self.logger_name)
@@ -923,11 +1093,144 @@ class SWDataWithTrivialization(SWDataBase):
             .format(irr_sing.z)
         )
         path_around_z = get_path_around(irr_sing.z, self.base_point, self)
-        irr_sing.monodromy = self.get_sheet_monodromy(path_around_z)
+        irr_sing.monodromy = self.get_sheet_monodromy(
+            path_around_z, is_irr_sing=True
+        )
     
+<<<<<<< HEAD
 # XXX: Moved to SWDataBase
 #    def analyze_ffr_ramification_point(self, rp):
 
+=======
+    def analyze_ffr_ramification_point(self, rp):
+        logger = logging.getLogger(self.logger_name)
+        logger.info(
+            "Analyzing a ramification point at z = {}, x={}."
+            .format(rp.z, rp.x)
+        )
+        rp_type = None
+        num_eq = self.ffr_curve.num_eq
+
+        # use dz = z - rp.z & dx = x - rp.x
+        dz, dx = sympy.symbols('dz, dx')
+        local_curve = (
+            num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
+            .series(dx, 0, rp.i + 1).removeO()
+            .series(dz, 0, 2).removeO()
+        )
+        logger.debug('\nlocal curve = {}\n'.format(local_curve))
+            
+        # Classify which type of ramification point
+        # type_I: ADE type with x_0 != 0
+        #   i.e. F ~ a z + b x^k    (in local coordinates)
+        # type_II: D-type with x_0 = 0, but nonedgenerate
+        #   i.e. F ~ a z + b x^2r   with r=rank(g)
+        # type_III: D-type with x_0 = 0, degenerate
+        #   i.e. F ~ x^2 (a z + b x^(2r-2))
+        # type_IV: E6-type with x_0 = 0, degenerate
+        #   i.e. F ~ x^3 (a z + b x^(...))
+        # type V: Other case.
+        # More cases may be added in the future, in particular 
+        # for degenerations of E_6 or E_7 curves.
+        
+        zero_threshold = self.accuracy * 100
+        if (
+            self.g_data.type == 'A' or (
+                (self.g_data.type == 'D' or self.g_data.type == 'E') and 
+                abs(rp.x) > zero_threshold
+            ) or (
+                self.g_data.type == 'D' and rp.i == 2 
+                and abs(rp.x) < zero_threshold
+            ) or (
+                self.g_data.type == 'E' and (rp.i == 2 or rp.i == 3) 
+                and abs(rp.x) < zero_threshold
+            )
+        ):
+            rp_type = 'type_I'
+        elif (
+            self.g_data.type == 'D' and abs(rp.x) < zero_threshold
+            and 2 * self.g_data.rank == rp.i
+            and abs(local_curve.n().subs(dx, 0).coeff(dz)) > zero_threshold
+        ):
+            rp_type = 'type_II'
+        elif (
+            self.g_data.type == 'D' and 2 * self.g_data.rank == rp.i
+            and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
+        ):
+            rp_type = 'type_III'
+        elif (
+            self.g_data.type == 'E' and self.g_data.rank == 6
+            and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
+        ):
+            rp_type = 'type_IV'
+        else:
+            rp_type = 'type_V'
+            logger.info(
+                'Lie algebra {}'.format(self.g_data.type, self.g_data.rank)
+            )
+            logger.info('ramification index {}'.format(rp.i))
+            logger.info(
+                'local curve {}'
+                .format(abs(local_curve.n().subs(dx, 0).coeff(dz)))
+            )
+            raise Exception(
+                'Cannot handle this type of ramification point'.format(
+                    local_curve
+                )
+            )
+
+        # dx_dz = dx(dz) is the local form of x (the local 
+        # coiordinate around the ramification point) as a function of z
+        # (also intended as a local coordinate near a ramification point)
+        if rp_type == 'type_I' or rp_type == 'type_II':
+            a = local_curve.n().subs(dx, 0).coeff(dz)
+            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
+
+        elif rp_type == 'type_III':
+            a = local_curve.n().coeff(dz).coeff(dx, 2)
+            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 2)
+
+        elif rp_type == 'type_IV':
+            a = local_curve.n().coeff(dz).coeff(dx, 15)
+            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, 12)
+        
+        logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
+            [rp.z, rp.x], rp_type)
+        )
+
+        rp.ramification_type = rp_type    
+        rp.sw_diff_coeffs_a_b = [complex(a), complex(b)]
+
+        # Now we compute the SW differential actual coefficient.
+        # The relation of this to a, b should be that 
+        # sw_diff_coeff = (-a / b)^{1/k} * (self.diff.jac)^{+/-1}
+        # for a degree-k ramification point
+        # because F ~ a z + b x^k so \lambda ~ x dz ~ (-a/b)^{1/k} (dz/dz') dz'
+
+        # here num_v is essentially: x * (dz'/dz), where the last factor 
+        # is the jacobian from z-plane rotations or PSL2C transformations.
+        num_v = self.diff.num_v  
+
+        # now we plug this into num_v, in a neighborhood of x_0
+        # we have x = x_0 + dx_dz.
+        local_diff = (
+            num_v.subs(x, rp.x + dx_dz).subs(z, rp.z + dz)
+            .series(dz, 0, 1).removeO()
+        )
+
+        # get the coefficient and the exponent of the leading term
+        (diff_c, diff_e) = local_diff.leadterm(dz)
+        if diff_e == 0:
+            # remove the constant term from the local_diff
+            local_diff -= local_diff.subs(dz, 0)
+            (diff_c, diff_e) = local_diff.leadterm(dz)
+
+        rp.sw_diff_coeff = complex(diff_c.n())
+        
+>>>>>>> results_for_note
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):
     """
@@ -1049,7 +1352,6 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
     """
     logger = logging.getLogger(logger_name)
     sorted_xs = []
-    # print 'reference xs = {}'.format(ref_xs)
 
     # It may happen that numerical inaccuracy of numpy
     # leads to believe that sheet tracking is going wrong.
@@ -1072,23 +1374,8 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 )
 
     for s_1 in ref_xs:
-        # closest_candidate = new_xs[0]
-        # min_d = abs(s_1 - closest_candidate)
-        # for s_2 in new_xs:
-        #     if abs(s_2 - s_1) < min_d:
-        #         min_d = abs(s_2 - s_1)
-        #         closest_candidate = s_2
         closest_candidate = nsmallest(1, new_xs, key=lambda x: abs(x - s_1))[0]
-        # print 'the closest to {} is {}'.format(s_1, closest_candidate)
         sorted_xs.append(closest_candidate)
-        # rel_min_d = abs(
-        #     (s_1 - closest_candidate) / (s_1 + closest_candidate)
-        # )
-        # for s_2 in new_xs:
-        #     if abs((s_2 - s_1)/max(map(abs, [s_2 , s_1]))) < rel_min_d:
-        #         min_d = abs((s_2 - s_1)/max(map(abs, [s_2 , s_1])))
-        #         closest_candidate = s_2
-        # sorted_xs.append(closest_candidate)
     
     if check_tracking is True:
         # Now we check that sheet tracking is not making a mistake.
@@ -1186,11 +1473,6 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
                 for x_pair_i in x_pair:
                     correct_xy_pairs.update({x_pair_i: x_pair_i})
             else:
-                # print 'x_pair = {}'.format(x_pair)
-                # print 'reference xs '
-                # print ref_xs
-                # print 'new xs'
-                # print new_xs
                 raise Exception('Cannot handle this kind of sheet degeneracy')
         else:
             closest_ys_0 = nsmallest(
@@ -1296,11 +1578,6 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
 
     # Finally, cleanup the duplicates, 
     # as well as the roots which are not linearly independent
-    # TODO: Check if we really need to remove linearly depedent 
-    # roots. Isn't it part of the information a branch pt carries?
-    # Pietro: the information of the branch point is the vector space
-    # spanned by these roots. Therefore only linearly independent ones 
-    # are needed.
     return numpy.array(
         keep_linearly_independent_vectors(vanishing_positive_roots)
     )
@@ -1352,3 +1629,31 @@ def keep_linearly_independent_vectors(vector_list):
             independent_list.append(v)
 
     return independent_list
+<<<<<<< HEAD
+=======
+
+
+def build_monodromy_matrix(initial_sheets, sorted_sheets):
+    # Now we have three lists:
+    # initial_sheets = [[0, x_0], [1, x_1], ...]
+    # final_sheets = [[0, x'_0], [1, x'_1], ...]
+    # sorted_sheets = [[i_0, x_0], [i_1, x_1], ...]
+    # therefore the monodromy permutation corresponds
+    # to 0 -> i_0, 1 -> i_1, etc.
+
+    n_sheets = len(initial_sheets)
+
+    # NOTE: in the following basis vectors, i = 0 , ... , n-1
+    def basis_e(i):
+        return numpy.array([kr_delta(j, i) for j in range(n_sheets)])
+
+    perm_list = []
+    for i in range(n_sheets):
+        new_sheet_index = sorted_sheets[i][0]
+        perm_list.append(basis_e(new_sheet_index))
+
+    # perm_matrix = numpy.array(perm_list).transpose()
+    perm_matrix = numpy.array(perm_list)
+    logging.debug('Permutation matrix {}'.format(perm_matrix))
+    return perm_matrix
+>>>>>>> results_for_note

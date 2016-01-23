@@ -2,3 +2,4 @@
 *.sage.py
 *.swp
 *.log
+*.DS_Store
