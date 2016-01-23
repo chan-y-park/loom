@@ -1,10 +1,6 @@
 import numpy
 import logging
 import sympy
-<<<<<<< HEAD
-# import pdb
-=======
->>>>>>> results_for_note
 
 from cmath import exp, pi, phase
 from sympy import oo
@@ -360,17 +356,12 @@ class SWDataWithTrivialization(SWDataBase):
             self.accuracy,
         )
 
-<<<<<<< HEAD
-        logger.info('Ramification points arrange into {} branch points '
-                    'at positions {}'.format(len(bpzs), bpzs))
-=======
         logger.info(
             'Ramification points arrange into {} branch points '
             'at positions {}'.format(
                 len(bpzs), bpzs
             )
         )
->>>>>>> results_for_note
 
         # z-coords of irregular punctures.
         ipzs = n_remove_duplicate(
@@ -455,15 +446,12 @@ class SWDataWithTrivialization(SWDataBase):
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
 
-<<<<<<< HEAD
 # XXX: Moved to SWDataBase.
 #        # Analyze ramification points
 #        for bp in self.branch_points:
 #            for rp in bp.ffr_ramification_points:
 #                self.analyze_ffr_ramification_point(rp)
 
-=======
->>>>>>> results_for_note
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
     def get_sheets_along_path(
@@ -949,36 +937,36 @@ class SWDataWithTrivialization(SWDataBase):
         else:
             pass
 
-<<<<<<< HEAD
-        # Now we have tree lists:
-        # initial_sheets = [[0, x_0], [1, x_1], ...]
-        # final_sheets = [[0, x'_0], [1, x'_1], ...]
-        # sorted_sheets = [[i_0, x_0], [i_1, x_1], ...]
-        # therefore the monodromy permutation corresponds
-        # to 0 -> i_0, 1 -> i_1, etc.
+#### FIXME: REMOVE AFTER MERGE
 
-        n_sheets = len(initial_sheets)
+        # # Now we have tree lists:
+        # # initial_sheets = [[0, x_0], [1, x_1], ...]
+        # # final_sheets = [[0, x'_0], [1, x'_1], ...]
+        # # sorted_sheets = [[i_0, x_0], [i_1, x_1], ...]
+        # # therefore the monodromy permutation corresponds
+        # # to 0 -> i_0, 1 -> i_1, etc.
 
-        logger.debug('Sorted sheets around locus {}'.format(sorted_sheets))
+        # n_sheets = len(initial_sheets)
+
+        # logger.debug('Sorted sheets around locus {}'.format(sorted_sheets))
         
-        # NOTE: in the following basis vectors, i = 0 , ... , n-1
-        def basis_e(i):
-            return numpy.array([kr_delta(j, i) for j in range(n_sheets)])
+        # # NOTE: in the following basis vectors, i = 0 , ... , n-1
+        # def basis_e(i):
+        #     return numpy.array([kr_delta(j, i) for j in range(n_sheets)])
 
-        perm_list = []
-        for i in range(n_sheets):
-            new_sheet_index = sorted_sheets[i][0]
-            perm_list.append(basis_e(new_sheet_index))
+        # perm_list = []
+        # for i in range(n_sheets):
+        #     new_sheet_index = sorted_sheets[i][0]
+        #     perm_list.append(basis_e(new_sheet_index))
 
-        # perm_matrix = numpy.array(perm_list).transpose()
-        perm_matrix = numpy.array(perm_list)
+        # # perm_matrix = numpy.array(perm_list).transpose()
+        # perm_matrix = numpy.array(perm_list)
 
-        logger.debug('Permutation matrix {}'.format(perm_matrix))
-=======
+        # logger.debug('Permutation matrix {}'.format(perm_matrix))
+
         logger.debug(
             'Sorted sheets around locus {}'.format(sorted_sheets)
         )
->>>>>>> results_for_note
 
         perm_matrix = build_monodromy_matrix(initial_sheets, sorted_sheets)
         if is_weyl_monodromy(perm_matrix, self.g_data) is False:
@@ -1027,39 +1015,68 @@ class SWDataWithTrivialization(SWDataBase):
             bp, self.g_data, self.logger_name,
         )
         bp.order = len(bp.positive_roots) + 1
+
+
         
         bp.ffr_ramification_points = [
             rp for rp in self.ffr_ramification_points
             if abs(rp.z - bp.z) < self.accuracy
         ]
 
-<<<<<<< HEAD
-        # XXX: Temporary analysis for D-type AD theories.
-        for rp in bp.ffr_ramification_points:
-            if (
-                rp.ramification_type == 'type_AD' or
-                rp.ramification_type == 'type_III'
-            ):
-                logger.warning('Temporary fix-up of the monodromy '
-                               'for a D-type AD theory.')
-                # Find two diagonal elements and permute them.
-                indices = []
-                for i, row_i in enumerate(bp.monodromy):
-                    if row_i[i] == 1:
-                        indices.append(i)
-                if len(indices) == 2:
-                    i, j = indices
-                    bp.monodromy[i][i] = 0
-                    bp.monodromy[j][j] = 0
-                    bp.monodromy[i][j] = 1
-                    bp.monodromy[j][i] = 1
-                else:
-                    RuntimeError('Unknown form of the monodromy at {}.'
-                                 .format(bp.label))
-=======
-        # Analyze ramification points
-        for rp in bp.ffr_ramification_points:
-            self.analyze_ffr_ramification_point(rp)
+### FIXME: REMOVE AFTER MERGING
+
+# <<<<<<< HEAD
+#         # XXX: Temporary analysis for D-type AD theories.
+#         for rp in bp.ffr_ramification_points:
+#             if (
+#                 rp.ramification_type == 'type_AD' or
+#                 rp.ramification_type == 'type_III'
+#             ):
+#                 logger.warning('Temporary fix-up of the monodromy '
+#                                'for a D-type AD theory.')
+#                 # Find two diagonal elements and permute them.
+#                 indices = []
+#                 for i, row_i in enumerate(bp.monodromy):
+#                     if row_i[i] == 1:
+#                         indices.append(i)
+#                 if len(indices) == 2:
+#                     i, j = indices
+#                     bp.monodromy[i][i] = 0
+#                     bp.monodromy[j][j] = 0
+#                     bp.monodromy[i][j] = 1
+#                     bp.monodromy[j][i] = 1
+#                 else:
+#                     RuntimeError('Unknown form of the monodromy at {}.'
+#                                  .format(bp.label))
+# =======
+#         # Analyze ramification points
+#         for rp in bp.ffr_ramification_points:
+#             self.analyze_ffr_ramification_point(rp)
+
+#         ramification_types = ([
+#             rp.ramification_type for rp in bp.ffr_ramification_points 
+#             if rp.ramification_type != 'type_I'
+#         ])
+
+#         logger.info("Computing the monodromy")
+#         path_around_bp = get_path_around(bp.z, self.base_point, self,)
+
+#         if len(ramification_types) == 0:
+#             bp.monodromy = self.get_sheet_monodromy(path_around_bp)
+#         else:
+#             if len(delete_duplicates(ramification_types)) == 1:
+#                 bp.monodromy = self.get_sheet_monodromy(
+#                     path_around_bp, 
+#                     is_higher_bp=True, higher_bp_type=ramification_types[0]
+#                 )
+#             else:
+#                 raise Exception(
+#                     'Multiple ramification types for BP at z = {}'.format(bp.z)
+#                 )
+
+#         # TODO: it would be good to make a check here, e.g. on the 
+#         # relation between vanishing roots and the monodromy.
+# >>>>>>> results_for_note      
 
         ramification_types = ([
             rp.ramification_type for rp in bp.ffr_ramification_points 
@@ -1084,7 +1101,34 @@ class SWDataWithTrivialization(SWDataBase):
 
         # TODO: it would be good to make a check here, e.g. on the 
         # relation between vanishing roots and the monodromy.
->>>>>>> results_for_note
+
+        # XXX: Temporary analysis for D-type AD theories.
+        # TODO: Delete this, 'for' cycle, and implement this fix 
+        # inside the routine get_sheet_monodromy as for all the other types.
+        for rp in bp.ffr_ramification_points:
+            if (
+                rp.ramification_type == 'type_AD' 
+                # or rp.ramification_type == 'type_III'
+                # NOTE: no need to do this for type_III, already handled
+                # in the routine get_sheet_monodromy
+                # But, double-check me with explicit examples.
+            ):
+                logger.warning('Temporary fix-up of the monodromy '
+                               'for a D-type AD theory.')
+                # Find two diagonal elements and permute them.
+                indices = []
+                for i, row_i in enumerate(bp.monodromy):
+                    if row_i[i] == 1:
+                        indices.append(i)
+                if len(indices) == 2:
+                    i, j = indices
+                    bp.monodromy[i][i] = 0
+                    bp.monodromy[j][j] = 0
+                    bp.monodromy[i][j] = 1
+                    bp.monodromy[j][i] = 1
+                else:
+                    RuntimeError('Unknown form of the monodromy at {}.'
+                                 .format(bp.label))
 
     def analyze_irregular_singularity(self, irr_sing):
         logger = logging.getLogger(self.logger_name)
@@ -1097,140 +1141,6 @@ class SWDataWithTrivialization(SWDataBase):
             path_around_z, is_irr_sing=True
         )
     
-<<<<<<< HEAD
-# XXX: Moved to SWDataBase
-#    def analyze_ffr_ramification_point(self, rp):
-
-=======
-    def analyze_ffr_ramification_point(self, rp):
-        logger = logging.getLogger(self.logger_name)
-        logger.info(
-            "Analyzing a ramification point at z = {}, x={}."
-            .format(rp.z, rp.x)
-        )
-        rp_type = None
-        num_eq = self.ffr_curve.num_eq
-
-        # use dz = z - rp.z & dx = x - rp.x
-        dz, dx = sympy.symbols('dz, dx')
-        local_curve = (
-            num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
-            .series(dx, 0, rp.i + 1).removeO()
-            .series(dz, 0, 2).removeO()
-        )
-        logger.debug('\nlocal curve = {}\n'.format(local_curve))
-            
-        # Classify which type of ramification point
-        # type_I: ADE type with x_0 != 0
-        #   i.e. F ~ a z + b x^k    (in local coordinates)
-        # type_II: D-type with x_0 = 0, but nonedgenerate
-        #   i.e. F ~ a z + b x^2r   with r=rank(g)
-        # type_III: D-type with x_0 = 0, degenerate
-        #   i.e. F ~ x^2 (a z + b x^(2r-2))
-        # type_IV: E6-type with x_0 = 0, degenerate
-        #   i.e. F ~ x^3 (a z + b x^(...))
-        # type V: Other case.
-        # More cases may be added in the future, in particular 
-        # for degenerations of E_6 or E_7 curves.
-        
-        zero_threshold = self.accuracy * 100
-        if (
-            self.g_data.type == 'A' or (
-                (self.g_data.type == 'D' or self.g_data.type == 'E') and 
-                abs(rp.x) > zero_threshold
-            ) or (
-                self.g_data.type == 'D' and rp.i == 2 
-                and abs(rp.x) < zero_threshold
-            ) or (
-                self.g_data.type == 'E' and (rp.i == 2 or rp.i == 3) 
-                and abs(rp.x) < zero_threshold
-            )
-        ):
-            rp_type = 'type_I'
-        elif (
-            self.g_data.type == 'D' and abs(rp.x) < zero_threshold
-            and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(dx, 0).coeff(dz)) > zero_threshold
-        ):
-            rp_type = 'type_II'
-        elif (
-            self.g_data.type == 'D' and 2 * self.g_data.rank == rp.i
-            and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
-        ):
-            rp_type = 'type_III'
-        elif (
-            self.g_data.type == 'E' and self.g_data.rank == 6
-            and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
-        ):
-            rp_type = 'type_IV'
-        else:
-            rp_type = 'type_V'
-            logger.info(
-                'Lie algebra {}'.format(self.g_data.type, self.g_data.rank)
-            )
-            logger.info('ramification index {}'.format(rp.i))
-            logger.info(
-                'local curve {}'
-                .format(abs(local_curve.n().subs(dx, 0).coeff(dz)))
-            )
-            raise Exception(
-                'Cannot handle this type of ramification point'.format(
-                    local_curve
-                )
-            )
-
-        # dx_dz = dx(dz) is the local form of x (the local 
-        # coiordinate around the ramification point) as a function of z
-        # (also intended as a local coordinate near a ramification point)
-        if rp_type == 'type_I' or rp_type == 'type_II':
-            a = local_curve.n().subs(dx, 0).coeff(dz)
-            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
-
-        elif rp_type == 'type_III':
-            a = local_curve.n().coeff(dz).coeff(dx, 2)
-            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 2)
-
-        elif rp_type == 'type_IV':
-            a = local_curve.n().coeff(dz).coeff(dx, 15)
-            b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-            dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, 12)
-        
-        logger.debug('\nThe ramification point at (z,x)={} is of {}'.format(
-            [rp.z, rp.x], rp_type)
-        )
-
-        rp.ramification_type = rp_type    
-        rp.sw_diff_coeffs_a_b = [complex(a), complex(b)]
-
-        # Now we compute the SW differential actual coefficient.
-        # The relation of this to a, b should be that 
-        # sw_diff_coeff = (-a / b)^{1/k} * (self.diff.jac)^{+/-1}
-        # for a degree-k ramification point
-        # because F ~ a z + b x^k so \lambda ~ x dz ~ (-a/b)^{1/k} (dz/dz') dz'
-
-        # here num_v is essentially: x * (dz'/dz), where the last factor 
-        # is the jacobian from z-plane rotations or PSL2C transformations.
-        num_v = self.diff.num_v  
-
-        # now we plug this into num_v, in a neighborhood of x_0
-        # we have x = x_0 + dx_dz.
-        local_diff = (
-            num_v.subs(x, rp.x + dx_dz).subs(z, rp.z + dz)
-            .series(dz, 0, 1).removeO()
-        )
-
-        # get the coefficient and the exponent of the leading term
-        (diff_c, diff_e) = local_diff.leadterm(dz)
-        if diff_e == 0:
-            # remove the constant term from the local_diff
-            local_diff -= local_diff.subs(dz, 0)
-            (diff_c, diff_e) = local_diff.leadterm(dz)
-
-        rp.sw_diff_coeff = complex(diff_c.n())
-        
->>>>>>> results_for_note
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):
     """
@@ -1629,8 +1539,6 @@ def keep_linearly_independent_vectors(vector_list):
             independent_list.append(v)
 
     return independent_list
-<<<<<<< HEAD
-=======
 
 
 def build_monodromy_matrix(initial_sheets, sorted_sheets):
@@ -1656,4 +1564,4 @@ def build_monodromy_matrix(initial_sheets, sorted_sheets):
     perm_matrix = numpy.array(perm_list)
     logging.debug('Permutation matrix {}'.format(perm_matrix))
     return perm_matrix
->>>>>>> results_for_note
+
