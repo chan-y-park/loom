@@ -169,14 +169,14 @@ class BranchPoint:
                     self.ffr_ramification_points.append(rp)
 
     def print_info(self):
-        print(
+        logging.info(
             "---------------------------------------------------------\n"
             "Branch Point at z = {}\n"
             "---------------------------------------------------------"
             .format(self.z)
         )
         for key, value in vars(self).iteritems():
-            print("{}:".format(key))
+            logigng.info("{}:".format(key))
             pprint(value)
 
 
@@ -211,14 +211,14 @@ class IrregularSingularity:
         return json_data
 
     def print_info(self):
-        print(
+        logger.info(
             "---------------------------------------------------------\n"
             "Irregular singularity at z = {}\n"
             "---------------------------------------------------------"
             .format(self.z)
         )
         for key, value in vars(self).iteritems():
-            print("{}:".format(key))
+            logger.info("{}:".format(key))
             pprint(value)
 
 
@@ -828,7 +828,7 @@ class SWDataWithTrivialization(SWDataBase):
                     sorted_sheets = corrected_sheets
                     pass
 
-                elif self.g_data == 'E':
+                elif self.g_data.type == 'E':
                     triple_sheets = [
                         i for i, s in enumerate(sorted_sheets) 
                         if s[0] == multiple_labels[0]
@@ -926,7 +926,7 @@ class SWDataWithTrivialization(SWDataBase):
                     else:
                         raise Exception(
                             'higher-type ramification points for E-type '
-                            'theories can only be of types IV. Found {}'
+                            'theories can only be of type IV. Found {}'
                             .format(higher_bp_type)
                         )
                     sorted_sheets = corrected_sheets
@@ -941,33 +941,6 @@ class SWDataWithTrivialization(SWDataBase):
                 )
         else:
             pass
-
-#### FIXME: REMOVE AFTER MERGE
-
-        # # Now we have tree lists:
-        # # initial_sheets = [[0, x_0], [1, x_1], ...]
-        # # final_sheets = [[0, x'_0], [1, x'_1], ...]
-        # # sorted_sheets = [[i_0, x_0], [i_1, x_1], ...]
-        # # therefore the monodromy permutation corresponds
-        # # to 0 -> i_0, 1 -> i_1, etc.
-
-        # n_sheets = len(initial_sheets)
-
-        # logger.debug('Sorted sheets around locus {}'.format(sorted_sheets))
-        
-        # # NOTE: in the following basis vectors, i = 0 , ... , n-1
-        # def basis_e(i):
-        #     return numpy.array([kr_delta(j, i) for j in range(n_sheets)])
-
-        # perm_list = []
-        # for i in range(n_sheets):
-        #     new_sheet_index = sorted_sheets[i][0]
-        #     perm_list.append(basis_e(new_sheet_index))
-
-        # # perm_matrix = numpy.array(perm_list).transpose()
-        # perm_matrix = numpy.array(perm_list)
-
-        # logger.debug('Permutation matrix {}'.format(perm_matrix))
 
         logger.debug(
             'Sorted sheets around locus {}'.format(sorted_sheets)
@@ -1027,61 +1000,6 @@ class SWDataWithTrivialization(SWDataBase):
             rp for rp in self.ffr_ramification_points
             if abs(rp.z - bp.z) < self.accuracy
         ]
-
-### FIXME: REMOVE AFTER MERGING
-
-# <<<<<<< HEAD
-#         # XXX: Temporary analysis for D-type AD theories.
-#         for rp in bp.ffr_ramification_points:
-#             if (
-#                 rp.ramification_type == 'type_AD' or
-#                 rp.ramification_type == 'type_III'
-#             ):
-#                 logger.warning('Temporary fix-up of the monodromy '
-#                                'for a D-type AD theory.')
-#                 # Find two diagonal elements and permute them.
-#                 indices = []
-#                 for i, row_i in enumerate(bp.monodromy):
-#                     if row_i[i] == 1:
-#                         indices.append(i)
-#                 if len(indices) == 2:
-#                     i, j = indices
-#                     bp.monodromy[i][i] = 0
-#                     bp.monodromy[j][j] = 0
-#                     bp.monodromy[i][j] = 1
-#                     bp.monodromy[j][i] = 1
-#                 else:
-#                     RuntimeError('Unknown form of the monodromy at {}.'
-#                                  .format(bp.label))
-# =======
-#         # Analyze ramification points
-#         for rp in bp.ffr_ramification_points:
-#             self.analyze_ffr_ramification_point(rp)
-
-#         ramification_types = ([
-#             rp.ramification_type for rp in bp.ffr_ramification_points 
-#             if rp.ramification_type != 'type_I'
-#         ])
-
-#         logger.info("Computing the monodromy")
-#         path_around_bp = get_path_around(bp.z, self.base_point, self,)
-
-#         if len(ramification_types) == 0:
-#             bp.monodromy = self.get_sheet_monodromy(path_around_bp)
-#         else:
-#             if len(delete_duplicates(ramification_types)) == 1:
-#                 bp.monodromy = self.get_sheet_monodromy(
-#                     path_around_bp, 
-#                     is_higher_bp=True, higher_bp_type=ramification_types[0]
-#                 )
-#             else:
-#                 raise Exception(
-#                     'Multiple ramification types for BP at z = {}'.format(bp.z)
-#                 )
-
-#         # TODO: it would be good to make a check here, e.g. on the 
-#         # relation between vanishing roots and the monodromy.
-# >>>>>>> results_for_note      
 
         ramification_types = ([
             rp.ramification_type for rp in bp.ffr_ramification_points 

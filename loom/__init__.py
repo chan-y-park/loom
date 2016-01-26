@@ -43,7 +43,7 @@ LOGGING_FILE_PATH = os.path.join(
 set_logging(
     logger_name='loom',
     logging_level=logging.INFO,
-    logging_stream=sys.stdout,
+    # logging_stream=sys.stdout,
     logging_file_name=LOGGING_FILE_PATH,
 )
 

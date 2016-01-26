@@ -586,8 +586,9 @@ class SWDataBase(object):
             )
             self.curve = None
 
+        # FIXME: why aren't the following messages displayed 
+        # when I run loom?
         # Display the content of SWDataBase.
-
         logger.info(
             'Seiberg-Witten curve in the 1st fundamental '
             'representation:\n(note: here x really stands for \lambda)'
@@ -1025,6 +1026,7 @@ class SWDataBase(object):
                     ffr_xs, 
                     ffr_weights_list,
                     near_degenerate_branch_locus=near_degenerate_branch_locus,
+                    logger_name=self.logger_name,
                 )
                 if fund_rep_index == 1:
                     xs = aligned_ffr_xs
@@ -1706,7 +1708,6 @@ def get_ramification_points_using_discriminant(
 
             subs_dict[z] = z_i
             f_x_eq = f.subs(subs_dict).evalf(n=ROOT_FINDING_PRECISION)
-            # print '\n this is the f_x equation: {}'.format(f_x_eq)
             f_x_roots = sage_subprocess.solve_single_eq_x(
                 [f_x_eq],
                 precision=ROOT_FINDING_PRECISION,
@@ -1780,8 +1781,6 @@ def null_sheet_triples(sheets):
 
         n_attempt += 1
         if len(null_triples) != N_NULL_TRIPLES:
-            print '\n{} triples'.format(len(null_triples))
-            print 'delta_x = {}'.format(delta_x)
             if len(null_triples) < N_NULL_TRIPLES:
                 delta_x = delta_x * 1.2
             elif len(null_triples) > N_NULL_TRIPLES:
@@ -1821,11 +1820,13 @@ def align_sheets_for_e_6_ffr(
     sheets, 
     weights, 
     near_degenerate_branch_locus=None,
+    logger_name='loom',
 ):
     """
     Return the list of sheets aligned according to the list of weights.
     The output is a list such that sheets[i] will correspond to weights[i].
     """
+    logger = logging.getLogger(logger_name)
     if len(sheets) != 27:
         raise Exception('Missing some sheets of the E_6 cover.')
 
@@ -1849,8 +1850,8 @@ def align_sheets_for_e_6_ffr(
         gathered_sheets = gather(sheets, have_same_r)  
 
         if len(gathered_sheets) != 3:
-            print 'The following sheets appear: '
-            print sheets
+            logger.info('The following sheets appear: ')
+            logger.info(sheets)
             raise ValueError(
                 'In a degenerate E_6 curve, sheets should arrange into '
                 'three rings in the complex plane. '
