@@ -176,7 +176,7 @@ class BranchPoint:
             .format(self.z)
         )
         for key, value in vars(self).iteritems():
-            logigng.info("{}:".format(key))
+            logging.info("{}:".format(key))
             pprint(value)
 
 
