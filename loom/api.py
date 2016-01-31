@@ -47,14 +47,16 @@ def get_logging_formatter(level):
 
 def set_logging(
     logger_name='loom',
-    logging_level=logging.INFO,
+    logging_level_name='INFO',
     logging_queue=None,
     logging_stream=None,
     logging_file_name=None,
     remove_handlers=True,
     use_rotating_file_handler=False,
 ):
+    logging.basicConfig()
     logger = logging.getLogger(logger_name)
+    logging_level = logging.getLevelName(logging_level_name)
     logger.setLevel(logging_level)
     formatter = get_logging_formatter(logging_level)
 

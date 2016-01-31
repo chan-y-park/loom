@@ -446,12 +446,6 @@ class SWDataWithTrivialization(SWDataBase):
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
 
-# XXX: Moved to SWDataBase.
-#        # Analyze ramification points
-#        for bp in self.branch_points:
-#            for rp in bp.ffr_ramification_points:
-#                self.analyze_ffr_ramification_point(rp)
-
     # TODO: Need to implement tracking without using aligned x's?
     # PL: Do we actually need to?
     def get_sheets_along_path(
@@ -1464,14 +1458,14 @@ def keep_linearly_independent_vectors(vector_list):
     return independent_list
 
 
-def build_monodromy_matrix(initial_sheets, sorted_sheets):
+def build_monodromy_matrix(initial_sheets, sorted_sheets, logger_name='loom'):
     # Now we have three lists:
     # initial_sheets = [[0, x_0], [1, x_1], ...]
     # final_sheets = [[0, x'_0], [1, x'_1], ...]
     # sorted_sheets = [[i_0, x_0], [i_1, x_1], ...]
     # therefore the monodromy permutation corresponds
     # to 0 -> i_0, 1 -> i_1, etc.
-
+    logger = logging.getLogger(logger_name)
     n_sheets = len(initial_sheets)
 
     # NOTE: in the following basis vectors, i = 0 , ... , n-1
@@ -1485,6 +1479,6 @@ def build_monodromy_matrix(initial_sheets, sorted_sheets):
 
     # perm_matrix = numpy.array(perm_list).transpose()
     perm_matrix = numpy.array(perm_list)
-    logging.debug('Permutation matrix {}'.format(perm_matrix))
+    logger.debug('Permutation matrix {}'.format(perm_matrix))
     return perm_matrix
 

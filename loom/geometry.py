@@ -586,8 +586,6 @@ class SWDataBase(object):
             )
             self.curve = None
 
-        # FIXME: why aren't the following messages displayed 
-        # when I run loom?
         # Display the content of SWDataBase.
         logger.info(
             'Seiberg-Witten curve in the 1st fundamental '
