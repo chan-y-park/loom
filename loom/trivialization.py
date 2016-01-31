@@ -115,7 +115,11 @@ class BranchPoint:
         lie in the fiber above the branch point.
 
     """
-    def __init__(self, z=None, json_data=None, ffr_ramification_points=None,):
+    def __init__(
+        self, z=None, json_data=None, ffr_ramification_points=None,
+        logger_name='loom',
+    ):
+        self.logger_name = logger_name
         if json_data is None:
             self.z = z
             self.label = None
@@ -169,14 +173,15 @@ class BranchPoint:
                     self.ffr_ramification_points.append(rp)
 
     def print_info(self):
-        logging.info(
+        logger = logging.getLogger(self.logger_name)
+        logger.info(
             "---------------------------------------------------------\n"
             "Branch Point at z = {}\n"
             "---------------------------------------------------------"
             .format(self.z)
         )
         for key, value in vars(self).iteritems():
-            logging.info("{}:".format(key))
+            logger.info("{}:".format(key))
             pprint(value)
 
 
