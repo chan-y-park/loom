@@ -126,6 +126,53 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
 
 #     return sols
 
+# def solve_single_eq_single_var(
+#     eq, var=None, precision=None, logger_name='loom',
+# ):
+#     """
+#     Use sage to solve a single polynomial equation in a single variable.
+#     """
+#     logger = logging.getLogger(logger_name)
+#     sols = []
+#     if precision is not None:
+#         mp.dps = precision
+#     else:
+#         precision = 15
+
+#     if var is None:
+#         raise Exception('Must specify variable for solving the equation.')
+#     elif var == 'x':
+#         try:
+#             rv_str = subprocess.check_output(
+#                 ['sage', sage_script_dir + 'solve_single_eq_x.sage'] +
+#                 [str(precision), str(eq)]
+#             )
+#         except (KeyboardInterrupt, SystemExit):
+#             raise
+#     elif var == 'z':
+#         try:
+#             rv_str = subprocess.check_output(
+#                 ['sage', sage_script_dir + 'solve_single_eq_z.sage'] +
+#                 [str(precision), str(eq)]
+#             )
+#         except (KeyboardInterrupt, SystemExit):
+#             raise
+    
+#     rv = eval(rv_str)
+#     sols_str_list, mult_str_list, messages = rv
+
+#     for msg in messages:
+#         logger.warning(msg)
+    
+#     for i, sols_str in enumerate(sols_str_list):
+#         (z_re, z_im) = sols_str
+#         for j in range(mult_str_list[i]):
+#             sols.append(
+#                 mpc(z_re, z_im)
+#             )
+
+#     return sols
+
 def solve_single_eq_single_var(
     eq, var=None, precision=None, logger_name='loom',
 ):
@@ -141,19 +188,11 @@ def solve_single_eq_single_var(
 
     if var is None:
         raise Exception('Must specify variable for solving the equation.')
-    elif var == 'x':
+    else:
         try:
             rv_str = subprocess.check_output(
-                ['sage', sage_script_dir + 'solve_single_eq_x.sage'] +
-                [str(precision), str(eq)]
-            )
-        except (KeyboardInterrupt, SystemExit):
-            raise
-    elif var == 'z':
-        try:
-            rv_str = subprocess.check_output(
-                ['sage', sage_script_dir + 'solve_single_eq_z.sage'] +
-                [str(precision), str(eq)]
+                ['sage', sage_script_dir + 'solve_single_eq_single_var.sage'] +
+                [str(precision), str(eq), var]
             )
         except (KeyboardInterrupt, SystemExit):
             raise
