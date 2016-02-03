@@ -23,82 +23,6 @@ NUM_ODE_XS_OVER_Z = 2
 SEED_PHASE_PRECISION = 0.001
 SEED_PRECISION_MAX_DEPTH = 5
 
-# XXX: Left for the convenience of merging.
-# class Joint:
-#     def __init__(self, z=None, s_wall_1=None, s_wall_2=None,
-#                  t_1=None, t_2=None, sw_data=None, logger_name='loom',):
-#         self.z = None
-#         self.M = None
-#         self.parents = None
-#         self.label = None
-#         self.root = None
-#         self.ode_xs = None
-# 
-#         if z is None:
-#             # Return without setting attributes.
-#             return
-# 
-#         self.z = z
-#         self.M = s_wall_1.M[t_1] + s_wall_2.M[t_2]
-#         self.parents = [s_wall_1.label, s_wall_2.label]
-#         self.label = [s_wall_1.label, s_wall_2.label]
-# 
-#         alpha_1 = s_wall_1.get_root_at_t(t_1)
-#         alpha_2 = s_wall_2.get_root_at_t(t_2) 
-#         self.root = alpha_1 + alpha_2
-# 
-#         # FIXME: The following, including self.ode_xs, can be removed
-#         # once the seeding of an S-wall is done by using a root.
-#         ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
-#         ffr_new_wall_weight_pairs = (
-#             sw_data.g_data.ordered_weight_pairs(self.root, ffr=True)
-#         )
-#         ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
-#         ode_x1 = ffr_xs_at_z[ffr_w_p_0[0]]
-#         ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
-#         self.ode_xs = [ode_x1, ode_x2]
-# 
-#     def __eq__(self, other):
-#         return self.label == other.label
-# 
-#     def get_json_data(self):
-#         json_data = {
-#             'z': ctor2(self.z),
-#             'M': ctor2(self.M),
-#             'parents': [parent for parent in self.parents],
-#             'label': self.label,
-#             'root': self.root.tolist(),
-#             'ode_xs': [ctor2(x) for x in self.ode_xs],
-#         }
-#         return json_data
-# 
-#     def set_from_json_data(self, json_data):
-#         self.z = r2toc(json_data['z'])
-#         self.M = r2toc(json_data['M'])
-#         self.parents = [parent for parent in json_data['parents']]
-#         self.label = json_data['label']
-#         self.root = numpy.array(json_data['root'])
-#         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
-# 
-#     def is_equal_to(self, other, accuracy):
-#         if(abs(self.z - other.z) > accuracy):
-#             return False
-# 
-#         if numpy.array_equal(self.root, other.root) is not True:
-#             return False
-# 
-#         if(abs(self.M - other.M) > accuracy):
-#             return False
-# 
-#         # FIXME: Probably the following comparison is not needed 
-#         # after comparing the roots of two S-walls.
-#         # Decide whether to do the comparison or not.
-#         for i in range(NUM_ODE_XS_OVER_Z):
-#             if abs(self.ode_xs[i] - other.ode_xs[i]) > accuracy:
-#                 return False
-# 
-#         return True
-
 class Joint:
     def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
                  logger_name='loom',):
@@ -184,7 +108,6 @@ class Joint:
 # more sense to give the initial root-type.
 # From that, and the trivialization module, we can
 # extract the value of x_0, in principle.
-
 
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, M_0=None, parents=None,
@@ -633,23 +556,6 @@ class SWall(object):
         else:
             raise RuntimeError('Parent of {} has no root.'
                                .format(self.label))
-
-#    def get_root_at_t(self, t):
-#        """
-#        Given an integer t which parametrizes a point 
-#        of the trajectory in proper time, return the local 
-#        root at that point.
-#        """
-#        if t < 0 or t > (len(self.z) - 1):
-#            raise ValueError
-#        else:
-#            closed_splits = self.get_splits() + [len(self.z) - 1]
-#            for i, sp in enumerate(closed_splits):
-#                if t <= sp:
-#                    return self.local_roots[i]
-#                    break
-#                else:
-#                    pass
 
     def get_roots_at_t(self, t):
         """

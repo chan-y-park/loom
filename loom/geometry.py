@@ -462,8 +462,13 @@ class SWCurve:
             return numpy.roots(coeff_list)
         else:
             f_x_eq = self.num_eq.subs(z, z_0).evalf(n=ROOT_FINDING_PRECISION)
-            f_x_roots = sage_subprocess.solve_single_eq_x(
-                [f_x_eq],
+            # f_x_roots = sage_subprocess.solve_single_eq_x(
+            #     [f_x_eq],
+            #     precision=ROOT_FINDING_PRECISION,
+            # )
+            f_x_roots = sage_subprocess.solve_single_eq_single_var(
+                f_x_eq,
+                var='x',
                 precision=ROOT_FINDING_PRECISION,
             )
             return map(complex, f_x_roots)
@@ -1687,8 +1692,14 @@ def get_ramification_points_using_discriminant(
         f_roots = None
 
         fact_eq = f_P.as_expr().evalf(n=ROOT_FINDING_PRECISION, chop=True) 
-        f_roots = sage_subprocess.solve_single_eq_z(
-            [fact_eq],
+        # f_roots = sage_subprocess.solve_single_eq_z(
+        #     [fact_eq],
+        #     precision=ROOT_FINDING_PRECISION,
+        #     logger_name=logger_name,
+        # )
+        f_roots = sage_subprocess.solve_single_eq_single_var(
+            fact_eq,
+            var='z',
             precision=ROOT_FINDING_PRECISION,
             logger_name=logger_name,
         )
@@ -1711,8 +1722,14 @@ def get_ramification_points_using_discriminant(
 
             subs_dict[z] = z_i
             f_x_eq = f.subs(subs_dict).evalf(n=ROOT_FINDING_PRECISION)
-            f_x_roots = sage_subprocess.solve_single_eq_x(
-                [f_x_eq],
+            # f_x_roots = sage_subprocess.solve_single_eq_x(
+            #     [f_x_eq],
+            #     precision=ROOT_FINDING_PRECISION,
+            #     logger_name=logger_name,
+            # )
+            f_x_roots = sage_subprocess.solve_single_eq_single_var(
+                f_x_eq,
+                var='x',
                 precision=ROOT_FINDING_PRECISION,
                 logger_name=logger_name,
             )
