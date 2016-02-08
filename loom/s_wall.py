@@ -23,6 +23,7 @@ NUM_ODE_XS_OVER_Z = 2
 SEED_PHASE_PRECISION = 0.001
 SEED_PRECISION_MAX_DEPTH = 5
 
+
 class Joint:
     def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
                  logger_name='loom',):

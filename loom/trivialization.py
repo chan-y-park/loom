@@ -931,7 +931,6 @@ class SWDataWithTrivialization(SWDataBase):
                     sorted_sheets = corrected_sheets
                     pass
 
-
             else:
                 raise ValueError(
                     '\nError in determination of monodromy!\n' +
@@ -993,8 +992,6 @@ class SWDataWithTrivialization(SWDataBase):
         )
         bp.order = len(bp.positive_roots) + 1
 
-
-        
         bp.ffr_ramification_points = [
             rp for rp in self.ffr_ramification_points
             if abs(rp.z - bp.z) < self.accuracy

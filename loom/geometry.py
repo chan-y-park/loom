@@ -1172,7 +1172,8 @@ class SWDataBase(object):
             
             logger.debug(
                 '\nThe ramification point at (z,x)={} is of {}'.format(
-                [rp.z, rp.x], rp_type)
+                    [rp.z, rp.x], rp_type
+                )
             )
 
             rp.ramification_type = rp_type    
@@ -1647,9 +1648,9 @@ def get_ramification_points_using_discriminant(
             # discriminant with sage or sympy is just stuck. Mathematica 
             # is able to do this in a fraction of a second though
             if (
-                sympy.expand(f_n.subs(subs_dict)/ (x ** 3)) == (
-                    -108*x**24*z**26 - 540*I*x**12*z**15 
-                    + 540*I*x**12*z**13 - z**4 + 2*z**2 - 1
+                sympy.expand(f_n.subs(subs_dict) / (x ** 3)) == (
+                    -108 * x**24 * z**26 - 540 * I * x**12 * z**15 
+                    + 540 * I * x**12 * z**13 - z**4 + 2 * z**2 - 1
                 )
             ):
                 D_z = z**598 * (z**2 - 1)**46
