@@ -1569,7 +1569,7 @@ def get_ramification_points_using_discriminant(
     # these methods to employ in the long run
 
     # FIRST METHOD: Use sympy to compute discriminants
-    # D_z = sympy.discriminant(f_n.subs(subs_dict), x)
+    # D_z = sympy.discriminant(f_n, x)
 
     # if D_z == 0:
     #     logger.info(
@@ -1577,9 +1577,9 @@ def get_ramification_points_using_discriminant(
     #         'Will work with an effective discriminant.'
     #     )
     #     if g_data.type == 'A':
-    #         D_z = sympy.discriminant(f_n.subs(subs_dict) / x, x)
+    #         D_z = sympy.discriminant(f_n / x, x)
     #     if g_data.type == 'D':
-    #         D_z = sympy.discriminant(f_n.subs(subs_dict) / (x ** 2), x)
+    #         D_z = sympy.discriminant(f_n / (x ** 2), x)
     #     # TODO: think through possible generalizations here,
     #     # this is only handling certain special cases with E_6
     #     # i.e. the maximally degenerate branch-point, occurring 
@@ -1587,19 +1587,19 @@ def get_ramification_points_using_discriminant(
     #     if g_data.type == 'E':
     #         logger.info(
     #             'will work with renormalized curve \n{}'.format(
-    #                 f_n.subs(subs_dict) / (x ** 3)
+    #                 f_n / (x ** 3)
     #             )
     #         )
     #         logger.debug(
     #             'after simplification \n{}'.format(
-    #                 sympy.simplify(f_n.subs(subs_dict) / (x ** 3))
+    #                 sympy.simplify(f_n / (x ** 3))
     #             )
     #         )
     #         # FIXME: this is a temporary fix, the computation of the 
     #         # discriminant with sage or sympy is just stuck. Mathematica 
     #         # is able to do this in a fraction of a second though
     #         if (
-    #             sympy.expand(f_n.subs(subs_dict) / (x ** 3)) == (
+    #             sympy.expand(f_n / (x ** 3)) == (
     #                 -108 * x ** 24 * z ** 26 - 540 * I * x ** 12 * z ** 15 
     #                 + 540 * I * x ** 12 * z ** 13 - z ** 4 + 2 * z ** 2 - 1
     #             )
@@ -1607,7 +1607,7 @@ def get_ramification_points_using_discriminant(
     #             D_z = z ** 598 * (z ** 2 - 1) ** 46
     #         else:
     #             D_z = sympy.discriminant(
-    #                 sympy.simplify(f_n.subs(subs_dict) / (x ** 3)), x
+    #                 sympy.simplify(f_n / (x ** 3)), x
     #             )
 
     #     logger.debug(
@@ -1616,7 +1616,7 @@ def get_ramification_points_using_discriminant(
 
     # SECOND METHOD: Use SAGE to compute discriminants
     D_z = sage_subprocess.compute_discriminant(
-        sympy.expand(f_n.subs(subs_dict))
+        sympy.expand(f_n)
     )
 
     if D_z == 0:
@@ -1625,9 +1625,9 @@ def get_ramification_points_using_discriminant(
             'Will work with an effective discriminant.'
         )
         if g_data.type == 'A':
-            D_z = sympy.discriminant(f_n.subs(subs_dict) / x, x)
+            D_z = sympy.discriminant(f_n / x, x)
         if g_data.type == 'D':
-            D_z = sympy.discriminant(f_n.subs(subs_dict) / (x ** 2), x)
+            D_z = sympy.discriminant(f_n / (x ** 2), x)
         # NOTE: think through possible generalizations here,
         # this is only handling certain special cases with E_6
         # i.e. the maximally degenerate branch-point, occurring 
@@ -1635,12 +1635,12 @@ def get_ramification_points_using_discriminant(
         if g_data.type == 'E':
             logger.info(
                 'will work with renormalized curve \n{}'.format(
-                    f_n.subs(subs_dict) / (x ** 3)
+                    f_n / (x ** 3)
                 )
             )
             logger.debug(
                 'after simplification \n{}'.format(
-                    sympy.simplify(f_n.subs(subs_dict) / (x ** 3))
+                    sympy.simplify(f_n / (x ** 3))
                 )
             )
 
@@ -1648,7 +1648,7 @@ def get_ramification_points_using_discriminant(
             # discriminant with sage or sympy is just stuck. Mathematica 
             # is able to do this in a fraction of a second though
             if (
-                sympy.expand(f_n.subs(subs_dict) / (x ** 3)) == (
+                sympy.expand(f_n / (x ** 3)) == (
                     -108 * x**24 * z**26 - 540 * I * x**12 * z**15 
                     + 540 * I * x**12 * z**13 - z**4 + 2 * z**2 - 1
                 )
@@ -1656,7 +1656,7 @@ def get_ramification_points_using_discriminant(
                 D_z = z**598 * (z**2 - 1)**46
             else:
                 D_z = sage_subprocess.compute_discriminant(
-                    sympy.expand(f_n.subs(subs_dict) / (x ** 3))
+                    sympy.expand(f_n / (x ** 3))
                 )
 
         logger.debug(
