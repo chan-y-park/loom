@@ -754,6 +754,7 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
     bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
+        logger_name=get_logger_name(),
     )
     # Set the z-plane rotation back.
     # TODO: Decide whether to save a rotated data or a raw data.

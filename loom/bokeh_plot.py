@@ -1,3 +1,4 @@
+import logging
 import numpy
 import bokeh
 # import pdb
@@ -18,14 +19,17 @@ from misc import get_splits_with_overlap
 def get_spectral_network_bokeh_plot(
     spectral_network_data, plot_range=None,
     plot_joints=False, plot_data_points=False, plot_on_cylinder=False,
-    notebook=False,
+    plot_width=800, plot_height=800,
+    notebook=False, logger_name=None,
 ):
+    logger = logging.getLogger(logger_name)
+
     spectral_networks = spectral_network_data.spectral_networks
     sw_data = spectral_network_data.sw_data
     z_rotation = complex(sw_data.z_plane_rotation)
 
-    plot_width = 800
-    plot_height = plot_width
+    plot_width = plot_width
+    plot_height = plot_height
 
     x_min = min([min([min([z.real for z in s_wall.z])
                       for s_wall in sn.s_walls])
@@ -181,15 +185,35 @@ def get_spectral_network_bokeh_plot(
                     for root in roots:
                         root_label += str(root.tolist()) + ', '
                     sn_data['root'].append(root_label[:-2])
-                    sn_data['color'].append(
-                        sw_data.g_data.get_root_color(roots[0])
-                    )
+                    try:
+                        color = sw_data.g_data.get_root_color(roots[0])
+                    except Exception as e:
+                        color = '#000000'
+                        logger.warning(
+                            '*** unknown root color for {} ***'
+                            .format(s_wall.label)
+                        )
+                        
+                    sn_data['color'].append(color)
+#                    sn_data['color'].append(
+#                        sw_data.g_data.get_root_color(roots[0])
+#                    )
             else:
                 for root in s_wall.local_roots:
                     sn_data['label'].append(str(s_wall.label))
                     sn_data['root'].append(str(root.tolist()))
-                    sn_data['color'].append(sw_data.g_data
-                                            .get_root_color(root))
+                    try:
+                        color = sw_data.g_data.get_root_color(root)
+                    except Exception as e:
+                        color = '#000000'
+                        logger.warning(
+                            '*** unknown root color for {} ***'
+                            .format(s_wall.label)
+                        )
+                        
+                    sn_data['color'].append(color)
+#                    sn_data['color'].append(sw_data.g_data
+#                                            .get_root_color(root))
 
         snds.data['spectral_networks'].append(sn_data)
 
