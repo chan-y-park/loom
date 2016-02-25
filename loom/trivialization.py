@@ -401,7 +401,7 @@ class SWDataWithTrivialization(SWDataBase):
             )
             self.farthest_branching_locus = max(
                 [abs(x) for x in all_points_z]
-                )
+            )
             
         elif n_critical_loci == 1:
             # If there is only one branching locus, we still
@@ -469,41 +469,62 @@ class SWDataWithTrivialization(SWDataBase):
         # e.g. M_1 M_2 ... M_k = M_{k+1} ... M_N (M_{oo})^{-1}
         # for all possible splittings.
 
+        logger = logging.getLogger(self.logger_name)
+        rep_d = len(self.g_data.weights)
+
         # If there is no irregular singularity at infinity, 
-        # we make a check that the product of monodromies is trivial
-        # TODO: also make a check if there IS branching at infinity:
-        # first compute monodromy around infinity, and then check against
-        # the product of single monodromies.
-        monodromy_at_infinity = None
+        # we make a check that the numerically computed monodromy is trivial
+        monodromy_at_oo = None
         for p in self.irregular_punctures: 
             if p.z == oo:
-                monodromy_at_infinity = True
+                monodromy_at_oo = True
                 logger.debug(
                     "There is branching at infinity, "
                     "due to an irregular singularity."
                 )
 
-        if monodromy_at_infinity is None:
-            ram_loci = self.branch_points + self.irregular_singularities
-            ordered_monodromies = [rl.monodromy for rl in sorted(
-                ram_loci, key=lambda rl: rl.z.real
-            )]
-            rep_d = len(self.g_data.weights)
-            tot_mono = numpy.identity(rep_d)
-            for m_i in ordered_monodromies:
-                # NOTE: since monodromies are counter-clockwise and 
-                # ramification loci are ordered according to ascending 
-                # real part of their coordinate, multiplication must 
-                # be to the right.
-                tot_mono = numpy.dot(tot_mono, m_i)
-
-            if numpy.array_equal(tot_mono, numpy.identity(rep_d)) is True:
-                logger.info("Monodromy at infinity is trivial, as expected.")
+        path_around_oo = self.get_path_around(oo, self.base_point, self)
+        numerical_monodromy_at_oo = self.get_sheet_monodromy(path_around_oo)
+        if monodromy_at_oo is None:
+            if numpy.array_equal(
+                numerical_monodromy_at_oo, numpy.identity(rep_d)
+            ) is True:
+                monodromy_at_oo = numpy.identity(rep_d)
+                logger.info(
+                    "Direct computation confirms trivial monodromy at oo"
+                )
             else:
                 raise Exception(
                     "Monodromy at infinity is nontrivial, but no branching "
                     "has been declared at infinity."
                 )
+        elif monodromy_at_oo is True:
+            monodromy_at_oo = numerical_monodromy_at_oo
+
+        # Check that product of all monodromies equals 
+        # the monodromy at infinity    
+        ram_loci = self.branch_points + self.irregular_singularities
+        ordered_monodromies = [rl.monodromy for rl in sorted(
+            ram_loci, key=lambda rl: rl.z.real
+        )]
+        m_tot = numpy.identity(rep_d)
+        for m_i in ordered_monodromies:
+            # NOTE: since monodromies are counter-clockwise and 
+            # ramification loci are ordered according to ascending 
+            # real part of their coordinate, multiplication must 
+            # be to the right.
+            m_tot = numpy.dot(m_tot, m_i)
+
+        if numpy.array_equal(m_tot, monodromy_at_oo) is True:
+            logger.info(
+                "Monodromy at infinity agrees with the product "
+                "of all monodromies, as expected."
+            )
+        else:
+            raise Exception(
+                "Monodromy at infinity does not agree with the product "
+                "of all monodromies. Probable error in trivialization."
+            )
 
     def get_sheets_along_path(
         self, z_path, is_path_to_bp=False, ffr=False,
