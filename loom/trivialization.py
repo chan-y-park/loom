@@ -517,9 +517,10 @@ class SWDataWithTrivialization(SWDataBase):
                 "of all monodromies, as expected."
             )
         else:
-            raise Exception(
-                "Monodromy at infinity does not agree with the product "
-                "of all monodromies. Probable error in trivialization."
+            logging.info(
+                '\nWARNING!\n'
+                'Monodromy at infinity does not agree with the product '
+                'of all monodromies. Probable error in trivialization.'
             )
 
         # Now we check consistency for various combinations of monodromies
@@ -541,13 +542,13 @@ class SWDataWithTrivialization(SWDataBase):
                 # be to the right.
                 m_2 = numpy.dot(m_2, m_i)
             if numpy.array_equal(
-                numpy.dot(m_1, numpy(m_2, monodromy_at_oo)),
+                numpy.dot(m_1, numpy.dot(m_2, monodromy_at_oo)),
                 numpy.identity(rep_d)
             ):
-                print "\n\nchecking splitting number {}\n\n".format(i)
                 continue
             else:
-                raise Exception(
+                logging.info(
+                    '\nWARNING!\n'
                     'The product of the first {} monodromies '
                     'does not match the (inverse of) the remaining ones'
                     .format(i)
