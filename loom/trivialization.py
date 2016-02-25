@@ -277,6 +277,7 @@ class SWDataWithTrivialization(SWDataBase):
     # This should be guaranteed by the automatic rotation of 
     # the z-plane which is performed before calling this class.
     # TODO: irregular singularities ARE branch points.
+    # PL: in what sense? 
     def __init__(self, config, logger_name='loom', json_data=None,):
         super(SWDataWithTrivialization, self).__init__(
             config, logger_name=logger_name, json_data=json_data,
@@ -452,8 +453,42 @@ class SWDataWithTrivialization(SWDataBase):
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
 
-    # TODO: Need to implement tracking without using aligned x's?
-    # PL: Do we actually need to?
+        # If there is no irregular singularity at infinity, 
+        # we make a check that the product of monodromies is trivial
+        # TODO: also make a check if there IS branching at infinity:
+        # first compute monodromy around infinity, and then check against
+        # the product of single monodromies.
+        monodromy_at_infinity = None
+        for p in self.irregular_punctures: 
+            if p.z == oo:
+                monodromy_at_infinity = True
+                logger.info(
+                    "There is branching at infinity, "
+                    "due to an irregular singularity."
+                )
+
+        if monodromy_at_infinity is None:
+            ram_loci = self.branch_points + self.irregular_singularities
+            ordered_monodromies = [rl.monodromy for rl in sorted(
+                ram_loci, key=lambda rl: rl.z.real
+            )]
+            rep_d = len(self.g_data.weights)
+            tot_mono = numpy.identity(rep_d)
+            for m_i in ordered_monodromies:
+                # NOTE: since monodromies are counter-clockwise and 
+                # ramification loci are ordered according to ascending 
+                # real part of their coordinate, multiplication must 
+                # be to the right.
+                tot_mono = numpy.dot(tot_mono, m_i)
+
+            if numpy.array_equal(tot_mono, numpy.identity(rep_d)) is True:
+                logger.info("Monodromy at infinity is trivial, as expected.")
+            else:
+                raise Exception(
+                    "Monodromy at infinity is nontrivial, but no branching "
+                    "has been declared at infinity."
+                )
+
     def get_sheets_along_path(
         self, z_path, is_path_to_bp=False, ffr=False,
         ffr_xs_0=None, zoom_level=MAX_ZOOM_LEVEL,
