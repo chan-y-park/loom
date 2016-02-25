@@ -1267,19 +1267,22 @@ def get_ramification_points_using_system_of_eqs(
     eq_1 = f_n
 
     # Check the curve if it has the D-type factorization.
-    num_factor, f_n_factors = sympy.factor_list(f_n)
-    if len(f_n_factors) > 1:
-        # TODO: check Casimir differentials too?
-        if (
-            g_data.type == 'D' and
-            len(f_n_factors) == 2 and
-            (x, 2) in f_n_factors
-        ):
-            eq_1 = sympy.simplify(eq_1 / x ** 2)
-        else:
-            logger.warning('The curve to find ramification points'
-                           'has an unknown factorization: {} = {}.'
-                           .format(f_n, f_n.factor()))
+    # TODO: checking factorization of an E-type curve using SymPy
+    # is too slow. Consider using SAGE.
+    if g_data.type != 'E':
+        num_factor, f_n_factors = sympy.factor_list(f_n)
+        if len(f_n_factors) > 1:
+            # TODO: check Casimir differentials too?
+            if (
+                g_data.type == 'D' and
+                len(f_n_factors) == 2 and
+                (x, 2) in f_n_factors
+            ):
+                eq_1 = sympy.simplify(eq_1 / x ** 2)
+            else:
+                logger.warning('The curve to find ramification points '
+                               'has an unknown factorization: {} = {}.'
+                               .format(f_n, f_n.factor()))
 
     eq_2 = eq_1.diff(x)
 

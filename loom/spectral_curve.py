@@ -172,6 +172,8 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     elif g_type == 'E':
         if g_rank == 6:
             return get_E_6_curve_string(casimir_differentials)
+        elif g_rank == 7:
+            return get_E_7_curve_string(casimir_differentials)
 
     else:
         raise NotImplemented(
