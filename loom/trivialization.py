@@ -462,7 +462,7 @@ class SWDataWithTrivialization(SWDataBase):
         for p in self.irregular_punctures: 
             if p.z == oo:
                 monodromy_at_infinity = True
-                logger.info(
+                logger.debug(
                     "There is branching at infinity, "
                     "due to an irregular singularity."
                 )
