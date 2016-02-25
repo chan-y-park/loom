@@ -2,7 +2,7 @@ import sympy
 import numpy
 import logging
 import copy
-# import pdb
+import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo, I
@@ -13,6 +13,7 @@ from cmath import phase, pi
 from matplotlib import cm as mpl_color_map
 
 import sage_subprocess
+from spectral_curve import get_ffr_curve_string
 from misc import (ctor2, r2toc, PSL2C,
                   delete_duplicates, gather, parse_sym_dict_str,
                   n_remove_duplicate)
@@ -422,9 +423,11 @@ class SWCurve:
                 casimir_differentials, g_data.type, g_data.rank
             )
             try:
-                self.sym_eq = sympy.sympify(ffr_eq_str)
+                # TODO: SAGE is much faster in expanding an expression.
+                #self.sym_eq = sympy.sympify(ffr_eq_str)
+                self.sym_eq = sympy.sympify(ffr_eq_str).expand()
             except:
-                raise ValueError('syntax error in the Casimir differentials.')
+                raise
             # NOTE: We apply PSL2C only to the numerical curve
             # for the simplicity of analysis.
             Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
@@ -590,7 +593,7 @@ class SWDataBase(object):
         # Display the content of SWDataBase.
         logger.info(
             'Seiberg-Witten curve in the 1st fundamental '
-            'representation:\n(note: here x really stands for \lambda)'
+            'representation:\n(note: \lambda = x dz)'
             '\n{} = 0\n(numerically\n{}=0\n)'
             .format(sympy.latex(self.ffr_curve.sym_eq),
                     sympy.latex(self.ffr_curve.num_eq))
@@ -608,75 +611,6 @@ class SWDataBase(object):
 
         for pct in self.regular_punctures + self.irregular_punctures:
             logger.info('{} at z={}'.format(pct.label, pct.z))
-
-    def set_z_rotation(self, z_rotation):
-        for p in (
-            self.regular_punctures + self.irregular_punctures +
-            self.ffr_ramification_points
-        ):
-            p.set_z_rotation(z_rotation)
-
-        if self.ffr_curve is not None:
-            self.ffr_curve.set_z_rotation(z_rotation)
-
-        if self.curve is not None:
-            self.curve.set_z_rotation(z_rotation)
-
-        if self.diff is not None:
-            self.diff.set_z_rotation(z_rotation)
-
-        # self.z_plane_rotation *= z_rotation
-
-    def get_json_data(self):
-        json_data = {
-            'g_data': self.g_data.get_json_data(),
-            'regular_punctures': [p.get_json_data() 
-                                  for p in self.regular_punctures],
-            'irregular_punctures': [p.get_json_data() 
-                                    for p in self.irregular_punctures],
-            'ffr_ramification_points': [
-                rp.get_json_data() for rp in self.ffr_ramification_points
-            ],
-            'z_plane_rotation': str(self.z_plane_rotation),
-            'accuracy': self.accuracy,
-        }
-
-        return json_data
-
-    def set_from_json_data(self, json_data):
-        logger = logging.getLogger(self.logger_name)
-
-        self.g_data = GData(json_data=json_data['g_data'],
-                            logger_name=self.logger_name,)
-        # XXX: Remove the following check after deprecating
-        # using older data.
-        try:
-            self.regular_punctures = [
-                Puncture(json_data=data)
-                for data in json_data['regular_punctures'] 
-            ]
-            self.irregular_punctures = [
-                Puncture(json_data=data)
-                for data in json_data['irregular_punctures'] 
-            ]
-        except KeyError:
-            logger.warning(
-                'Loading a JSON data of an older version: '
-                'no (ir)regular_punctures data, '
-                'use punctures data instead.'
-            )
-            self.regular_punctures = []
-            self.irregular_punctures = [
-                Puncture(json_data=data)
-                for data in json_data['punctures'] 
-            ]
-
-        self.ffr_ramification_points = [
-            RamificationPoint(json_data=data)
-            for data in json_data['ffr_ramification_points']
-        ]
-        self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
-        self.accuracy = json_data['accuracy']
 
     def set_from_config(self, config, mt_params=None,
                         casimir_differentials=None, diff_params=None,):
@@ -900,6 +834,75 @@ class SWDataBase(object):
 
         if config['size_of_puncture_cutoff'] is None:
             config['size_of_puncture_cutoff'] = min_abs_distance / 100.0
+
+    def set_z_rotation(self, z_rotation):
+        for p in (
+            self.regular_punctures + self.irregular_punctures +
+            self.ffr_ramification_points
+        ):
+            p.set_z_rotation(z_rotation)
+
+        if self.ffr_curve is not None:
+            self.ffr_curve.set_z_rotation(z_rotation)
+
+        if self.curve is not None:
+            self.curve.set_z_rotation(z_rotation)
+
+        if self.diff is not None:
+            self.diff.set_z_rotation(z_rotation)
+
+        # self.z_plane_rotation *= z_rotation
+
+    def get_json_data(self):
+        json_data = {
+            'g_data': self.g_data.get_json_data(),
+            'regular_punctures': [p.get_json_data() 
+                                  for p in self.regular_punctures],
+            'irregular_punctures': [p.get_json_data() 
+                                    for p in self.irregular_punctures],
+            'ffr_ramification_points': [
+                rp.get_json_data() for rp in self.ffr_ramification_points
+            ],
+            'z_plane_rotation': str(self.z_plane_rotation),
+            'accuracy': self.accuracy,
+        }
+
+        return json_data
+
+    def set_from_json_data(self, json_data):
+        logger = logging.getLogger(self.logger_name)
+
+        self.g_data = GData(json_data=json_data['g_data'],
+                            logger_name=self.logger_name,)
+        # XXX: Remove the following check after deprecating
+        # using older data.
+        try:
+            self.regular_punctures = [
+                Puncture(json_data=data)
+                for data in json_data['regular_punctures'] 
+            ]
+            self.irregular_punctures = [
+                Puncture(json_data=data)
+                for data in json_data['irregular_punctures'] 
+            ]
+        except KeyError:
+            logger.warning(
+                'Loading a JSON data of an older version: '
+                'no (ir)regular_punctures data, '
+                'use punctures data instead.'
+            )
+            self.regular_punctures = []
+            self.irregular_punctures = [
+                Puncture(json_data=data)
+                for data in json_data['punctures'] 
+            ]
+
+        self.ffr_ramification_points = [
+            RamificationPoint(json_data=data)
+            for data in json_data['ffr_ramification_points']
+        ]
+        self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
+        self.accuracy = json_data['accuracy']
 
     def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
         """
@@ -1245,235 +1248,6 @@ def get_punctures_from_config(
     return punctures
 
 
-# E_6 curve strings
-#
-# KEEP FOR NOW
-#
-# The 1st representation
-# tau_str = 'z + 1/z + ({u_6})'
-# q_1_str = (
-#     '270*x^(15) + 342*(({u_1}))*x^(13) + 162*(({u_1}))^2*x^(11)'  
-#     '- 252*(({u_2}))*x^(10) + (26*(({u_1}))^3 + 18*(({u_3})))*x^9' 
-#     '- 162*(({u_1}))*(({u_2}))*x^8 + (6*(({u_1}))*(({u_3})) '
-#     '- 27*(({u_4})))*x^7' 
-#     '- (30*(({u_1}))^2*(({u_2})) - 36*(({u_5})))*x^6' 
-#     '+ (27*(({u_2}))^2 - 9*(({u_1}))*(({u_4})))*x^5' 
-#     '- (3*(({u_2}))*(({u_3})) - 6*(({u_1}))*(({u_5})))*x^4' 
-#     '- 3*(({u_1}))*(({u_2}))^2*x^3 - 3*(({u_2}))*(({u_5}))*x '
-#     '- (({u_2}))^3'
-# )
-# q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
-# p_1_str = (
-#     '78*x^10 + 60*(({u_1}))*x^8 + 14*(({u_1}))^2*x^6 '
-#     '- 33*(({u_2}))*x^5' 
-#     '+ 2*(({u_3}))*x^4 - 5*(({u_1}))*(({u_2}))*x^3 - (({u_4}))*x^2 '
-#     '- (({u_5}))*x - (({u_2}))^2'
-# )
-# p_2_str = (
-#     '12*x^10 + 12*(({u_1}))*x^8 + 4*(({u_1}))^2*x^6 '
-#     '- 12*(({u_2}))*x^5 + (({u_3}))*x^4' 
-#     '- 4*(({u_1}))*(({u_2}))*x^3 - 2*(({u_4}))*x^2 + 4*(({u_5}))*x '
-#     '+ (({u_2}))^2'
-# )
-
-
-# The 2nd representation
-# Another version of the SW curve, obtained after replacing 
-# x -> - z x / 2
-# so that now x ~ \lambda_{SW}
-#
-# phi_12_str = '({u_6})'
-# q_1_str = (
-#     '-(13/256) * x^9 * ({u_1})^3 * z^9 '
-#     '- 15/32 * x^6 * ({u_1})^2 * ({u_2}) * z^6'
-#     '-(81 * x^(11) * ({u_1})^2 * z^(11))/(1024) '
-#     '+ (3/8) * x^3 * ({u_1}) * ({u_2})^2 * z^3 '
-#     '- (81/128) * x^8 * ({u_1}) * ({u_2}) * z^8'
-#     '- (3/64) * x^7 * ({u_1}) * ({u_3}) * z^7 '
-#     '+ (9 / 32) * x^5 * ({u_1}) * ({u_4}) * z^5'
-#     '+ (3/8) * x^4 * ({u_1}) * ({u_5}) * z^4 '
-#     '- (171 * x^(13) * ({u_1}) * z^(13))/(4096)'
-#     '- ({u_2})^3 - (27/32) * x^5 * ({u_2})^2 * z^5 '
-#     '- (3/16) * x^4 * ({u_2}) * ({u_3}) * z^4'
-#     '+ (3/2) * x * ({u_2}) * ({u_5}) * z '
-#     '- (63/256) * x^(10) * ({u_2}) * z^(10) '
-#     '- (9/256) * x^9 * ({u_3}) * z^9 '
-#     '+ (27/128) * x^7 * ({u_4}) * z^7 '
-#     '+ (9/16) * x^6 * ({u_5}) * z^6 '
-#     '- (135 * x^(15) * z^(15))/(16384)'
-# )
-# q_2_str = '1/2 * ((-2) / (x * z))^3 *(({q_1})^2 - ({p_1})^2*({p_2}))'
-# p_1_str = (
-#     '(7/32) * x^6 * ({u_1})^2 * z^6 + (5/8) * x^3 * ({u_1}) * ({u_2}) * z^3' 
-#     '+ (15/64) * x^8 * ({u_1}) * z^8 - ({u_2})^2 '
-#     '+ (33/32) * x^5 * ({u_2}) * z^5 + (1/8) * x^4 * ({u_3}) * z^4 '
-#     '- (1/4) * x^2 * ({u_4}) * z^2 + (x * ({u_5}) * z)/2 '
-#     '+ (39 * x^(10) * z^(10))/512'
-# )
-# p_2_str = (
-#     '(1/256) * x * z * (16 * x^5 * ({u_1})^2 * z^5 '
-#     '+ 12 * x^7 * ({u_1}) * z^7 + 16 * x^3 * ({u_3}) * z^3 '
-#     '- 128 * x * ({u_4}) * z - 512 * ({u_5}) + 3 * x^9 * z^9) '
-#     '+ (1/8) * ({u_2}) * (4 * x^3 * ({u_1}) * z^3 + 3 * x^5 * z^5) '
-#     '+ ({u_2})^2'
-# )
-
-
-# The 3rd representation
-# The E_6 curve in Class S form
-# NOTE: here x really stands for \lambda 
-# NOTE: this being said, it's just a relabeling because \lambda = x dz/z
-# this is terribly cofusing notation, should switch to writing 
-# curves entirely in terms of \lambda
-
-q_1_str = (
-    '270*x^(15) + 342*(({phi_2}))*x^(13) + 162*(({phi_2}))^2*x^(11)'  
-    '- 252*(({phi_5}))*x^(10) + (26*(({phi_2}))^3 + 18*(({phi_6})))*x^9' 
-    '- 162*(({phi_2}))*(({phi_5}))*x^8 + (6*(({phi_2}))*(({phi_6})) '
-    '- 27*(({phi_8})))*x^7' 
-    '- (30*(({phi_2}))^2*(({phi_5})) - 36*(({phi_9})))*x^6' 
-    '+ (27*(({phi_5}))^2 - 9*(({phi_2}))*(({phi_8})))*x^5' 
-    '- (3*(({phi_5}))*(({phi_6})) - 6*(({phi_2}))*(({phi_9})))*x^4' 
-    '- 3*(({phi_2}))*(({phi_5}))^2*x^3 - 3*(({phi_5}))*(({phi_9}))*x '
-    '- (({phi_5}))^3'
-)
-q_2_str = '1/(2*x^3)*(({q_1})^2 - ({p_1})^2*({p_2}))'
-p_1_str = (
-    '78*x^10 + 60*(({phi_2}))*x^8 + 14*(({phi_2}))^2*x^6 '
-    '- 33*(({phi_5}))*x^5' 
-    '+ 2*(({phi_6}))*x^4 - 5*(({phi_2}))*(({phi_5}))*x^3 - (({phi_8}))*x^2 '
-    '- (({phi_9}))*x - (({phi_5}))^2'
-)
-p_2_str = (
-    '12*x^10 + 12*(({phi_2}))*x^8 + 4*(({phi_2}))^2*x^6 '
-    '- 12*(({phi_5}))*x^5 + (({phi_6}))*x^4' 
-    '- 4*(({phi_2}))*(({phi_5}))*x^3 - 2*(({phi_8}))*x^2 + 4*(({phi_9}))*x '
-    '+ (({phi_5}))^2'
-)
-
-
-def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
-    """
-    Construct a Seiberg-Witten curve in the 1st fundamental representation
-    using Casimir differentials.
-    """
-    cs = []
-    # FIXME: make checks for the casimirs given by the user
-    # For example, I was able to insert the 0th Casimir with no complaint
-    # Moreover I didn get the curve I wanted because below we add +1 to phi_0
-    # We should prevent the wrong casimirs from being inserted at all.
-    if g_type == 'A':
-        N = g_rank + 1
-        for k, phi_k in casimir_differentials.iteritems():
-            cs.append([k, phi_k])
-
-    elif g_type == 'D':
-        N = 2 * g_rank
-        for k, phi_k in casimir_differentials.iteritems():
-            if k % 2 != 0:
-                raise ValueError(
-                    'phi_{} = {} dz^k'.format(k, phi_k) + 
-                    'is an incorrect casimir differential '
-                    'for a D-type curve.' 
-                )
-            else:
-                cs.append([k, phi_k])
-
-#    elif g_type == 'E':
-#        phi = casimir_differentials
-#        # u_(1, 2, 3, 4, 5) = phi[2, 5, 6, 8, 9, 12]
-#        if g_rank == 6:
-#            ## Temporarily working with a highly non generic curve
-#            #tau = tau_str.format(u_6=phi[12])
-#            #q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-#            #                     u_4=phi[8], u_5=phi[9])
-#            #p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-#            #                     u_4=phi[8], u_5=phi[9])
-#            #p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-#            #                     u_4=phi[8], u_5=phi[9])
-#            #q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
-#            #curve_str = (
-#            #    '(1/2)*x^3*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
-#            #    .format(tau=tau, q_1=q_1, q_2=q_2)
-#            #)
-#            curve_str = (
-#                'x^27 + x^15 * u_12 + x^3 * u_24'
-#                .format(u_12=phi[12], u_24=phi[24])
-#            )
-#            return curve_str
-    elif g_type == 'E':
-        phi = casimir_differentials
-        # u_(1, 2, 3, 4, 5) = phi[2, 5, 6, 8, 9, 12]
-        if g_rank == 6:
-
-            # KEEP FOR NOW
-
-            # # The following goes with the 1st presentation of the SW curve.
-            # tau = tau_str.format(u_6=phi[12])
-            # q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-            #                     u_4=phi[8], u_5=phi[9])
-            # p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-            #                     u_4=phi[8], u_5=phi[9])
-            # p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-            #                     u_4=phi[8], u_5=phi[9])
-            # q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
-            # curve_str = (
-            #    '(1/2)*(x^3)*({tau})^2 - ({q_1})*({tau}) + ({q_2})'
-            #    .format(tau=tau, q_1=q_1, q_2=q_2)
-            # )
-
-            # The following goes with the 2nd presentation of the SW curve.
-            # 
-            # phi_12 = phi_12_str.format(u_6=phi[12])
-            # q_1 = q_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-            #                     u_4=phi[8], u_5=phi[9])
-            # p_1 = p_1_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-            #                     u_4=phi[8], u_5=phi[9])
-            # p_2 = p_2_str.format(u_1=phi[2], u_2=phi[5], u_3=phi[6],
-            #                     u_4=phi[8], u_5=phi[9])
-            # q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
-            # curve_str = (
-            #    '(1/2)*(-(1/2) *z *x)^3*({phi_12})^2 '
-            #    '- ({q_1})*({phi_12}) + ({q_2})'
-            #    .format(phi_12=phi_12, q_1=q_1, q_2=q_2)
-            # )
-            
-            # The following goes with the 3rd presentation of the SW curve.
-            q_1 = q_1_str.format(
-                phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                phi_8=phi[8], phi_9=phi[9]
-            )
-            p_1 = p_1_str.format(
-                phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                phi_8=phi[8], phi_9=phi[9]
-            )
-            p_2 = p_2_str.format(
-                phi_2=phi[2], phi_5=phi[5], phi_6=phi[6],
-                phi_8=phi[8], phi_9=phi[9]
-            )
-            q_2 = q_2_str.format(q_1=q_1, p_1=p_1, p_2=p_2)
-            curve_str = (
-                '(1/2)*(x^3)*({phi_12})^2 - ({q_1})*({phi_12}) + ({q_2})'
-                .format(phi_12=phi[12], q_1=q_1, q_2=q_2)
-            )
-
-            return curve_str
-    else:
-        raise NotImplemented(
-            'get_ffr_curve_string(): construction of a Seiberg-Witten curve '
-            'of g = {}_{} is not implemented.'.format(g_type, g_rank)
-        )
-
-    # g_type == 'A' or g_type == 'D':
-    curve_str = 'x^{} '.format(N)
-    for k, c_k in cs:
-        curve_str += ' + ({}) '.format(c_k)
-        if k != N:
-            curve_str += ' * x^{}'.format(N - k)
-
-    return curve_str
-
-
 def get_ramification_points_using_system_of_eqs(
     curve=None, 
     diff_params=None, 
@@ -1493,19 +1267,22 @@ def get_ramification_points_using_system_of_eqs(
     eq_1 = f_n
 
     # Check the curve if it has the D-type factorization.
-    num_factor, f_n_factors = sympy.factor_list(f_n)
-    if len(f_n_factors) > 1:
-        # TODO: check Casimir differentials too?
-        if (
-            g_data.type == 'D' and
-            len(f_n_factors) == 2 and
-            (x, 2) in f_n_factors
-        ):
-            eq_1 = sympy.simplify(eq_1 / x ** 2)
-        else:
-            logger.warning('The curve to find ramification points'
-                           'has an unknown factorization: {} = {}.'
-                           .format(f_n, f_n.factor()))
+    # TODO: checking factorization of an E-type curve using SymPy
+    # is too slow. Consider using SAGE.
+    if g_data.type != 'E':
+        num_factor, f_n_factors = sympy.factor_list(f_n)
+        if len(f_n_factors) > 1:
+            # TODO: check Casimir differentials too?
+            if (
+                g_data.type == 'D' and
+                len(f_n_factors) == 2 and
+                (x, 2) in f_n_factors
+            ):
+                eq_1 = sympy.simplify(eq_1 / x ** 2)
+            else:
+                logger.warning('The curve to find ramification points '
+                               'has an unknown factorization: {} = {}.'
+                               .format(f_n, f_n.factor()))
 
     eq_2 = eq_1.diff(x)
 
@@ -1518,9 +1295,12 @@ def get_ramification_points_using_system_of_eqs(
         logger_name=logger_name,
     )
 
+ 
+    logger.info('Analyze solutions from SAGE.')
     # TODO: Consider calculating the discriminant D(z)
     # and double-check if all the z_i's are found.
     for z_i, x_i in z_x_s:
+        #logger.info('Analyze a solution (z, x) = ({}, {})'.format(z_i, x_i))
         # Check if z_i is one of the punctures.
         is_puncture = False
         for p in punctures:
@@ -1539,6 +1319,13 @@ def get_ramification_points_using_system_of_eqs(
                 .evalf(n=ROOT_FINDING_PRECISION)) < accuracy
         ):
             m_x += 1
+
+        if m_x == 1:
+            dfdx = f_n_i.diff(x).subs(x, x_i).evalf(n=ROOT_FINDING_PRECISION)
+            logger.warning(
+                'multiplicity of x is 1 at z = {}, x = {}: '
+                'df/dx = {}.'.format(z_i, x_i, dfdx)
+            )
 
         sols.append(
             [complex(mpmath.chop(z_i)), 

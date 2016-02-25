@@ -276,6 +276,7 @@ class SWDataWithTrivialization(SWDataBase):
     # overlap vertically.
     # This should be guaranteed by the automatic rotation of 
     # the z-plane which is performed before calling this class.
+    # TODO: irregular singularities ARE branch points.
     def __init__(self, config, logger_name='loom', json_data=None,):
         super(SWDataWithTrivialization, self).__init__(
             config, logger_name=logger_name, json_data=json_data,
