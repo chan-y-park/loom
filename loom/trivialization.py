@@ -458,6 +458,7 @@ class SWDataWithTrivialization(SWDataBase):
             self.irregular_singularities.append(irr_sing)
 
         # perform extensive global checks on monodromies
+        logger.info('Doing global checks on monodromies...')
         self.global_monodromy_checks()
 
 
@@ -512,16 +513,20 @@ class SWDataWithTrivialization(SWDataBase):
             m_tot = numpy.dot(m_tot, m_i)
 
         if numpy.array_equal(m_tot, monodromy_at_oo) is True:
-            logger.info(
+            logger.debug(
                 "Monodromy at infinity agrees with the product "
                 "of all monodromies, as expected."
             )
         else:
-            logging.info(
-                '\nWARNING!\n'
+            logger.info(
+                '\n\nWARNING!\n'
                 'Monodromy at infinity does not agree with the product '
                 'of all monodromies. Probable error in trivialization.'
             )
+            # raise Exception(
+            #     'Monodromy at infinity does not agree with the product '
+            #     'of all monodromies. Probable error in trivialization.'
+            # )
 
         # Now we check consistency for various combinations of monodromies
         # e.g. M_1 M_2 ... M_k = M_{k+1} ... M_N (M_{oo})^{-1}
@@ -541,18 +546,20 @@ class SWDataWithTrivialization(SWDataBase):
                 # real part of their coordinate, multiplication must 
                 # be to the right.
                 m_2 = numpy.dot(m_2, m_i)
-            if numpy.array_equal(
-                numpy.dot(m_1, numpy.dot(m_2, monodromy_at_oo)),
-                numpy.identity(rep_d)
-            ):
+            if numpy.array_equal(numpy.dot(m_1, m_2), monodromy_at_oo):
                 continue
             else:
-                logging.info(
-                    '\nWARNING!\n'
+                logger.info(
+                    '\n\nWARNING!\n'
                     'The product of the first {} monodromies '
                     'does not match the (inverse of) the remaining ones'
-                    .format(i)
+                    .format(i + 1)
                 )
+                # raise Exception(
+                #     'The product of the first {} monodromies '
+                #     'does not match the (inverse of) the remaining ones'
+                #     .format(i + 1)
+                # )
 
 
     def get_sheets_along_path(
