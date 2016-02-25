@@ -949,7 +949,7 @@ class SWDataWithTrivialization(SWDataBase):
         if is_weyl_monodromy(perm_matrix, self.g_data) is False:
             raise Exception('Failed to assign a Weyl-type monodromy.')
         else:
-            logger.info('Sheet monodromy is of Weyl type')
+            logger.debug('Sheet monodromy is of Weyl type')
         return perm_matrix
 
     def analyze_branch_point(self, bp):
@@ -958,8 +958,8 @@ class SWDataWithTrivialization(SWDataBase):
             "Analyzing a branch point at z = {}."
             .format(bp.z)
         )
-        logger.info(
-            "Studying groups of colliding sheets"
+        logger.debugging(
+            "Studying groups of colliding sheets to determine root(s) type."
         )
         path_to_bp = get_path_to(bp.z, self)
         # it's important that we set ffr=False, as the sheets here
@@ -1003,7 +1003,7 @@ class SWDataWithTrivialization(SWDataBase):
             if rp.ramification_type != 'type_I'
         ])
 
-        logger.info("Computing the monodromy")
+        logger.debug("Computing the monodromy.")
         path_around_bp = get_path_around(bp.z, self.base_point, self,)
 
         if len(ramification_types) == 0:
@@ -1017,6 +1017,25 @@ class SWDataWithTrivialization(SWDataBase):
             else:
                 raise Exception(
                     'Multiple ramification types for BP at z = {}'.format(bp.z)
+                )
+
+        # If the order of the branch point is 1, it means that it does 
+        # not correspond to a root, and will be dropped later on.
+        # Since all branch points should be of weyl-type, there
+        # should be no monodromy around this branch point.
+        # Here we check there is no monodromy at all around this branch point.
+        if bp.order == 1:
+            rep_d = len(self.g_data.weights)
+            if numpy.array_equal(bp.monodromy, numpy.identity(rep_d)) is True:
+                logger.debug(
+                    "This branch point has trivial monodromy, in agreement"
+                    "with the fact that it does not correspond to any root."
+                )
+            else:
+                logger.info(
+                    "Warning! While the branch point does not correspond to "
+                    "any root, its monodromy is nontrivial. "
+                    "Probable error in trivialization of the covering."
                 )
 
         # TODO: it would be good to make a check here, e.g. on the 
@@ -1400,7 +1419,7 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
         # TODO: Check if the situation is what we expect and is normal.
         # If that's the case, don't print a message. 
         # Otherwise print a warning instead of info.
-        logger.info(
+        logger.debug(
             "Branch point doesn't correspond "
             "to a positive root. May be an accidental branch point."
         )
