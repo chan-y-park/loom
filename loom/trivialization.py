@@ -399,6 +399,9 @@ class SWDataWithTrivialization(SWDataBase):
             self.min_horizontal_distance = min(
                 [x for x in horizontal_distances if abs(x) > self.accuracy]
             )
+            self.farthest_branching_locus = max(
+                [abs(x) for x in all_points_z]
+                )
             
         elif n_critical_loci == 1:
             # If there is only one branching locus, we still
@@ -409,6 +412,7 @@ class SWDataWithTrivialization(SWDataBase):
             max_distance = 3.0
             self.min_distance = max_distance
             self.min_horizontal_distance = max_distance
+            self.farthest_branching_locus = max_distance
 
         elif n_critical_loci == 0:
             raise Exception('Must have at least one critical locus on C.')
@@ -452,6 +456,18 @@ class SWDataWithTrivialization(SWDataBase):
             )
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
+
+        # perform extensive global checks on monodromies
+        self.global_monodromy_checks()
+
+
+    def global_monodromy_checks(self):
+        """
+        A set of global checks on monodromies.
+        """
+        # TODO: introduce checks on all possible combinations of monodromies
+        # e.g. M_1 M_2 ... M_k = M_{k+1} ... M_N (M_{oo})^{-1}
+        # for all possible splittings.
 
         # If there is no irregular singularity at infinity, 
         # we make a check that the product of monodromies is trivial
@@ -1197,30 +1213,57 @@ def get_path_around(z_pt, base_pt, sw):
     logger = logging.getLogger(sw.logger_name)
     logger.debug("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
-    z_1 = 1j * base_pt.imag + z_pt.real
-    # if n_loci==None:
-    #     n_loci = len(sw.branch_points + sw.irregular_singularities)
-    # radius = min_distance / n_loci
-    radius = sw.min_horizontal_distance / 2.0
-    z_2 = z_pt - 1j * radius
+    
+    if z_pt != oo:
+        z_1 = 1j * base_pt.imag + z_pt.real
+        # if n_loci==None:
+        #     n_loci = len(sw.branch_points + sw.irregular_singularities)
+        # radius = min_distance / n_loci
+        radius = sw.min_horizontal_distance / 2.0
+        z_2 = z_pt - 1j * radius
 
-    steps = N_PATH_AROUND_PT
-    path_segment_1 = [
-        z_0 + ((z_1 - z_0) / steps) * i for i in range(steps + 1)
-    ]
-    path_segment_2 = [
-        z_1 + ((z_2 - z_1) / steps) * i for i in range(steps + 1)
-    ]
-    path_segment_3 = [
-        z_pt + radius * (-1j) * exp(i * 2.0 * pi * 1j / steps) 
-        for i in range(steps + 1)
-    ]
-    path_segment_4 = path_segment_2[::-1]
-    path_segment_5 = path_segment_1[::-1]
-    return (
-        path_segment_1 + path_segment_2 + path_segment_3 + 
-        path_segment_4 + path_segment_5
-    )
+        steps = N_PATH_AROUND_PT
+        path_segment_1 = [
+            z_0 + ((z_1 - z_0) / steps) * i for i in range(steps + 1)
+        ]
+        path_segment_2 = [
+            z_1 + ((z_2 - z_1) / steps) * i for i in range(steps + 1)
+        ]
+        path_segment_3 = [
+            z_pt + radius * (-1j) * exp(i * 2.0 * pi * 1j / steps) 
+            for i in range(steps + 1)
+        ]
+        path_segment_4 = path_segment_2[::-1]
+        path_segment_5 = path_segment_1[::-1]
+        return (
+            path_segment_1 + path_segment_2 + path_segment_3 + 
+            path_segment_4 + path_segment_5
+        )
+    else:
+        radius = sw.farthest_branching_locus * 2.0
+        steps = N_PATH_AROUND_PT
+        # need more steps to get good tracking on a large circle
+        large_steps = 10 * steps
+
+        z_1 = 1j * base_pt.imag
+        z_2 = -1j * radius
+        path_segment_1 = [
+            z_0 + ((z_1 - z_0) / steps) * i for i in range(steps + 1)
+        ]
+        path_segment_2 = [
+            z_1 + ((z_2 - z_1) / steps) * i for i in range(steps + 1)
+        ]
+        path_segment_3 = [
+            radius * (-1j) * exp(i * 2.0 * pi * 1j / large_steps) 
+            for i in range(large_steps + 1)
+        ]
+        path_segment_4 = path_segment_2[::-1]
+        path_segment_5 = path_segment_1[::-1]
+        return (
+            path_segment_1 + path_segment_2 + path_segment_3 + 
+            path_segment_4 + path_segment_5
+        )
+
 
 
 # TODO: Try using numba.
