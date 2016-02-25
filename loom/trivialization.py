@@ -475,22 +475,28 @@ class SWDataWithTrivialization(SWDataBase):
 
         # If there is no irregular singularity at infinity, 
         # we make a check that the numerically computed monodromy is trivial
-        monodromy_at_oo = None
+        m_oo = None
         for p in self.irregular_punctures: 
             if p.z == oo:
-                monodromy_at_oo = True
+                m_oo = True
                 logger.debug(
                     "There is branching at infinity, "
                     "due to an irregular singularity."
                 )
 
         path_around_oo = get_path_around(oo, self.base_point, self)
-        numerical_monodromy_at_oo = self.get_sheet_monodromy(path_around_oo)
-        if monodromy_at_oo is None:
+        if m_oo is None:
+            numerical_m_oo = self.get_sheet_monodromy(path_around_oo)
+        elif m_oo is True:
+            numerical_m_oo = self.get_sheet_monodromy(
+                path_around_oo, is_irr_sing=True
+            )
+
+        if m_oo is None:
             if numpy.array_equal(
-                numerical_monodromy_at_oo, numpy.identity(rep_d)
+                numerical_m_oo, numpy.identity(rep_d)
             ) is True:
-                monodromy_at_oo = numpy.identity(rep_d)
+                m_oo = numpy.identity(rep_d)
                 logger.info(
                     "Direct computation confirms trivial monodromy at oo"
                 )
@@ -499,8 +505,8 @@ class SWDataWithTrivialization(SWDataBase):
                     "Monodromy at infinity is nontrivial, but no branching "
                     "has been declared at infinity."
                 )
-        elif monodromy_at_oo is True:
-            monodromy_at_oo = numerical_monodromy_at_oo
+        elif m_oo is True:
+            m_oo = numerical_m_oo
 
         # Check that product of all monodromies equals 
         # the monodromy at infinity    
@@ -512,7 +518,7 @@ class SWDataWithTrivialization(SWDataBase):
             # be to the right.
             m_tot = numpy.dot(m_tot, m_i)
 
-        if numpy.array_equal(m_tot, monodromy_at_oo) is True:
+        if numpy.array_equal(m_tot, m_oo) is True:
             logger.debug(
                 "Monodromy at infinity agrees with the product "
                 "of all monodromies, as expected."
@@ -546,7 +552,7 @@ class SWDataWithTrivialization(SWDataBase):
                 # real part of their coordinate, multiplication must 
                 # be to the right.
                 m_2 = numpy.dot(m_2, m_i)
-            if numpy.array_equal(numpy.dot(m_1, m_2), monodromy_at_oo):
+            if numpy.array_equal(numpy.dot(m_1, m_2), m_oo):
                 continue
             else:
                 logger.info(
@@ -767,6 +773,13 @@ class SWDataWithTrivialization(SWDataBase):
         Returns a permutation matrix, expressed in 
         the basis of reference sheets, such that
         new_sheets = M . old_sheets
+
+        There are subtleties associarted with representations
+        of D and E-type algebras, where two or more sheets
+        can be identically zero. Then one needs to 
+        figure out how to permute them, if at all.
+        For this reason, it is important to specify whenever 
+        we are computing the monodromy around an irregular singularity.
         """
         logger = logging.getLogger(self.logger_name)
         logger.debug(
