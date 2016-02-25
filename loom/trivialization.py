@@ -465,12 +465,12 @@ class SWDataWithTrivialization(SWDataBase):
         """
         A set of global checks on monodromies.
         """
-        # TODO: introduce checks on all possible combinations of monodromies
-        # e.g. M_1 M_2 ... M_k = M_{k+1} ... M_N (M_{oo})^{-1}
-        # for all possible splittings.
-
         logger = logging.getLogger(self.logger_name)
         rep_d = len(self.g_data.weights)
+        ram_loci = self.branch_points + self.irregular_singularities
+        ordered_monodromies = [rl.monodromy for rl in sorted(
+            ram_loci, key=lambda rl: rl.z.real
+        )]
 
         # If there is no irregular singularity at infinity, 
         # we make a check that the numerically computed monodromy is trivial
@@ -503,10 +503,6 @@ class SWDataWithTrivialization(SWDataBase):
 
         # Check that product of all monodromies equals 
         # the monodromy at infinity    
-        ram_loci = self.branch_points + self.irregular_singularities
-        ordered_monodromies = [rl.monodromy for rl in sorted(
-            ram_loci, key=lambda rl: rl.z.real
-        )]
         m_tot = numpy.identity(rep_d)
         for m_i in ordered_monodromies:
             # NOTE: since monodromies are counter-clockwise and 
@@ -525,6 +521,38 @@ class SWDataWithTrivialization(SWDataBase):
                 "Monodromy at infinity does not agree with the product "
                 "of all monodromies. Probable error in trivialization."
             )
+
+        # Now we check consistency for various combinations of monodromies
+        # e.g. M_1 M_2 ... M_k = M_{k+1} ... M_N (M_{oo})^{-1}
+        # for all possible sequential pairwise splittings.
+        for i in range(len(ordered_monodromies)):
+            m_1 = numpy.identity(rep_d)
+            m_2 = numpy.identity(rep_d)
+            for m_i in ordered_monodromies[:(i + 1)]:
+                # NOTE: since monodromies are counter-clockwise and 
+                # ramification loci are ordered according to ascending 
+                # real part of their coordinate, multiplication must 
+                # be to the right.
+                m_1 = numpy.dot(m_1, m_i)
+            for m_i in ordered_monodromies[(i + 1):]:
+                # NOTE: since monodromies are counter-clockwise and 
+                # ramification loci are ordered according to ascending 
+                # real part of their coordinate, multiplication must 
+                # be to the right.
+                m_2 = numpy.dot(m_2, m_i)
+            if numpy.array_equal(
+                numpy.dot(m_1, numpy(m_2, monodromy_at_oo)),
+                numpy.identity(rep_d)
+            ):
+                print "\n\nchecking splitting number {}\n\n".format(i)
+                continue
+            else:
+                raise Exception(
+                    'The product of the first {} monodromies '
+                    'does not match the (inverse of) the remaining ones'
+                    .format(i)
+                )
+
 
     def get_sheets_along_path(
         self, z_path, is_path_to_bp=False, ffr=False,
