@@ -2,7 +2,7 @@ import sympy
 import numpy
 import logging
 import copy
-# import pdb
+import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo, I
@@ -423,7 +423,9 @@ class SWCurve:
                 casimir_differentials, g_data.type, g_data.rank
             )
             try:
-                self.sym_eq = sympy.sympify(ffr_eq_str)
+                # TODO: SAGE is much faster in expanding an expression.
+                #self.sym_eq = sympy.sympify(ffr_eq_str)
+                self.sym_eq = sympy.sympify(ffr_eq_str).expand()
             except:
                 raise
             # NOTE: We apply PSL2C only to the numerical curve
@@ -609,75 +611,6 @@ class SWDataBase(object):
 
         for pct in self.regular_punctures + self.irregular_punctures:
             logger.info('{} at z={}'.format(pct.label, pct.z))
-
-    def set_z_rotation(self, z_rotation):
-        for p in (
-            self.regular_punctures + self.irregular_punctures +
-            self.ffr_ramification_points
-        ):
-            p.set_z_rotation(z_rotation)
-
-        if self.ffr_curve is not None:
-            self.ffr_curve.set_z_rotation(z_rotation)
-
-        if self.curve is not None:
-            self.curve.set_z_rotation(z_rotation)
-
-        if self.diff is not None:
-            self.diff.set_z_rotation(z_rotation)
-
-        # self.z_plane_rotation *= z_rotation
-
-    def get_json_data(self):
-        json_data = {
-            'g_data': self.g_data.get_json_data(),
-            'regular_punctures': [p.get_json_data() 
-                                  for p in self.regular_punctures],
-            'irregular_punctures': [p.get_json_data() 
-                                    for p in self.irregular_punctures],
-            'ffr_ramification_points': [
-                rp.get_json_data() for rp in self.ffr_ramification_points
-            ],
-            'z_plane_rotation': str(self.z_plane_rotation),
-            'accuracy': self.accuracy,
-        }
-
-        return json_data
-
-    def set_from_json_data(self, json_data):
-        logger = logging.getLogger(self.logger_name)
-
-        self.g_data = GData(json_data=json_data['g_data'],
-                            logger_name=self.logger_name,)
-        # XXX: Remove the following check after deprecating
-        # using older data.
-        try:
-            self.regular_punctures = [
-                Puncture(json_data=data)
-                for data in json_data['regular_punctures'] 
-            ]
-            self.irregular_punctures = [
-                Puncture(json_data=data)
-                for data in json_data['irregular_punctures'] 
-            ]
-        except KeyError:
-            logger.warning(
-                'Loading a JSON data of an older version: '
-                'no (ir)regular_punctures data, '
-                'use punctures data instead.'
-            )
-            self.regular_punctures = []
-            self.irregular_punctures = [
-                Puncture(json_data=data)
-                for data in json_data['punctures'] 
-            ]
-
-        self.ffr_ramification_points = [
-            RamificationPoint(json_data=data)
-            for data in json_data['ffr_ramification_points']
-        ]
-        self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
-        self.accuracy = json_data['accuracy']
 
     def set_from_config(self, config, mt_params=None,
                         casimir_differentials=None, diff_params=None,):
@@ -901,6 +834,75 @@ class SWDataBase(object):
 
         if config['size_of_puncture_cutoff'] is None:
             config['size_of_puncture_cutoff'] = min_abs_distance / 100.0
+
+    def set_z_rotation(self, z_rotation):
+        for p in (
+            self.regular_punctures + self.irregular_punctures +
+            self.ffr_ramification_points
+        ):
+            p.set_z_rotation(z_rotation)
+
+        if self.ffr_curve is not None:
+            self.ffr_curve.set_z_rotation(z_rotation)
+
+        if self.curve is not None:
+            self.curve.set_z_rotation(z_rotation)
+
+        if self.diff is not None:
+            self.diff.set_z_rotation(z_rotation)
+
+        # self.z_plane_rotation *= z_rotation
+
+    def get_json_data(self):
+        json_data = {
+            'g_data': self.g_data.get_json_data(),
+            'regular_punctures': [p.get_json_data() 
+                                  for p in self.regular_punctures],
+            'irregular_punctures': [p.get_json_data() 
+                                    for p in self.irregular_punctures],
+            'ffr_ramification_points': [
+                rp.get_json_data() for rp in self.ffr_ramification_points
+            ],
+            'z_plane_rotation': str(self.z_plane_rotation),
+            'accuracy': self.accuracy,
+        }
+
+        return json_data
+
+    def set_from_json_data(self, json_data):
+        logger = logging.getLogger(self.logger_name)
+
+        self.g_data = GData(json_data=json_data['g_data'],
+                            logger_name=self.logger_name,)
+        # XXX: Remove the following check after deprecating
+        # using older data.
+        try:
+            self.regular_punctures = [
+                Puncture(json_data=data)
+                for data in json_data['regular_punctures'] 
+            ]
+            self.irregular_punctures = [
+                Puncture(json_data=data)
+                for data in json_data['irregular_punctures'] 
+            ]
+        except KeyError:
+            logger.warning(
+                'Loading a JSON data of an older version: '
+                'no (ir)regular_punctures data, '
+                'use punctures data instead.'
+            )
+            self.regular_punctures = []
+            self.irregular_punctures = [
+                Puncture(json_data=data)
+                for data in json_data['punctures'] 
+            ]
+
+        self.ffr_ramification_points = [
+            RamificationPoint(json_data=data)
+            for data in json_data['ffr_ramification_points']
+        ]
+        self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
+        self.accuracy = json_data['accuracy']
 
     def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
         """
@@ -1290,9 +1292,12 @@ def get_ramification_points_using_system_of_eqs(
         logger_name=logger_name,
     )
 
+ 
+    logger.info('Analyze solutions from SAGE.')
     # TODO: Consider calculating the discriminant D(z)
     # and double-check if all the z_i's are found.
     for z_i, x_i in z_x_s:
+        #logger.info('Analyze a solution (z, x) = ({}, {})'.format(z_i, x_i))
         # Check if z_i is one of the punctures.
         is_puncture = False
         for p in punctures:
@@ -1311,6 +1316,13 @@ def get_ramification_points_using_system_of_eqs(
                 .evalf(n=ROOT_FINDING_PRECISION)) < accuracy
         ):
             m_x += 1
+
+        if m_x == 1:
+            dfdx = f_n_i.diff(x).subs(x, x_i).evalf(n=ROOT_FINDING_PRECISION)
+            logger.warning(
+                'multiplicity of x is 1 at z = {}, x = {}: '
+                'df/dx = {}.'.format(z_i, x_i, dfdx)
+            )
 
         sols.append(
             [complex(mpmath.chop(z_i)), 
