@@ -483,7 +483,7 @@ class SWDataWithTrivialization(SWDataBase):
                     "due to an irregular singularity."
                 )
 
-        path_around_oo = self.get_path_around(oo, self.base_point, self)
+        path_around_oo = get_path_around(oo, self.base_point, self)
         numerical_monodromy_at_oo = self.get_sheet_monodromy(path_around_oo)
         if monodromy_at_oo is None:
             if numpy.array_equal(
