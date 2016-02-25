@@ -958,7 +958,7 @@ class SWDataWithTrivialization(SWDataBase):
             "Analyzing a branch point at z = {}."
             .format(bp.z)
         )
-        logger.debugging(
+        logger.debug(
             "Studying groups of colliding sheets to determine root(s) type."
         )
         path_to_bp = get_path_to(bp.z, self)
