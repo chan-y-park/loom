@@ -419,4 +419,4 @@ def spread_of_branch_points(z_s):
     # TODO: think about more accurate ways to estimate the spread.
     max_d = max([abs(z_i - z_j) for z_i in z_s for z_j in z_s if z_i != z_j])
     min_d = min([abs(z_i - z_j) for z_i in z_s for z_j in z_s if z_i != z_j])
-    return min_d / max_d
+    return min_d / (max_d / len(z_s))
