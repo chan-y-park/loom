@@ -331,6 +331,9 @@ class SWDataWithTrivialization(SWDataBase):
         json_data['reference_xs'] = [
             ctor2(x) for x in self.reference_xs
         ]
+        json_data['farthest_branching_locus'] = ctor2(
+            self.farthest_branching_locus
+        )
 
         return json_data
 
@@ -353,6 +356,9 @@ class SWDataWithTrivialization(SWDataBase):
         self.reference_xs = [
             r2toc(x) for x in json_data['reference_xs']
         ]
+        self.farthest_branching_locus = r2toc(
+            json_data['farthest_branching_locus']
+        )
 
     def set_trivialization(self):
         logger = logging.getLogger(self.logger_name)
