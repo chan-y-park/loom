@@ -178,7 +178,7 @@ def get_spectral_network_bokeh_plot(
                 z_r = s_wall.z[start:stop].real
                 z_i = s_wall.z[start:stop].imag
                 a_i = int(numpy.floor(len(z_r) / 2.0))
-                # Check if the arrow is within the plot range.
+                #TODO: Check if the arrow is within the plot range.
                 a_angle = pi
                 a_angle = (
                     phase((z_r[a_i] - z_r[a_i - 1]) +
