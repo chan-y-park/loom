@@ -858,73 +858,58 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             )
 
         elif rp_type == 'type_IV':
-            # Note: the following are NOT the same as c_+/-
-            # as in the notes, rather they are a 12-th root of those.
-            sw_c_plus, sw_c_minus = sw_diff_coeff
-
-            phases = [
-                exp(2 * pi * 1j * float(i) / (12.0)) 
-                for i in range(12)
-            ] + [0.0]
-            phi = [[
-                phases[i] - phases[j] for i in range(13) 
-            ] for j in range(13)]
-            psi_plus = [[(
-                (sw_c_plus ** 12) * phases[i] 
-                - (sw_c_minus ** 12) * phases[j] 
-            ) for i in range(13) ] for j in range(13)]
-            psi_minus = [[(
-                (sw_c_minus ** 12) * phases[i] 
-                - (sw_c_plus ** 12) * phases[j] 
-            ) for i in range(13)] for j in range(13)]
-
-            omega = exp(
-                2.0 * pi * 1j / 13.0
-            )
             # note: the following nomenclature of variables is
             # chose to match to the notes on seeding. 
             # It would be better not to change it to avoid
             # potential confusion.
-            dz_A_plus = ([
-                (1.0 / cpow(sw_c_plus, 12, 13)) *
+
+            # Note: the following are NOT the same as c_+/-
+            # as in the notes, rather they are a 12-th root of those.
+            sw_c_plus, sw_c_minus = sw_diff_coeff
+
+            # computing the seed reference sheets -- see notes 
+            # for an explanation of what they are, and how they 
+            # will be employed
+            seed_ref_xs = (
+                [0.0, 0.0, 0.0] + 
+                [sw_c_plus * exp(2 * pi * 1j * float(i) / (12.0)) 
+                for i in range(12)] +
+                [sw_c_minus * exp(2 * pi * 1j * float(i) / (12.0)) 
+                for i in range(12)]
+            )
+
+            aligned_seed_ref_xs = align_sheets_for_e_6_ffr(
+                        seed_ref_xs, 
+                        sw.g_data.weights, 
+                        near_degenerate_branch_locus=False
+                    )
+
+            # now for each pair of reference sheets 
+            # which actually differs by a root, we consider 
+            # their difference to define a seed location
+            delta_seed_xs = []
+            for i, x_i in enumerate(aligned_seed_ref_xs): 
+                w_i = sw.g_data.weights[i]
+                for j, x_j in enumerate(aligned_seed_ref_xs):
+                    w_j = sw.g_data.weights[j]
+                    if is_root(w_j - w_i, sw.g_data):
+                        delta_seed_xs.append((x_j - x_i) / abs(x_j - x_i))
+
+            omega = exp(2.0 * pi * 1j / 13.0)
+
+            dz_phases = ([
                 exp(1j * theta * 12.0 / 13.0) *
-                ((-1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
+                ((-1.0 / delta_xs) ** (12.0 / 13.0)) * 
                 (omega ** s)
-                for i in range(13) for j in range(13) 
-                for s in range(13) if (i != j and e_6_compatible(i, j))
-            ])
-            dz_A_minus = ([
-                (1.0 / cpow(sw_c_minus, 12, 13)) *
-                exp(1j * theta * 12.0 / 13.0) *
-                ((-1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
-                (omega ** s)
-                for i in range(13) for j in range(13) 
-                for s in range(13) if (i != j and e_6_compatible(i, j))
-            ])
-            dz_B_plus = ([
-                exp(1j * theta * 12.0 / 13.0) *
-                ((-1.0 / psi_plus[i][j]) ** (12.0 / 13.0)) * 
-                (omega ** s)
-                for i in range(13) for j in range(13) 
-                for s in range(13) if (i != j and e_6_compatible(i, j))
-            ])
-            dz_B_minus = ([
-                exp(1j * theta * 12.0 / 13.0) *
-                ((-1.0 / psi_minus[i][j]) ** (12.0 / 13.0)) * 
-                (omega ** s)
-                for i in range(13) for j in range(13) 
-                for s in range(13) if (i != j and e_6_compatible(i, j))
+                for s in range(13) for delta_xs in delta_seed_xs 
             ])
 
-            dz_phases = dz_A_plus + dz_A_minus + dz_B_plus + dz_B_minus
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < accuracy
             )
-            print "\n\nThe seeding phases are {}".format(len(zetas))
-            print zetas
 
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0
@@ -1141,25 +1126,25 @@ def left_right(l, point):
             return 'left'
 
 
-def e_6_compatible(i, j):
-    """
-    Given two integers i,j =0, ..., 12
-    determine whether the corresponding phases
-    in the E_6 seeds can be paired together.
-    This accounts for which sheets actually differ 
-    by a root, or not. The following prescription
-    is derived from the Coxeter projection diagram 
-    of E_6, and looking for roots that connect
-    a given weight with other weights.
-    """
-    dist = abs(i - j) % 12
-    if (
-        (0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
-        (i == 12 or j == 12)
-    ):
-        return True
-    else:
-        return False
+# def e_6_compatible(i, j):
+#     """
+#     Given two integers i,j =0, ..., 12
+#     determine whether the corresponding phases
+#     in the E_6 seeds can be paired together.
+#     This accounts for which sheets actually differ 
+#     by a root, or not. The following prescription
+#     is derived from the Coxeter projection diagram 
+#     of E_6, and looking for roots that connect
+#     a given weight with other weights.
+#     """
+#     dist = abs(i - j) % 12
+#     if (
+#         (0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
+#         (i == 12 or j == 12)
+#     ):
+#         return True
+#     else:
+#         return False
 
 
 # TODO: Merge the following two functions?
