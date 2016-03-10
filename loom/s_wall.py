@@ -6,7 +6,9 @@ from cmath import exp, pi
 from math import floor
 from scipy import interpolate
 
-from geometry import find_xs_at_z_0, align_sheets_for_e_6_ffr
+from geometry import (
+    find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
+)
 from misc import (
     cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root, 
     get_descendant_roots, sort_roots, n_nearest
@@ -688,14 +690,80 @@ def get_s_wall_root(z, ffr_xs, sw_data):
     # The following is a dictionary
     sheets_at_z = sw_data.get_sheets_at_z(z, ffr=True)
     xs_at_z = sheets_at_z.values()
-    
-    # Sheet matching x_i
-    closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
-    i = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_i][0]
 
-    # Sheet matching x_j
-    closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
-    j = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_j][0]
+    if (
+        (sw_data.g_data.type == 'D' or sw_data.g_data.type == 'E') and 
+        (abs(x_i) < SHEET_NULL_TOLERANCE or abs(x_j) < SHEET_NULL_TOLERANCE)
+    ):
+        if sw_data.g_data.type == 'D':
+            n_w = 2
+        elif sw_data.g_data.type == 'E':
+            n_w = 3
+        if abs(x_i) < SHEET_NULL_TOLERANCE:
+            # Several sheets matching x_i
+            closest_to_x_i = sorted(
+                [[k, x_k] for k, x_k in enumerate(xs_at_z)], 
+                key=lambda y: abs(y[1] - x_i)
+            )[0:n_w]
+            i_s = [y[0] for y in closest_to_x_i]
+            # Sheet matching x_j
+            closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
+            j = (
+                [k for k, v in sheets_at_z.iteritems() 
+                    if v == closest_to_x_j][0]
+            )
+            for k in i_s:
+                # NOTE: Assuming that there is precisely ONE pair 
+                # whose difference is a root. In D-type it's really two pairs. 
+                # But either is fine, and they will be automatically 
+                # orthogonal to each other, so they are part of the same
+                # "multi-root" set.
+                # For E-type should introduce a little check to see if
+                # there is actually more than one combo that works.
+                alpha = (
+                    sw_data.g_data.ffr_weights[j] 
+                    - sw_data.g_data.ffr_weights[k]
+                )
+                if is_root(alpha, sw_data.g_data):
+                    i = k
+                    break
+
+        elif abs(x_j) < SHEET_NULL_TOLERANCE:
+            # Sheet matching x_i
+            closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
+            i = (
+                [k for k, v in sheets_at_z.iteritems() 
+                    if v == closest_to_x_i][0]
+            )
+            # Several sheets matching x_j
+            closest_to_x_j = sorted(
+                [[k, x_k] for k, x_k in enumerate(xs_at_z)], 
+                key=lambda y: abs(y[1] - x_j)
+            )[0:n_w]
+            j_s = [y[0] for y in closest_to_x_j]
+            for k in j_s:
+                # NOTE: Assuming that there is precisely ONE pair 
+                # whose difference is a root. In D-type it's really two pairs. 
+                # But either is fine, and they will be automatically 
+                # orthogonal to each other, so they are part of the same
+                # "multi-root" set.
+                # For E-type should introduce a little check to see if
+                # there is actually more than one combo that works.
+                alpha = (
+                    sw_data.g_data.ffr_weights[k] 
+                    - sw_data.g_data.ffr_weights[i]
+                )
+                if is_root(alpha, sw_data.g_data):
+                    j = k
+                    break
+
+    else:
+        # Sheet matching x_i
+        closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
+        i = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_i][0]
+        # Sheet matching x_j
+        closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
+        j = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_j][0]
 
     return sw_data.g_data.ffr_weights[j] - sw_data.g_data.ffr_weights[i]
 

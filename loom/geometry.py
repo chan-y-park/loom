@@ -326,7 +326,7 @@ class RamificationPoint:
     def get_json_data(self):
         if self.sw_diff_coeff is None:
             sw_diff_coeff = None
-        elif type(sw_diff_coeff) == list:
+        elif type(self.sw_diff_coeff) == list:
             # This handles the case of type IV ramification points
             sw_diff_coeff = [ctor2(x) for x in self.sw_diff_coeff]
         else:
