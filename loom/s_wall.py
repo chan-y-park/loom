@@ -435,7 +435,7 @@ class SWall(object):
         # means colliding sheets usually.
         # But some walls are born beyond the max_radius in general
         # in that case, we just choose the t=0 coordinate
-        # Also we keep t < 100, to avoid numerical errors induced by 
+        # Also we keep t < 500, to avoid numerical errors induced by 
         # numerics of ode_int, which tend to spoil the values of 
         # s_wall.x[t] far along the trajectory.
         t_0 = sorted(
@@ -444,7 +444,7 @@ class SWall(object):
                     z_r_distance_from_critical_loci(z_i, sw_data)
                 )]
                 for t_i, z_i in enumerate(self.z) if (
-                    (abs(z_i) < max_radius or t_i == 0) and t_i < 100
+                    (abs(z_i) < max_radius or t_i == 0) and t_i < 500
                 ) 
             ]), cmp=lambda a, b: cmp(a[1], b[1])
         )[-1][0]
