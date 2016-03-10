@@ -858,6 +858,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             )
 
         elif rp_type == 'type_IV':
+            # Note: the following are NOT the same as c_+/-
+            # as in the notes, rather they are a 12-th root of those.
+            sw_c_plus, sw_c_minus = sw_diff_coeff
+
             phases = [
                 exp(2 * pi * 1j * float(i) / (12.0)) 
                 for i in range(12)
@@ -865,24 +869,62 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             phi = [[
                 phases[i] - phases[j] for i in range(13) 
             ] for j in range(13)]
+            psi_plus = [[(
+                (sw_c_plus ** 12) * phases[i] 
+                - (sw_c_minus ** 12) * phases[j] 
+            ) for i in range(13) ] for j in range(13)]
+            psi_minus = [[(
+                (sw_c_minus ** 12) * phases[i] 
+                - (sw_c_plus ** 12) * phases[j] 
+            ) for i in range(13)] for j in range(13)]
 
             omega = exp(
                 2.0 * pi * 1j / 13.0
             )
-            dz_phases = ([
-                (1.0 / cpow(sw_diff_coeff, 12, 13)) *
+            # note: the following nomenclature of variables is
+            # chose to match to the notes on seeding. 
+            # It would be better not to change it to avoid
+            # potential confusion.
+            dz_A_plus = ([
+                (1.0 / cpow(sw_c_plus, 12, 13)) *
                 exp(1j * theta * 12.0 / 13.0) *
                 ((-1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
                 (omega ** s)
                 for i in range(13) for j in range(13) 
                 for s in range(13) if (i != j and e_6_compatible(i, j))
             ])
+            dz_A_minus = ([
+                (1.0 / cpow(sw_c_minus, 12, 13)) *
+                exp(1j * theta * 12.0 / 13.0) *
+                ((-1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
+                (omega ** s)
+                for i in range(13) for j in range(13) 
+                for s in range(13) if (i != j and e_6_compatible(i, j))
+            ])
+            dz_B_plus = ([
+                exp(1j * theta * 12.0 / 13.0) *
+                ((-1.0 / psi_plus[i][j]) ** (12.0 / 13.0)) * 
+                (omega ** s)
+                for i in range(13) for j in range(13) 
+                for s in range(13) if (i != j and e_6_compatible(i, j))
+            ])
+            dz_B_minus = ([
+                exp(1j * theta * 12.0 / 13.0) *
+                ((-1.0 / psi_minus[i][j]) ** (12.0 / 13.0)) * 
+                (omega ** s)
+                for i in range(13) for j in range(13) 
+                for s in range(13) if (i != j and e_6_compatible(i, j))
+            ])
+
+            dz_phases = dz_A_plus + dz_A_minus + dz_B_plus + dz_B_minus
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
             zetas = remove_duplicate(
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < accuracy
             )
+            print "\n\nThe seeding phases are {}".format(len(zetas))
+            print zetas
 
         # Now for each seeding point z_1 we identify two sheets
         # of the cover which match the phase of the displacement z_1-z_0

@@ -326,6 +326,9 @@ class RamificationPoint:
     def get_json_data(self):
         if self.sw_diff_coeff is None:
             sw_diff_coeff = None
+        elif type(sw_diff_coeff) == list:
+            # This handles the case of type IV ramification points
+            sw_diff_coeff = [ctor2(x) for x in self.sw_diff_coeff]
         else:
             sw_diff_coeff = ctor2(self.sw_diff_coeff)
         json_data = {
@@ -349,7 +352,11 @@ class RamificationPoint:
         self.ramification_type = json_data['ramification_type']
 
         if json_data['sw_diff_coeff'] is not None:
-            sw_diff_coeff = r2toc(json_data['sw_diff_coeff'])
+            if self.ramification_type == 'type_IV':
+                # In the case of type IV there are two coefficients to unpack
+                sw_diff_coeff = [r2toc(x) for x in json_data['sw_diff_coeff']]
+            else:
+                sw_diff_coeff = r2toc(json_data['sw_diff_coeff'])
         else:
             sw_diff_coeff = None
         self.sw_diff_coeff = sw_diff_coeff 
@@ -705,7 +712,7 @@ class SWDataBase(object):
             [r.z for r in ffr_ramification_points if r.z != oo], 
             self.accuracy,
         )
-        spread = spread_of_branch_points(bpzs)
+        spread = spread_of_branch_points(bpzs, min_spread=MIN_SPREAD)
         if spread > MIN_SPREAD:
             pass
         else:
@@ -1094,11 +1101,24 @@ class SWDataBase(object):
                 "Analyzing a ramification point at z = {}, x={}."
                 .format(rp.z, rp.x)
             )
-            local_curve = (
-                num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
-                .series(dx, 0, rp.i + 1).removeO()
-                .series(dz, 0, 2).removeO()
-            )
+
+            zero_threshold = self.accuracy * 100
+            g_data = self.g_data
+
+            if g_data.type == 'A' or g_data.type == 'D':
+                local_curve = (
+                    num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
+                    .series(dx, 0, rp.i + 1).removeO()
+                    .series(dz, 0, 2).removeO()
+                )
+            elif g_data.type == 'E' and g_data.rank == 6:
+                local_curve = (
+                    num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
+                    .series(dx, 0, rp.i + 1).removeO()
+                    .series(dz, 0, 3).removeO()
+                )
+            else:
+                raise NotImplementedError
             logger.debug('\nlocal curve = {}\n'.format(local_curve))
                 
             # Classify which type of ramification point
@@ -1109,14 +1129,11 @@ class SWDataBase(object):
             # type_III: D-type with x_0 = 0, degenerate
             #   i.e. F ~ x^2 (a z + b x^(2r-2))
             # type_IV: E6-type with x_0 = 0, degenerate
-            #   i.e. F ~ x^3 (a z + b x^(...))
+            #   i.e. F ~ x^3 (b x^{24} + a_1 x^{12} z + a_2 z^2)
             # type V: Other case.
             # More cases may be added in the future, in particular 
             # for degenerations of E_6 or E_7 curves.
             
-            # TODO: avoid using self.* repeatedly, define a local variable.
-            zero_threshold = self.accuracy * 100
-            g_data = self.g_data
             # XXX: Temporary case for D-type AD theories.
             if (
                 g_data.type == 'D' and rp.i == 4 and abs(rp.x) < zero_threshold
@@ -1173,27 +1190,39 @@ class SWDataBase(object):
                 )
 
             # dx_dz = dx(dz) is the local form of x (the local 
-            # coiordinate around the ramification point) as a function of z
+            # coordinate around the ramification point) as a function of z
             # (also intended as a local coordinate near a ramification point)
             if rp_type == 'type_I' or rp_type == 'type_II':
                 a = local_curve.n().subs(dx, 0).coeff(dz)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+                sw_diff_coeffs_a_b = [complex(a), complex(b)]
                 dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
 
             elif rp_type == 'type_III':
                 a = local_curve.n().coeff(dz).coeff(dx, 2)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+                sw_diff_coeffs_a_b = [complex(a), complex(b)]
                 dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 2)
 
             elif rp_type == 'type_IV':
-                a = local_curve.n().coeff(dz).coeff(dx, 15)
+                a_1 = local_curve.n().coeff(dz).coeff(dx, 15)
+                a_2 = local_curve.n().coeff(dz, 2).coeff(dx, 3)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-                dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, 12)
+                sw_diff_coeffs_a_b = [complex(a_1), complex(a_2), complex(b)]
+                dx_dz_plus = (((
+                    -1.0 * a_1 
+                    + (a_1 ** 2 - 4.0 * b * a_2) ** sympy.Rational(1, 2)
+                ) / (2.0 * b)) * dz) ** sympy.Rational(1, 12)
+                dx_dz_minus = (((
+                    -1.0 * a_1 
+                    - (a_1 ** 2 - 4.0 * b * a_2) ** sympy.Rational(1, 2)
+                ) / (2.0 * b)) * dz) ** sympy.Rational(1, 12)
 
             # FIXME: temporary patch until type_AD is removed
             elif rp_type == 'type_AD':
                 a = local_curve.n().subs(dx, 0).coeff(dz)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+                sw_diff_coeffs_a_b = [complex(a), complex(b)]
                 dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
             
             logger.debug(
@@ -1203,34 +1232,80 @@ class SWDataBase(object):
             )
 
             rp.ramification_type = rp_type    
-            rp.sw_diff_coeffs_a_b = [complex(a), complex(b)]
+            rp.sw_diff_coeffs_a_b = sw_diff_coeffs_a_b
 
             # Now we compute the SW differential actual coefficient.
-            # The relation of this to a, b should be that 
+            # The relation of this to a, b will depend on the 
+            # ramification point type. For types I, II, III it should be 
             # sw_diff_coeff = (-a / b)^{1/k} * (self.diff.jac)^{+/-1}
             # for a degree-k ramification point
             # because F ~ a z + b x^k so 
             # \lambda ~ x dz ~ (-a/b)^{1/k} (dz/dz') dz'
+            # For type IV there will be two coefficients to consider
+            # because (after dropping an overall x^3) 
+            # F ~ b x^{24} + a_1 x^{12} z + a_2 z^2
+            # so there are two solutions
+            # \lambda ~ x dz ~ (c_{+/-})^{1/12} (dz/dz') dz'
+            # where 
+            # c_{+/-} = (-a_1 +/- \sqrt{(a_1)^2 - 4 b a_2})/(2 b)
 
             # here num_v is essentially: x * (dz'/dz), where the last factor 
             # is the jacobian from z-plane rotations or PSL2C transformations.
             num_v = self.diff.num_v  
 
+            print "\n\nThis is the numerical differential"
+            print num_v
+
             # now we plug this into num_v, in a neighborhood of x_0
             # we have x = x_0 + dx_dz.
-            local_diff = (
-                num_v.subs(x, rp.x + dx_dz).subs(z, rp.z + dz)
-                .series(dz, 0, 1).removeO()
-            )
-
-            # get the coefficient and the exponent of the leading term
-            (diff_c, diff_e) = local_diff.leadterm(dz)
-            if diff_e == 0:
-                # remove the constant term from the local_diff
-                local_diff -= local_diff.subs(dz, 0)
+            if (
+                rp_type == 'type_I' or rp_type == 'type_II' or 
+                rp_type == 'type_III' or rp_type == 'type_AD'
+            ):
+                local_diff = (
+                    num_v.subs(x, rp.x + dx_dz).subs(z, rp.z + dz)
+                    .series(dz, 0, 1).removeO()
+                )
+                # get the coefficient and the exponent of the leading term
                 (diff_c, diff_e) = local_diff.leadterm(dz)
+                if diff_e == 0:
+                    # remove the constant term from the local_diff
+                    local_diff -= local_diff.subs(dz, 0)
+                    (diff_c, diff_e) = local_diff.leadterm(dz)
 
-            rp.sw_diff_coeff = complex(diff_c.n())
+                rp.sw_diff_coeff = complex(diff_c.n())
+
+            elif rp_type == 'type_IV':
+                local_diff_plus = (
+                    num_v.subs(x, rp.x + dx_dz_plus).subs(z, rp.z + dz)
+                    .series(dz, 0, 1).removeO()
+                )
+                local_diff_minus = (
+                    num_v.subs(x, rp.x + dx_dz_minus).subs(z, rp.z + dz)
+                    .series(dz, 0, 1).removeO()
+                )
+
+                # get the coefficient and the exponent of the leading term
+                (diff_c_plus, diff_e_plus) = local_diff_plus.leadterm(dz)
+                if diff_e_plus == 0:
+                    # remove the constant term from the local_diff
+                    local_diff_plus -= local_diff_plus.subs(dz, 0)
+                    (diff_c_plus, diff_e_plus) = local_diff_plus.leadterm(dz)
+                (diff_c_minus, diff_e_minus) = local_diff_minus.leadterm(dz)
+                if diff_e_minus == 0:
+                    # remove the constant term from the local_diff
+                    local_diff_minus -= local_diff_minus.subs(dz, 0)
+                    (diff_c_minus, diff_e_minus) = (
+                        local_diff_minus.leadterm(dz)
+                    )
+
+                rp.sw_diff_coeff = (
+                    [complex(diff_c_plus.n()), complex(diff_c_minus.n())]
+                )
+            else:
+                raise NotImplementedError
+
+            
 
 
 def get_punctures_from_config(
@@ -1651,7 +1726,7 @@ def align_sheets_for_e_6_ffr(
         [x for x in sheets if abs(x) < SHEET_NULL_TOLERANCE]
     )
     
-    if n_sheets_at_origin == 27 and near_degenerate_branch_locus:
+    if n_sheets_at_origin == 27 and near_degenerate_branch_locus is True:
         sorted_sheets = sheets
 
     elif n_sheets_at_origin == 3:
