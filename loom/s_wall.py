@@ -417,7 +417,8 @@ class SWall(object):
 
         # Choose a suitable point along the wall
         # we pick the one whose z coordinate's real part is 
-        # farthest from critical loci of the fibration        
+        # farthest from critical loci of the fibration, including 
+        # branch points and all types of punctures.        
         # Ideally, we would like this basepoint to be not too far away 
         # on the C-plane, because getting close to infinity
         # means colliding sheets usually.
@@ -429,7 +430,7 @@ class SWall(object):
         t_0 = sorted(
             ([
                 [t_i, min(
-                    z_r_distance_from_ramification_loci(z_i, sw_data)
+                    z_r_distance_from_critical_loci(z_i, sw_data)
                 )]
                 for t_i, z_i in enumerate(self.z) if (
                     (abs(z_i) < max_radius or t_i == 0) and t_i < 100
@@ -1047,8 +1048,11 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     return seeds
 
 
-def z_r_distance_from_ramification_loci(z, sw_data):
-    critical_loci = sw_data.branch_points + sw_data.irregular_singularities
+def z_r_distance_from_critical_loci(z, sw_data):
+    critical_loci = (
+        sw_data.branch_points + sw_data.irregular_singularities 
+        + sw_data.regular_punctures
+    )
     return [abs(z.real - c_l.z.real) for c_l in critical_loci]
 
 

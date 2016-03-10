@@ -277,6 +277,7 @@ class SWDataWithTrivialization(SWDataBase):
     # This should be guaranteed by the automatic rotation of 
     # the z-plane which is performed before calling this class.
     # TODO: irregular singularities ARE branch points.
+    # PL: in what sense? 
     def __init__(self, config, logger_name='loom', json_data=None,):
         super(SWDataWithTrivialization, self).__init__(
             config, logger_name=logger_name, json_data=json_data,
@@ -330,6 +331,9 @@ class SWDataWithTrivialization(SWDataBase):
         json_data['reference_xs'] = [
             ctor2(x) for x in self.reference_xs
         ]
+        json_data['farthest_branching_locus'] = ctor2(
+            self.farthest_branching_locus
+        )
 
         return json_data
 
@@ -352,6 +356,9 @@ class SWDataWithTrivialization(SWDataBase):
         self.reference_xs = [
             r2toc(x) for x in json_data['reference_xs']
         ]
+        self.farthest_branching_locus = r2toc(
+            json_data['farthest_branching_locus']
+        )
 
     def set_trivialization(self):
         logger = logging.getLogger(self.logger_name)
@@ -398,6 +405,9 @@ class SWDataWithTrivialization(SWDataBase):
             self.min_horizontal_distance = min(
                 [x for x in horizontal_distances if abs(x) > self.accuracy]
             )
+            self.farthest_branching_locus = max(
+                [abs(x) for x in all_points_z]
+            )
             
         elif n_critical_loci == 1:
             # If there is only one branching locus, we still
@@ -408,6 +418,7 @@ class SWDataWithTrivialization(SWDataBase):
             max_distance = 3.0
             self.min_distance = max_distance
             self.min_horizontal_distance = max_distance
+            self.farthest_branching_locus = max_distance
 
         elif n_critical_loci == 0:
             raise Exception('Must have at least one critical locus on C.')
@@ -452,8 +463,117 @@ class SWDataWithTrivialization(SWDataBase):
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
 
-    # TODO: Need to implement tracking without using aligned x's?
-    # PL: Do we actually need to?
+        # perform extensive global checks on monodromies
+        logger.info('Doing global checks on monodromies...')
+        self.global_monodromy_checks()
+
+
+    def global_monodromy_checks(self):
+        """
+        A set of global checks on monodromies.
+        """
+        logger = logging.getLogger(self.logger_name)
+        rep_d = len(self.g_data.weights)
+        ram_loci = self.branch_points + self.irregular_singularities
+        ordered_monodromies = [rl.monodromy for rl in sorted(
+            ram_loci, key=lambda rl: rl.z.real
+        )]
+
+        # If there is no irregular singularity at infinity, 
+        # we make a check that the numerically computed monodromy is trivial
+        m_oo = None
+        for p in self.irregular_punctures: 
+            if p.z == oo:
+                m_oo = True
+                logger.debug(
+                    "There is branching at infinity, "
+                    "due to an irregular singularity."
+                )
+
+        path_around_oo = get_path_around(oo, self.base_point, self)
+        if m_oo is None:
+            numerical_m_oo = self.get_sheet_monodromy(path_around_oo)
+        elif m_oo is True:
+            numerical_m_oo = self.get_sheet_monodromy(
+                path_around_oo, is_irr_sing=True
+            )
+
+        if m_oo is None:
+            if numpy.array_equal(
+                numerical_m_oo, numpy.identity(rep_d)
+            ) is True:
+                m_oo = numpy.identity(rep_d)
+                logger.info(
+                    "Direct computation confirms trivial monodromy at oo"
+                )
+            else:
+                raise Exception(
+                    "Monodromy at infinity is nontrivial, but no branching "
+                    "has been declared at infinity."
+                )
+        elif m_oo is True:
+            m_oo = numerical_m_oo
+
+        # Check that product of all monodromies equals 
+        # the monodromy at infinity    
+        m_tot = numpy.identity(rep_d)
+        for m_i in ordered_monodromies:
+            # NOTE: since monodromies are counter-clockwise and 
+            # ramification loci are ordered according to ascending 
+            # real part of their coordinate, multiplication must 
+            # be to the right.
+            m_tot = numpy.dot(m_tot, m_i)
+
+        if numpy.array_equal(m_tot, m_oo) is True:
+            logger.debug(
+                "Monodromy at infinity agrees with the product "
+                "of all monodromies, as expected."
+            )
+        else:
+            logger.info(
+                '\n\nWARNING!\n'
+                'Monodromy at infinity does not agree with the product '
+                'of all monodromies. Probable error in trivialization.'
+            )
+            # raise Exception(
+            #     'Monodromy at infinity does not agree with the product '
+            #     'of all monodromies. Probable error in trivialization.'
+            # )
+
+        # Now we check consistency for various combinations of monodromies
+        # e.g. M_1 M_2 ... M_k = M_{k+1} ... M_N (M_{oo})^{-1}
+        # for all possible sequential pairwise splittings.
+        for i in range(len(ordered_monodromies)):
+            m_1 = numpy.identity(rep_d)
+            m_2 = numpy.identity(rep_d)
+            for m_i in ordered_monodromies[:(i + 1)]:
+                # NOTE: since monodromies are counter-clockwise and 
+                # ramification loci are ordered according to ascending 
+                # real part of their coordinate, multiplication must 
+                # be to the right.
+                m_1 = numpy.dot(m_1, m_i)
+            for m_i in ordered_monodromies[(i + 1):]:
+                # NOTE: since monodromies are counter-clockwise and 
+                # ramification loci are ordered according to ascending 
+                # real part of their coordinate, multiplication must 
+                # be to the right.
+                m_2 = numpy.dot(m_2, m_i)
+            if numpy.array_equal(numpy.dot(m_1, m_2), m_oo):
+                continue
+            else:
+                logger.info(
+                    '\n\nWARNING!\n'
+                    'The product of the first {} monodromies '
+                    'does not match the (inverse of) the remaining ones'
+                    .format(i + 1)
+                )
+                # raise Exception(
+                #     'The product of the first {} monodromies '
+                #     'does not match the (inverse of) the remaining ones'
+                #     .format(i + 1)
+                # )
+
+
     def get_sheets_along_path(
         self, z_path, is_path_to_bp=False, ffr=False,
         ffr_xs_0=None, zoom_level=MAX_ZOOM_LEVEL,
@@ -659,6 +779,13 @@ class SWDataWithTrivialization(SWDataBase):
         Returns a permutation matrix, expressed in 
         the basis of reference sheets, such that
         new_sheets = M . old_sheets
+
+        There are subtleties associarted with representations
+        of D and E-type algebras, where two or more sheets
+        can be identically zero. Then one needs to 
+        figure out how to permute them, if at all.
+        For this reason, it is important to specify whenever 
+        we are computing the monodromy around an irregular singularity.
         """
         logger = logging.getLogger(self.logger_name)
         logger.debug(
@@ -949,7 +1076,7 @@ class SWDataWithTrivialization(SWDataBase):
         if is_weyl_monodromy(perm_matrix, self.g_data) is False:
             raise Exception('Failed to assign a Weyl-type monodromy.')
         else:
-            logger.info('Sheet monodromy is of Weyl type')
+            logger.debug('Sheet monodromy is of Weyl type')
         return perm_matrix
 
     def analyze_branch_point(self, bp):
@@ -958,8 +1085,8 @@ class SWDataWithTrivialization(SWDataBase):
             "Analyzing a branch point at z = {}."
             .format(bp.z)
         )
-        logger.info(
-            "Studying groups of colliding sheets"
+        logger.debug(
+            "Studying groups of colliding sheets to determine root(s) type."
         )
         path_to_bp = get_path_to(bp.z, self)
         # it's important that we set ffr=False, as the sheets here
@@ -1003,7 +1130,7 @@ class SWDataWithTrivialization(SWDataBase):
             if rp.ramification_type != 'type_I'
         ])
 
-        logger.info("Computing the monodromy")
+        logger.debug("Computing the monodromy.")
         path_around_bp = get_path_around(bp.z, self.base_point, self,)
 
         if len(ramification_types) == 0:
@@ -1017,6 +1144,25 @@ class SWDataWithTrivialization(SWDataBase):
             else:
                 raise Exception(
                     'Multiple ramification types for BP at z = {}'.format(bp.z)
+                )
+
+        # If the order of the branch point is 1, it means that it does 
+        # not correspond to a root, and will be dropped later on.
+        # Since all branch points should be of weyl-type, there
+        # should be no monodromy around this branch point.
+        # Here we check there is no monodromy at all around this branch point.
+        if bp.order == 1:
+            rep_d = len(self.g_data.weights)
+            if numpy.array_equal(bp.monodromy, numpy.identity(rep_d)) is True:
+                logger.debug(
+                    "This branch point has trivial monodromy, in agreement"
+                    "with the fact that it does not correspond to any root."
+                )
+            else:
+                logger.info(
+                    "Warning! While the branch point does not correspond to "
+                    "any root, its monodromy is nontrivial. "
+                    "Probable error in trivialization of the covering."
                 )
 
         # TODO: it would be good to make a check here, e.g. on the 
@@ -1143,30 +1289,57 @@ def get_path_around(z_pt, base_pt, sw):
     logger = logging.getLogger(sw.logger_name)
     logger.debug("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
-    z_1 = 1j * base_pt.imag + z_pt.real
-    # if n_loci==None:
-    #     n_loci = len(sw.branch_points + sw.irregular_singularities)
-    # radius = min_distance / n_loci
-    radius = sw.min_horizontal_distance / 2.0
-    z_2 = z_pt - 1j * radius
+    
+    if z_pt != oo:
+        z_1 = 1j * base_pt.imag + z_pt.real
+        # if n_loci==None:
+        #     n_loci = len(sw.branch_points + sw.irregular_singularities)
+        # radius = min_distance / n_loci
+        radius = sw.min_horizontal_distance / 2.0
+        z_2 = z_pt - 1j * radius
 
-    steps = N_PATH_AROUND_PT
-    path_segment_1 = [
-        z_0 + ((z_1 - z_0) / steps) * i for i in range(steps + 1)
-    ]
-    path_segment_2 = [
-        z_1 + ((z_2 - z_1) / steps) * i for i in range(steps + 1)
-    ]
-    path_segment_3 = [
-        z_pt + radius * (-1j) * exp(i * 2.0 * pi * 1j / steps) 
-        for i in range(steps + 1)
-    ]
-    path_segment_4 = path_segment_2[::-1]
-    path_segment_5 = path_segment_1[::-1]
-    return (
-        path_segment_1 + path_segment_2 + path_segment_3 + 
-        path_segment_4 + path_segment_5
-    )
+        steps = N_PATH_AROUND_PT
+        path_segment_1 = [
+            z_0 + ((z_1 - z_0) / steps) * i for i in range(steps + 1)
+        ]
+        path_segment_2 = [
+            z_1 + ((z_2 - z_1) / steps) * i for i in range(steps + 1)
+        ]
+        path_segment_3 = [
+            z_pt + radius * (-1j) * exp(i * 2.0 * pi * 1j / steps) 
+            for i in range(steps + 1)
+        ]
+        path_segment_4 = path_segment_2[::-1]
+        path_segment_5 = path_segment_1[::-1]
+        return (
+            path_segment_1 + path_segment_2 + path_segment_3 + 
+            path_segment_4 + path_segment_5
+        )
+    else:
+        radius = sw.farthest_branching_locus * 2.0
+        steps = N_PATH_AROUND_PT
+        # need more steps to get good tracking on a large circle
+        large_steps = 10 * steps
+
+        z_1 = 1j * base_pt.imag
+        z_2 = -1j * radius
+        path_segment_1 = [
+            z_0 + ((z_1 - z_0) / steps) * i for i in range(steps + 1)
+        ]
+        path_segment_2 = [
+            z_1 + ((z_2 - z_1) / steps) * i for i in range(steps + 1)
+        ]
+        path_segment_3 = [
+            radius * (-1j) * exp(i * 2.0 * pi * 1j / large_steps) 
+            for i in range(large_steps + 1)
+        ]
+        path_segment_4 = path_segment_2[::-1]
+        path_segment_5 = path_segment_1[::-1]
+        return (
+            path_segment_1 + path_segment_2 + path_segment_3 + 
+            path_segment_4 + path_segment_5
+        )
+
 
 
 # TODO: Try using numba.
@@ -1400,7 +1573,7 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
         # TODO: Check if the situation is what we expect and is normal.
         # If that's the case, don't print a message. 
         # Otherwise print a warning instead of info.
-        logger.info(
+        logger.debug(
             "Branch point doesn't correspond "
             "to a positive root. May be an accidental branch point."
         )

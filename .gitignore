@@ -3,3 +3,6 @@
 *.swp
 *.log
 *.DS_Store
+loom/sage_scripts/*.py
+logs/*.txt
+

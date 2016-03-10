@@ -409,3 +409,14 @@ def get_data_size_of(obj, debug=False):
         data_size = 0
 
     return data_size
+
+
+def spread_of_branch_points(z_s):
+    """
+    Give a measure of how much branch points are separated 
+    from each other.
+    """
+    # TODO: think about more accurate ways to estimate the spread.
+    max_d = max([abs(z_i - z_j) for z_i in z_s for z_j in z_s if z_i != z_j])
+    min_d = min([abs(z_i - z_j) for z_i in z_s for z_j in z_s if z_i != z_j])
+    return min_d / (max_d / len(z_s))

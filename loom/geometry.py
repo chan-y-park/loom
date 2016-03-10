@@ -16,7 +16,7 @@ import sage_subprocess
 from spectral_curve import get_ffr_curve_string
 from misc import (ctor2, r2toc, PSL2C,
                   delete_duplicates, gather, parse_sym_dict_str,
-                  n_remove_duplicate)
+                  n_remove_duplicate, spread_of_branch_points)
 
 x, z = sympy.symbols('x z')
 
@@ -32,6 +32,8 @@ ROOT_FINDING_PRECISION = 20
 mp.dps = ROOT_FINDING_PRECISION
 
 DEFAULT_LARGE_STEP_SIZE = 0.01
+
+MIN_SPREAD = 0.1
 
 
 class GData:
@@ -590,7 +592,10 @@ class SWDataBase(object):
             )
             self.curve = None
 
-        # Display the content of SWDataBase.
+        # TODO: move these messages somewhere inside set_from_config
+        # otherwise the messages about finding ramification points 
+        # will show up in the output even before we prin the curve.
+        # Display the Seiberg-Witten curve given by the configuration
         logger.info(
             'Seiberg-Witten curve in the 1st fundamental '
             'representation:\n(note: \lambda = x dz)'
@@ -693,6 +698,24 @@ class SWDataBase(object):
                        .format(len(ffr_ramification_points)))
             )
             ffr_ramification_points.append(rp)
+
+        # TODO: instead of just printing a warning, increase the accuracy 
+        # or other relevant parameters to overcome this issue.
+        bpzs = n_remove_duplicate(
+            [r.z for r in ffr_ramification_points if r.z != oo], 
+            self.accuracy,
+        )
+        spread = spread_of_branch_points(bpzs)
+        if spread > MIN_SPREAD:
+            pass
+        else:
+            logger.info(
+                '\n\nWarning!\n'
+                'Branch points may be too close to each other '
+                'for numerical trivialization. Spread is {}'
+                '\nBranch points are:\n{}'
+                .format(spread, [rp.z for rp in ffr_ramification_points])
+            )
 
         logger.debug('These are the punctures:')
         for pct in punctures:

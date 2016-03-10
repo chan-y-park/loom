@@ -504,7 +504,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
 
         elif (
             abs(s_wall_z[t].real - bp.z.real) < accuracy 
-            and s_wall_z[t].imag - bp.z.imag
+            and s_wall_z[t].imag - bp.z.imag > 0
         ):
             logger.info(
                 'The nearest point is too close to a branch cut, '
