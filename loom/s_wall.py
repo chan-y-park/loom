@@ -197,7 +197,10 @@ class SWall(object):
                 [br_loc.label, t, d]
                 for br_loc, t, d in self.cuts_intersections
             ],
-            # 'root_basepoint': ctor2(self.root_basepoint),
+            'root_basepoint': (
+                [self.root_basepoint[0], ctor2(self.root_basepoint[1]),
+                    [ctor2(x) for x in self.root_basepoint[2]]]
+            ),
             'local_roots': [root.tolist() for root in self.local_roots],
             # TODO: Restore the following after multiple_local_roots
             # becomes the default.
@@ -240,7 +243,13 @@ class SWall(object):
         except KeyError:
             pass
         self.local_weight_pairs = json_data['local_weight_pairs']
-        # self.root_basepoint = r2toc(json_data['root_basepoint'])
+        self.root_basepoint = (
+            [json_data['root_basepoint'][0], 
+                r2toc(json_data['root_basepoint'][1]),
+                numpy.array(
+                    [r2toc(x) for x in json_data['root_basepoint'][2]]
+                )]
+        )
 
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
