@@ -26,8 +26,8 @@ N_PATH_TO_PT = 100
 
 # number of steps for each SEGMENT of the path around a
 # branching point (either branch-point, or irregular singularity)
-N_PATH_AROUND_PT = 60
-# N_PATH_AROUND_PT = 100
+# N_PATH_AROUND_PT = 60
+N_PATH_AROUND_PT = 100
 
 # Number of times the tracking of sheets is allowed to automatically zoom in.
 # Usual values
@@ -466,7 +466,6 @@ class SWDataWithTrivialization(SWDataBase):
         # perform extensive global checks on monodromies
         logger.info('Doing global checks on monodromies...')
         self.global_monodromy_checks()
-
 
     def global_monodromy_checks(self):
         """
@@ -1077,6 +1076,9 @@ class SWDataWithTrivialization(SWDataBase):
             raise Exception('Failed to assign a Weyl-type monodromy.')
         else:
             logger.debug('Sheet monodromy is of Weyl type')
+        logger.debug(
+            'Permutation matrix {}'.format(perm_matrix)
+        )
         return perm_matrix
 
     def analyze_branch_point(self, bp):

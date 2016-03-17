@@ -438,6 +438,13 @@ class SWall(object):
         # Also we keep t < 500, to avoid numerical errors induced by 
         # numerics of ode_int, which tend to spoil the values of 
         # s_wall.x[t] far along the trajectory.
+        # FIXME: this fact of choosing t < 500 can cause trouble
+        # if we have a primary S-wall that is almost vertical 
+        # and (running upwards), because then its
+        # points are very close to a branch cut, and 
+        # it is better to take t as large as possible to take 
+        # advantage of the distance from the cut, to compute the root.
+        # This can be handled by checking explicitly for such cases.
         t_0 = sorted(
             ([
                 [t_i, min(
