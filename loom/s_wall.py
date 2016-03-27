@@ -836,14 +836,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
         elif rp_type == 'type_I':
             phases = [exp(2 * pi * 1j * float(i) / r_i) for i in range(r_i)]
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
-
-            print "\n\nphases"
-            print phases
-            print "\n\nphi"
-            print phi
-            print "cpow((sw_diff_coeff), r_i, r_i + 1)"
-            print cpow((sw_diff_coeff), r_i, r_i + 1)
-            
             omega = exp(2.0 * pi * 1j * float(r_i) / float(r_i + 1))
 
             # a, b = sw_diff_coeffs_a_b
