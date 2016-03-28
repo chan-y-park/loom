@@ -211,7 +211,7 @@ def save_spectral_network(
 
     # Save version data.
     version_file_path = os.path.join(data_dir, 'version')
-    version = None
+    version = "None"
     # FIXME: Temporarily disabling this because I get the error from git
     # "Unknown option: -C"
     # version = get_current_branch_version()
