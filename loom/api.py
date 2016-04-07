@@ -47,6 +47,7 @@ def get_logging_formatter(level):
 
 def set_logging(
     logger_name='loom',
+    logging_level=None,
     logging_level_name='INFO',
     logging_queue=None,
     logging_stream=None,
@@ -56,7 +57,8 @@ def set_logging(
 ):
     logging.basicConfig()
     logger = logging.getLogger(logger_name)
-    logging_level = logging.getLevelName(logging_level_name)
+    if logging_level is None:
+        logging_level = logging.getLevelName(logging_level_name)
     logger.setLevel(logging_level)
     formatter = get_logging_formatter(logging_level)
 

@@ -356,9 +356,14 @@ class SWDataWithTrivialization(SWDataBase):
         self.reference_xs = [
             r2toc(x) for x in json_data['reference_xs']
         ]
-        self.farthest_branching_locus = r2toc(
-            json_data['farthest_branching_locus']
-        )
+        try:
+            self.farthest_branching_locus = r2toc(
+                json_data['farthest_branching_locus']
+            )
+        except KeyError:
+            logger.warning('No JSON data for farthest_branching_locus, '
+                           'setting to None.')
+            self.farthest_branching_locus = None
 
     def set_trivialization(self):
         logger = logging.getLogger(self.logger_name)

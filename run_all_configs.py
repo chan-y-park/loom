@@ -59,7 +59,7 @@ if not os.path.exists(TEST_RESULT_DIR):
 
 loom.set_logging(
     logger_name=logger_name,
-    logging_level=logging.INFO,
+    logging_level_name='INFO',
     logging_stream=sys.stdout,
     logging_file_name=os.path.join(
         loom.api.get_loom_dir(),

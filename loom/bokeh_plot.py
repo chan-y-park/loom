@@ -21,6 +21,7 @@ def get_spectral_network_bokeh_plot(
     plot_joints=False, plot_data_points=False, plot_on_cylinder=False,
     plot_width=800, plot_height=800,
     notebook=False, logger_name=None,
+    marked_points=[],
 ):
     logger = logging.getLogger(logger_name)
 
@@ -71,6 +72,20 @@ def get_spectral_network_bokeh_plot(
         y_range=plot_y_range,
     )
     bokeh_figure.grid.grid_line_color = None
+
+    # Data source for marked points, which are drawn for an illustration.
+    mpds = ColumnDataSource({'x': [], 'y': [], 'color':[],
+                             'label': [], 'root': []})
+    for mp in marked_points:
+        z, color = mp
+        mpds.data['x'].append(z.real)
+        mpds.data['y'].append(z.imag)
+        mpds.data['color'].append(color)
+        mpds.data['label'].append('')
+        mpds.data['root'].append('')
+    bokeh_figure.circle(
+        x='x', y='y', size=5, color='color', source=mpds,
+    )
 
     # Data source for punctures.
     ppds = ColumnDataSource({'x': [], 'y': [], 'label': [], 'root': []})
@@ -163,6 +178,7 @@ def get_spectral_network_bokeh_plot(
                 z_r = s_wall.z[start:stop].real
                 z_i = s_wall.z[start:stop].imag
                 a_i = int(numpy.floor(len(z_r) / 2.0))
+                #TODO: Check if the arrow is within the plot range.
                 a_angle = pi
                 a_angle = (
                     phase((z_r[a_i] - z_r[a_i - 1]) +
