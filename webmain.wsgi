@@ -19,7 +19,7 @@ from loom.web_ui import get_application
 
 default_config_file = os.path.join(get_loom_dir(), 'config/default.ini')
 application = get_application(default_config_file,
-                              logging_level_name='INFO')
+                              logging_level=logging.INFO)
 
 if __name__ == '__main__':
     pid_file = os.path.join(get_loom_dir(), 'logs/webmain_pid')
