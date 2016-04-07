@@ -27,6 +27,9 @@ NUM_ODE_XS_OVER_Z = 2
 SEED_PHASE_PRECISION = 0.001
 SEED_PRECISION_MAX_DEPTH = 5
 
+# Minimum number of data points for each S-wall.
+MIN_NUM_OF_DATA_PTS = 3
+
 
 class Joint:
     def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
@@ -285,18 +288,19 @@ class SWall(object):
 
         while ode.successful() and step < num_of_steps:
             step += 1
-            # Stop if z is inside a cutoff of a puncture.
-            if len(ppzs) > 0:
-                min_d = min([abs(z_i - ppz) for ppz in ppzs])
-                if min_d < size_of_puncture_cutoff:
-                    self.resize(step)
-                    break
+            if step > MIN_NUM_OF_DATA_PTS:
+                # Stop if z is inside a cutoff of a puncture.
+                if len(ppzs) > 0:
+                    min_d = min([abs(z_i - ppz) for ppz in ppzs])
+                    if min_d < size_of_puncture_cutoff:
+                        self.resize(step)
+                        break
 
-            # Stop if M exceeds mass limit.
-            if mass_limit is not None:
-                if M_i > mass_limit:
-                    self.resize(step)
-                    break
+                # Stop if M exceeds mass limit.
+                if mass_limit is not None:
+                    if M_i > mass_limit:
+                        self.resize(step)
+                        break
 
             # Adjust the step size if z is near a branch point.
             if (len(bpzs) > 0 and
@@ -347,7 +351,7 @@ class SWall(object):
             br_loc_x = br_loc.z.real
             br_loc_y = br_loc.z.imag
 
-            if num_of_zs > 3:
+            if num_of_zs > MIN_NUM_OF_DATA_PTS:
                 # If the length of the S-wall's coordinates
                 # is greater than 3, use the B-spline of SciPy
                 # to find the intersections between cuts and the S-wall.
@@ -358,7 +362,7 @@ class SWall(object):
                 # based on the z-coordinate's real part.
                 t_zeros = interpolate.sproot(g).tolist()
 
-            elif 1 < num_of_zs <= 3:
+            elif 1 < num_of_zs <= MIN_NUM_OF_DATA_PTS:
                 # There are two or three data points on the S-wall.
                 # Use a linear interpolation for every pair of data points.
                 t_zeros = []
