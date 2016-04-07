@@ -1,10 +1,12 @@
 import logging
 import numpy
 import sympy
+import pdb
 
 from cmath import exp, pi
 from math import floor
 from scipy import interpolate
+from sympy import oo
 
 from geometry import (
     find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
@@ -1164,7 +1166,8 @@ def z_r_distance_from_critical_loci(z, sw_data):
         sw_data.branch_points + sw_data.irregular_singularities 
         + sw_data.regular_punctures
     )
-    return [abs(z.real - c_l.z.real) for c_l in critical_loci]
+    return [abs(z.real - c_l.z.real)
+            for c_l in critical_loci if c_l.z != oo]
 
 
 def branch_locus_from_label(sw_data, br_loc_label):
