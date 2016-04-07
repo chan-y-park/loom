@@ -6,7 +6,9 @@ from cmath import exp, pi
 from math import floor
 from scipy import interpolate
 
-from geometry import find_xs_at_z_0, align_sheets_for_e_6_ffr
+from geometry import (
+    find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
+)
 from misc import (
     cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root, 
     get_descendant_roots, sort_roots, n_nearest
@@ -195,7 +197,10 @@ class SWall(object):
                 [br_loc.label, t, d]
                 for br_loc, t, d in self.cuts_intersections
             ],
-            # 'root_basepoint': ctor2(self.root_basepoint),
+            'root_basepoint': (
+                [self.root_basepoint[0], ctor2(self.root_basepoint[1]),
+                    [ctor2(x) for x in self.root_basepoint[2]]]
+            ),
             'local_roots': [root.tolist() for root in self.local_roots],
             # TODO: Restore the following after multiple_local_roots
             # becomes the default.
@@ -238,7 +243,13 @@ class SWall(object):
         except KeyError:
             pass
         self.local_weight_pairs = json_data['local_weight_pairs']
-        # self.root_basepoint = r2toc(json_data['root_basepoint'])
+        self.root_basepoint = (
+            [json_data['root_basepoint'][0], 
+                r2toc(json_data['root_basepoint'][1]),
+                numpy.array(
+                    [r2toc(x) for x in json_data['root_basepoint'][2]]
+                )]
+        )
 
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
@@ -424,16 +435,23 @@ class SWall(object):
         # means colliding sheets usually.
         # But some walls are born beyond the max_radius in general
         # in that case, we just choose the t=0 coordinate
-        # Also we keep t < 100, to avoid numerical errors induced by 
+        # Also we keep t < 500, to avoid numerical errors induced by 
         # numerics of ode_int, which tend to spoil the values of 
         # s_wall.x[t] far along the trajectory.
+        # FIXME: this fact of choosing t < 500 can cause trouble
+        # if we have a primary S-wall that is almost vertical 
+        # and (running upwards), because then its
+        # points are very close to a branch cut, and 
+        # it is better to take t as large as possible to take 
+        # advantage of the distance from the cut, to compute the root.
+        # This can be handled by checking explicitly for such cases.
         t_0 = sorted(
             ([
                 [t_i, min(
                     z_r_distance_from_critical_loci(z_i, sw_data)
                 )]
                 for t_i, z_i in enumerate(self.z) if (
-                    (abs(z_i) < max_radius or t_i == 0) and t_i < 100
+                    (abs(z_i) < max_radius or t_i == 0) and t_i < 500
                 ) 
             ]), cmp=lambda a, b: cmp(a[1], b[1])
         )[-1][0]
@@ -688,14 +706,80 @@ def get_s_wall_root(z, ffr_xs, sw_data):
     # The following is a dictionary
     sheets_at_z = sw_data.get_sheets_at_z(z, ffr=True)
     xs_at_z = sheets_at_z.values()
-    
-    # Sheet matching x_i
-    closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
-    i = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_i][0]
 
-    # Sheet matching x_j
-    closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
-    j = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_j][0]
+    if (
+        (sw_data.g_data.type == 'D' or sw_data.g_data.type == 'E') and 
+        (abs(x_i) < SHEET_NULL_TOLERANCE or abs(x_j) < SHEET_NULL_TOLERANCE)
+    ):
+        if sw_data.g_data.type == 'D':
+            n_w = 2
+        elif sw_data.g_data.type == 'E':
+            n_w = 3
+        if abs(x_i) < SHEET_NULL_TOLERANCE:
+            # Several sheets matching x_i
+            closest_to_x_i = sorted(
+                [[k, x_k] for k, x_k in enumerate(xs_at_z)], 
+                key=lambda y: abs(y[1] - x_i)
+            )[0:n_w]
+            i_s = [y[0] for y in closest_to_x_i]
+            # Sheet matching x_j
+            closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
+            j = (
+                [k for k, v in sheets_at_z.iteritems() 
+                    if v == closest_to_x_j][0]
+            )
+            for k in i_s:
+                # NOTE: Assuming that there is precisely ONE pair 
+                # whose difference is a root. In D-type it's really two pairs. 
+                # But either is fine, and they will be automatically 
+                # orthogonal to each other, so they are part of the same
+                # "multi-root" set.
+                # For E-type should introduce a little check to see if
+                # there is actually more than one combo that works.
+                alpha = (
+                    sw_data.g_data.ffr_weights[j] 
+                    - sw_data.g_data.ffr_weights[k]
+                )
+                if is_root(alpha, sw_data.g_data):
+                    i = k
+                    break
+
+        elif abs(x_j) < SHEET_NULL_TOLERANCE:
+            # Sheet matching x_i
+            closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
+            i = (
+                [k for k, v in sheets_at_z.iteritems() 
+                    if v == closest_to_x_i][0]
+            )
+            # Several sheets matching x_j
+            closest_to_x_j = sorted(
+                [[k, x_k] for k, x_k in enumerate(xs_at_z)], 
+                key=lambda y: abs(y[1] - x_j)
+            )[0:n_w]
+            j_s = [y[0] for y in closest_to_x_j]
+            for k in j_s:
+                # NOTE: Assuming that there is precisely ONE pair 
+                # whose difference is a root. In D-type it's really two pairs. 
+                # But either is fine, and they will be automatically 
+                # orthogonal to each other, so they are part of the same
+                # "multi-root" set.
+                # For E-type should introduce a little check to see if
+                # there is actually more than one combo that works.
+                alpha = (
+                    sw_data.g_data.ffr_weights[k] 
+                    - sw_data.g_data.ffr_weights[i]
+                )
+                if is_root(alpha, sw_data.g_data):
+                    j = k
+                    break
+
+    else:
+        # Sheet matching x_i
+        closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
+        i = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_i][0]
+        # Sheet matching x_j
+        closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
+        j = [k for k, v in sheets_at_z.iteritems() if v == closest_to_x_j][0]
 
     return sw_data.g_data.ffr_weights[j] - sw_data.g_data.ffr_weights[i]
 
@@ -858,25 +942,52 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             )
 
         elif rp_type == 'type_IV':
-            phases = [
-                exp(2 * pi * 1j * float(i) / (12.0)) 
-                for i in range(12)
-            ] + [0.0]
-            phi = [[
-                phases[i] - phases[j] for i in range(13) 
-            ] for j in range(13)]
+            # note: the following nomenclature of variables is
+            # chose to match to the notes on seeding. 
+            # It would be better not to change it to avoid
+            # potential confusion.
 
-            omega = exp(
-                2.0 * pi * 1j / 13.0
+            # Note: the following are NOT the same as c_+/-
+            # as in the notes, rather they are a 12-th root of those.
+            sw_c_plus, sw_c_minus = sw_diff_coeff
+
+            # computing the seed reference sheets -- see notes 
+            # for an explanation of what they are, and how they 
+            # will be employed
+            seed_ref_xs = (
+                [0.0, 0.0, 0.0] + 
+                [sw_c_plus * exp(2 * pi * 1j * float(i) / (12.0)) 
+                for i in range(12)] +
+                [sw_c_minus * exp(2 * pi * 1j * float(i) / (12.0)) 
+                for i in range(12)]
             )
+
+            aligned_seed_ref_xs = align_sheets_for_e_6_ffr(
+                        seed_ref_xs, 
+                        sw.g_data.weights, 
+                        near_degenerate_branch_locus=False
+                    )
+
+            # now for each pair of reference sheets 
+            # which actually differs by a root, we consider 
+            # their difference to define a seed location
+            delta_seed_xs = []
+            for i, x_i in enumerate(aligned_seed_ref_xs): 
+                w_i = sw.g_data.weights[i]
+                for j, x_j in enumerate(aligned_seed_ref_xs):
+                    w_j = sw.g_data.weights[j]
+                    if is_root(w_j - w_i, sw.g_data):
+                        delta_seed_xs.append((x_j - x_i) / abs(x_j - x_i))
+
+            omega = exp(2.0 * pi * 1j / 13.0)
+
             dz_phases = ([
-                (1.0 / cpow(sw_diff_coeff, 12, 13)) *
                 exp(1j * theta * 12.0 / 13.0) *
-                ((-1.0 / phi[i][j]) ** (12.0 / 13.0)) * 
+                ((-1.0 / delta_xs) ** (12.0 / 13.0)) * 
                 (omega ** s)
-                for i in range(13) for j in range(13) 
-                for s in range(13) if (i != j and e_6_compatible(i, j))
+                for s in range(13) for delta_xs in delta_seed_xs 
             ])
+
             norm_dz_phases = [d / abs(d) for d in dz_phases]
             # these are the normalized phases of the seeds
             # with respect to the branch point:
@@ -1099,25 +1210,25 @@ def left_right(l, point):
             return 'left'
 
 
-def e_6_compatible(i, j):
-    """
-    Given two integers i,j =0, ..., 12
-    determine whether the corresponding phases
-    in the E_6 seeds can be paired together.
-    This accounts for which sheets actually differ 
-    by a root, or not. The following prescription
-    is derived from the Coxeter projection diagram 
-    of E_6, and looking for roots that connect
-    a given weight with other weights.
-    """
-    dist = abs(i - j) % 12
-    if (
-        (0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
-        (i == 12 or j == 12)
-    ):
-        return True
-    else:
-        return False
+# def e_6_compatible(i, j):
+#     """
+#     Given two integers i,j =0, ..., 12
+#     determine whether the corresponding phases
+#     in the E_6 seeds can be paired together.
+#     This accounts for which sheets actually differ 
+#     by a root, or not. The following prescription
+#     is derived from the Coxeter projection diagram 
+#     of E_6, and looking for roots that connect
+#     a given weight with other weights.
+#     """
+#     dist = abs(i - j) % 12
+#     if (
+#         (0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
+#         (i == 12 or j == 12)
+#     ):
+#         return True
+#     else:
+#         return False
 
 
 # TODO: Merge the following two functions?
