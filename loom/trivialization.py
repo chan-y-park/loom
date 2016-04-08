@@ -338,6 +338,8 @@ class SWDataWithTrivialization(SWDataBase):
         return json_data
 
     def set_trivialization_from_json_data(self, json_data,):
+        logger = logging.getLogger(self.logger_name)
+
         self.branch_points = [
             BranchPoint(json_data=data, 
                         ffr_ramification_points=self.ffr_ramification_points,)

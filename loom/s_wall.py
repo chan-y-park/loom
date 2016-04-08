@@ -150,7 +150,7 @@ class SWall(object):
 
         # cuts_intersections = [[b_pt_idx, i, '(c)cw'], ...]
         self.cuts_intersections = []
-        self.root_basepoint = []
+        #self.root_basepoint = []
         self.local_roots = []
         self.multiple_local_roots = None
         # local_weight_pairs is a list of pair of intgers.
@@ -158,7 +158,7 @@ class SWall(object):
 
         self.data_attributes = [
             'z', 'M', 'x', 'parents', 'parent_roots', 'label', 
-            'cuts_intersections', 'root_basepoint',
+            'cuts_intersections', #'root_basepoint',
             'local_roots', 'multiple_local_roots', 'local_weight_pairs',
         ]
 
@@ -202,10 +202,10 @@ class SWall(object):
                 [br_loc.label, t, d]
                 for br_loc, t, d in self.cuts_intersections
             ],
-            'root_basepoint': (
-                [self.root_basepoint[0], ctor2(self.root_basepoint[1]),
-                    [ctor2(x) for x in self.root_basepoint[2]]]
-            ),
+            #'root_basepoint': (
+            #    [self.root_basepoint[0], ctor2(self.root_basepoint[1]),
+            #        [ctor2(x) for x in self.root_basepoint[2]]]
+            #),
             'local_roots': [root.tolist() for root in self.local_roots],
             # TODO: Restore the following after multiple_local_roots
             # becomes the default.
@@ -248,13 +248,13 @@ class SWall(object):
         except KeyError:
             pass
         self.local_weight_pairs = json_data['local_weight_pairs']
-        self.root_basepoint = (
-            [json_data['root_basepoint'][0], 
-                r2toc(json_data['root_basepoint'][1]),
-                numpy.array(
-                    [r2toc(x) for x in json_data['root_basepoint'][2]]
-                )]
-        )
+        #self.root_basepoint = (
+        #    [json_data['root_basepoint'][0], 
+        #        r2toc(json_data['root_basepoint'][1]),
+        #        numpy.array(
+        #            [r2toc(x) for x in json_data['root_basepoint'][2]]
+        #        )]
+        #)
 
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
@@ -464,7 +464,7 @@ class SWall(object):
 
         z_0 = self.z[t_0]
         xs_0 = self.x[t_0]
-        self.root_basepoint = [t_0, z_0, xs_0]
+        #self.root_basepoint = [t_0, z_0, xs_0]
 
         # Determine the initial root-type
         initial_root = get_s_wall_root(z_0, xs_0, sw_data,)

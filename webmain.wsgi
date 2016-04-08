@@ -4,6 +4,7 @@ import os
 import signal
 import logging
 import sys
+import getopt
 
 import scipy
 import flask
@@ -11,6 +12,7 @@ import time
 
 import pdb
 
+argv = sys.argv[1:]
 sys.stdout = sys.stderr
 print 'loom WSGI working directory: {}'.format(os.getcwd())
 
@@ -22,6 +24,13 @@ application = get_application(default_config_file,
                               logging_level=logging.INFO)
 
 if __name__ == '__main__':
+    host = '0.0.0.0'
+    port = 8888
+    optlist, args = getopt.getopt(argv, 'p:')
+    for opt, arg in optlist:
+        if opt == '-p':
+            port = int(arg)
+
     pid_file = os.path.join(get_loom_dir(), 'logs/webmain_pid')
     try:
         with open(pid_file, 'r') as fp:
@@ -32,8 +41,6 @@ if __name__ == '__main__':
     with open(pid_file, 'w') as fp:
         pid = os.getpid()
         fp.write(str(pid))
-    host = '0.0.0.0'
-    port = 8888
     try:
         application.run(
             host=host,

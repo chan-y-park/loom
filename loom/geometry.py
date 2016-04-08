@@ -422,7 +422,8 @@ class SWCurve:
     """
     def __init__(self, casimir_differentials=None, g_data=None, 
                  diff_params=None, mt_params=None, 
-                 z_rotation=sympy.sympify('1'), ffr=False):
+                 z_rotation=sympy.sympify('1'), ffr=False,
+                 expand=False):
         self.sym_eq = None
         self.num_eq = None
 
@@ -432,9 +433,11 @@ class SWCurve:
                 casimir_differentials, g_data.type, g_data.rank
             )
             try:
-                # TODO: SAGE is much faster in expanding an expression.
-                #self.sym_eq = sympy.sympify(ffr_eq_str)
-                self.sym_eq = sympy.sympify(ffr_eq_str).expand()
+                if expand is True:
+                    # TODO: SAGE is much faster in expanding an expression.
+                    self.sym_eq = sympy.sympify(ffr_eq_str).expand()
+                else:
+                    self.sym_eq = sympy.sympify(ffr_eq_str)
             except:
                 raise
             # NOTE: We apply PSL2C only to the numerical curve
@@ -642,6 +645,7 @@ class SWDataBase(object):
         pi_div = 0
 
         method = config['ramification_point_finding_method']
+        logger.info('Ramification point finding method: {}'.format(method))
         if method == 'discriminant':
             get_ramification_points = (
                 get_ramification_points_using_discriminant
@@ -932,6 +936,11 @@ class SWDataBase(object):
             for data in json_data['ffr_ramification_points']
         ]
         self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
+        for p in (
+            self.regular_punctures + self.irregular_punctures +
+            self.ffr_ramification_points
+        ):
+            p.set_z_rotation(self.z_plane_rotation)
         self.accuracy = json_data['accuracy']
 
     def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):

@@ -756,9 +756,6 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         plot_range=loom_config['plot_range'],
         logger_name=get_logger_name(),
     )
-    # Set the z-plane rotation back.
-    # TODO: Decide whether to save a rotated data or a raw data.
-    spectral_network_data.set_z_rotation(z_rotation)
 
     initial_phase = '{:.3f}'.format(
         spectral_network_data.spectral_networks[0].phase / pi
@@ -769,6 +766,10 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         branch_points=sw_data.branch_points,
         irregular_singularities=sw_data.irregular_singularities,
     )
+
+    # Set the z-plane rotation back.
+    # TODO: Decide whether to save a rotated data or a raw data.
+    spectral_network_data.set_z_rotation(z_rotation)
 
     if download is False:
         download_data_url = flask.url_for(
