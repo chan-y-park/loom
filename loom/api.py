@@ -9,6 +9,7 @@ import signal
 import matplotlib
 # import pdb
 
+from cmath import pi
 from logging.handlers import RotatingFileHandler
 from logutils_queue import QueueHandler
 from config import LoomConfig
@@ -27,7 +28,9 @@ class SpectralNetworkData:
     def __init__(self, sw_data, spectral_networks):
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
-        self.data_attributes = ['sw_data', 'spectral_networks']
+        self.branch_cut_rotation_angle = 0
+        self.data_attributes = ['sw_data', 'spectral_networks',
+                                'branch_cut_rotation_angle',]
 
     def set_z_rotation(self, z_rotation):
         self.sw_data.set_z_rotation(z_rotation)

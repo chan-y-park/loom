@@ -22,17 +22,20 @@
         }
 
         source.addEventListener('finish', function(e) {
-            document.getElementById("plot_button").disabled = false;
+            //document.getElementById("plot_button").disabled = false;
             source.close();
+            document.getElementById("log_input").value = box.val();
+            document.getElementById("plot").submit();
         }, false);
     </script>
     <br/>
-    <form action="{{ url_for('plot') }}" method="post">
+    <form id="plot" action="{{ url_for('plot') }}" method="post">
         <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
-        <div class="form-group">
+        <input id="log_input" type="hidden" name="progress_log" value="">
+        <!--<div class="form-group">
             <input id="plot_button" type="submit" class="btn btn-default" 
              value="Plot spectral networks" disabled="true">
-        </div>
+        </div>-->
     </form>
     {% endif %}
     {% include "config_form.html" %}

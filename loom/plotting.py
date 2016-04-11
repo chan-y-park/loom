@@ -402,6 +402,7 @@ def make_weight_dictionary(g_data):
 
 def get_legend(
     g_data=None,
+    regular_punctures=None,
     branch_points=None,
     irregular_singularities=None,
 ):
@@ -417,18 +418,25 @@ def get_legend(
     weight_labels = weight_dictionary.keys()
     weights = weight_dictionary.values()
 
-    legend = ('\t--- The Root System ---\n')
+    legend = ('\t--- Root System ---\n')
     for i in range(len(roots)):
         legend += (
             root_labels[i] + ' : {}\n'.format(list(roots[i])) +
             'ordered weight pairs : {}\n'.format(weight_pairs[i])
         )
 
-    legend += ('\t--- The Weight System ---\n')
+    legend += ('\t--- Weight System ---\n')
     for i in range(len(weights)):
         legend += (weight_labels[i] + ' : {}\n'.format(list(weights[i])))
 
-    legend += ('\t--- The Branch Points ---\n')
+    legend += ('\t--- Regular punctures ---\n')
+    for p in regular_punctures:
+        legend += (
+            irs.label + 
+            '\tposition : {}\n'.format(irs.z)
+        )
+
+    legend += ('\t--- Branch Points ---\n')
     for bp in branch_points:
         rt_labels = [get_label(rt, root_dictionary)
                      for rt in bp.positive_roots]
@@ -439,7 +447,7 @@ def get_legend(
             '\t\tmonodromy matrix : \n{}\n'.format(bp.monodromy)
         )
 
-    legend += ('\t--- The Irregular Singularities ---\n')
+    legend += ('\t--- Irregular Singularities ---\n')
     for irs in irregular_singularities:
         legend += (
             irs.label + 

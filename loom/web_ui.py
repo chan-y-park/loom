@@ -502,6 +502,7 @@ def plot():
 
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
+        progress_log = flask.request.form['progress_log']
         # Finish loom_process
         rv = loom_db.get_result(process_uuid)
 
@@ -522,6 +523,7 @@ def plot():
 
     return render_plot_template(
         loom_config, spectral_network_data, process_uuid=process_uuid,
+        progress_log=progress_log,
     )
 
 
@@ -741,8 +743,10 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
     return loom_config
 
 
-def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
-                         download=False,):
+def render_plot_template(
+    loom_config, spectral_network_data, process_uuid=None,
+    progress_log=None, download=False,
+):
 
     download_data_url = download_plot_url = None
     sw_data = spectral_network_data.sw_data
@@ -763,6 +767,7 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
 
     legend = get_legend(
         g_data=sw_data.g_data,
+        regular_punctures=sw_data.regular_punctures,
         branch_points=sw_data.branch_points,
         irregular_singularities=sw_data.irregular_singularities,
     )
@@ -787,6 +792,7 @@ def render_plot_template(loom_config, spectral_network_data, process_uuid=None,
         process_uuid=process_uuid,
         bokeh_plot_script=bokeh_plot_script,
         div=div,
+        progress_log=progress_log,
         plot_legend=legend,
         bokeh_custom_script=bokeh_custom_script,
         download_data_url=download_data_url,

@@ -56,9 +56,18 @@
     </form>
     <br/>
 {% endif %}
+    <h2>Plot Information</h2>
     <textarea rows="24" cols="80">
 {{ plot_legend|safe }}
     </textarea>
+
+{% if progress_log %}
+    <h2>Log</h2>
+    <textarea rows="24" cols="80">
+{{ progress_log|safe }}
+    </textarea>
+{% endif %}
+
 {% include "config_form.html" %}
 </div>
 {% endblock %}

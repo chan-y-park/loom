@@ -669,7 +669,7 @@ class SWDataWithTrivialization(SWDataBase):
                     sw_curve=self.curve,
                 )
             if sorted_ffr_xs == 'sorting failed':
-                logger.warning(
+                logger.debug(
                     'Encountered a problem with sheet tracking.'
                 )
                 if zoom_level > 0:
