@@ -871,7 +871,7 @@ class SWDataBase(object):
             config['size_of_bp_neighborhood'] = min_abs_distance / 2.0
 
         if config['size_of_puncture_cutoff'] is None:
-            config['size_of_puncture_cutoff'] = min_abs_distance / 100.0
+            config['size_of_puncture_cutoff'] = min_abs_distance / 10.0
 
         logger.info('size_of_small_step = {}'
                     .format(config['size_of_small_step']))
@@ -949,11 +949,11 @@ class SWDataBase(object):
             for data in json_data['ffr_ramification_points']
         ]
         self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
-        for p in (
-            self.regular_punctures + self.irregular_punctures +
-            self.ffr_ramification_points
-        ):
-            p.set_z_rotation(self.z_plane_rotation)
+        #for p in (
+        #    self.regular_punctures + self.irregular_punctures +
+        #    self.ffr_ramification_points
+        #):
+        #    p.set_z_rotation(self.z_plane_rotation)
         self.accuracy = json_data['accuracy']
 
     def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
