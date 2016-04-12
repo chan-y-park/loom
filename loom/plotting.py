@@ -433,7 +433,7 @@ def get_legend(
     for p in regular_punctures:
         legend += (
             p.label + 
-            '\tposition : {}\n'.format(irs.z)
+            '\tposition : {}\n'.format(p.z)
         )
 
     legend += ('\t--- Branch Points ---\n')
