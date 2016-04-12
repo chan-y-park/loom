@@ -419,7 +419,10 @@ def spread_of_branch_points(z_s, min_spread=None):
     if len(z_s) == 1 and min_spread is not None:
         return 10 * min_spread
     elif len(z_s) == 1 and min_spread is None:
-        raise Exception('Cannot evaluate spread with just one branch point.')
+        raise RuntimeError(
+            'spread_of_branch_points: '
+            'Cannot evaluate spread with just one branch point.'
+        )
     else:
         # TODO: think about more accurate ways to estimate the spread.
         max_d = max(

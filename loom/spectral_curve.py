@@ -146,10 +146,12 @@ def check_casimir_differentials(casimir_differentials, g_type, g_rank):
     if g_type == 'D':
         for k, phi_k in casimir_differentials.iteritems():
             if k % 2 != 0:
-                raise ValueError(
-                    'phi_{} = {} dz^k'.format(k, phi_k) + 
+                raise RuntimeError(
+                    'check_casimir_differentials(): '
+                    'phi_{} = {} dz^k '
                     'is an incorrect casimir differential '
                     'for a D-type curve.' 
+                    .format(k, phi_k)
                 )
 
 
@@ -158,10 +160,7 @@ def get_ffr_curve_string(casimir_differentials, g_type, g_rank):
     Construct a Seiberg-Witten curve in the 1st fundamental representation
     using Casimir differentials.
     """
-    try:
-        check_casimir_differentials(casimir_differentials, g_type, g_rank)
-    except ValueError:
-        raise 
+    check_casimir_differentials(casimir_differentials, g_type, g_rank)
 
     if g_type == 'A':
         return get_A_D_curve_string(casimir_differentials, g_rank + 1)

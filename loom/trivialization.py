@@ -437,7 +437,10 @@ class SWDataWithTrivialization(SWDataBase):
             self.farthest_branching_locus = max_distance
 
         elif n_critical_loci == 0:
-            raise Exception('Must have at least one critical locus on C.')
+            raise RuntimeError(
+                'set_trivialization(): '
+                'Must have at least one critical locus on C.'
+            )
 
         center = sum([z_pt for z_pt in all_points_z]) / n_critical_loci
         self.base_point = center - 1j * max_distance
@@ -460,7 +463,7 @@ class SWDataWithTrivialization(SWDataBase):
         # and analyze them
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
-            bp.label = 'Branch point #{}'.format(i)
+            bp.label = 'branch point #{}'.format(i)
 
             self.analyze_branch_point(bp)
             if bp.order > 1:
@@ -474,7 +477,7 @@ class SWDataWithTrivialization(SWDataBase):
         # Construct the list of irregular singularities
         for j, z_irr_sing in enumerate(ipzs):
             irr_sing = IrregularSingularity(
-                z=z_irr_sing, label='Irr.Sing. #{}'.format(j)
+                z=z_irr_sing, label='irregular singularity #{}'.format(j)
             )
             self.analyze_irregular_singularity(irr_sing)
             self.irregular_singularities.append(irr_sing)
@@ -519,12 +522,13 @@ class SWDataWithTrivialization(SWDataBase):
             ) is True:
                 m_oo = numpy.identity(rep_d)
                 logger.info(
-                    "Direct computation confirms trivial monodromy at oo"
+                    'Direct computation confirms trivial monodromy at oo.'
                 )
             else:
-                raise Exception(
-                    "Monodromy at infinity is nontrivial, but no branching "
-                    "has been declared at infinity."
+                raise RuntimeError(
+                    'global_monodromy_checks (): '
+                    'Monodromy at infinity is nontrivial, but no branching '
+                    'has been declared at infinity.'
                 )
         elif m_oo is True:
             m_oo = numerical_m_oo
@@ -545,12 +549,12 @@ class SWDataWithTrivialization(SWDataBase):
                 "of all monodromies, as expected."
             )
         else:
-            logger.info(
-                '\n\nWARNING!\n'
+            logger.warning(
+                'global_monodromy_checks(): '
                 'Monodromy at infinity does not agree with the product '
                 'of all monodromies. Probable error in trivialization.'
             )
-            # raise Exception(
+            # raise RuntimeError(
             #     'Monodromy at infinity does not agree with the product '
             #     'of all monodromies. Probable error in trivialization.'
             # )
@@ -576,13 +580,12 @@ class SWDataWithTrivialization(SWDataBase):
             if numpy.array_equal(numpy.dot(m_1, m_2), m_oo):
                 continue
             else:
-                logger.info(
-                    '\n\nWARNING!\n'
+                logger.warning(
                     'The product of the first {} monodromies '
                     'does not match the (inverse of) the remaining ones'
                     .format(i + 1)
                 )
-                # raise Exception(
+                # raise RuntimeError(
                 #     'The product of the first {} monodromies '
                 #     'does not match the (inverse of) the remaining ones'
                 #     .format(i + 1)
@@ -618,7 +621,10 @@ class SWDataWithTrivialization(SWDataBase):
                 ffr_xs_0 = self.reference_ffr_xs
                 # xs_0 = self.reference_xs
             else:
-                raise Exception('Must specify initial sheets for tracking.')
+                raise RuntimeError(
+                    'get_sheets_along_path() :'
+                    'Must specify initial sheets for tracking.'
+                )
         logger.debug(
             'Zooming level: {}/{}'.format(zoom_level, MAX_ZOOM_LEVEL)
         )
@@ -732,10 +738,11 @@ class SWDataWithTrivialization(SWDataBase):
                                 '\n ffr_xs_0 = {} \n ffr_xs_1 = {}'
                                 .format(z, ffr_xs_0, ffr_xs_1_s)
                             )
-                            raise Exception(
-                                '\nCannot track the sheets!\n'
-                                'Probably passing too close to a branch point'
-                                ' or a puncture. Try increasing N_PATH_TO_PT '
+                            raise RuntimeError(
+                                'get_sheets_along_path(): '
+                                'Cannot track the sheets; '
+                                'probably passing too close to a branch point '
+                                'or a puncture. Try increasing N_PATH_TO_PT '
                                 'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
                             )
 
@@ -880,10 +887,14 @@ class SWDataWithTrivialization(SWDataBase):
                                 'multiple labels = {}'
                                 .format(multiple_labels)
                             )
-                            raise Exception('Too many degenerate sheets')
+                            raise RuntimeError(
+                                'get_sheets_at_z(): '
+                                'Too many degenerate sheets.'
+                            )
                 if len(multiple_labels) != 1:
-                    raise Exception(
-                        'Cannot determine which sheets are' +
+                    raise RuntimeError(
+                        'get_sheets_at_z(): '
+                        'Cannot determine which sheets are '
                         'degenerate, tracking will fail.'
                     )
 
@@ -957,12 +968,14 @@ class SWDataWithTrivialization(SWDataBase):
                         if is_weyl_monodromy(m_1, self.g_data):
                             corrected_sheets = corrected_sheets_1
                         else:
-                            raise Exception(
+                            raise RuntimeError(
+                                'get_sheet_monodromy(): '
                                 'Failed to assign a Weyl-type monodromy.'
                             )
                         
                     else:
-                        raise Exception(
+                        raise RuntimeError(
+                            'get_sheet_monodromy(): '
                             'higher-type ramification points for D-type '
                             'theories can only be of types II or III. '
                             'Found {} instead'.format(higher_bp_type)
@@ -1061,12 +1074,14 @@ class SWDataWithTrivialization(SWDataBase):
                         elif is_weyl_monodromy(m_2, self.g_data):
                             corrected_sheets = corrected_sheets_2
                         else:
-                            raise Exception(
+                            raise RuntimeError(
+                                'get_sheet_monodromy(): '
                                 'Failed to assign a Weyl-type monodromy.'
                             )
                             
                     else:
-                        raise Exception(
+                        raise RuntimeError(
+                            'get_sheet_monodromy(): '
                             'higher-type ramification points for E-type '
                             'theories can only be of type IV. Found {}'
                             .format(higher_bp_type)
@@ -1075,10 +1090,10 @@ class SWDataWithTrivialization(SWDataBase):
                     pass
 
             else:
-                raise ValueError(
-                    '\nError in determination of monodromy!\n' +
-                    'Cannot match uniquely the initial sheets' + 
-                    ' to the final ones.'
+                raise RuntimeError(
+                    'get_sheet_monodromy(): '
+                    'Cannot match uniquely the initial sheets ' 
+                    'to the final ones.'
                 )
         else:
             pass
@@ -1089,7 +1104,10 @@ class SWDataWithTrivialization(SWDataBase):
 
         perm_matrix = build_monodromy_matrix(initial_sheets, sorted_sheets)
         if is_weyl_monodromy(perm_matrix, self.g_data) is False:
-            raise Exception('Failed to assign a Weyl-type monodromy.')
+            raise RuntimeError(
+                'get_sheet_monodromy(): '
+                'Failed to assign a Weyl-type monodromy.'
+            )
         else:
             logger.debug('Sheet monodromy is of Weyl type')
         logger.debug(
@@ -1160,7 +1178,8 @@ class SWDataWithTrivialization(SWDataBase):
                     is_higher_bp=True, higher_bp_type=ramification_types[0]
                 )
             else:
-                raise Exception(
+                raise RuntimeError(
+                    'analyze_branch_point(): '
                     'Multiple ramification types for BP at z = {}'.format(bp.z)
                 )
 
@@ -1211,8 +1230,11 @@ class SWDataWithTrivialization(SWDataBase):
                     bp.monodromy[i][j] = 1
                     bp.monodromy[j][i] = 1
                 else:
-                    RuntimeError('Unknown form of the monodromy at {}.'
-                                 .format(bp.label))
+                    RuntimeError(
+                        'analyze_branch_point(): '
+                        'Unknown form of the monodromy at {}.'
+                        .format(bp.label)
+                    )
 
     def analyze_irregular_singularity(self, irr_sing):
         logger = logging.getLogger(self.logger_name)
@@ -1494,7 +1516,10 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
                 for x_pair_i in x_pair:
                     correct_xy_pairs.update({x_pair_i: x_pair_i})
             else:
-                raise Exception('Cannot handle this kind of sheet degeneracy')
+                raise RuntimeError(
+                    'sort_xs_by_derivative(): '
+                    'Cannot handle this kind of sheet degeneracy.'
+                )
         else:
             closest_ys_0 = nsmallest(
                 2, new_xs, key=lambda x: abs(x - x_pair[0])

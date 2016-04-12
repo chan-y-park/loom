@@ -45,6 +45,10 @@ def get_logging_formatter(level):
         logging_format = '%(module)s@%(lineno)d: %(funcName)s: %(message)s'
     elif level == logging.INFO:
         logging_format = '%(process)d: %(message)s'
+    elif level == logging.WARNING:
+        logging_format = '=== WARNING ===\n%(funcName)s: %(message)s'
+    elif level == logging.ERROR:
+        logging_format = '### ERROR ###\n%(funcName)s: %(message)s'
     else:
         logging_format = '%(message)s'
     return logging.Formatter(logging_format)

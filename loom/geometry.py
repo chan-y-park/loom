@@ -668,11 +668,11 @@ class SWDataBase(object):
             )
 
         regular_punctures = get_punctures_from_config(
-            config['regular_punctures'], 'Regular puncture',
+            config['regular_punctures'], 'regular puncture',
             diff_params, mt_params,
         )
         irregular_punctures = get_punctures_from_config(
-            config['irregular_punctures'], 'Irregular puncture',
+            config['irregular_punctures'], 'irregular puncture',
             diff_params, mt_params,
         )
 
@@ -805,7 +805,8 @@ class SWDataBase(object):
                     break
 
                 elif len(z_r_list) == 0:
-                    raise Exception(
+                    raise RuntimeError(
+                        'SWDataBase.set_from_config(): '
                         'Could not find any punctures ' 
                         'or branch points'
                     )
@@ -832,7 +833,7 @@ class SWDataBase(object):
                 break
 
         if n_r == pi_div == max_pi_div:
-            raise ValueError(
+            raise RuntimeError(
                 'Could not find a suitable rotation for the z-plane.'
             )
 
@@ -871,6 +872,15 @@ class SWDataBase(object):
 
         if config['size_of_puncture_cutoff'] is None:
             config['size_of_puncture_cutoff'] = min_abs_distance / 100.0
+
+        logger.info('size_of_small_step = {}'
+                    .format(config['size_of_small_step']))
+        logger.info('size_of_large_step = {}'
+                    .format(config['size_of_large_step']))
+        logger.info('size_of_bp_neighborhood = {}'
+                    .format(config['size_of_bp_neighborhood']))
+        logger.info('size_of_puncture_cutoff = {}'
+                    .format(config['size_of_puncture_cutoff']))
 
     def set_z_rotation(self, z_rotation):
         for p in (
@@ -1012,10 +1022,13 @@ class SWDataBase(object):
             else:
                 if n_zero_xs != 2 and near_degenerate_branch_locus is False:
                     logger.info(
-                        'At z ={} found the following sheets \n{}'.format(
-                            z_0, ffr_xs
-                        ))
-                    raise Exception('Zero sheets must be none or two.')
+                        'At z ={} found the following sheets \n{}'
+                        .format(z_0, ffr_xs)
+                    )
+                    raise RuntimeError(
+                        'SWDataBase.get_aligned_xs(): '
+                        'Zero sheets must be none or two.'
+                    )
                 else:
                     sorted_ffr_xs = sorted(
                         non_zero_xs, key=lambda x: phase(x),  # reverse=True,
@@ -1195,7 +1208,7 @@ class SWDataBase(object):
                     'local curve {}'
                     .format(abs(local_curve.n().subs(dx, 0).coeff(dz)))
                 )
-                raise Exception(
+                raise RuntimeError(
                     'Cannot handle this type of ramification point'.format(
                         local_curve
                     )
@@ -1687,7 +1700,8 @@ def null_sheet_triples(sheets):
             null_triples = []
 
     if len(null_triples) != N_NULL_TRIPLES:
-        raise ValueError(
+        raise RuntimeError(
+            'null_sheet_triples(): '
             'Wrong number of overall sheet triples after {} attempts'.format(
                 n_attempt
             )
@@ -1727,7 +1741,10 @@ def align_sheets_for_e_6_ffr(
     """
     logger = logging.getLogger(logger_name)
     if len(sheets) != 27:
-        raise Exception('Missing some sheets of the E_6 cover.')
+        raise RuntimeError(
+            'align_sheets_for_e_6_ffr(): '
+            'Missing some sheets of the E_6 cover.'
+        )
 
     n_sheets_at_origin = len(
         [x for x in sheets if abs(x) < SHEET_NULL_TOLERANCE]
@@ -1751,7 +1768,8 @@ def align_sheets_for_e_6_ffr(
         if len(gathered_sheets) != 3:
             logger.info('The following sheets appear: ')
             logger.info(sheets)
-            raise ValueError(
+            raise RuntimeError(
+                'align_sheets_for_e_6_ffr(): '
                 'In a degenerate E_6 curve, sheets should arrange into '
                 'three rings in the complex plane. '
                 '(One or more rings may shrink to the origin)'
@@ -1843,10 +1861,10 @@ def align_sheets_for_e_6_ffr(
             logger.info('the sheets\n{}'.format(sheets))
             logger.info('the choice of x_0\n{}'.format(x_0))
             logger.info('the triples of x_0\n{}'.format(s_q_0))
-            raise ValueError(
-                'Wrong number of sheet triples: {} instead of {}'.format(
-                    len(s_q_0), NULL_TRIPLES_INDIVIDUAL
-                )
+            raise RuntimeError(
+                'align_sheets_for_e_6_ffr(): '
+                'Wrong number of sheet triples: {} instead of {}'
+                .format(len(s_q_0), NULL_TRIPLES_INDIVIDUAL)
             )
 
         # Get the ordered list of sheets appearing in the quintet s_q_0
@@ -1954,8 +1972,14 @@ def align_sheets_for_e_6_ffr(
                 break
 
         if None in sorted_sheets:
-            raise ValueError('Cannot match all sheets with weights') 
+            raise RuntimeError(
+                'align_sheets_for_e_6_ffr(): '
+                'Cannot match all sheets with weights.'
+            ) 
         elif len(sorted_sheets) != len(delete_duplicates(sorted_sheets)):
-            raise ValueError('Duplicate identification of sheets and weights')
+            raise RuntimeError(
+                'align_sheets_for_e_6_ffr(): '
+                'Duplicate identification of sheets and weights.'
+           )
             
     return sorted_sheets

@@ -40,7 +40,10 @@ def pick_basis(ffr_weights, algebra_type, algebra_rank):
             return basis
         
         else:
-            raise ValueError('This is not a complete basis!')
+            raise RuntimeError(
+                'pick_basis() '
+                'This is not a complete basis.'
+            )
 
 
 def argsort(seq, reverse=False):
@@ -110,8 +113,10 @@ def main(root_system, highest_weight):
             ### omega_1 is the 7th fundamental weight
             omega_1 = A.fundamental_weight(7)   
     else:
-        raise ValueError('There are no minuscule ' +
-                        'representations for this algebra.')
+        raise RuntimeError(
+            'get_g_data.sage.main(): '
+            'There is no minuscule representation for this algebra.'
+        )
     
     ### weyl_orbit_1 consists of weights in the 1st fundamental rep.
     weyl_orbit_1 = omega_1.orbit()

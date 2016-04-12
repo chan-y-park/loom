@@ -29,7 +29,10 @@ class SpectralNetwork:
         self.s_walls = []
         self.joints = []
         self.logger_name = logger_name
-        self.data_attributes = ['phase', 's_walls', 'joints']
+        # errors is a list of (error type string, error value tuples).
+        self.errors = []
+        self.data_attributes = ['phase', 's_walls', 'joints', 
+                                'errors',]
 
     def set_z_rotation(self, z_rotation):
         for s_wall in self.s_walls:
@@ -116,32 +119,38 @@ class SpectralNetwork:
         logger.info('Seed S-walls at branch points...')
         
         for bp in sw_data.branch_points:
-            s_wall_seeds = get_s_wall_seeds(
-                sw_data, self.phase, bp, config, self.logger_name,
-            )
-            for z_0, x_0, M_0 in s_wall_seeds:
-                label = 'S-wall #{}'.format(len(self.s_walls))
-                self.s_walls.append(
-                    SWall(
-                        z_0=z_0,
-                        x_0=x_0,
-                        M_0=M_0,
-                        # TODO: change this to take bp itself.
-                        parents=[bp.label],
-                        parent_roots=[root for root in bp.positive_roots],
-                        label=label,
-                        n_steps=n_steps,
-                        logger_name=self.logger_name,
-                    )
+            try:
+                s_wall_seeds = get_s_wall_seeds(
+                    sw_data, self.phase, bp, config, self.logger_name,
                 )
+                for z_0, x_0, M_0 in s_wall_seeds:
+                    label = 'S-wall #{}'.format(len(self.s_walls))
+                    self.s_walls.append(
+                        SWall(
+                            z_0=z_0,
+                            x_0=x_0,
+                            M_0=M_0,
+                            # TODO: change this to take bp itself.
+                            parents=[bp.label],
+                            parent_roots=[root for root in bp.positive_roots],
+                            label=label,
+                            n_steps=n_steps,
+                            logger_name=self.logger_name,
+                        )
+                    )
+            except RuntimeError as e:
+                logger.error(
+                    'Error while seeding S-walls at {}: {}\n'
+                    'Skip the seeding.'
+                    .format(bp.label, e)
+                )
+                self.errors.append(('RuntimeError', e.args))
+                continue
 
         logger.debug('Setup the ODE integrator...')
         ode = get_ode(sw_data, self.phase, accuracy)
         punctures = sw_data.regular_punctures + sw_data.irregular_punctures
         ppzs = [p.z for p in punctures]
-
-#        bpzs = [bp.z for bp in sw_data.branch_points]
-        # TODO: There are branch cuts also from irregular singularities. 
         bpzs = [bp.z for bp in sw_data.branch_points +
                 sw_data.irregular_singularities]
         
@@ -157,17 +166,38 @@ class SpectralNetwork:
             new_joints = []     # number of new joints found in each iteration
             for i in range(n_finished_s_walls, len(self.s_walls)):
                 s_i = self.s_walls[i]
-                logger.info('Growing S-wall #{}...'.format(i))
-                s_i.grow(
-                    ode, bpzs, ppzs, config, 
-                )
+                logger.info('Growing {}...'.format(s_i.label))
+                try:
+                    s_i.grow(ode, bpzs, ppzs, config,)
+                except RuntimeError as e:
+                    logger.error(
+                        'Error while growing {}: {}\n'
+                        'Skip the growing.'
+                        .format(s_i.label, e)
+                    )
+                    self.errors.append(('RuntimeError', e.args))
+                    continue
+                    
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
                 logger.info('Determining the root type of S-wall #{}...'
                             .format(i))
-                s_i.determine_root_types(
-                    sw_data, cutoff_radius=config['size_of_small_step'],
-                )
+                try:
+                    s_i.determine_root_types(
+                        sw_data, cutoff_radius=config['size_of_small_step'],
+                    )
+                except RuntimeError as e:
+                    logger.error(
+                        'Error while determining root types of {}: {}\n'
+                        'Stop growing this spectral network '
+                        'of phase = {}'
+                        .format(s_i.label, e, self.phase)
+                    )
+                    self.errors.append(('RuntimeError', e.args))
+                    # Remove S-wall seeds from the i-th to the end.
+                    for j in range(i, len(self.s_walls)):
+                        self.s_walls.pop()
+                    return
 
                 logger.info('Finding new joints from S-wall #{}...'.format(i))
                 new_joints += self.get_new_joints(i, config, sw_data,
@@ -237,6 +267,7 @@ class SpectralNetwork:
                                 for s_wall in self.s_walls]
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
+        json_data['errors'] = self.errors
         return json_data
 
     def set_from_json_data(self, json_data, sw_data):
@@ -246,6 +277,10 @@ class SpectralNetwork:
         branch_loci = sw_data.branch_points + sw_data.irregular_singularities
 
         self.phase = json_data['phase']
+        try:
+            self.errors = json_data['errors']
+        except KeyError:
+            pass
 
         for s_wall_data in json_data['s_walls']:
             an_s_wall = SWall(logger_name=self.logger_name,)
@@ -496,7 +531,8 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
 
     for bp in branch_points:
         if bp.z.real - p_z.real == 0.0 and bp.z.imag <= p_z.imag:
-            raise Exception(
+            raise RuntimeError(
+                'get_nearest_point_index(): '
                 'Intersection point lies exactly above {}. '
                 'Try perturbing the phase.'
                 .format(bp.label)
@@ -546,7 +582,8 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                 break
             
     if t_before == 0 and t_after == t_max:
-        raise Exception(
+        raise RuntimeError(
+            'get_nearest_point_index(): '
             'Could not find a suitable nearest point, '
             'due to the presence of some branch cut.'
         )

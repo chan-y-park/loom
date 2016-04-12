@@ -47,14 +47,15 @@ def a_child_process(
         ) 
 
         spectral_network.grow(config, sw)
-    except (KeyboardInterrupt, SystemExit) as e:
-        logger.warning('A child process calculating phase = {} '
-                       'caught {}'.format(phase, type(e)))
-        return None
+#    except (KeyboardInterrupt, SystemExit) as e:
+#        logger.warning('A child process calculating phase = {} '
+#                       'caught {}'.format(phase, type(e)))
+#        return None
     except Exception as e:
         logger.warning('A child process calculating phase = {} '
-                       'caught an exception: {}'.format(phase, e.args))
-        return None 
+                       'caught an exception: {}'.format(phase, e))
+        spectral_network.errors.append = ('Unknown', e.args)
+#        return None 
 
     shared_n_finished_spectral_networks.value += 1
     logger.info('Finished generating spectral network #{}/{}.'

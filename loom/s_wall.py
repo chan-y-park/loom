@@ -589,8 +589,13 @@ class SWall(object):
         of the trajectory in proper time, return the local 
         root at that point.
         """
-        if t < 0 or t > (len(self.z) - 1):
-            raise ValueError
+        t_max = len(self.z) - 1
+        if t < 0 or t > t_max:
+            raise RuntimeError(
+                'get_roots_at_t(): '
+                't = {}, should be between 0 and {}.'
+                .format(t, t_max)
+            )
         else:
             closed_splits = self.get_splits() + [len(self.z) - 1]
             for i, sp in enumerate(closed_splits):
@@ -606,8 +611,13 @@ class SWall(object):
         of the trajectory in proper time, return the local 
         pair of weights at that point.
         """        
-        if t < 0 or t > (len(self.z) - 1):
-            raise ValueError
+        t_max = len(self.z) - 1
+        if t < 0 or t > t_max:
+            raise RuntimeError(
+                'get_weight_pairs_at_t(): '
+                't = {}, should be between 0 and {}.'
+                .format(t, t_max)
+            )
         else:
             closed_splits = self.get_splits() + [len(self.z) - 1]
             for i, sp in enumerate(closed_splits):
@@ -863,8 +873,11 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
         
         elif rp_type == 'type_II':
             if r_i % 2 == 1:
-                raise Exception('Cannot have a type II ramification point' +
-                                'with odd ramification index.')
+                raise RuntimeError(
+                    'get_s_wall_seeds(): '
+                    'Cannot have a type II ramification point '
+                    'with odd ramification index.'
+                )
             # defining this object just for enhanced readability of code 
             # in comparing with notes on classification of ramifications
             r_k = r_i / 2
@@ -903,8 +916,11 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
         elif rp_type == 'type_III':
             if r_i % 2 == 1:
-                raise Exception('Cannot have a type III ramification point' +
-                                'with odd ramification index.')
+                raise RuntimeError(
+                    'get_s_wall_seeds(): '
+                    'Cannot have a type III ramification point '
+                    'with odd ramification index.'
+                )
             # defining this object just for enhanced readability of code 
             # in comparing with notes on classification of ramifications
             r_k = r_i / 2
@@ -1179,7 +1195,8 @@ def branch_locus_from_label(sw_data, br_loc_label):
     for br_loc in branch_loci:
         if br_loc.label == br_loc_label:
             return br_loc
-    raise Exception(
+    raise RuntimeError(
+        'branch_locus_from_label(): '
         'Could not find any branching locus labeled {}'.format(br_loc_label)
     )
 
@@ -1190,7 +1207,7 @@ def clock(direction):
     elif direction == 'right':
         return 'cw'
     else:
-        raise ValueError('Cannot read direction!')
+        raise RuntimeError('clock(): Cannot read direction.')
 
 
 def left_right(l, point):
@@ -1202,8 +1219,10 @@ def left_right(l, point):
     returning repsectively 'left' or 'right'
     """
     if point > len(l) - 1:
-        raise ValueError(
-            'Can\'t determine direction, point doesnt belong to list!'
+        raise RuntimeError(
+            'left_right(): '
+            'Cannot determine direction, '
+            'point does not belong to the given list.'
         )
     elif point > 0:
         if l[point - 1].real < l[point].real:

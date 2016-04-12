@@ -164,6 +164,14 @@ def get_spectral_network_bokeh_plot(
     })
 
     for sn in spectral_networks:
+        skip_plotting = False
+        for error in sn.errors:
+            error_type, error_msg = error
+            if error_type == 'Unknown':
+                skip_plotting = True
+        if skip_plotting is True:
+            continue
+                
         sn_phase = '{:.3f}'.format(sn.phase / pi)
         pds.data['phase'].append(sn_phase)
 
