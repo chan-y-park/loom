@@ -751,9 +751,6 @@ def render_plot_template(
     download_data_url = download_plot_url = None
     sw_data = spectral_network_data.sw_data
 
-    # Rotate the z-plane into the location defined by the curve.
-    z_rotation = complex(sw_data.z_plane_rotation)
-    spectral_network_data.set_z_rotation(1/z_rotation)
     # Make a Bokeh plot
     bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
@@ -774,7 +771,7 @@ def render_plot_template(
 
     # Set the z-plane rotation back.
     # TODO: Decide whether to save a rotated data or a raw data.
-    spectral_network_data.set_z_rotation(z_rotation)
+    #spectral_network_data.set_z_rotation(z_rotation)
 
     if download is False:
         download_data_url = flask.url_for(

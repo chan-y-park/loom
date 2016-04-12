@@ -315,7 +315,7 @@ class RamificationPoint:
 
     def set_z_rotation(self, z_rotation):
         if self.z != oo:
-            self.z /= complex(z_rotation)
+            self.z *= complex(z_rotation)
 
 #    def __str__(self):
 #        return 'z = {}, x = {}, i = {}'.format(self.z, self.x, self.i)
@@ -383,7 +383,7 @@ class Puncture:
 
     def set_z_rotation(self, z_rotation):
         if self.z != oo:
-            self.z /= complex(z_rotation)
+            self.z *= complex(z_rotation)
 
     def __eq__(self, other):
         return self.label == other.label
@@ -432,6 +432,7 @@ class SWCurve:
             ffr_eq_str = get_ffr_curve_string(
                 casimir_differentials, g_data.type, g_data.rank
             )
+
             try:
                 if expand is True:
                     # TODO: SAGE is much faster in expanding an expression.
@@ -440,13 +441,16 @@ class SWCurve:
                     self.sym_eq = sympy.sympify(ffr_eq_str)
             except:
                 raise
+
             # NOTE: We apply PSL2C only to the numerical curve
             # for the simplicity of analysis.
+
             Ciz = PSL2C(mt_params, z_rotation * z, inverse=True) 
             self.num_eq = (
                 self.sym_eq.subs(z, Ciz).subs(diff_params)
                 .evalf(n=ROOT_FINDING_PRECISION, chop=True)
             )
+
         else:
             # TODO: Need to build a cover in a general representation
             # from the differentials, using symmetric polynomials.
@@ -766,8 +770,7 @@ class SWDataBase(object):
                 # singularities.)
                 
                 # Now check if the z-plane needs to be rotated
-
-                # Note: if we substitute z' = c z in F(x,z)=0,
+                # NOTE: if we substitute z' = c z in F(x,z)=0,
                 # where c is a phase, the position of punctures 
                 # and branch points will rotate contravariantly
                 # z_pt -> c^{-1} z_pt
@@ -845,7 +848,7 @@ class SWDataBase(object):
         )
 
         for p in punctures + ffr_ramification_points:
-            p.set_z_rotation(z_plane_rotation)
+            p.set_z_rotation(1/z_plane_rotation)
         self.regular_punctures = regular_punctures
         self.irregular_punctures = irregular_punctures
 
@@ -877,15 +880,15 @@ class SWDataBase(object):
             p.set_z_rotation(z_rotation)
 
         if self.ffr_curve is not None:
-            self.ffr_curve.set_z_rotation(z_rotation)
+            self.ffr_curve.set_z_rotation(1/z_rotation)
 
         if self.curve is not None:
-            self.curve.set_z_rotation(z_rotation)
+            self.curve.set_z_rotation(1/z_rotation)
 
         if self.diff is not None:
-            self.diff.set_z_rotation(z_rotation)
+            self.diff.set_z_rotation(1/z_rotation)
 
-        # self.z_plane_rotation *= z_rotation
+        self.z_plane_rotation /= z_rotation
 
     def get_json_data(self):
         json_data = {

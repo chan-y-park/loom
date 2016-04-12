@@ -29,7 +29,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         plot_on_cylinder=False,
         C=[[1, 0], [0, 1]],
         g_data=None,
-        z_rotation=1,
+        branch_cut_rotation=1,
     ):
         
         labels = {'branch_points': [], 'joints': [], 'punctures': [],
@@ -147,7 +147,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             labels=labels,
             plot_joints=plot_joints,
             plot_data_points=plot_data_points,
-            z_rotation=z_rotation,
+            branch_cut_rotation=branch_cut_rotation,
         )
 
         return plot_legend
@@ -432,7 +432,7 @@ def get_legend(
     legend += ('\t--- Regular punctures ---\n')
     for p in regular_punctures:
         legend += (
-            irs.label + 
+            p.label + 
             '\tposition : {}\n'.format(irs.z)
         )
 

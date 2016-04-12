@@ -17,7 +17,7 @@ class NetworkPlotBase(object):
         self, phase=None, branch_points=None, joints=None, punctures=None,
         irregular_singularities=None, walls=None, wall_segments=None, 
         wall_colors=None, labels=None, plot_joints=False,
-        plot_data_points=False, z_rotation=1,
+        plot_data_points=False, branch_cut_rotation=1,
     ):
         """
         branch_points = [[bpx, bpy], ...]
@@ -77,7 +77,7 @@ class NetworkPlotBase(object):
                       label=labels['irregular_singularities'][i],)
 
         # Plot branch cuts according to the z-plane rotation.
-        y_r = (2j * axes.get_ylim()[1]) * z_rotation
+        y_r = (2j * axes.get_ylim()[1]) * branch_cut_rotation
 
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp

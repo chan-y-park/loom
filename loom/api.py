@@ -28,14 +28,16 @@ class SpectralNetworkData:
     def __init__(self, sw_data, spectral_networks):
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
-        self.branch_cut_rotation_angle = 0
-        self.data_attributes = ['sw_data', 'spectral_networks',
-                                'branch_cut_rotation_angle',]
+        self.data_attributes = ['sw_data', 'spectral_networks',]
 
     def set_z_rotation(self, z_rotation):
         self.sw_data.set_z_rotation(z_rotation)
         for sn in self.spectral_networks:
             sn.set_z_rotation(z_rotation)
+
+    def reset_z_rotation(self):
+        z_r = self.sw_data.z_plane_rotation
+        self.set_z_rotation(z_r)
 
 
 def get_logging_formatter(level):
@@ -375,8 +377,9 @@ def make_spectral_network_plot(
         )
 
     # Rotate the z-plane into the location defined by the curve.
-    z_rotation = complex(sw_data.z_plane_rotation)
-    spectral_network_data.set_z_rotation(1/z_rotation)
+    #z_r = sw_data.z_plane_rotation
+    #spectral_network_data.set_z_rotation(z_r)
+    spectral_network_data.reset_z_rotation()
 
     for spectral_network in spectral_networks:
         logger.info('Generating the plot of a spectral network '
@@ -388,14 +391,14 @@ def make_spectral_network_plot(
                        sw_data.irregular_punctures),
             irregular_singularities=sw_data.irregular_singularities,
             g_data=sw_data.g_data,
-            z_rotation=z_rotation,
+            branch_cut_rotation=sw_data.branch_cut_rotation,
             **kwargs
         )
         logger.info(plot_legend)
 
     # Set the z-plane rotation back.
     # TODO: Decide whether to save a rotated data or a raw data.
-    spectral_network_data.set_z_rotation(z_rotation)
+    #spectral_network_data.set_z_rotation(1/z_r)
 
     if show_plot is True:
         spectral_network_plot.show()

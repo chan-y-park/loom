@@ -141,7 +141,7 @@ class BranchPoint:
 
     def set_z_rotation(self, z_rotation):
         if self.z != oo:
-            self.z /= complex(z_rotation)
+            self.z *= complex(z_rotation)
 
     def get_json_data(self):
         json_data = {
@@ -205,7 +205,7 @@ class IrregularSingularity:
 
     def set_z_rotation(self, z_rotation):
         if self.z != oo:
-            self.z /= complex(z_rotation)
+            self.z *= complex(z_rotation)
 
     def get_json_data(self):
         json_data = {
@@ -276,8 +276,6 @@ class SWDataWithTrivialization(SWDataBase):
     # overlap vertically.
     # This should be guaranteed by the automatic rotation of 
     # the z-plane which is performed before calling this class.
-    # TODO: irregular singularities ARE branch points.
-    # PL: in what sense? 
     def __init__(self, config, logger_name='loom', json_data=None,):
         super(SWDataWithTrivialization, self).__init__(
             config, logger_name=logger_name, json_data=json_data,
@@ -291,7 +289,7 @@ class SWDataWithTrivialization(SWDataBase):
         self.base_point = None 
         self.reference_ffr_xs = None
         self.reference_xs = None
-        # self.branch_cut_angle = None
+        self.branch_cut_rotation = 1
 
         if json_data is None:
             self.set_trivialization()
@@ -301,7 +299,7 @@ class SWDataWithTrivialization(SWDataBase):
         self.data_attributes += [
             'branch_points', 'irregular_singularities', 'min_distance',
             'min_horizontal_distance', 'base_point', 'reference_ffr_xs',
-            'reference_xs'
+            'reference_xs', 'branch_cut_rotation',
         ]
 
     def set_z_rotation(self, z_rotation):
@@ -310,7 +308,9 @@ class SWDataWithTrivialization(SWDataBase):
         for p in (self.branch_points + self.irregular_singularities):
             p.set_z_rotation(z_rotation)
 
-        self.base_point /= complex(z_rotation)
+        self.base_point *= complex(z_rotation)
+
+        self.branch_cut_rotation *= z_rotation
 
     def get_json_data(self):
         json_data = super(SWDataWithTrivialization, self).get_json_data()
@@ -333,6 +333,9 @@ class SWDataWithTrivialization(SWDataBase):
         ]
         json_data['farthest_branching_locus'] = ctor2(
             self.farthest_branching_locus
+        )
+        json_data['branch_cut_rotation'] = str(
+            self.branch_cut_rotation
         )
 
         return json_data
@@ -366,6 +369,12 @@ class SWDataWithTrivialization(SWDataBase):
             logger.warning('No JSON data for farthest_branching_locus, '
                            'setting to None.')
             self.farthest_branching_locus = None
+        try:
+            self.branch_cut_rotation = sympy.sympify(
+                json_data['branch_cut_rotation']
+            )
+        except KeyError:
+            pass
 
     def set_trivialization(self):
         logger = logging.getLogger(self.logger_name)
