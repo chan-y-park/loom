@@ -22,14 +22,16 @@ def get_spectral_network_bokeh_plot(
     plot_width=800, plot_height=800,
     notebook=False, logger_name=None,
     marked_points=[],
+    reset_z_rotation=True,
 ):
     logger = logging.getLogger(logger_name)
 
     spectral_networks = spectral_network_data.spectral_networks
     sw_data = spectral_network_data.sw_data
 
-    # Rotate the z-plane into the location defined by the curve.
-    spectral_network_data.reset_z_rotation()
+    if reset_z_rotation is True:
+        # Rotate the z-plane into the location defined by the curve.
+        spectral_network_data.reset_z_rotation()
 
     bc_rotation = complex(sw_data.branch_cut_rotation)
 

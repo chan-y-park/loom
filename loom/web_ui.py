@@ -499,12 +499,18 @@ def save_config():
 
 def plot():
     loom_db = flask.current_app.loom_db
+    rotate_back = False
 
     if flask.request.method == 'POST':
+        rotate_back = bool(flask.request.form['rotate_back'])
         process_uuid = flask.request.form['process_uuid']
         progress_log = flask.request.form['progress_log']
-        # Finish loom_process
-        rv = loom_db.get_result(process_uuid)
+
+        if rotate_back is True:
+            rv = loom_db.result_queues[process_uuid].get()
+        else:
+            # Finish loom_process
+            rv = loom_db.get_result(process_uuid)
 
     elif flask.request.method == 'GET':
         process_uuid = data_dir = flask.request.args['data']
@@ -519,12 +525,17 @@ def plot():
 
     loom_config, spectral_network_data = rv
 
+    if rotate_back is True:
+        spectral_network_data.set_z_rotation(
+            1/spectral_network_data.sw_data.branch_cut_rotation
+        )
+
     # Put data back into the queue for future use.
     loom_db.result_queues[process_uuid].put(rv)
 
     return render_plot_template(
         loom_config, spectral_network_data, process_uuid=process_uuid,
-        progress_log=progress_log,
+        progress_log=progress_log, rotate_back=rotate_back,
     )
 
 
@@ -746,17 +757,22 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
 
 def render_plot_template(
     loom_config, spectral_network_data, process_uuid=None,
-    progress_log=None, download=False,
+    progress_log=None, download=False, rotate_back=False,
 ):
-
     download_data_url = download_plot_url = None
     sw_data = spectral_network_data.sw_data
+
+    if rotate_back is True:
+        reset_z_rotation = False
+    else:
+        reset_z_rotation = True
 
     # Make a Bokeh plot
     bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
         logger_name=get_logger_name(),
+        reset_z_rotation=reset_z_rotation,
     )
 
     initial_phase = '{:.3f}'.format(
@@ -776,10 +792,12 @@ def render_plot_template(
 
     if download is False:
         download_data_url = flask.url_for(
-            'download_data', process_uuid=process_uuid,
+            'download_data',
+            process_uuid=process_uuid,
         )
         download_plot_url = flask.url_for(
-            'download_plot', process_uuid=process_uuid,
+            'download_plot',
+            process_uuid=process_uuid,
         )
 
     with open('static/bokeh_callbacks.js', 'r') as fp:
