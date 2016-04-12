@@ -508,6 +508,7 @@ def plot():
 
     elif flask.request.method == 'GET':
         process_uuid = data_dir = flask.request.args['data']
+        progress_log = None
         full_data_dir = os.path.join(
             get_loom_dir(), 'data', data_dir
         )
