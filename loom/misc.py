@@ -44,11 +44,17 @@ class UnravelError(Exception):
 
 
 def ctor2(complex_number):
-    return (complex_number.real, complex_number.imag)
+    if complex_number is None:
+        return None
+    else:
+        return (complex_number.real, complex_number.imag)
 
 
 def r2toc(real_tuple):
-    return (real_tuple[0] + (1j * real_tuple[1]))
+    if real_tuple is None:
+        return None
+    else:
+        return (real_tuple[0] + (1j * real_tuple[1]))
 
 
 def get_root_multiplicity(coefficients, root_0, accuracy):

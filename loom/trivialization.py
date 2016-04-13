@@ -40,6 +40,8 @@ ZOOM_FACTOR = 10
 # Tolerance for recognizing colliding sheets at a branch-point
 BP_PROXIMITY_THRESHOLD = 0.05
 
+# Used in set_trivialization() 
+SINGLE_BRANCH_LOCUS_MAX_DISTANCE = 3.0
 
 class BranchPoint:
     """
@@ -284,12 +286,15 @@ class SWDataWithTrivialization(SWDataBase):
         self.branch_points = []
         self.irregular_singularities = []
 
-        self.min_distance = None 
-        self.min_horizontal_distance = None 
-        self.base_point = None 
         self.reference_ffr_xs = None
         self.reference_xs = None
         self.branch_cut_rotation = 1
+
+        # The following attributes are not used outside this module,
+        self.min_distance = None 
+        self.min_horizontal_distance = None 
+        self.farthest_branching_locus = None 
+        self.base_point = None 
 
         if json_data is None:
             self.set_trivialization()
@@ -297,9 +302,10 @@ class SWDataWithTrivialization(SWDataBase):
             self.set_trivialization_from_json_data(json_data)
 
         self.data_attributes += [
-            'branch_points', 'irregular_singularities', 'min_distance',
-            'min_horizontal_distance', 'base_point', 'reference_ffr_xs',
-            'reference_xs', 'branch_cut_rotation',
+            'branch_points', 'irregular_singularities', 
+            'min_distance', 'min_horizontal_distance',
+            'farthest_branching_locus', 'base_point',
+            'reference_ffr_xs', 'reference_xs', 'branch_cut_rotation',
         ]
 
     def set_z_rotation(self, z_rotation):
@@ -322,22 +328,22 @@ class SWDataWithTrivialization(SWDataBase):
             irs.get_json_data()
             for irs in self.irregular_singularities
         ]
-        json_data['min_distance'] = self.min_distance
-        json_data['min_horizontal_distance'] = self.min_horizontal_distance
-        json_data['base_point'] = ctor2(self.base_point)
         json_data['reference_ffr_xs'] = [
             ctor2(x) for x in self.reference_ffr_xs
         ]
         json_data['reference_xs'] = [
             ctor2(x) for x in self.reference_xs
         ]
-        json_data['farthest_branching_locus'] = ctor2(
-            self.farthest_branching_locus
-        )
         json_data['branch_cut_rotation'] = str(
             self.branch_cut_rotation
         )
 
+        json_data['min_distance'] = self.min_distance
+        json_data['min_horizontal_distance'] = self.min_horizontal_distance
+        json_data['base_point'] = ctor2(self.base_point)
+        json_data['farthest_branching_locus'] = ctor2(
+            self.farthest_branching_locus
+        )
         return json_data
 
     def set_trivialization_from_json_data(self, json_data,):
@@ -352,15 +358,22 @@ class SWDataWithTrivialization(SWDataBase):
             IrregularSingularity(json_data=data)
             for data in json_data['irregular_singularities']
         ]
-        self.min_distance = json_data['min_distance'] 
-        self.min_horizontal_distance = json_data['min_horizontal_distance']
-        self.base_point = r2toc(json_data['base_point']) 
         self.reference_ffr_xs = [
             r2toc(x) for x in json_data['reference_ffr_xs']
         ]
         self.reference_xs = [
             r2toc(x) for x in json_data['reference_xs']
         ]
+        try:
+            self.branch_cut_rotation = sympy.sympify(
+                json_data['branch_cut_rotation']
+            )
+        except KeyError:
+            pass
+
+        self.min_distance = json_data['min_distance'] 
+        self.min_horizontal_distance = json_data['min_horizontal_distance']
+        self.base_point = r2toc(json_data['base_point']) 
         try:
             self.farthest_branching_locus = r2toc(
                 json_data['farthest_branching_locus']
@@ -369,13 +382,6 @@ class SWDataWithTrivialization(SWDataBase):
             logger.warning('No JSON data for farthest_branching_locus, '
                            'setting to None.')
             self.farthest_branching_locus = None
-        try:
-            self.branch_cut_rotation = sympy.sympify(
-                json_data['branch_cut_rotation']
-            )
-        except KeyError:
-            pass
-
     def set_trivialization(self):
         logger = logging.getLogger(self.logger_name)
 
@@ -431,7 +437,7 @@ class SWDataWithTrivialization(SWDataBase):
             # circumvent the branch locus when constructing paths 
             # to trivializae the cover, as well as to fix a basepoint
             # for the trivialization
-            max_distance = 3.0
+            max_distance = SINGLE_BRANCH_LOCUS_MAX_DISTANCE
             self.min_distance = max_distance
             self.min_horizontal_distance = max_distance
             self.farthest_branching_locus = max_distance

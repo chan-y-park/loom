@@ -139,12 +139,13 @@ class SpectralNetwork:
                         )
                     )
             except RuntimeError as e:
-                logger.error(
+                error_msg = (
                     'Error while seeding S-walls at {}: {}\n'
                     'Skip the seeding.'
                     .format(bp.label, e)
                 )
-                self.errors.append(('RuntimeError', e.args))
+                logger.error(error_msg)
+                self.errors.append(('RuntimeError', error_msg))
                 continue
 
         logger.debug('Setup the ODE integrator...')
@@ -172,12 +173,13 @@ class SpectralNetwork:
                 try:
                     s_i.grow(ode, bpzs, ppzs, config,)
                 except RuntimeError as e:
-                    logger.error(
+                    error_msg = (
                         'Error while growing {}: {}\n'
-                        'Skip the growing.'
+                        'Stop growing this S-wall.'
                         .format(s_i.label, e)
                     )
-                    self.errors.append(('RuntimeError', e.args))
+                    logger.error(error_msg)
+                    self.errors.append(('RuntimeError', error_msg))
                     
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
@@ -188,20 +190,35 @@ class SpectralNetwork:
                         sw_data, cutoff_radius=config['size_of_small_step'],
                     )
                 except RuntimeError as e:
-                    logger.error(
+                    error_msg = (
                         'Error while determining root types of {}: {}\n'
-                        'Stop growing this S-wall and remove it.'
+                        'Remove this S-wall.'
                         .format(s_i.label, e)
                     )
-                    self.errors.append(('RuntimeError', e.args))
+                    logger.error(error_msg)
+                    self.errors.append(
+                        ('RuntimeError', error_msg)
+                    )
                     # Remove the S-wall.
                     self.s_walls.pop(i)
                     continue
 
                 logger.info('Finding new joints from {}...'.format(s_i.label))
-                new_joints += self.get_new_joints(i, config, sw_data,
-                                                  get_intersections,
-                                                  use_cgal,)
+                try:
+                    new_joints += self.get_new_joints(i, config, sw_data,
+                                                      get_intersections,
+                                                      use_cgal,)
+                except RuntimeError as e:
+                    error_msg = (
+                        'Error while finding joints of {}: {}\n'
+                        'Stop finding joints from this S-wall.'
+                        .format(s_i.label, e)
+                    )
+                    logger.error(error_msg)
+                    self.errors.append(
+                        ('RuntimeError', error_msg)
+                    )
+
                 i += 1
 
             n_finished_s_walls = len(self.s_walls)

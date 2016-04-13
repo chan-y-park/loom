@@ -275,6 +275,7 @@ def stop_signal_handler(signum, frame):
 def generate_spectral_network(
     config,
     phase=None,
+    sw=None,
     n_processes=0,
     result_queue=None,
     logging_queue=None,
@@ -300,7 +301,8 @@ def generate_spectral_network(
         )
         logger.info('Started @ {}'.format(start_date_time))
 
-        sw = SWDataWithTrivialization(config, logger_name=logger_name)
+        if sw is None:
+            sw = SWDataWithTrivialization(config, logger_name=logger_name)
 
         if(isinstance(phase, float)):
             logger.info('Generate a single spectral network at theta = {}.'

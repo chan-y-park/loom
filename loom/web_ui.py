@@ -22,6 +22,7 @@ from api import (
     set_logging,
     load_config,
     load_spectral_network,
+    save_spectral_network,
     generate_spectral_network,
     get_current_branch_version,
 )
@@ -543,6 +544,32 @@ def plot():
     )
 
 
+def save_data_to_server():
+    if flask.request.method == 'POST':
+        process_uuid = flask.request.form['process_uuid']
+        data_name = flask.request.form['data_name']
+
+        logger_name = get_logger_name(process_uuid)
+        logger = logging.getLogger(logger_name)
+
+        loom_db = flask.current_app.loom_db
+        rv = loom_db.result_queues[process_uuid].get()
+        loom_config, spectral_network_data = rv
+
+        data_dir = os.path.join(get_loom_dir(), 'data', data_name,)
+
+        save_spectral_network(
+            loom_config,
+            spectral_network_data,
+            data_dir=data_dir,
+            logger_name=logger_name,
+        )
+    return flask.render_template(
+        'save_success.html',
+        data_name=data_name,
+    )
+
+
 def download_data(process_uuid):
     loom_db = flask.current_app.loom_db
     rv = loom_db.result_queues[process_uuid].get()
@@ -681,6 +708,11 @@ def get_application(config_file, logging_level):
     application.add_url_rule(
         '/plot', 'plot', plot,
         methods=['GET', 'POST'],
+    )
+    application.add_url_rule(
+        '/save_data_to_server', 'save_data_to_server',
+        save_data_to_server,
+        methods=['POST'],
     )
     application.add_url_rule(
         '/download_data/<process_uuid>', 'download_data', download_data,
@@ -837,17 +869,18 @@ def record_stat(rv, stat_logger_name, ip, uuid):
     config, spectral_network_data = rv
     # Make a zipped config file and record the stat.
     config_file_name = '{}.ini'.format(uuid)
-    config_zipfile_path = os.path.join(
+    zipfile_path = os.path.join(
         get_loom_dir(), 'logs', '{}.zip'.format(config_file_name),
     )
     config_fp = BytesIO()
     config.parser.write(config_fp)
     config_fp.seek(0)
-    with zipfile.ZipFile(config_zipfile_path, 'w') as zfp:
+    with zipfile.ZipFile(zipfile_path, 'w') as zfp:
         zip_info = zipfile.ZipInfo(config_file_name)
         zip_info.date_time = time.localtime(time.time())[:6]
         zip_info.compress_type = zipfile.ZIP_DEFLATED
-        zip_info.external_attr = 0777 << 16L
+        #zip_info.external_attr = 0777 << 16L
+        zip_info.external_attr = 040755 << 16L
         zfp.writestr(zip_info, config_fp.read())
 
     data_size = get_data_size_of(spectral_network_data)

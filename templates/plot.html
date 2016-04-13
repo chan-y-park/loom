@@ -11,7 +11,6 @@
     </script>
 
     {{ bokeh_plot_script | safe }}
-
 {% endblock %}
 {% block body %}
 
@@ -53,6 +52,43 @@
 </div>
 <div class="container">
 {% if download_data_url %}
+    <form class="form-horizontal" id="save_data_to_server_form" method="post">
+        <div class="form-group">
+            <div class="col-xs-2">
+                <label for="data_name_text" class="control-label">
+                    Save data to server as
+                </label>
+            </div>
+            <div class="col-xs-4">
+                <input type="text" class="form-control"
+                 name="data_name" id="data_name_text"
+                 value="{{ process_uuid }}">
+            </div>
+            <div class="col-xs-2">
+                <input type="submit" class="btn btn-default"
+                 id="save_data_to_server_button" value="Save">
+            </div>
+        </div>
+        <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
+    </form>
+
+    <script>
+        var save_data_to_server_form = 
+            document.getElementById("save_data_to_server_form");
+        save_data_to_server_form.onsubmit = function () {
+            var w = window.open(
+                "about:blank",
+                "save_data_to_server_window",
+                "toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0," +
+                "resizable=0,width=600,height=200"
+            );
+            save_data_to_server_form.action =
+                "{{ url_for('save_data_to_server') }}";
+            save_data_to_server_form.target = "save_data_to_server_window";
+            save_data_to_server_form.submit();
+        };
+    </script>
+
     <form class="form-inline" id="download_form" method="post">
         <!--
         <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
