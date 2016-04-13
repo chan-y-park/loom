@@ -821,17 +821,14 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     accuracy = config['accuracy']
     initial_seed_size = config['size_of_small_step']
     seeds = []
-    # max_r_i = max([rp.i for rp in branch_point.ffr_ramification_points])
     min_dt = 1.0
-    ffr_ram_pts = branch_point.ffr_ramification_points
     
-    for rp in ffr_ram_pts:
+    for rp in branch_point.ffr_ramification_points:
         z_0 = rp.z
         x_0 = rp.x
         r_i = rp.i
         rp_type = rp.ramification_type
         sw_diff_coeff = rp.sw_diff_coeff
-        #sw_diff_coeffs_a_b = rp.sw_diff_coeffs_a_b
 
         logger.debug('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
         logger.debug('Ramification index = {}'.format(r_i))
@@ -1159,10 +1156,10 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                         precision_level += 1
                     else:
                         logger.warning(
-                            'Could not get the desired precision '
+                            'At {}, could not get the desired precision '
                             'on the seed of an S-wall.\nThe Mismatch between '
                             'the phase of a seed and that of the displacement '
-                            'is : {}'.format(phase_mismatch)
+                            'is : {}'.format(rp.label, phase_mismatch)
                         )
                         raise_precision = False
                         break

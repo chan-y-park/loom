@@ -791,7 +791,13 @@ class SWDataWithTrivialization(SWDataBase):
         which cannot be a branch point or a singularity.
         """
         z_path = get_path_to(z_pt, self)
-        sheets = self.get_sheets_along_path(z_path, ffr=ffr)
+        try:
+            sheets = self.get_sheets_along_path(z_path, ffr=ffr)
+        except IndexError:
+            raise RuntimeError(
+                'get_sheets_at_z(): get_sheets_along_path() failed '
+                'at z = {}.'.format(z_pt)
+            )
         final_xs = [s_i[-1] for s_i in sheets]
         final_sheets = {i: x for i, x in enumerate(final_xs)}
         return final_sheets
