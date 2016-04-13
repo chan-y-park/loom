@@ -398,15 +398,21 @@ class SWDataWithTrivialization(SWDataBase):
             )
         )
 
-        # z-coords of irregular punctures.
+        # z-coords of punctures.
+        rpzs = n_remove_duplicate(
+            [p.z for p in self.regular_punctures 
+             if p.z != oo],
+            self.accuracy,
+        )
         ipzs = n_remove_duplicate(
-            [p.z for p in self.irregular_punctures if p.z != oo],
+            [p.z for p in self.irregular_punctures 
+             if p.z != oo],
             self.accuracy,
         )
         
         # Automatically choose a basepoint, based on the positions of
         # both branch points and irregular singularities
-        all_points_z = bpzs + ipzs
+        all_points_z = bpzs + rpzs + ipzs
         n_critical_loci = len(all_points_z)
         
         if n_critical_loci > 1:
@@ -1263,12 +1269,12 @@ class SWDataWithTrivialization(SWDataBase):
 def get_path_to(z_pt, sw_data, logger_name='loom'):
     """
     Return a rectangular path from the base point to z_pt.
-    If the path has to pass too close to a branch point, 
+    If the path has to pass too close to a branch point or a puncture, 
     we avoid the latter by drawing an arc around it.
     """
     logger = logging.getLogger(logger_name)
     base_pt = sw_data.base_point
-    closest_bp = None
+    closest_z_pt = None
     # if n_loci==None:
     #     n_loci = len(sw_data.branch_points + sw_data.irregular_singularities)
     # radius = sw_data.min_distance / n_loci
@@ -1277,18 +1283,23 @@ def get_path_to(z_pt, sw_data, logger_name='loom'):
     logger.debug("Constructing a path [{}, {}]".format(base_pt, z_pt))
 
     # Determine if the path will need to pass 
-    # close to a branch point.
-    for bp in sw_data.branch_points:
-        delta_z = z_pt - bp.z
+    # close to a branch point or a puncture.
+    for p in (
+        sw_data.branch_points + sw_data.regular_punctures + 
+        sw_data.irregular_punctures
+    ):
+        if p.z == oo:
+            continue
+        delta_z = z_pt - p.z
         # NOTE we only check for one possible nearby point
         # based on the fact that the radius is always less
         # than the minimal horizontal separation of them
         if abs(delta_z.real) < radius and delta_z.imag > 0:
-            closest_bp = bp
+            closest_z_pt = p.z
             break
 
     # If there the path does not pass near a branch point:
-    if closest_bp is None:
+    if closest_z_pt is None:
         z_0 = base_pt
         z_1 = 1j * base_pt.imag + z_pt.real
         z_2 = z_pt
@@ -1303,19 +1314,19 @@ def get_path_to(z_pt, sw_data, logger_name='loom'):
     # If there the path needs to pass near a branch point:
     else:
         z_0 = base_pt
-        z_1 = 1j * base_pt.imag + closest_bp.z.real
-        z_2 = 1j * (closest_bp.z.imag - radius) + closest_bp.z.real
-        z_3 = closest_bp.z + radius * exp(1j * phase(z_pt - closest_bp.z))
+        z_1 = 1j * base_pt.imag + closest_z_pt.real
+        z_2 = 1j * (closest_z_pt.imag - radius) + closest_z_pt.real
+        z_3 = closest_z_pt + radius * exp(1j * phase(z_pt - closest_z_pt))
         z_4 = z_pt
         
-        if (z_pt - closest_bp.z).real > 0:
+        if (z_pt - closest_z_pt).real > 0:
             # way_around = 'ccw'
             sign = 1.0
-            delta_theta = phase(z_pt - closest_bp.z) + pi / 2
+            delta_theta = phase(z_pt - closest_z_pt) + pi / 2
         else:
             # way_around = 'cw'
             sign = -1.0
-            delta_theta = 3 * pi / 2 - phase(z_pt - closest_bp.z) 
+            delta_theta = 3 * pi / 2 - phase(z_pt - closest_z_pt) 
 
         steps = int(N_PATH_TO_PT / 5)
 
@@ -1324,7 +1335,7 @@ def get_path_to(z_pt, sw_data, logger_name='loom'):
         path_segment_2 = [z_1 + ((z_2 - z_1) / steps) * i 
                           for i in range(steps + 1)]
         path_segment_3 = [
-            closest_bp.z + radius * (-1j) * exp(
+            closest_z_pt + radius * (-1j) * exp(
                 sign * 1j * (delta_theta) * (float(i) / float(steps))
             ) for i in range(steps + 1)
         ]

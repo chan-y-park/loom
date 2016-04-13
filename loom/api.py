@@ -1,5 +1,6 @@
 import time
 import os
+import sys
 import json
 import glob
 import zipfile
@@ -7,6 +8,7 @@ import logging
 import subprocess
 import signal
 import matplotlib
+import traceback
 # import pdb
 
 from cmath import pi
@@ -54,6 +56,35 @@ def get_logging_formatter(level):
     return logging.Formatter(logging_format)
 
 
+class LoomLoggingFormatter(logging.Formatter):
+    debug_format = '%(module)s@%(lineno)d: %(funcName)s: %(message)s'
+    info_format = '%(process)d: %(message)s'
+    warning_format = '=== WARNING ===\n%(funcName)s: %(message)s'
+    error_format = '### ERROR ###\n%(funcName)s: %(message)s'
+    default_format = '%(message)s'
+
+    def __init__(self, fmt=default_format):
+        logging.Formatter.__init__(self, fmt)
+
+    def format(self, record):
+        saved_format = self._fmt
+
+        if record.levelno == logging.DEBUG:
+            self._fmt = LoomLoggingFormatter.debug_format
+        elif record.levelno == logging.INFO:
+            self._fmt = LoomLoggingFormatter.info_format
+        elif record.levelno == logging.WARNING:
+            self._fmt = LoomLoggingFormatter.warning_format
+        elif record.levelno == logging.ERROR:
+            self._fmt = LoomLoggingFormatter.error_format
+
+        result = logging.Formatter.format(self, record)
+
+        self._fmt = saved_format
+
+        return result
+
+
 def set_logging(
     logger_name='loom',
     logging_level=None,
@@ -69,7 +100,13 @@ def set_logging(
     if logging_level is None:
         logging_level = logging.getLevelName(logging_level_name)
     logger.setLevel(logging_level)
-    formatter = get_logging_formatter(logging_level)
+    #formatter = get_logging_formatter(logging_level)
+    formatter = LoomLoggingFormatter()
+
+    #stdout_h = logging.StreamHandler(sys.stdout)
+    #stdout_h.setFormatter(formatter)
+    #logging.root.addHandler(stdout_h)
+    #logging.root.setLevel(logging_level)
 
     if remove_handlers is True:
         # Remove other handlers.
@@ -97,6 +134,7 @@ def set_logging(
                 logging_level, logging.StreamHandler, logging_stream
             )
         )
+
     if logging_queue is not None:
         # Create a queue handler for multiprocessing.
         logger.addHandler(
@@ -109,7 +147,8 @@ def set_logging(
 def get_logging_handler(level, handler_class, buffer_object):
     h = handler_class(buffer_object)
     h.setLevel(level)
-    h.setFormatter(get_logging_formatter(level))
+    f = LoomLoggingFormatter()
+    h.setFormatter(f)
     return h
 
 
@@ -339,6 +378,19 @@ def generate_spectral_network(
                        .format(type(e)))
         sw = None
         spectral_networks = None
+    # TODO: handle and print all the other exceptions
+    # to web UI.
+#    except Exception as e:
+#        #logger.error(
+#        #    '{}\n{}'.format(
+#        #        traceback.print_exc(),
+#        #        e,
+#        #    )
+#        #)
+#        logger.error('{}'.format(e,))
+#        sw = None
+#        spectral_networks = None
+#        #raise e
 
     spectral_network_data = SpectralNetworkData(sw, spectral_networks)
     if logging_queue is not None:

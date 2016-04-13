@@ -231,6 +231,7 @@ class LoomDB(object):
             logging.StreamHandler,
             logging_stream,
         )
+        stop_finish = False
 
         try:
             result_queue = self.result_queues[process_uuid]
