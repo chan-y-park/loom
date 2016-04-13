@@ -26,11 +26,11 @@ def get_spectral_network_bokeh_plot(
 ):
     logger = logging.getLogger(logger_name)
 
-    #spectral_networks = spectral_network_data.spectral_networks
-    spectral_networks = [
-        sn for sn in spectral_network_data.spectral_networks
-        if len(sn.errors) == 0
-    ]
+    spectral_networks = spectral_network_data.spectral_networks
+#    spectral_networks = [
+#        sn for sn in spectral_network_data.spectral_networks
+#        if len(sn.errors) == 0
+#    ]
     if len(spectral_networks) == 0:
         raise RuntimeError(
             'get_spectral_network_bokeh_plot(): '
