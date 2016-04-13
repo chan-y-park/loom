@@ -303,7 +303,7 @@ class RamificationPoint:
             # in the trivializatio module.
             self.ramification_type = None
             self.sw_diff_coeff = None
-            self.sw_diff_coeffs_a_b = [None, None]
+            #self.sw_diff_coeffs_a_b = [None, None]
             self.is_puncture = is_puncture
         else:
             self.set_from_json_data(json_data)
@@ -1220,20 +1220,20 @@ class SWDataBase(object):
             if rp_type == 'type_I' or rp_type == 'type_II':
                 a = local_curve.n().subs(dx, 0).coeff(dz)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-                sw_diff_coeffs_a_b = [complex(a), complex(b)]
+                #sw_diff_coeffs_a_b = [complex(a), complex(b)]
                 dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
 
             elif rp_type == 'type_III':
                 a = local_curve.n().coeff(dz).coeff(dx, 2)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-                sw_diff_coeffs_a_b = [complex(a), complex(b)]
+                #sw_diff_coeffs_a_b = [complex(a), complex(b)]
                 dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i - 2)
 
             elif rp_type == 'type_IV':
                 a_1 = local_curve.n().coeff(dz).coeff(dx, 15)
                 a_2 = local_curve.n().coeff(dz, 2).coeff(dx, 3)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-                sw_diff_coeffs_a_b = [complex(a_1), complex(a_2), complex(b)]
+                #sw_diff_coeffs_a_b = [complex(a_1), complex(a_2), complex(b)]
                 dx_dz_plus = (((
                     -1.0 * a_1 
                     + (a_1 ** 2 - 4.0 * b * a_2) ** sympy.Rational(1, 2)
@@ -1247,7 +1247,7 @@ class SWDataBase(object):
             elif rp_type == 'type_AD':
                 a = local_curve.n().subs(dx, 0).coeff(dz)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
-                sw_diff_coeffs_a_b = [complex(a), complex(b)]
+                #sw_diff_coeffs_a_b = [complex(a), complex(b)]
                 dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
             
             logger.debug(
@@ -1257,7 +1257,7 @@ class SWDataBase(object):
             )
 
             rp.ramification_type = rp_type    
-            rp.sw_diff_coeffs_a_b = sw_diff_coeffs_a_b
+            #rp.sw_diff_coeffs_a_b = sw_diff_coeffs_a_b
 
             # Now we compute the SW differential actual coefficient.
             # The relation of this to a, b will depend on the 

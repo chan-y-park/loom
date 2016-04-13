@@ -502,7 +502,10 @@ def plot():
     rotate_back = False
 
     if flask.request.method == 'POST':
-        rotate_back = bool(flask.request.form['rotate_back'])
+        try:
+            rotate_back = bool(flask.request.form['rotate_back'])
+        except KeyError:
+            pass
         process_uuid = flask.request.form['process_uuid']
         progress_log = flask.request.form['progress_log']
 
@@ -513,7 +516,8 @@ def plot():
             rv = loom_db.get_result(process_uuid)
 
     elif flask.request.method == 'GET':
-        process_uuid = data_dir = flask.request.args['data']
+        data_dir = flask.request.args['data']
+        process_uuid = str(uuid.uuid4()) 
         progress_log = None
         full_data_dir = os.path.join(
             get_loom_dir(), 'data', data_dir
@@ -521,7 +525,7 @@ def plot():
         rv = load_spectral_network(
             full_data_dir, logger_name=get_logger_name()
         )
-        loom_db.result_queues[data_dir] = multiprocessing.Queue()
+        loom_db.result_queues[process_uuid] = multiprocessing.Queue()
 
     loom_config, spectral_network_data = rv
 

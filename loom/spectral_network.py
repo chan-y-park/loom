@@ -4,7 +4,7 @@ import numpy
 import sympy
 import ctypes
 import logging
-
+import pdb
 import itertools
 
 from cmath import exp
@@ -164,7 +164,9 @@ class SpectralNetwork:
             Each S-wall is grown only once.
             """
             new_joints = []     # number of new joints found in each iteration
-            for i in range(n_finished_s_walls, len(self.s_walls)):
+            i = n_finished_s_walls
+            while (i < len(self.s_walls)):
+            #for i in range(n_finished_s_walls, len(self.s_walls)):
                 s_i = self.s_walls[i]
                 logger.info('Growing {}...'.format(s_i.label))
                 try:
@@ -176,12 +178,11 @@ class SpectralNetwork:
                         .format(s_i.label, e)
                     )
                     self.errors.append(('RuntimeError', e.args))
-                    continue
                     
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
-                logger.info('Determining the root type of S-wall #{}...'
-                            .format(i))
+                logger.info('Determining the root type of {}...'
+                            .format(s_i.label))
                 try:
                     s_i.determine_root_types(
                         sw_data, cutoff_radius=config['size_of_small_step'],
@@ -189,20 +190,19 @@ class SpectralNetwork:
                 except RuntimeError as e:
                     logger.error(
                         'Error while determining root types of {}: {}\n'
-                        'Stop growing this spectral network '
-                        'of phase = {}'
-                        .format(s_i.label, e, self.phase)
+                        'Stop growing this S-wall and remove it.'
+                        .format(s_i.label, e)
                     )
                     self.errors.append(('RuntimeError', e.args))
-                    # Remove S-wall seeds from the i-th to the end.
-                    for j in range(i, len(self.s_walls)):
-                        self.s_walls.pop()
-                    return
+                    # Remove the S-wall.
+                    self.s_walls.pop(i)
+                    continue
 
-                logger.info('Finding new joints from S-wall #{}...'.format(i))
+                logger.info('Finding new joints from {}...'.format(s_i.label))
                 new_joints += self.get_new_joints(i, config, sw_data,
                                                   get_intersections,
                                                   use_cgal,)
+                i += 1
 
             n_finished_s_walls = len(self.s_walls)
             if(len(new_joints) == 0):
