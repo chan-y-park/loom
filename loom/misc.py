@@ -422,7 +422,9 @@ def spread_of_branch_points(z_s, min_spread=None):
     Give a measure of how much branch points are separated 
     from each other.
     """
-    if len(z_s) == 1 and min_spread is not None:
+    if len(z_s) == 0:
+        raise Exception('No branch points found.')
+    elif len(z_s) == 1 and min_spread is not None:
         return 10 * min_spread
     elif len(z_s) == 1 and min_spread is None:
         raise RuntimeError(
