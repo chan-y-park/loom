@@ -1,8 +1,10 @@
 # ``loom``
 A framework to generate and analyze spectral networks, including a GUI based on ``Tkinter`` and a web frontend based on ``flask``. ``loom`` is written in Python, Javascript, and C++.
 
-## Note for users and developers
-``stable`` is the branch to use for the study of spectral networks, ``master`` is a developmental branch that may contain up-to-date but unstable features.
+[Overview](#overview)
+
+[How to use ``loom`` web UI](#how-to-use-loom-web-ui)
+[How to run ``loom``](#how-to-run-loom)
 
 ## Overview
 ``loom`` has the following functionality.
@@ -15,13 +17,22 @@ A framework to generate and analyze spectral networks, including a GUI based on 
 
 In addition, ``loom`` contains a web frontend that drives a WSGI application, which can be loaded from any web server that supports WSGI applications, including Apache. To see how the WSGI application looks like, visit
 * http://het-math2.physics.rutgers.edu/loom/ (stable)
-* http://chan.physics.rutgers.edu/loom/ (developmental)
+* http://chan.physics.rutgers.edu/loom/ (developmental, alpha version)
+* http://het-math2.physics.rutgers.edu/loom/ (developmental, beta version)
 
-## Screenshots
+### Note for users and developers
+``stable_*`` is the branch to use for the study of spectral networks, ``master`` is a developmental branch that may contain up-to-date but unstable features.
+
+### Screenshots
 
 ![loom screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_desktop.png "loom desktop")
 ![loom menu screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_menu.png "loom menu")
 ![loom plot screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_plot.png "loom plot")
+
+## How to use ``loom`` web UI
+
+### Configuration page
+### Plot page
 
 ## How to run ``loom``
 ``loom`` is expected to run on a Linux system. Although ``loom`` does not require any platform-specific library and therefore should run on any platform that runs Python 2.X in principle, it usually runs into a platform-specific problem when run on a platform other than Linux; for example, on Windows it has an issue with multiple processes, and on Mac it has an issue with TKinter GUI.
