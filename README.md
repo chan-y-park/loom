@@ -4,6 +4,7 @@ A framework to generate and analyze spectral networks, including a GUI based on 
 [Overview](#overview)
 
 [How to use ``loom`` web UI](#how-to-use-loom-web-ui)
+
 [How to run ``loom``](#how-to-run-loom)
 
 ## Overview
