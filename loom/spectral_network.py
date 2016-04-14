@@ -40,7 +40,12 @@ class SpectralNetwork:
         for joint in self.joints:
             joint.set_z_rotation(z_rotation)
 
-    def grow(self, config, sw_data):
+    def grow(
+        self, config, sw_data,
+        additional_iterations=0,
+        additional_n_steps=0,
+        new_mass_limit=0,
+    ):
         """
         Grow the spectral network by seeding SWall's
         and then calling SWall.grow() for each S-wall.
@@ -53,8 +58,28 @@ class SpectralNetwork:
         logger = logging.getLogger(self.logger_name)
         
         accuracy = config['accuracy']
-        num_of_iterations = config['num_of_iterations']
+
         n_steps = config['num_of_steps']
+        if additional_n_steps > 0:
+            config['num_of_steps'] = n_steps + additional_n_steps
+            n_steps = additional_n_steps
+            if additional_iterations > 0:
+                logger.warning(
+                    'Cannot set additional iterations at the same time '
+                    'with an additional number of steps.\n'
+                    'loom will reset the additional iterations to zero.'
+                )
+                additional_iterations = 0
+
+        num_of_iterations = config['num_of_iterations']
+        if additional_iterations > 0:
+            config['num_of_iterations'] = (num_of_iterations +
+                                           additional_iterations)
+            num_of_iterations = additional_iterations
+
+        if new_mass_limit > 0:
+            config['mass_limit'] = new_mass_limit
+        
 
         # Determine the intersection-finding algorithm
         # according to the availability of CGAL.
@@ -114,39 +139,16 @@ class SpectralNetwork:
             get_intersections = find_intersections_of_curves
             use_cgal = False
 
-        logger.info('Start growing a new spectral network...')
+        if additional_iterations > 0 or additional_n_steps > 0:
+            logger.info(
+                'Extend the given spectral network '
+                'by {} iterations and {} steps.'
+                .format(additional_iterations, additional_n_steps)
+            )
 
-        logger.info('Seed S-walls at branch points...')
-        
-        for bp in sw_data.branch_points:
-            try:
-                s_wall_seeds = get_s_wall_seeds(
-                    sw_data, self.phase, bp, config, self.logger_name,
-                )
-                for z_0, x_0, M_0 in s_wall_seeds:
-                    label = 'S-wall #{}'.format(len(self.s_walls))
-                    self.s_walls.append(
-                        SWall(
-                            z_0=z_0,
-                            x_0=x_0,
-                            M_0=M_0,
-                            # TODO: change this to take bp itself.
-                            parents=[bp.label],
-                            parent_roots=[root for root in bp.positive_roots],
-                            label=label,
-                            n_steps=n_steps,
-                            logger_name=self.logger_name,
-                        )
-                    )
-            except RuntimeError as e:
-                error_msg = (
-                    'Error while seeding S-walls at {}: {}\n'
-                    'Skip the seeding.'
-                    .format(bp.label, e)
-                )
-                logger.error(error_msg)
-                self.errors.append(('RuntimeError', error_msg))
-                continue
+            
+        else:
+            logger.info('Start growing a new spectral network...')
 
         logger.debug('Setup the ODE integrator...')
         ode = get_ode(sw_data, self.phase, accuracy)
@@ -154,8 +156,12 @@ class SpectralNetwork:
         ppzs = [p.z for p in punctures]
         bpzs = [bp.z for bp in sw_data.branch_points +
                 sw_data.irregular_singularities]
-        
-        n_finished_s_walls = 0 
+
+        if additional_iterations > 0 and additional_n_steps == 0:
+            n_finished_s_walls = len(self.s_walls)
+        else:
+            n_finished_s_walls = 0
+
         iteration = 1
         while(iteration <= num_of_iterations):
             logger.info('Start iteration #{}...'.format(iteration))
@@ -163,15 +169,126 @@ class SpectralNetwork:
             Iterate until there is no new joint
             or for a specified number of iterations.
             Each S-wall is grown only once.
+
+            Each iteration starts with seeding S-walls.
+            It can be either seeding them around each branch point,
+            if this spectral network is a brand new one,
+            or finding the joints to seed S-walls from them,
+            if this is growing an existing spectral network.
             """
-            new_joints = []     # number of new joints found in each iteration
+            if (
+                additional_iterations == 0
+                and additional_n_steps == 0:
+                and iteration == 1
+            ):
+                # Seed S-walls around each branch point.
+                logger.info('Seed S-walls at branch points...')
+                for bp in sw_data.branch_points:
+                    try:
+                        s_wall_seeds = get_s_wall_seeds(
+                            sw_data, self.phase, bp, config, self.logger_name,
+                        )
+                        for z_0, x_0, M_0 in s_wall_seeds:
+                            label = 'S-wall #{}'.format(len(self.s_walls))
+                            self.s_walls.append(
+                                SWall(
+                                    z_0=z_0,
+                                    x_0=x_0,
+                                    M_0=M_0,
+                                    # TODO: change this to take bp itself.
+                                    parents=[bp.label],
+                                    parent_roots=[root for root
+                                                  in bp.positive_roots],
+                                    label=label,
+                                    n_steps=n_steps,
+                                    logger_name=self.logger_name,
+                                )
+                            )
+                    except RuntimeError as e:
+                        error_msg = (
+                            'Error while seeding S-walls at {}: {}\n'
+                            'Skip the seeding.'
+                            .format(bp.label, e)
+                        )
+                        logger.error(error_msg)
+                        self.errors.append(('RuntimeError', error_msg))
+                        continue
+
+            elif additional_n_steps > 0:
+                # No seeding.
+                extend_s_walls = True
+
+            else:
+                # additional_iterations > 0 or iteration > 1
+                # Find joints and seed S-walls at the joints. 
+                new_joints = [] # number of new joints found in each iteration
+                for i in range(n_finished_s_walls, len(self.s_walls)):
+                    logger.info('Finding new joints from {}...'
+                                .format(s_i.label))
+                    try:
+                        new_joints += self.get_new_joints(
+                            i, config, sw_data, get_intersections, use_cgal,
+                        )
+                    except RuntimeError as e:
+                        error_msg = (
+                            'Error while finding joints of {}: {}\n'
+                            'Stop finding joints from this S-wall.'
+                            .format(s_i.label, e)
+                        )
+                        logger.error(error_msg)
+                        self.errors.append(
+                            ('RuntimeError', error_msg)
+                        )
+
+                if(len(new_joints) == 0):
+                    logger.info(
+                        'No additional joint found: '
+                        'Stop growing this spectral network '
+                        'at iteration #{}.'.format(iteration)
+                    )
+                    break
+                else:
+
+                # Seed an S-wall for each new joint.
+                for joint in new_joints:
+                    joint_is_new = True
+                    # check if this is not in the previous joint list
+                    for old_joint in self.joints:
+                        if joint.is_equal_to(old_joint, accuracy):
+                            joint_is_new = False
+                            break
+                    if not joint_is_new:
+                        continue
+                    joint.label = 'joint #{}'.format(len(self.joints))
+                    self.joints.append(joint)
+                    label = 'S-wall #{}'.format(len(self.s_walls))
+                    if (
+                        config['mass_limit'] is None or 
+                        joint.M < config['mass_limit']
+                    ):
+                        self.s_walls.append(
+                            SWall(
+                                z_0=joint.z,
+                                # The numerics of S-walls involves sheets
+                                # from the first fundamental cover.
+                                x_0=joint.ode_xs,
+                                M_0=joint.M,
+                                parents=joint.parents,
+                                # XXX: parent_roots != (roots of parents)
+                                parent_roots=joint.roots,
+                                label=label,
+                                n_steps=n_steps,
+                                logger_name=self.logger_name,
+                            )
+                        )
+
+            # Grow each S-wall.
             i = n_finished_s_walls
             while (i < len(self.s_walls)):
-            #for i in range(n_finished_s_walls, len(self.s_walls)):
                 s_i = self.s_walls[i]
                 logger.info('Growing {}...'.format(s_i.label))
                 try:
-                    s_i.grow(ode, bpzs, ppzs, config,)
+                    s_i.grow(ode, bpzs, ppzs, config, extend_s_walls=True,)
                 except RuntimeError as e:
                     error_msg = (
                         'Error while growing {}: {}\n'
@@ -180,7 +297,7 @@ class SpectralNetwork:
                     )
                     logger.error(error_msg)
                     self.errors.append(('RuntimeError', error_msg))
-                    
+
                 # Cut the grown S-walls at the intersetions with branch cuts
                 # and decorate each segment with its root data.
                 logger.info('Determining the root type of {}...'
@@ -203,74 +320,20 @@ class SpectralNetwork:
                     self.s_walls.pop(i)
                     continue
 
-                logger.info('Finding new joints from {}...'.format(s_i.label))
-                try:
-                    new_joints += self.get_new_joints(i, config, sw_data,
-                                                      get_intersections,
-                                                      use_cgal,)
-                except RuntimeError as e:
-                    error_msg = (
-                        'Error while finding joints of {}: {}\n'
-                        'Stop finding joints from this S-wall.'
-                        .format(s_i.label, e)
-                    )
-                    logger.error(error_msg)
-                    self.errors.append(
-                        ('RuntimeError', error_msg)
-                    )
-
+                # End of growing the i-th S-wall.
                 i += 1
 
+            logger.info(
+                'Growing S-walls in iteration #{} finished.'
+                .format(iteration)
+            )
             n_finished_s_walls = len(self.s_walls)
-            if(len(new_joints) == 0):
-                logger.info(
-                    'No additional joint found: '
-                    'Stop growing this spectral network '
-                    'at iteration #{}.'.format(iteration)
-                )
-                break
-            elif iteration == num_of_iterations:
-                # Last iteration finished. Do not form new joints,
+
+            if iteration == num_of_iterations:
+                # Last iteration finished. Do not find new joints,
                 # and do not seed additional S-walls, either.
                 break
-            else:
-                logger.info(
-                    'Growing S-walls in iteration #{} finished.'
-                    .format(iteration)
-                )
-
-            # Seed an S-wall for each new joint.
-            for joint in new_joints:
-                joint_is_new = True
-                # check if this is not in the previous joint list
-                for old_joint in self.joints:
-                    if joint.is_equal_to(old_joint, accuracy):
-                        joint_is_new = False
-                        break
-                if not joint_is_new:
-                    continue
-                joint.label = 'joint #{}'.format(len(self.joints))
-                self.joints.append(joint)
-                label = 'S-wall #{}'.format(len(self.s_walls))
-                if (
-                    config['mass_limit'] is None or 
-                    joint.M < config['mass_limit']
-                ):
-                    self.s_walls.append(
-                        SWall(
-                            z_0=joint.z,
-                            # The numerics of S-walls involves sheets
-                            # from the first fundamental cover.
-                            x_0=joint.ode_xs,
-                            M_0=joint.M,
-                            parents=joint.parents,
-                            # XXX: parent_roots != (roots of parents)
-                            parent_roots=joint.roots,
-                            label=label,
-                            n_steps=n_steps,
-                            logger_name=self.logger_name,
-                        )
-                    )
+                    
             logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
 
