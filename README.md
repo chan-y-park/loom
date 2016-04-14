@@ -18,7 +18,7 @@ A framework to generate and analyze spectral networks, including a GUI based on 
 In addition, ``loom`` contains a web frontend that drives a WSGI application, which can be loaded from any web server that supports WSGI applications, including Apache. To see how the WSGI application looks like, visit
 * http://het-math2.physics.rutgers.edu/loom/ (stable)
 * http://chan.physics.rutgers.edu/loom/ (developmental, alpha version)
-* http://het-math2.physics.rutgers.edu/loom/ (developmental, beta version)
+* http://het-math2.physics.rutgers.edu/dev_loom/ (developmental, beta version)
 
 ### Note for users and developers
 ``stable_*`` is the branch to use for the study of spectral networks, ``master`` is a developmental branch that may contain up-to-date but unstable features.
@@ -31,8 +31,54 @@ In addition, ``loom`` contains a web frontend that drives a WSGI application, wh
 
 ## How to use ``loom`` web UI
 
+* The front page of the web UI of ``loom`` can be found at
+  * http://het-math2.physics.rutgers.edu/loom/ (stable)
+  * http://chan.physics.rutgers.edu/loom/ (developmental, alpha version)
+  * http://het-math2.physics.rutgers.edu/dev_loom/ (developmental, beta version)
+* In the following we will denote the root url as ``/``, that is, the full url of ``/config`` is http://het-math2.physics.rutgers.edu/dev_loom/config.
+
 ### Configuration page
+* Go to ``/config`` to set a configuration to run ``loom`` on the web.
+* The first row specifies the Lie algebra and its representation associated with the spectral network to generate. The default configuration is associated with the standard representation of ``A_2``. For example, to generate an ``D_4`` spectral network in a spinor representation, choose the options in the following way:
+  * ``Lie algebra type``: D
+  * ``rank``: 4
+  * ``representation``: 4
+* ``Description``: a text to describe the setup; it has no effect in the run of ``loom`` but just a convenient note to understand the data without loading it onto ``loom``.
+* ``Casimir differentials``: a ``Python`` dictionary of the differentials that specify a class S theory. The default configuration corresponds to
+```phi_2(z) = v_2 (dz)^2```
+```phi_3(z) = (v_3 + z^2) (dz)^3```
+where ``v_2`` and ``v_3`` are complex parameters whose numerical values are to be specified in ``Parameters of differentials``. The differentials are intepreted as ``SymPy`` expressions, therefore they should follow the syntax of ``SymPy``. For example, an explicit representation of multiplication using ``*`` is necessary. 
+* ``Parameters of differentials``: a ``Python`` dictionary of the complex parameters that appear in the definition of the differentials. But for the convienience of users an unusual format of using ``=`` instead of ``:`` is allowed, i.e. ``{v_2 = 1.0, v_3 = 1.0}`` works the same as ``{v_2: 1.0, v_3: 1.0}``.
+* ``Regular punctures`` and ``Irregular punctures``: the locations of regular punctures, i.e. a puncture without a branch cut attached to it and the locations of irregular punctures, i.e. a puncture with a branch cut attached to it.  They are ``Python`` lists, and the entries are interpreted as ``SymPy`` expressions. Note that the locations should be the same as those specified by the differentials, and changing just the entries here does not change the spectral network itself but results in a spectral network generated in an incorrect way. In the future this information will be automatically obtained from the differentials.
+* ``Plot rage``: the initial range of spectral network plot to draw. You can change the range interactively in the plot page.
+* ``Number of steps``: each S-wall of a spectral network is a collection of numerical points evaluted by solving a differential equation, and this specifies the number of points. The larger this number, the longer it takes to finish one iteration.
+* ``Number of iterations``: at the start of each iteration ``loom`` grows S-walls from their seed, and at the end of each iteration ``loom`` finds the joint of S-walls and the seed of new S-walls from the joints. This parameter specifies how many iterations ``loom`` will go through, therefore a larger number of iterations will result in a longer run of ``loom``. **It's a good practice to start with ``Number of iterations = 1``**, so that no S-walls from the joints will be grown to have a rough picture of a spectral network, because there is a possibility that the number of joints can be huge even after just one iteration and the running time can be uncontrollable.
+* ``Mass limit``: controls the length of each S-wall. An S-wall has an associated "mass", which is the integral of the Seiberg-Witten differenital along the S-wall. When growing an S-wall it is truncated when it reaches the mass limit, even if the number of points is less then the number of steps. Therefore another way of controlling the running of ``loom`` is **starting with a small mass limit**.
+* ``Phase``: to obtain a single spectral network, specify its phase as a real number in radian. The default configuration generates 8 spectral networks between ``\theta = 0.01`` to ``\theta = 3.14``.
+* By clicking ``Save configuration`` button you can save the configuration specified in this page to an ``.ini`` file on your local machine.
+* To load the saved configuration, first click ``Browse...`` button to select the file from your local machine, and click ``Load configuration`` to apply the configuration, which will show you the configuration from the file on this page.
+* Click ``Generate spectral networks`` button to start running ``loom`` with the specified configuration.
+* By clicking ``Show/hide advanced options`` you can change more options.
+  * ``Mobius transformation`` specifies an ``SL(2, \mathbb{C})`` transformation on the UV curve. However it is not fully implemented yet.
+  * ``Ramification point finding methods`` specifies how to find ramification points of the IR curve, therefore the branch points on the UV curve. There are currently two methods available, ``system_of_eqs`` and ``discriminant``. If none is specifies the default option is ``system_of_eqs``. For the detail of the two methods please see [geometry.py](loom/geometry.py).
+  * ``Size of a small step`` and ``Size of a large step`` are two step sizes that ``loom`` adpatively chooses as the size of one step when solving the differential equation for S-walls.
+  * ``Size of a branch point neighborhood`` and ``Size of a puncture cutoff`` specify the radius around the loci that ``loom`` will stop evaluating the differential equation as the points are singular for the differential equation.
+  * ``Accuracy`` is a cutoff below which a numerical value is considered to be zero.
+
 ### Plot page
+
+* Place the mouse cursor onto an arrow, a cross, or a circle to display the information of the S-wall, the branch point, or the puncture, respectively. There will be a tooltip showing the label of the object and the root associated to it.
+* Weights and roots are shown in an orthonomal basis of the associated Lie algebra.
+* Use the mouse wheel to zoom in or out the plot, drag the plot to move it.
+* On the upper right corner of the plot there are tools to save the plot in ``.png``, reset the zoon and the displacement, etc.
+* On the right side of the plot, the phase of the displayed spectral network is shown. Below the phase are buttons to change the display of the plot.
+  * When you zoomed in and lost some arrows on an S-wall, click ``Redraw arrows`` to redraw arrows within the plot area so that the corresponding tooltips can be shown by placing the mouse cursor on them.
+  * Use ``Show data points`` and ``Hide data points`` to display/hide the acutall numerical points on S-walls instead of lines connecting them.
+  * ``Rotate back`` makes the plot and the data to be rotated to the poisition where the calculation of ``loom`` is actually done, this is mostly for the purpose of debugging.
+* When multiple spectral networks are displayed, use the slider under the plot to change between spectral networks.
+* To save the data on the server, first specify the name of the data in the text box on the right of ``Save data to server as``, then click the ``Save`` button. The data can be retrieved by going to ``\plot?data=data_name`` for data named as ``data_name``.
+* Use ``Download data`` to save the ``loom`` data on your local machine, but you need ``loom`` to load the data.
+* Use ``Download plot`` to save the plot in HTML on your local machine, you don't need to install ``loom`` on your local machine to see this plot as long as it is connected to the internet.
 
 ## How to run ``loom``
 ``loom`` is expected to run on a Linux system. Although ``loom`` does not require any platform-specific library and therefore should run on any platform that runs Python 2.X in principle, it usually runs into a platform-specific problem when run on a platform other than Linux; for example, on Windows it has an issue with multiple processes, and on Mac it has an issue with TKinter GUI.
