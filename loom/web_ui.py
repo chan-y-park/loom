@@ -558,16 +558,24 @@ def save_data_to_server():
         loom_config, spectral_network_data = rv
 
         data_dir = os.path.join(get_loom_dir(), 'data', data_name,)
+        # XXX: check if there is an existing dir with the same name.
+        if os.path.exists(data_dir):
+            msg = (
+                'Data with name "{}" already exists, '
+                'chose a different name.'.format(data_name)
+            )
+        else:
+            save_spectral_network(
+                loom_config,
+                spectral_network_data,
+                data_dir=data_dir,
+                logger_name=logger_name,
+            )
+            msg = 'Data successfully saved as "{}".'.format(data_name)
 
-        save_spectral_network(
-            loom_config,
-            spectral_network_data,
-            data_dir=data_dir,
-            logger_name=logger_name,
-        )
     return flask.render_template(
-        'save_success.html',
-        data_name=data_name,
+        'save_message.html',
+        msg=msg,
     )
 
 
