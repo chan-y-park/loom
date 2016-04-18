@@ -531,10 +531,10 @@ def plot():
 
     loom_config, spectral_network_data = rv
 
-    if rotate_back is True:
-        spectral_network_data.set_z_rotation(
-            1/spectral_network_data.sw_data.branch_cut_rotation
-        )
+#    if rotate_back is True:
+#        spectral_network_data.set_z_rotation(
+#            1/spectral_network_data.sw_data.branch_cut_rotation
+#        )
 
     # Put data back into the queue for future use.
     loom_db.result_queues[process_uuid].put(rv)
@@ -809,6 +809,9 @@ def render_plot_template(
 
     if rotate_back is True:
         reset_z_rotation = False
+        spectral_network_data.set_z_rotation(
+            1/spectral_network_data.sw_data.branch_cut_rotation
+        )
     else:
         reset_z_rotation = True
 
