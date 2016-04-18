@@ -532,22 +532,17 @@ def plot():
     loom_config, spectral_network_data = rv
 
     if rotate_back is True:
-        #reset_z_rotation = False
         bc_r = spectral_network_data.sw_data.branch_cut_rotation
-        print 'branch_cut_rotation = {}'.format(bc_r)
         spectral_network_data.set_z_rotation(1/bc_r)
-        for p in spectral_network_data.sw_data.regular_punctures:
-            print '{}: z = {}'.format(p.label, p.z)
     else:
         spectral_network_data.reset_z_rotation()
-        #reset_z_rotation = True
  
     # Put data back into the queue for future use.
     loom_db.result_queues[process_uuid].put(rv)
 
     return render_plot_template(
         loom_config, spectral_network_data, process_uuid=process_uuid,
-        progress_log=progress_log, #reset_z_rotation=reset_z_rotation,
+        progress_log=progress_log,
     )
 
 
@@ -808,7 +803,7 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
 
 def render_plot_template(
     loom_config, spectral_network_data, process_uuid=None,
-    progress_log=None, download=False, #rotate_back=False,
+    progress_log=None, download=False,
 ):
     download_data_url = download_plot_url = None
     sw_data = spectral_network_data.sw_data
@@ -818,7 +813,6 @@ def render_plot_template(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
         logger_name=get_logger_name(),
-        #reset_z_rotation=reset_z_rotation,
     )
 
     initial_phase = '{:.3f}'.format(
