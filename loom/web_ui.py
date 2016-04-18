@@ -531,6 +531,9 @@ def plot():
 
     loom_config, spectral_network_data = rv
 
+    # XXX: Remeber to do any operation on data here
+    # before putting it back to the queue. Otherwise
+    # there can be a complication due to threading.
     if rotate_back is True:
         bc_r = spectral_network_data.sw_data.branch_cut_rotation
         spectral_network_data.set_z_rotation(1/bc_r)

@@ -269,10 +269,11 @@ class SWall(object):
         branch_point_zs,
         puncture_point_zs,
         config,
+        num_of_steps=None,
     ):
         bpzs = branch_point_zs
         ppzs = puncture_point_zs
-        num_of_steps = config['num_of_steps']
+        #num_of_steps = config['num_of_steps']
         size_of_small_step = config['size_of_small_step']
         size_of_large_step = config['size_of_large_step']
         size_of_bp_neighborhood = config['size_of_bp_neighborhood']
