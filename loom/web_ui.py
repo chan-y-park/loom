@@ -532,16 +532,17 @@ def plot():
     loom_config, spectral_network_data = rv
 
     if rotate_back is True:
-        spectral_network_data.set_z_rotation(
-            1/spectral_network_data.sw_data.branch_cut_rotation
-        )
-
+        bc_r = spectral_network_data.sw_data.branch_cut_rotation
+        spectral_network_data.set_z_rotation(1/bc_r)
+    else:
+        spectral_network_data.reset_z_rotation()
+ 
     # Put data back into the queue for future use.
     loom_db.result_queues[process_uuid].put(rv)
 
     return render_plot_template(
         loom_config, spectral_network_data, process_uuid=process_uuid,
-        progress_log=progress_log, rotate_back=rotate_back,
+        progress_log=progress_log,
     )
 
 
@@ -802,22 +803,16 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
 
 def render_plot_template(
     loom_config, spectral_network_data, process_uuid=None,
-    progress_log=None, download=False, rotate_back=False,
+    progress_log=None, download=False,
 ):
     download_data_url = download_plot_url = None
     sw_data = spectral_network_data.sw_data
-
-    if rotate_back is True:
-        reset_z_rotation = False
-    else:
-        reset_z_rotation = True
 
     # Make a Bokeh plot
     bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
         logger_name=get_logger_name(),
-        reset_z_rotation=reset_z_rotation,
     )
 
     initial_phase = '{:.3f}'.format(
@@ -830,10 +825,6 @@ def render_plot_template(
         branch_points=sw_data.branch_points,
         irregular_singularities=sw_data.irregular_singularities,
     )
-
-    # Set the z-plane rotation back.
-    # TODO: Decide whether to save a rotated data or a raw data.
-    #spectral_network_data.set_z_rotation(z_rotation)
 
     if download is False:
         download_data_url = flask.url_for(

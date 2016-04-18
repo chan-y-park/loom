@@ -871,7 +871,8 @@ class SWDataBase(object):
             config['size_of_bp_neighborhood'] = min_abs_distance / 2.0
 
         if config['size_of_puncture_cutoff'] is None:
-            config['size_of_puncture_cutoff'] = min_abs_distance / 10.0
+            #config['size_of_puncture_cutoff'] = min_abs_distance / 10.0
+            config['size_of_puncture_cutoff'] = min_abs_distance / 100.0
 
         logger.info('size_of_small_step = {}'
                     .format(config['size_of_small_step']))
