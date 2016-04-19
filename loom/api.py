@@ -27,10 +27,83 @@ class SpectralNetworkData:
     a set of spectral networks generated from a
     single Seiberg-Witten data.
     """
-    def __init__(self, sw_data, spectral_networks):
+    def __init__(
+        self,
+        sw_data=None,
+        spectral_networks=None,
+        config=None,
+        config_file_path=None,
+        data_dir=None,
+        logger_name='loom',
+    ):
+        self.logger_name = logger_name
+
+        if config_file_path is not None:
+            config = load_config(
+                file_path=config_file_path,
+                logger_name=self.logger_name,
+            )
+        elif data_dir is not None:
+            config, spectral_network_data = load_spectral_network(
+                data_dir=data_dir,
+                logger_name=self.logger_name,
+            )
+            sw_data, spectral_networks = spectral_network_data
+
+        self.config = config
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
         self.data_attributes = ['sw_data', 'spectral_networks',]
+
+    def save(self, data_dir=None):
+        save_spectral_network(
+            self.config,
+            self,
+            data_dir=data_dir,
+            logger_name=self.logger_name,
+        )
+
+    def generate(self, phase=None, n_processes=None,):
+        sw_data, spectral_networks = generate_spectral_network(
+            self.config, phase=phase, sw=self.sw_data,
+            n_processes=n_processes, logger_name=self.logger_name,
+        )
+        self.sw_data = sw_data
+        self.spectral_networks = spectral_networks
+
+    def extend(
+        self,
+        additional_n_steps=0,
+        new_mass_limit=0,
+        additional_iterations=0,
+        additional_phases=[],
+    ):
+        logger = self.logger
+        try:
+            logger.info('Extending the spectral networks...')
+            if len(self.spectral_networks) == 1:
+                sn = self.spectral_networks[0]
+                sn.grow(
+                    self.config,
+                    self.sw_data,
+                    additiona_iterations=additional_iterations,
+                    additional_n_steps=additional_n_steps,
+                    new_mass_limit=new_mass_limit,
+                )
+            else:
+                pass
+        except:
+            pass
+
+            logger.info(
+                'Adding spectral networks with phase = {}'
+                .format(additional_phases)
+            )
+
+
+    def plot(self, plot_range=None):
+        # TODO: Implement if needed.
+        return None
 
     def set_z_rotation(self, z_rotation):
         self.sw_data.set_z_rotation(z_rotation)
@@ -223,7 +296,10 @@ def load_spectral_network(
             spectral_network.set_from_json_data(json_data, sw_data)
             spectral_networks.append(spectral_network)
 
-    data = SpectralNetworkData(sw_data, spectral_networks)
+    data = SpectralNetworkData(
+        sw_data=sw_data,
+        spectral_networks=spectral_networks,
+    )
     logger.info('Finished loading data from {}.'.format(data_dir))
 
     rv = (config, data)
@@ -262,9 +338,10 @@ def save_spectral_network(
     # Save version data.
     version_file_path = os.path.join(data_dir, 'version')
     version = "None"
-    # FIXME: Temporarily disabling this because I get the error from git
-    # "Unknown option: -C"
-    # version = get_current_branch_version()
+    try:
+        version = get_current_branch_version()
+    except:
+        pass
     with open(version_file_path, 'w') as fp:
         fp.write(version)
 
@@ -309,11 +386,6 @@ def save_spectral_network(
     return None
 
 
-def stop_signal_handler(signum, frame):
-    if signum == signal.SIGTERM:
-        raise SystemExit('SIGTERM catched by generate_spectral_network.')
-
-
 def generate_spectral_network(
     config,
     phase=None,
@@ -335,14 +407,11 @@ def generate_spectral_network(
         phase = config['phase']
     else:
         config['phase'] = phase
-    try:
-        start_time = time.time()
-        start_date_time = (
-            '{:02}-{:02}-{:02} {:02}:{:02}:{:02}'
-            .format(*time.localtime(start_time)[:6])
-        )
-        logger.info('Started @ {}'.format(start_date_time))
 
+    start_time = time.time()
+    logger.info('Started @ {}'.format(get_date_time_str(start_time)))
+
+    try:
         if sw is None:
             sw = SWDataWithTrivialization(config, logger_name=logger_name)
 
@@ -368,14 +437,6 @@ def generate_spectral_network(
                 logger_name=logger_name,
             )
 
-        end_time = time.time()
-        end_date_time = (
-            '{:02}-{:02}-{:02} {:02}:{:02}:{:02}'
-            .format(*time.localtime(end_time)[:6])
-        )
-        logger.info('Finished @ {}'.format(end_date_time))
-        logger.info('elapsed cpu time: %.3f', end_time - start_time)
-
     except (KeyboardInterrupt, SystemExit) as e:
         logger.warning('loom.api caught {} while generating spectral networks.'
                        .format(type(e)))
@@ -394,6 +455,10 @@ def generate_spectral_network(
 #        sw = None
 #        spectral_networks = None
 #        #raise e
+
+    end_time = time.time()
+    logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
+    logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
     spectral_network_data = SpectralNetworkData(sw, spectral_networks)
     if logging_queue is not None:
@@ -465,6 +530,14 @@ def make_spectral_network_plot(
         spectral_network_plot.show()
 
     return spectral_network_plot
+
+
+def get_date_time_str(a_time):
+    a_date_time_str = (
+        '{:02}-{:02}-{:02} {:02}:{:02}:{:02}'
+        .format(*time.localtime(a_time)[:6])
+    )
+    return a_date_time_str
 
 
 def get_loom_dir():

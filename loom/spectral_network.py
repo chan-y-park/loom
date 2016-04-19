@@ -377,19 +377,6 @@ class SpectralNetwork:
                         )
                     finished_s_walls.append(unfinished_s_wall)
 
-                if(len(new_joints) == 0):
-                    logger.info(
-                        'No additional joint found: '
-                        'Stop growing this spectral network '
-                        'at iteration #{}.'.format(iteration)
-                    )
-                    break
-                else:
-                    logger.info(
-                        'Found {} new joints.'
-                        .format(len(new_joints))
-                    )
-
             for i, new_s_wall in enumerate(new_s_walls):
                 # Add the new S-wall to the spectral network
                 if additional_n_steps > 0 and iteration == 1:
@@ -429,6 +416,20 @@ class SpectralNetwork:
 
             self.n_finished_s_walls = len(self.s_walls)
 
+            if(len(new_joints) == 0):
+                if iteration < num_of_iterations:
+                    logger.info(
+                        'No additional joint found: '
+                        'Stop growing this spectral network '
+                        'at iteration #{}.'.format(iteration)
+                    )
+                    break
+            else:
+                logger.info(
+                    'Found {} new joints.'
+                    .format(len(new_joints))
+                )
+
             new_s_walls = []
             # Seed an S-wall for each new joint.
             for joint in new_joints:
@@ -464,11 +465,6 @@ class SpectralNetwork:
                             logger_name=self.logger_name,
                         )
                     )
-            if len(new_s_walls) > 0:
-                logger.info(
-                    'Seeded {} new S-walls.'
-                    .format(len(new_s_walls))
-                )
 
             logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1

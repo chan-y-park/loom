@@ -26,7 +26,7 @@ def init_process():
 
 def a_child_process(
     sw,
-    phase,
+    spectral_network,
     config,
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks,
@@ -38,13 +38,9 @@ def a_child_process(
     shared_n_started_spectral_networks.value += 1
     job_id = shared_n_started_spectral_networks.value
     logger.info('Start generating spectral network #{}/{}: theta = {}.'
-                .format(job_id, theta_n, phase))
+                .format(job_id, theta_n, spectral_network.phase))
    
     try:
-        spectral_network = SpectralNetwork(
-            phase=phase, 
-            logger_name=logger_name,
-        ) 
 
         spectral_network.grow(config, sw)
 #    except (KeyboardInterrupt, SystemExit) as e:
@@ -69,14 +65,26 @@ def parallel_get_spectral_network(
     sw, 
     config,
     n_processes,
+    spectral_networks=None,
+    additional_n_steps=0,
+    new_mass_limit=0,
+    additional_iterations=0,
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
-    spectral_network_list = []
-
-    theta_i, theta_f, theta_n = config['phase']
-    phases = [(float(theta_i) + i * float(theta_f - theta_i) / (theta_n - 1))
-              for i in range(theta_n)]
+    if spectral_networks is None:
+        theta_i, theta_f, theta_n = config['phase']
+        phases = [
+            (float(theta_i) + i * float(theta_f - theta_i) / (theta_n - 1))
+            for i in range(theta_n)
+        ]
+        spectral_networks = [
+            SpectralNetwork(
+                phase=phase, 
+                logger_name=logger_name,
+            ) 
+            for phase in phases
+        ]
 
     manager = multiprocessing.Manager()
     shared_n_started_spectral_networks = manager.Value('i', 0)
@@ -112,18 +120,19 @@ def parallel_get_spectral_network(
                 a_child_process,
                 args=(
                     sw,
-                    phase,
+                    sn,
                     config,
                     shared_n_started_spectral_networks,
                     shared_n_finished_spectral_networks,
                     logger_name,
                 )
-            ) for phase in phases
+            ) for sn in spectral_networks
         ]
         pool.close()
 
+        new_spectral_networks = []
         for result in results:
-            spectral_network_list.append(result.get())
+            new_spectral_networks.append(result.get())
 
     except (KeyboardInterrupt, SystemExit) as e:
         logger.warning('loom.parallel caught {}: {}; terminates processes...'
@@ -132,4 +141,4 @@ def parallel_get_spectral_network(
         pool.join()
         raise
 
-    return spectral_network_list
+    return new_spectral_networks
