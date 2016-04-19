@@ -26,6 +26,7 @@ class SpectralNetwork:
         logger_name='loom',
     ):
         self.phase = phase
+        self.n_finished_s_walls = None
         self.s_walls = []
         self.joints = []
         self.logger_name = logger_name
@@ -39,6 +40,46 @@ class SpectralNetwork:
             s_wall.set_z_rotation(z_rotation)
         for joint in self.joints:
             joint.set_z_rotation(z_rotation)
+
+    def get_json_data(self):
+        """
+        Prepare the spectral network data in a JSON-compatible file.
+        """
+        json_data = {}
+        json_data['phase'] = self.phase
+        json_data['n_finished_s_walls'] = self.n_finished_s_walls
+        json_data['s_walls'] = [s_wall.get_json_data()
+                                for s_wall in self.s_walls]
+        json_data['joints'] = [joint.get_json_data()
+                               for joint in self.joints]
+        json_data['errors'] = self.errors
+        return json_data
+
+    def set_from_json_data(self, json_data, sw_data):
+        """
+        Load the spectral network data from a JSON-compatible file.
+        """
+        branch_loci = sw_data.branch_points + sw_data.irregular_singularities
+
+        self.phase = json_data['phase']
+        try:
+            self.n_finished_s_walls = json_data['n_finished_s_walls']
+        except KeyError:
+            pass
+        try:
+            self.errors = json_data['errors']
+        except KeyError:
+            pass
+
+        for s_wall_data in json_data['s_walls']:
+            an_s_wall = SWall(logger_name=self.logger_name,)
+            an_s_wall.set_from_json_data(s_wall_data, branch_loci)
+            self.s_walls.append(an_s_wall)
+
+        for joint_data in json_data['joints']:
+            a_joint = Joint()
+            a_joint.set_from_json_data(joint_data)
+            self.joints.append(a_joint)
 
     def grow(
         self, config, sw_data,
@@ -58,35 +99,6 @@ class SpectralNetwork:
         logger = logging.getLogger(self.logger_name)
         
         accuracy = config['accuracy']
-        num_of_iterations = None
-        n_steps = None
-
-        if additional_n_steps == 0 and additional_iterations == 0:
-            num_of_iterations = config['num_of_iterations']
-            n_steps = config['num_of_steps']
-        else:
-            if additional_n_steps > 0:
-                # Extend existing S-walls.
-                config['num_of_steps'] += additional_n_steps
-                num_of_iterations = 1
-
-            if additional_iterations > 0:
-                # Grow a spectral network for additional iterations.
-                config['num_of_iterations'] += additional_iterations
-                num_of_iterations += additional_iterations
-
-            if new_mass_limit > 0:
-                if additional_n_steps == 0:
-                    logger.warning(
-                        'Changing the mass limit without increasing '
-                        'number of steps has no effect.'
-                        'The mass limit will be kept to {}'
-                        .format(config['mass_limit'])
-                    )
-                else:
-                    config['mass_limit'] = new_mass_limit
-
-            n_steps = config['num_of_steps']
 
         # Determine the intersection-finding algorithm
         # according to the availability of CGAL.
@@ -153,6 +165,37 @@ class SpectralNetwork:
         ppzs = [p.z for p in punctures]
         bpzs = [bp.z for bp in sw_data.branch_points +
                 sw_data.irregular_singularities]
+
+        num_of_iterations = None
+        n_steps = None
+
+        if additional_n_steps == 0 and additional_iterations == 0:
+            num_of_iterations = config['num_of_iterations']
+            n_steps = config['num_of_steps']
+        else:
+            num_of_iterations = 1
+
+            if additional_n_steps > 0:
+                # Extend existing S-walls.
+                config['num_of_steps'] += additional_n_steps
+
+            if additional_iterations > 0:
+                # Grow a spectral network for additional iterations.
+                config['num_of_iterations'] += additional_iterations
+                num_of_iterations += additional_iterations
+
+            if new_mass_limit > 0:
+                if additional_n_steps == 0:
+                    logger.warning(
+                        'Changing the mass limit without increasing '
+                        'number of steps has no effect.'
+                        'The mass limit will be kept to {}'
+                        .format(config['mass_limit'])
+                    )
+                else:
+                    config['mass_limit'] = new_mass_limit
+
+            n_steps = config['num_of_steps']
 
         iteration = 1
         # Start iterations.
@@ -223,7 +266,8 @@ class SpectralNetwork:
                             logger_name=self.logger_name,
                         )
                     )
-            #elif iteration > 1:
+            elif additional_iterations > 0 and iteration == 1:
+                new_s_walls = []
 
             # Grow each newly-seeded S-wall.
             i = 0 
@@ -280,8 +324,12 @@ class SpectralNetwork:
                 .format(iteration)
             )
 
-            # number of new joints found in each iteration.
+            # New joints found in each iteration.
             new_joints = [] 
+            if additional_iterations > 0 and iteration == 1:
+                new_s_walls = self.s_walls[self.n_finished_s_walls:]
+                self.s_walls = self.s_walls[:self.n_finished_s_walls]
+
             for i, new_s_wall in enumerate(new_s_walls):
                 # Find joints between the new S-wall
                 # and previous S-walls.
@@ -327,6 +375,10 @@ class SpectralNetwork:
                 else:
                     self.s_walls.append(new_s_wall)
 
+            self.n_finished_s_walls = len(self.s_walls)
+            if iteration == num_of_iterations:
+                self.n_finished_s_walls -= len(new_s_walls)
+
             if(len(new_joints) == 0):
                 if iteration < num_of_iterations:
                     logger.info(
@@ -349,7 +401,9 @@ class SpectralNetwork:
                         continue
                     joint.label = 'joint #{}'.format(len(self.joints))
                     self.joints.append(joint)
-                    label = 'S-wall #{}'.format(len(self.s_walls))
+                    label = 'S-wall #{}'.format(
+                        len(self.s_walls) + len(new_s_walls)
+                    )
                     if (
                         config['mass_limit'] is None or 
                         joint.M < config['mass_limit']
@@ -375,41 +429,6 @@ class SpectralNetwork:
 
         logger.info('Finished growing a spectral network at phase = {}'
                     .format(self.phase))
-
-    def get_json_data(self):
-        """
-        Prepare the spectral network data in a JSON-compatible file.
-        """
-        json_data = {}
-        json_data['phase'] = self.phase
-        json_data['s_walls'] = [s_wall.get_json_data()
-                                for s_wall in self.s_walls]
-        json_data['joints'] = [joint.get_json_data()
-                               for joint in self.joints]
-        json_data['errors'] = self.errors
-        return json_data
-
-    def set_from_json_data(self, json_data, sw_data):
-        """
-        Load the spectral network data from a JSON-compatible file.
-        """
-        branch_loci = sw_data.branch_points + sw_data.irregular_singularities
-
-        self.phase = json_data['phase']
-        try:
-            self.errors = json_data['errors']
-        except KeyError:
-            pass
-
-        for s_wall_data in json_data['s_walls']:
-            an_s_wall = SWall(logger_name=self.logger_name,)
-            an_s_wall.set_from_json_data(s_wall_data, branch_loci)
-            self.s_walls.append(an_s_wall)
-
-        for joint_data in json_data['joints']:
-            a_joint = Joint()
-            a_joint.set_from_json_data(joint_data)
-            self.joints.append(a_joint)
 
     def get_new_joints(
         self, new_s_wall, prev_s_walls, config, sw_data, 
