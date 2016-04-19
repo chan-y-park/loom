@@ -197,6 +197,7 @@ class SWall(object):
                 numpy.array([self.x.real, self.x.imag]), 0, 3
             ).tolist(),
             'parents': [parent for parent in self.parents],
+            'parent_roots': [root.tolist() for root in self.parent_roots],
             'label': self.label,
             'cuts_intersections': [
                 [br_loc.label, t, d]
@@ -231,13 +232,23 @@ class SWall(object):
             [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
         )
         self.parents = [parent for parent in json_data['parents']]
+        try:
+            self.parent_roots = [
+                numpy.array(root)
+                for root in json_data['parent_roots']
+            ]
+        except KeyError:
+            pass
         self.label = json_data['label']
         self.cuts_intersections = []
         for br_loc_label, t, d in json_data['cuts_intersections']:
             for br_loc in branch_loci:
                 if br_loc_label == br_loc.label:
                     self.cuts_intersections.append([br_loc, t, d])
-        self.local_roots = numpy.array(json_data['local_roots'])
+        self.local_roots = [
+            numpy.array(root)
+            for root in json_data['local_roots']
+        ]
         # TODO: Remove the following exception handling
         # after multiple_local_roots becomes the default.
         try:

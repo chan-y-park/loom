@@ -724,11 +724,10 @@ class SWDataBase(object):
         if spread > MIN_SPREAD:
             pass
         else:
-            logger.info(
-                '\n\nWarning!\n'
+            logger.warning(
                 'Branch points may be too close to each other '
-                'for numerical trivialization. Spread is {}'
-                '\nBranch points are:\n{}'
+                'for numerical trivialization. Spread is {}.\n'
+                'Branch points are:\n{}'
                 .format(spread, [rp.z for rp in ffr_ramification_points])
             )
 

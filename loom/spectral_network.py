@@ -155,7 +155,6 @@ class SpectralNetwork:
                 sw_data.irregular_singularities]
 
         iteration = 1
-        n_finished_s_walls = 0
         # Start iterations.
         while(iteration <= num_of_iterations):
             logger.info('Start iteration #{}...'.format(iteration))
@@ -281,15 +280,40 @@ class SpectralNetwork:
                 .format(iteration)
             )
 
-            if additional_n_steps > 0 and iteration == 1:
-                # Attach new S-walls to existing S-walls
-                for i in range(len(new_s_walls)):
-                    esw = self.s_walls[i]
-                    asw = new_s_walls[i]
+            # number of new joints found in each iteration.
+            new_joints = [] 
+            for i, new_s_wall in enumerate(new_s_walls):
+                # Find joints between the new S-wall
+                # and previous S-walls.
+                if iteration < num_of_iterations:
+                    logger.info('Finding new joints from {}...'
+                                .format(new_s_wall.label))
+                    try:
+                        new_joints += self.get_new_joints(
+                            new_s_wall, self.s_walls,
+                            config, sw_data, get_intersections, use_cgal,
+                        )
+                    except RuntimeError as e:
+                        error_msg = (
+                            'Error while finding joints of {}: {}\n'
+                            'Stop finding joints from this S-wall.'
+                            .format(new_s_wall.label, e)
+                        )
+                        logger.error(error_msg)
+                        self.errors.append(
+                            ('RuntimeError', error_msg)
+                        )
 
-                    esw.z = numpy.concatenate(esw.z, asw.z[1:]) 
-                    esw.x = numpy.concatenate(esw.x, asw.x[1:]) 
-                    esw.M = numpy.concatenate(esw.M, asw.M[1:]) 
+                # Add the new S-wall to the spectral network
+
+                if additional_n_steps > 0 and iteration == 1:
+                    # Attach new S-walls to existing S-walls
+                    esw = self.s_walls[i]
+                    asw = new_s_wall
+
+                    esw.z = numpy.concatenate((esw.z, asw.z[1:])) 
+                    esw.x = numpy.concatenate((esw.x, asw.x[1:])) 
+                    esw.M = numpy.concatenate((esw.M, asw.M[1:])) 
 
                     esw.local_roots += asw.local_roots[1:]
                     esw.multiple_local_roots += asw.multiple_local_roots[1:]
@@ -300,80 +324,51 @@ class SpectralNetwork:
                         esw.cuts_intersections.append(
                             [bp, t - 1, d]
                         )
-            else:
-                self.s_walls += new_s_walls
-
-            if iteration == num_of_iterations:
-                # Last iteration finished. Do not find new joints,
-                break
-            #else:
-            #    n_finished_s_walls = len(self.s_walls)
-                    
-            # Find joints and seed S-walls at the joints. 
-            new_joints = [] # number of new joints found in each iteration
-            for i in range(n_finished_s_walls, len(self.s_walls)):
-                s_i = self.s_walls[i]
-                logger.info('Finding new joints from {}...'
-                            .format(s_i.label))
-                try:
-                    new_joints += self.get_new_joints(
-                        i, config, sw_data, get_intersections, use_cgal,
-                    )
-                except RuntimeError as e:
-                    error_msg = (
-                        'Error while finding joints of {}: {}\n'
-                        'Stop finding joints from this S-wall.'
-                        .format(s_i.label, e)
-                    )
-                    logger.error(error_msg)
-                    self.errors.append(
-                        ('RuntimeError', error_msg)
-                    )
+                else:
+                    self.s_walls.append(new_s_wall)
 
             if(len(new_joints) == 0):
-                logger.info(
-                    'No additional joint found: '
-                    'Stop growing this spectral network '
-                    'at iteration #{}.'.format(iteration)
-                )
-                break
-
-            new_s_walls = []
-            # Seed an S-wall for each new joint.
-            for joint in new_joints:
-                joint_is_new = True
-                # check if this is not in the previous joint list
-                for old_joint in self.joints:
-                    if joint.is_equal_to(old_joint, accuracy):
-                        joint_is_new = False
-                        break
-                if not joint_is_new:
-                    continue
-                joint.label = 'joint #{}'.format(len(self.joints))
-                self.joints.append(joint)
-                label = 'S-wall #{}'.format(len(self.s_walls))
-                if (
-                    config['mass_limit'] is None or 
-                    joint.M < config['mass_limit']
-                ):
-                    new_s_walls.append(
-                        SWall(
-                            z_0=joint.z,
-                            # The numerics of S-walls involves sheets
-                            # from the first fundamental cover.
-                            x_0=joint.ode_xs,
-                            M_0=joint.M,
-                            parents=joint.parents,
-                            # XXX: parent_roots != (roots of parents)
-                            parent_roots=joint.roots,
-                            label=label,
-                            n_steps=n_steps,
-                            logger_name=self.logger_name,
-                        )
+                if iteration < num_of_iterations:
+                    logger.info(
+                        'No additional joint found: '
+                        'Stop growing this spectral network '
+                        'at iteration #{}.'.format(iteration)
                     )
-
-            n_finished_s_walls = len(self.s_walls)
-
+                    break
+            else:
+                new_s_walls = []
+                # Seed an S-wall for each new joint.
+                for joint in new_joints:
+                    joint_is_new = True
+                    # check if this is not in the previous joint list
+                    for old_joint in self.joints:
+                        if joint.is_equal_to(old_joint, accuracy):
+                            joint_is_new = False
+                            break
+                    if not joint_is_new:
+                        continue
+                    joint.label = 'joint #{}'.format(len(self.joints))
+                    self.joints.append(joint)
+                    label = 'S-wall #{}'.format(len(self.s_walls))
+                    if (
+                        config['mass_limit'] is None or 
+                        joint.M < config['mass_limit']
+                    ):
+                        new_s_walls.append(
+                            SWall(
+                                z_0=joint.z,
+                                # The numerics of S-walls involves sheets
+                                # from the first fundamental cover.
+                                x_0=joint.ode_xs,
+                                M_0=joint.M,
+                                parents=joint.parents,
+                                # XXX: parent_roots != (roots of parents)
+                                parent_roots=joint.roots,
+                                label=label,
+                                n_steps=n_steps,
+                                logger_name=self.logger_name,
+                            )
+                        )
 
             logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
@@ -416,8 +411,10 @@ class SpectralNetwork:
             a_joint.set_from_json_data(joint_data)
             self.joints.append(a_joint)
 
-    def get_new_joints(self, new_s_wall_index, config, sw_data,
-                       get_intersections, use_cgal,):
+    def get_new_joints(
+        self, new_s_wall, prev_s_walls, config, sw_data, 
+        get_intersections, use_cgal,
+    ):
         """
         Find intersections between the new S-wall and 
         previoulsy existing S-walls using 
@@ -437,9 +434,7 @@ class SpectralNetwork:
             )
             return [] 
 
-        new_s_wall = self.s_walls[new_s_wall_index]
-
-        for prev_s_wall in self.s_walls[:new_s_wall_index]:
+        for prev_s_wall in prev_s_walls:
 
             # First check if the two S-walls are compatible
             # for forming a joint.
