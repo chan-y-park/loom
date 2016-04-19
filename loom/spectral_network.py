@@ -255,6 +255,10 @@ class SpectralNetwork:
 
             elif additional_n_steps > 0 and iteration == 1:
                 # Use the endpoint of each S-wall as a seed.
+                logger.info(
+                    'Extending S-walls by {} steps.'
+                    .format(additional_n_steps)
+                )
                 new_s_walls = [
                     SWall(
                             z_0=s_wall.z[-1],
@@ -269,6 +273,11 @@ class SpectralNetwork:
                     for s_wall in self.s_walls
                 ]
             elif additional_iterations > 0 and iteration == 1:
+                logger.info(
+                    'Do {} additional iterations to find joints '
+                    'and grow S-walls from them.'
+                    .format(additional_iterations)
+                )
                 new_s_walls = []
 
             # Grow each newly-seeded S-wall.
@@ -326,12 +335,12 @@ class SpectralNetwork:
                 .format(iteration)
             )
 
+            # New joints found in each iteration.
+            new_joints = [] 
             if iteration < num_of_iterations:
                 # Find joints between the new S-wall and the previous S-walls,
                 # and among the new S-walls.
 
-                # New joints found in each iteration.
-                new_joints = [] 
                 # S-walls that are already searched for joints.
                 finished_s_walls = self.s_walls[:self.n_finished_s_walls]
                 # S-walls that are not searched for joints.
@@ -423,14 +432,14 @@ class SpectralNetwork:
             new_s_walls = []
             # Seed an S-wall for each new joint.
             for joint in new_joints:
-                joint_is_new = True
-                # check if this is not in the previous joint list
-                for old_joint in self.joints:
-                    if joint.is_equal_to(old_joint, accuracy):
-                        joint_is_new = False
-                        break
-                if not joint_is_new:
-                    continue
+#                joint_is_new = True
+#                # check if this is not in the previous joint list
+#                for old_joint in self.joints:
+#                    if joint.is_equal_to(old_joint, accuracy):
+#                        joint_is_new = False
+#                        break
+#                if not joint_is_new:
+#                    continue
                 joint.label = 'joint #{}'.format(len(self.joints))
                 self.joints.append(joint)
                 label = 'S-wall #{}'.format(
@@ -455,10 +464,11 @@ class SpectralNetwork:
                             logger_name=self.logger_name,
                         )
                     )
-            logger.info(
-                'Seeded {} new S-walls.'
-                .format(len(new_s_walls))
-            )
+            if len(new_s_walls) > 0:
+                logger.info(
+                    'Seeded {} new S-walls.'
+                    .format(len(new_s_walls))
+                )
 
             logger.info('Iteration #{} finished.'.format(iteration))
             iteration += 1
@@ -645,7 +655,18 @@ class SpectralNetwork:
                             )
                         )
 
-        return new_joints
+        checked_new_joints = []
+        for joint in new_joints:
+            joint_is_new = True
+            # check if this is not in the previous joint list
+            for old_joint in self.joints:
+                if joint.is_equal_to(old_joint, accuracy):
+                    joint_is_new = False
+                    break
+            if joint_is_new:
+                checked_new_joints.append(joint)
+
+        return checked_new_joints
 
 
 def get_ode(sw, phase, accuracy):
