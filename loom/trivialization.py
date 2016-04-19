@@ -193,7 +193,11 @@ class IrregularSingularity:
     Just a container of information.
     Strictly related to the first fundamental representation cover.
     """
-    def __init__(self, z=None, label=None, json_data=None):
+    def __init__(
+        self, z=None, label=None, json_data=None,
+        logger_name='loom',
+    ):
+        self.logger_name = logger_name
         if json_data is None:
             self.z = z
             self.label = label
@@ -218,6 +222,7 @@ class IrregularSingularity:
         return json_data
 
     def print_info(self):
+        logger = logging.getLogger(self.logger_name)
         logger.info(
             "---------------------------------------------------------\n"
             "Irregular singularity at z = {}\n"

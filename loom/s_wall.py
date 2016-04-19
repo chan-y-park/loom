@@ -148,7 +148,7 @@ class SWall(object):
         self.parent_roots = parent_roots
         self.label = label
 
-        # cuts_intersections = [[b_pt_idx, i, '(c)cw'], ...]
+        # cuts_intersections = [[branch_point, i, '(c)cw'], ...]
         self.cuts_intersections = []
         #self.root_basepoint = []
         self.local_roots = []
@@ -158,7 +158,7 @@ class SWall(object):
 
         self.data_attributes = [
             'z', 'M', 'x', 'parents', 'parent_roots', 'label', 
-            'cuts_intersections', #'root_basepoint',
+            'cuts_intersections',
             'local_roots', 'multiple_local_roots', 'local_weight_pairs',
         ]
 
