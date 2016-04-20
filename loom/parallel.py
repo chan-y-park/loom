@@ -30,6 +30,9 @@ def a_child_process(
     config,
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks,
+    additional_n_steps,
+    new_mass_limit,
+    additional_iterations,
     logger_name,
 ):
     logger = logging.getLogger(logger_name)
@@ -41,8 +44,12 @@ def a_child_process(
                 .format(job_id, theta_n, spectral_network.phase))
    
     try:
-
-        spectral_network.grow(config, sw)
+        spectral_network.grow(
+            config, sw,
+            additional_n_steps=additional_n_steps,
+            new_mass_limit=new_mass_limit,
+            additional_iterations=additional_iterations,
+        )
 #    except (KeyboardInterrupt, SystemExit) as e:
 #        logger.warning('A child process calculating phase = {} '
 #                       'caught {}'.format(phase, type(e)))
@@ -124,6 +131,9 @@ def parallel_get_spectral_network(
                     config,
                     shared_n_started_spectral_networks,
                     shared_n_finished_spectral_networks,
+                    additional_n_steps,
+                    new_mass_limit,
+                    additional_iterations,
                     logger_name,
                 )
             ) for sn in spectral_networks

@@ -274,7 +274,7 @@ class SpectralNetwork:
                 ]
             elif additional_iterations > 0 and iteration == 1:
                 logger.info(
-                    'Do {} additional iterations to find joints '
+                    'Do {} additional iteration(s) to find joints '
                     'and grow S-walls from them.'
                     .format(additional_iterations)
                 )
@@ -376,12 +376,18 @@ class SpectralNetwork:
                             ('RuntimeError', error_msg)
                         )
                     finished_s_walls.append(unfinished_s_wall)
+                
+                if additional_n_steps > 0 and iteration == 1:
+                    self.n_finished_s_walls = len(self.s_walls)
+                else:
+                    self.n_finished_s_walls += len(unfinished_s_walls)
 
             for i, new_s_wall in enumerate(new_s_walls):
                 # Add the new S-wall to the spectral network
                 if additional_n_steps > 0 and iteration == 1:
                     # Attach new S-walls to existing S-walls
                     esw = self.s_walls[i]
+                    esw_n_t = len(esw.z)
                     asw = new_s_wall
                     if asw.label != esw.label:
                         raise RuntimeError(
@@ -401,7 +407,7 @@ class SpectralNetwork:
                     for ci in asw.cuts_intersections:
                         bp, t, d = ci
                         esw.cuts_intersections.append(
-                            [bp, t - 1, d]
+                            [bp, esw_n_t + t, d]
                         )
                     logger.info(
                         'Extended {} by {} steps.'
@@ -414,7 +420,6 @@ class SpectralNetwork:
                     #    .format(new_s_wall.label)
                     #)
 
-            self.n_finished_s_walls = len(self.s_walls)
 
             if(len(new_joints) == 0):
                 if iteration < num_of_iterations:

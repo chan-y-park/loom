@@ -78,28 +78,48 @@ class SpectralNetworkData:
         additional_iterations=0,
         additional_phases=[],
     ):
-        logger = self.logger
-        try:
-            logger.info('Extending the spectral networks...')
-            if len(self.spectral_networks) == 1:
-                sn = self.spectral_networks[0]
-                sn.grow(
-                    self.config,
-                    self.sw_data,
-                    additiona_iterations=additional_iterations,
-                    additional_n_steps=additional_n_steps,
-                    new_mass_limit=new_mass_limit,
-                )
-            else:
-                pass
-        except:
-            pass
+        logger = logging.getLogger(self.logger_name)
 
+        if additional_n_steps > 0 or additional_iterations > 0:
+            start_time = time.time()
+            logger.info('Started @ {}'.format(get_date_time_str(start_time)))
+            try:
+                logger.info('Extending spectral networks...')
+                if len(self.spectral_networks) == 1:
+                    sn = self.spectral_networks[0]
+                    sn.grow(
+                        self.config,
+                        self.sw_data,
+                        additional_iterations=additional_iterations,
+                        additional_n_steps=additional_n_steps,
+                        new_mass_limit=new_mass_limit,
+                    )
+                else:
+                    spectral_networks = parallel_get_spectral_network(
+                        sw,
+                        config,
+                        n_processes,
+                        additional_iterations=additional_iterations,
+                        additional_n_steps=additional_n_steps,
+                        new_mass_limit=new_mass_limit,
+                        logger_name=logger_name,
+                    )
+            except (KeyboardInterrupt, SystemExit) as e:
+                logger.warning(
+                    'SpectralNetworkData.extend() '
+                    'caught {} while generating spectral networks.'
+                    .format(type(e))
+                )
+
+        if len(additional_phases) > 0:
             logger.info(
                 'Adding spectral networks with phase = {}'
                 .format(additional_phases)
             )
 
+        end_time = time.time()
+        logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
+        logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
     def plot(self, plot_range=None):
         # TODO: Implement if needed.
@@ -297,6 +317,7 @@ def load_spectral_network(
             spectral_networks.append(spectral_network)
 
     data = SpectralNetworkData(
+        config=config,
         sw_data=sw_data,
         spectral_networks=spectral_networks,
     )
