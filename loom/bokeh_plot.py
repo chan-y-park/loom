@@ -22,15 +22,18 @@ def get_spectral_network_bokeh_plot(
     plot_width=800, plot_height=800,
     notebook=False, logger_name=None,
     marked_points=[],
-    reset_z_rotation=True,
+    without_errors=False,
 ):
     logger = logging.getLogger(logger_name)
 
-    spectral_networks = spectral_network_data.spectral_networks
-#    spectral_networks = [
-#        sn for sn in spectral_network_data.spectral_networks
-#        if len(sn.errors) == 0
-#    ]
+    if without_errors is True:
+        spectral_networks = [
+            sn for sn in spectral_network_data.spectral_networks
+            if len(sn.errors) == 0
+        ]
+    else:
+        spectral_networks = spectral_network_data.spectral_networks
+
     if len(spectral_networks) == 0:
         raise RuntimeError(
             'get_spectral_network_bokeh_plot(): '
@@ -38,12 +41,6 @@ def get_spectral_network_bokeh_plot(
         )
 
     sw_data = spectral_network_data.sw_data
-
-    if reset_z_rotation is True:
-        # Rotate the z-plane into the location defined by the curve.
-        spectral_network_data.reset_z_rotation()
-
-    bc_rotation = complex(sw_data.branch_cut_rotation)
 
     plot_width = plot_width
     plot_height = plot_height
@@ -132,7 +129,7 @@ def get_spectral_network_bokeh_plot(
 
     bcds = ColumnDataSource({'xs': [], 'ys': []})
     for bl in sw_data.branch_points + sw_data.irregular_singularities:
-        y_r = (2j * y_max) * bc_rotation 
+        y_r = (2j * y_max) * complex(sw_data.branch_cut_rotation)
         bcds.data['xs'].append([bl.z.real, bl.z.real + y_r.real])
         bcds.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
 
