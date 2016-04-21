@@ -25,9 +25,9 @@ def init_process():
 
 
 def a_child_process(
+    config,
     sw,
     spectral_network,
-    config,
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks,
     additional_n_steps,
@@ -46,9 +46,9 @@ def a_child_process(
     try:
         spectral_network.grow(
             config, sw,
+            additional_iterations=additional_iterations,
             additional_n_steps=additional_n_steps,
             new_mass_limit=new_mass_limit,
-            additional_iterations=additional_iterations,
         )
 #    except (KeyboardInterrupt, SystemExit) as e:
 #        logger.warning('A child process calculating phase = {} '
@@ -69,10 +69,10 @@ def a_child_process(
 
 
 def parallel_get_spectral_network(
-    sw, 
-    config,
-    n_processes,
+    config=None,
+    sw_data=None, 
     spectral_networks=None,
+    n_processes=0,
     additional_n_steps=0,
     new_mass_limit=0,
     additional_iterations=0,
@@ -126,9 +126,9 @@ def parallel_get_spectral_network(
             pool.apply_async(
                 a_child_process,
                 args=(
-                    sw,
-                    sn,
                     config,
+                    sw_data,
+                    sn,
                     shared_n_started_spectral_networks,
                     shared_n_finished_spectral_networks,
                     additional_n_steps,

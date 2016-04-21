@@ -37,23 +37,22 @@ class SpectralNetworkData:
         logger_name='loom',
     ):
         self.logger_name = logger_name
-
-        if config_file_path is not None:
-            config = load_config(
-                file_path=config_file_path,
-                logger_name=self.logger_name,
-            )
-        elif data_dir is not None:
-            config, spectral_network_data = load_spectral_network(
-                data_dir=data_dir,
-                logger_name=self.logger_name,
-            )
-            sw_data, spectral_networks = spectral_network_data
-
         self.config = config
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
         self.data_attributes = ['sw_data', 'spectral_networks',]
+
+        if config_file_path is not None:
+            self.config = load_config(
+                file_path=config_file_path,
+                logger_name=self.logger_name,
+            )
+        elif data_dir is not None:
+            load_spectral_network(
+                data_dir=data_dir,
+                spectral_network_data=self,
+                logger_name=self.logger_name,
+            )
 
     def save(self, data_dir=None):
         save_spectral_network(
@@ -63,13 +62,57 @@ class SpectralNetworkData:
             logger_name=self.logger_name,
         )
 
-    def generate(self, phase=None, n_processes=None,):
-        sw_data, spectral_networks = generate_spectral_network(
-            self.config, phase=phase, sw=self.sw_data,
-            n_processes=n_processes, logger_name=self.logger_name,
-        )
-        self.sw_data = sw_data
-        self.spectral_networks = spectral_networks
+    def generate(self, phase=None, n_processes=0,):
+        logger = logging.getLogger(self.logger_name)
+
+        if phase is None:
+            phase = self.config['phase']
+        else:
+            self.config['phase'] = phase
+
+        start_time = time.time()
+        logger.info('Started @ {}'.format(get_date_time_str(start_time)))
+
+        try:
+            self.sw_data = SWDataWithTrivialization(
+                self.config, logger_name=self.logger_name
+            )
+            if(isinstance(phase, float)):
+                logger.info('Generate a single spectral network at theta = {}.'
+                            .format(phase))
+                spectral_network = SpectralNetwork(
+                    phase=phase,
+                    logger_name=self.logger_name,
+                )
+
+                spectral_network.grow(self.config, self.sw_data)
+
+                self.spectral_networks = [spectral_network]
+
+            elif(isinstance(phase, list)):
+                logger.info('Generate multiple spectral networks.')
+                logger.info('phases = {}.'.format(phase))
+                self.spectral_networks = parallel_get_spectral_network(
+                    self.sw_data,
+                    self.config,
+                    n_processes,
+                    logger_name=self.logger_name,
+                )
+
+        except (KeyboardInterrupt, SystemExit) as e:
+            logger.warning(
+                'SpectralNetworkData.generate() '
+                'caught {} while generating spectral networks.'
+                .format(type(e))
+            )
+            self.sw_data = None
+            self.spectral_networks = None
+        # TODO: handle and print all the other exceptions
+        # to web UI.
+
+        end_time = time.time()
+        logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
+        logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
     def extend(
         self,
@@ -77,6 +120,7 @@ class SpectralNetworkData:
         new_mass_limit=0,
         additional_iterations=0,
         additional_phases=[],
+        n_processes=0,
     ):
         logger = logging.getLogger(self.logger_name)
 
@@ -95,14 +139,15 @@ class SpectralNetworkData:
                         new_mass_limit=new_mass_limit,
                     )
                 else:
-                    spectral_networks = parallel_get_spectral_network(
-                        sw,
-                        config,
-                        n_processes,
+                    self.spectral_networks = parallel_get_spectral_network(
+                        config=self.config,
+                        sw_data=self.sw_data,
+                        spectral_networks=self.spectral_networks,
+                        n_processes=n_processes,
                         additional_iterations=additional_iterations,
                         additional_n_steps=additional_n_steps,
                         new_mass_limit=new_mass_limit,
-                        logger_name=logger_name,
+                        logger_name=self.logger_name,
                     )
             except (KeyboardInterrupt, SystemExit) as e:
                 logger.warning(
@@ -272,6 +317,7 @@ def save_config(config, file_path=None, logger_name='loom',):
 
 def load_spectral_network(
     data_dir=None,
+    spectral_network_data=None,
     logging_queue=None,
     result_queue=None,
     logger_name='loom',
@@ -316,13 +362,18 @@ def load_spectral_network(
             spectral_network.set_from_json_data(json_data, sw_data)
             spectral_networks.append(spectral_network)
 
+    logger.info('Finished loading data from {}.'.format(data_dir))
+
+    if spectral_network_data is not None:
+        spectral_network_data.config = config
+        spectral_network_data.sw_data = sw_data
+        spectral_network_data.spectral_networks = spectral_networks
+        return None
+
     data = SpectralNetworkData(
-        config=config,
         sw_data=sw_data,
         spectral_networks=spectral_networks,
     )
-    logger.info('Finished loading data from {}.'.format(data_dir))
-
     rv = (config, data)
     if result_queue is None:
         return rv
@@ -410,7 +461,7 @@ def save_spectral_network(
 def generate_spectral_network(
     config,
     phase=None,
-    sw=None,
+    #sw=None,
     n_processes=0,
     result_queue=None,
     logging_queue=None,
@@ -433,8 +484,9 @@ def generate_spectral_network(
     logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
     try:
-        if sw is None:
-            sw = SWDataWithTrivialization(config, logger_name=logger_name)
+        #if sw is None:
+        #    sw = SWDataWithTrivialization(config, logger_name=logger_name)
+        sw = SWDataWithTrivialization(config, logger_name=logger_name)
 
         if(isinstance(phase, float)):
             logger.info('Generate a single spectral network at theta = {}.'
@@ -459,8 +511,11 @@ def generate_spectral_network(
             )
 
     except (KeyboardInterrupt, SystemExit) as e:
-        logger.warning('loom.api caught {} while generating spectral networks.'
-                       .format(type(e)))
+        logger.warning(
+            'loom.api.generate_spectral_network() '
+            'caught {} while generating spectral networks.'
+            .format(type(e))
+        )
         sw = None
         spectral_networks = None
     # TODO: handle and print all the other exceptions
