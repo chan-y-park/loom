@@ -2,7 +2,7 @@ import signal
 import multiprocessing
 import logging
 
-from spectral_network import SpectralNetwork
+#from spectral_network import SpectralNetwork
 
 
 def child_sigint_handler(signum, frame):
@@ -28,6 +28,7 @@ def a_child_process(
     config,
     sw,
     spectral_network,
+    pool_size,
     shared_n_started_spectral_networks,
     shared_n_finished_spectral_networks,
     additional_n_steps,
@@ -36,12 +37,12 @@ def a_child_process(
     logger_name,
 ):
     logger = logging.getLogger(logger_name)
-    theta_i, theta_f, theta_n = config['phase']
+    #theta_i, theta_f, theta_n = config['phase']
 
     shared_n_started_spectral_networks.value += 1
     job_id = shared_n_started_spectral_networks.value
     logger.info('Start generating spectral network #{}/{}: theta = {}.'
-                .format(job_id, theta_n, spectral_network.phase))
+                .format(job_id, pool_size, spectral_network.phase))
    
     try:
         spectral_network.grow(
@@ -55,15 +56,17 @@ def a_child_process(
 #                       'caught {}'.format(phase, type(e)))
 #        return None
     except Exception as e:
-        error_msg = ('A child process calculating phase = {} '
-                     'caught an exception: {}'.format(phase, e))
+        error_msg = (
+            'A child process calculating phase = {} caught an exception: {}'
+            .format(spectral_network.phase, e)
+        )
         logger.warning(error_msg)
         spectral_network.errors.append = ('Unknown', error_msg)
 #        return None 
 
     shared_n_finished_spectral_networks.value += 1
     logger.info('Finished generating spectral network #{}/{}.'
-                .format(shared_n_finished_spectral_networks.value, theta_n))
+                .format(shared_n_finished_spectral_networks.value, pool_size))
 
     return spectral_network
 
@@ -79,19 +82,20 @@ def parallel_get_spectral_network(
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
-    if spectral_networks is None:
-        theta_i, theta_f, theta_n = config['phase']
-        phases = [
-            (float(theta_i) + i * float(theta_f - theta_i) / (theta_n - 1))
-            for i in range(theta_n)
-        ]
-        spectral_networks = [
-            SpectralNetwork(
-                phase=phase, 
-                logger_name=logger_name,
-            ) 
-            for phase in phases
-        ]
+#    phase = config['phase']
+#    if spectral_networks is None and isinstance(phase, list) is True:
+#        theta_i, theta_f, theta_n = phase
+#        phases = [
+#            (float(theta_i) + i * float(theta_f - theta_i) / (theta_n - 1))
+#            for i in range(theta_n)
+#        ]
+#        spectral_networks = [
+#            SpectralNetwork(
+#                phase=phase, 
+#                logger_name=logger_name,
+#            ) 
+#            for phase in phases
+#        ]
 
     manager = multiprocessing.Manager()
     shared_n_started_spectral_networks = manager.Value('i', 0)
@@ -107,12 +111,12 @@ def parallel_get_spectral_network(
             n_processes = n_cpu - (-n_processes)
         else:
             logger.warning('The number of CPUs is smaller than {}.'
-                           .format(-config['n_processes']))
+                           .format(-n_processes))
             logger.warning('Set n_processes to 1.')
             n_processes = 1
     elif (n_cpu < n_processes):
             logger.warning('The number of CPUs is smaller than {}.'
-                           .format(config['n_processes']))
+                           .format(n_processes))
             logger.warning('Set n_processes to {}.'.format(n_cpu))
             n_processes = n_cpu
 
@@ -129,6 +133,7 @@ def parallel_get_spectral_network(
                     config,
                     sw_data,
                     sn,
+                    len(spectral_networks),
                     shared_n_started_spectral_networks,
                     shared_n_finished_spectral_networks,
                     additional_n_steps,

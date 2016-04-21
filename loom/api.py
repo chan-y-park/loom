@@ -1,17 +1,14 @@
 import time
 import os
-import sys
 import json
 import glob
 import zipfile
 import logging
 import subprocess
-import signal
 import matplotlib
-import traceback
+# import traceback
 # import pdb
 
-from cmath import pi
 from logging.handlers import RotatingFileHandler
 from logutils_queue import QueueHandler
 from config import LoomConfig
@@ -19,6 +16,7 @@ from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
+from misc import get_phases_from_dict 
 
 
 class SpectralNetworkData:
@@ -62,21 +60,28 @@ class SpectralNetworkData:
             logger_name=self.logger_name,
         )
 
-    def generate(self, phase=None, n_processes=0,):
+    def generate(self, phase=None, n_processes=0, extend=False):
         logger = logging.getLogger(self.logger_name)
-
+        
+        accuracy = self.config['accuracy']
         if phase is None:
             phase = self.config['phase']
-        else:
-            self.config['phase'] = phase
 
-        start_time = time.time()
-        logger.info('Started @ {}'.format(get_date_time_str(start_time)))
+        if extend is False:
+            self.config['phase'] = {'single': [], 'range': []}
+
+        set_config_phase(self.config, phase)
+
+        if extend is False:
+            start_time = time.time()
+            logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
         try:
-            self.sw_data = SWDataWithTrivialization(
-                self.config, logger_name=self.logger_name
-            )
+            if extend is False:
+                self.sw_data = SWDataWithTrivialization(
+                    self.config, logger_name=self.logger_name
+                )
+
             if(isinstance(phase, float)):
                 logger.info('Generate a single spectral network at theta = {}.'
                             .format(phase))
@@ -87,14 +92,26 @@ class SpectralNetworkData:
 
                 spectral_network.grow(self.config, self.sw_data)
 
-                self.spectral_networks = [spectral_network]
+                spectral_networks = [spectral_network]
 
-            elif(isinstance(phase, list)):
+            elif(isinstance(phase, list) or isinstance(phase, dict)):
+                phases = get_phases_from_dict(self.config['phase'], accuracy)
+
                 logger.info('Generate multiple spectral networks.')
                 logger.info('phases = {}.'.format(phase))
-                self.spectral_networks = parallel_get_spectral_network(
+
+                seed_spectral_networks = [
+                    SpectralNetwork(
+                        phase=a_phase,
+                        logger_name=self.logger_name,
+                    )
+                    for a_phase in phases
+                ]
+
+                spectral_networks = parallel_get_spectral_network(
                     self.sw_data,
                     self.config,
+                    seed_spectral_networks,
                     n_processes,
                     logger_name=self.logger_name,
                 )
@@ -105,21 +122,25 @@ class SpectralNetworkData:
                 'caught {} while generating spectral networks.'
                 .format(type(e))
             )
-            self.sw_data = None
-            self.spectral_networks = None
+            #self.sw_data = None
+            #self.spectral_networks = None
         # TODO: handle and print all the other exceptions
         # to web UI.
-
-        end_time = time.time()
-        logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
-        logger.info('elapsed cpu time: %.3f', end_time - start_time)
+        if extend is True:
+            self.spectral_networks += spectral_networks
+            self.spectral_networks.sort(key=lambda sn: sn.phase)
+        else:
+            self.spectral_networks = spectral_networks
+            end_time = time.time()
+            logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
+            logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
     def extend(
         self,
         additional_n_steps=0,
         new_mass_limit=0,
         additional_iterations=0,
-        additional_phases=[],
+        additional_phases=None,
         n_processes=0,
     ):
         logger = logging.getLogger(self.logger_name)
@@ -156,10 +177,15 @@ class SpectralNetworkData:
                     .format(type(e))
                 )
 
-        if len(additional_phases) > 0:
+        if additional_phases is not None:
             logger.info(
                 'Adding spectral networks with phase = {}'
                 .format(additional_phases)
+            )
+            self.generate(
+                phase=additional_phases,
+                n_processes=n_processes,
+                extend=True,
             )
 
         end_time = time.time()
@@ -458,10 +484,11 @@ def save_spectral_network(
     return None
 
 
+# XXX: generate_spectral_network() will be deprecated.
+# Use SpectralNetworkData.generate().
 def generate_spectral_network(
     config,
     phase=None,
-    #sw=None,
     n_processes=0,
     result_queue=None,
     logging_queue=None,
@@ -484,9 +511,7 @@ def generate_spectral_network(
     logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
     try:
-        #if sw is None:
-        #    sw = SWDataWithTrivialization(config, logger_name=logger_name)
-        sw = SWDataWithTrivialization(config, logger_name=logger_name)
+        sw_data = SWDataWithTrivialization(config, logger_name=logger_name)
 
         if(isinstance(phase, float)):
             logger.info('Generate a single spectral network at theta = {}.'
@@ -496,7 +521,7 @@ def generate_spectral_network(
                 logger_name=logger_name,
             )
 
-            spectral_network.grow(config, sw)
+            spectral_network.grow(config, sw_data)
 
             spectral_networks = [spectral_network]
 
@@ -504,9 +529,9 @@ def generate_spectral_network(
             logger.info('Generate multiple spectral networks.')
             logger.info('phases = {}.'.format(phase))
             spectral_networks = parallel_get_spectral_network(
-                sw,
-                config,
-                n_processes,
+                config=config,
+                sw_data=sw_data,
+                n_processes=n_processes,
                 logger_name=logger_name,
             )
 
@@ -516,41 +541,32 @@ def generate_spectral_network(
             'caught {} while generating spectral networks.'
             .format(type(e))
         )
-        sw = None
+        sw_data = None
         spectral_networks = None
-    # TODO: handle and print all the other exceptions
-    # to web UI.
-#    except Exception as e:
-#        #logger.error(
-#        #    '{}\n{}'.format(
-#        #        traceback.print_exc(),
-#        #        e,
-#        #    )
-#        #)
-#        logger.error('{}'.format(e,))
-#        sw = None
-#        spectral_networks = None
-#        #raise e
 
     end_time = time.time()
     logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
     logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
-    spectral_network_data = SpectralNetworkData(sw, spectral_networks)
+    spectral_network_data = SpectralNetworkData(
+        sw_data=sw_data, spectral_networks=spectral_networks,
+    )
+
     if logging_queue is not None:
         # Put a mark that generating spectral networks is done.
         try:
             logging_queue.put_nowait(None)
         except:
-            logger.warn("Failed in putting a finish mark "
-                        "in the logging queue.")
+            logger.warn(
+                'Failed in putting a finish mark in the logging queue.'
+            )
 
-    if result_queue is None:
-        return spectral_network_data
-    else:
+    if result_queue is not None:
         rv = (config, spectral_network_data)
         result_queue.put(rv)
         return None
+    else:
+        return spectral_network_data
 
 
 def make_spectral_network_plot(
@@ -630,3 +646,13 @@ def get_current_branch_version():
     )
 
     return version
+
+
+def set_config_phase(config, phase):
+    if isinstance(phase, float):
+        config['phase']['single'].append(phase)
+    elif isinstance(phase, list):
+        config['phase']['range'].append(phase)
+    elif(isinstance(phase, dict)):
+        config['phase']['single'] += phase['single']
+        config['phase']['range'] += phase['range']
