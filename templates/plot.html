@@ -72,6 +72,34 @@
         <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
     </form>
 
+    <form class="form-horizontal" action="{{ url_for('config')}}" method="post">
+        <div class="form-group">
+            <div class="col-xs-2">
+                <label class="control-label">
+                    Additional steps
+                </label>
+            </div>
+            <div class="col-xs-2">
+                <input type="text" class="form-control"
+                 name="additional_n_steps" value="100">
+            </div>
+            <div class="col-xs-2">
+                <label class="control-label">
+                   Mass limit 
+                </label>
+            </div>
+            <div class="col-xs-2">
+                <input type="text" class="form-control"
+                 name="new_mass_limit" value="{{ mass_limit }}">
+            </div>
+            <div class="col-xs-2">
+                <input type="submit" class="btn btn-default"
+                 id="add_steps_button" value="Extend">
+            </div>
+        </div>
+        <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
+    </form>
+
     <script>
         var save_data_to_server_form = 
             document.getElementById("save_data_to_server_form");
