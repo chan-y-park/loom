@@ -22,9 +22,9 @@ from api import (
     get_logging_handler,
     set_logging,
     load_config,
-    load_spectral_network,
-    save_spectral_network,
-    generate_spectral_network,
+#    load_spectral_network,
+#    save_spectral_network,
+#    generate_spectral_network,
     get_current_branch_version,
 )
 from config import LoomConfig
@@ -253,7 +253,7 @@ class LoomDB(object):
             logging.StreamHandler,
             logging_stream,
         )
-        stop_finish = False
+        #stop_finish = False
 
         try:
             result_queue = self.result_queues[process_uuid]
@@ -480,7 +480,7 @@ def config(n_processes=None):
                 additional_n_steps = int(
                     flask.request.form['additional_n_steps']
                 )
-            except KeyError, ValueError:
+            except (KeyError, ValueError):
                 additional_n_steps = None
             try:
                 new_mass_limit = flask.request.form['new_mass_limit']
@@ -490,7 +490,7 @@ def config(n_processes=None):
                 additional_iterations = int(
                     flask.request.form['additional_iterations']
                 )
-            except KeyError, ValueError:
+            except (KeyError, ValueError):
                 additional_iterations = None
                 
             logger_name = get_logger_name(process_uuid)

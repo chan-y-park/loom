@@ -61,7 +61,7 @@ class SpectralNetworkData:
         )
 
     def generate(
-        self, phase=None, n_processes=0, extend=False
+        self, phase=None, n_processes=0, extend=False,
         result_queue=None, logging_queue=None,
     ):
         logger = logging.getLogger(self.logger_name)
@@ -599,14 +599,14 @@ def generate_spectral_network(
         sw_data=sw_data, spectral_networks=spectral_networks,
     )
 
-    if logging_queue is not None:
-        # Put a mark that generating spectral networks is done.
-        try:
-            logging_queue.put_nowait(None)
-        except:
-            logger.warn(
-                'Failed in putting a finish mark in the logging queue.'
-            )
+    #if logging_queue is not None:
+    #    # Put a mark that generating spectral networks is done.
+    #    try:
+    #        logging_queue.put_nowait(None)
+    #    except:
+    #        logger.warn(
+    #            'Failed in putting a finish mark in the logging queue.'
+    #        )
 
     #if result_queue is not None:
     #    rv = (config, spectral_network_data)
