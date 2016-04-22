@@ -4,7 +4,7 @@ import signal
 import multiprocessing
 import threading
 import time
-# import pdb
+import pdb
 import flask
 import sys
 import logging
@@ -196,7 +196,11 @@ class LoomDB(object):
             logging_queue=logging_queue,
         )
 
-        if (additional_n_steps is None and additional_iterations is None):
+        if (
+            additional_n_steps is None and
+            additional_iterations is None and
+            additional_phases is None
+        ):
             result_queue = multiprocessing.Queue()
             self.result_queues[process_uuid] = result_queue
 
@@ -214,7 +218,8 @@ class LoomDB(object):
                 ),
             )
         else:
-            spectral_network_data = self.result_queues[process_uuid].get()
+            result_queue = self.result_queues[process_uuid]
+            spectral_network_data = result_queue.get()
             loom_process = multiprocessing.Process(
                 target=spectral_network_data.extend,
                 kwargs=dict(
@@ -225,7 +230,6 @@ class LoomDB(object):
                     n_processes=n_processes,
                     result_queue=result_queue,
                     logging_queue=logging_queue,
-                    logger_name=logger_name,
                 )
             )
         self.loom_processes[process_uuid] = loom_process
@@ -454,6 +458,10 @@ def config(n_processes=None):
     if flask.request.method == 'GET':
         # Load the default configuration.
         loom_config = get_loom_config()
+        if n_processes is None:
+            n_processes_val = DEFAULT_NUM_PROCESSES
+        else:
+            n_processes_val = eval(n_processes)
 
     elif flask.request.method == 'POST':
         try:
@@ -471,38 +479,44 @@ def config(n_processes=None):
                 loom_config.read(uploaded_config_file)
         else:
             if n_processes is None:
-                n_processes = flask.request.form['n_processes']
+                n_processes_val = eval(flask.request.form['n_processes'])
+            else:
+                n_processes_val = eval(n_processes)
             try:
                 process_uuid = flask.request.form['process_uuid']
             except KeyError:
                 process_uuid = str(uuid.uuid4())
-            try:
-                additional_n_steps = int(
-                    flask.request.form['additional_n_steps']
-                )
-            except (KeyError, ValueError):
-                additional_n_steps = None
-            try:
-                new_mass_limit = flask.request.form['new_mass_limit']
-            except KeyError:
-                new_mass_limit = None
-            try:
-                additional_iterations = int(
-                    flask.request.form['additional_iterations']
-                )
-            except (KeyError, ValueError):
-                additional_iterations = None
+
+            additional_params = {
+                'additional_n_steps': None,
+                'new_mass_limit': None,
+                'additional_iterations': None,
+                'additional_phases': None
+            }
+
+            for key in additional_params.keys():
+                try:
+                    additional_params[key] = eval(
+                        flask.request.form[key]
+                    )
+                except (KeyError, SyntaxError):
+                    pass
                 
             logger_name = get_logger_name(process_uuid)
-            loom_config = get_loom_config(flask.request.form, logger_name) 
+            if (
+                additional_params['additional_n_steps'] is None and
+                additional_params['additional_iterations'] is None and
+                additional_params['additional_phases'] is None
+            ):
+                loom_config = get_loom_config(flask.request.form, logger_name) 
+            else:
+                loom_config = None
 
             app = flask.current_app
             app.loom_db.start_loom_process(
                 process_uuid, logging.INFO, loom_config,
-                n_processes=eval(n_processes),
-                additional_n_steps=additional_n_steps,
-                new_mass_limit=new_mass_limit,
-                additional_iterations=additional_iterations,
+                n_processes=n_processes_val,
+                **additional_params
             )
             event_source_url = flask.url_for(
                 'logging_stream', process_uuid=process_uuid,
@@ -516,7 +530,7 @@ def config(n_processes=None):
         config_options=config_options,
         advanced_config_options=advanced_config_options,
         loom_config=loom_config,
-        n_processes=n_processes,
+        n_processes=n_processes_val,
         process_uuid=process_uuid,
         event_source_url=event_source_url,
         text_area_content=text_area_content,
@@ -565,6 +579,10 @@ def plot():
 
     elif flask.request.method == 'GET':
         data_dir = flask.request.args['data']
+        try:
+            n_processes = flask.request.args['n_processes']
+        except KeyError:
+            n_processes = None
         process_uuid = str(uuid.uuid4()) 
         progress_log = None
         full_data_dir = os.path.join(
@@ -580,8 +598,9 @@ def plot():
     # before putting it back to the queue. Otherwise
     # there can be a complication due to threading.
     if rotate_back is True:
-        bc_r = spectral_network_data.sw_data.branch_cut_rotation
-        spectral_network_data.set_z_rotation(1/bc_r)
+        #bc_r = spectral_network_data.sw_data.branch_cut_rotation
+        #spectral_network_data.set_z_rotation(1/bc_r)
+        spectral_network_data.rotate_back()
     else:
         spectral_network_data.reset_z_rotation()
  
@@ -852,7 +871,8 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
 
 def render_plot_template(
     spectral_network_data, process_uuid=None,
-    progress_log=None, download=False,
+    progress_log=None, n_processes=None,
+    download=False,
 ):
     loom_config = spectral_network_data.config
     download_data_url = download_plot_url = None
@@ -903,6 +923,7 @@ def render_plot_template(
         config_options=config_options,
         advanced_config_options=advanced_config_options,
         initial_phase=initial_phase,
+        n_processes=n_processes,
     )
 
 
@@ -916,7 +937,8 @@ def get_logging_file_path(logger_name):
 
 
 def record_stat(rv, stat_logger_name, ip, uuid):
-    config, spectral_network_data = rv
+    spectral_network_data = rv
+    config = spectral_network_data.config
     # Make a zipped config file and record the stat.
     config_file_name = '{}.ini'.format(uuid)
     zipfile_path = os.path.join(

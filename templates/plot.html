@@ -39,6 +39,8 @@
                 <input type="hidden" name="process_uuid" 
                  value="{{ process_uuid }}">
                 <input type="hidden" name="progress_log" value="">
+                <input type="hidden" name="n_processes"
+                 value="{{ n_processes }}">
                 <input type="hidden" name="rotate_back"
                  value="True">
                 <input type="submit" class="btn btn-default"
@@ -50,126 +52,121 @@
         document.getElementById("phase").innerHTML = document.getElementById("initial_phase").innerHTML;
     </script>
 </div>
-<div class="container">
 {% if download_data_url %}
-    <form class="form-horizontal" id="save_data_to_server_form" method="post">
-        <div class="form-group">
-            <div class="col-xs-2">
-                <label for="data_name_text" class="control-label">
-                    Save data to server as
-                </label>
+<!--<div class="container" style="background-color:Aqua; width=800px;">-->
+<div class="container">
+    <div class="col-xs-8" style="border:1px solid Gray; border-radius: 10px;">
+        <h4>Extend spectral networks</h4>
+        <form class="form-horizontal" action="{{ url_for('config')}}"
+         method="post">
+            <div class="form-group">
+                <div class="col-xs-3">
+                    <label class="control-label">
+                        Additional steps
+                    </label>
+                </div>
+                <div class="col-xs-2">
+                    <input type="text" class="form-control"
+                     name="additional_n_steps" value="">
+                </div>
+                <div class="col-xs-3">
+                    <label class="control-label">
+                        New mass limit 
+                    </label>
+                </div>
+                <div class="col-xs-2">
+                    <input type="text" class="form-control"
+                     name="new_mass_limit"
+                     value="{{ loom_config['mass_limit'] }}">
+                </div>
             </div>
-            <div class="col-xs-4">
-                <input type="text" class="form-control"
-                 name="data_name" id="data_name_text"
-                 value="{{ process_uuid }}">
+            <div class="form-group">
+                <div class="col-xs-3">
+                    <label class="control-label">
+                        Additional iterations
+                    </label>
+                </div>
+                <div class="col-xs-2">
+                    <input type="text" class="form-control"
+                     name="additional_iterations" value="">
+                </div>
+                <div class="col-xs-3">
+                    <label class="control-label">
+                        Additional phases 
+                    </label>
+                </div>
+                <div class="col-xs-2">
+                    <input type="text" class="form-control"
+                     name="additional_phases" value="">
+                </div>
             </div>
-            <div class="col-xs-2">
-                <input type="submit" class="btn btn-default"
-                 id="save_data_to_server_button" value="Save">
+            <div class="form-group">
+                <div class="col-xs-1">
+                    <input type="submit" class="btn btn-default"
+                     id="extend_button" value="Extend">
+                </div>
             </div>
-        </div>
-        <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
-    </form>
+            <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
+            <input type="hidden" name="n_processes" value="{{ n_processes }}">
+        </form>
+    </div>
+</div>
+<br/>
+<div class="container">
+    <div class="col-xs-8" style="border:1px solid Gray; border-radius: 10px;">
+        <h4>Save data</h4>
+        <form class="form-horizontal" id="save_data_to_server_form"
+         method="post">
+            <div class="form-group">
+                <div class="col-xs-2">
+                    <label for="data_name_text" class="control-label">
+                        Save data to server as
+                    </label>
+                </div>
+                <div class="col-xs-4">
+                    <input type="text" class="form-control"
+                     name="data_name" id="data_name_text"
+                     value="{{ process_uuid }}">
+                </div>
+                <div class="col-xs-2">
+                    <input type="submit" class="btn btn-default"
+                     id="save_data_to_server_button" value="Save">
+                </div>
+            </div>
+            <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
+        </form>
+     
+        <script>
+            var save_data_to_server_form = 
+                document.getElementById("save_data_to_server_form");
+            save_data_to_server_form.onsubmit = function () {
+                var w = window.open(
+                    "about:blank",
+                    "save_data_to_server_window",
+                    "toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0," +
+                    "resizable=0,width=600,height=200"
+                );
+                save_data_to_server_form.action =
+                    "{{ url_for('save_data_to_server') }}";
+                save_data_to_server_form.target = "save_data_to_server_window";
+                save_data_to_server_form.submit();
+            };
+        </script>
 
-    <form class="form-horizontal" action="{{ url_for('config')}}" method="post">
-        <div class="form-group">
-            <div class="col-xs-2">
-                <label class="control-label">
-                    Additional steps
-                </label>
-            </div>
-            <div class="col-xs-2">
-                <input type="text" class="form-control"
-                 name="additional_n_steps" value="">
-            </div>
-            <div class="col-xs-2">
-                <label class="control-label">
-                   Mass limit 
-                </label>
-            </div>
-            <div class="col-xs-2">
-                <input type="text" class="form-control"
-                 name="new_mass_limit"
-                 value="{{ loom_config['mass_limit'] }}">
-            </div>
-            <div class="col-xs-2">
-                <label class="control-label">
-                    Additional iterations
-                </label>
-            </div>
-            <div class="col-xs-2">
-                <input type="text" class="form-control"
-                 name="additional_iterations" value="">
-            </div>
-            <div class="col-xs-2">
-                <label class="control-label">
-                    Additional phases 
-                </label>
-            </div>
-            <div class="col-xs-2">
-                <input type="text" class="form-control"
-                 name="additional_phases" value="">
-            </div>
-            <div class="col-xs-2">
+        <form class="form-inline" id="download_form" method="post">
+            <div class="form-group">
                 <input type="submit" class="btn btn-default"
-                 id="extend_button" value="Extend">
-            </div>
-        </div>
-        <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
-        <input type="hidden" name="process_uuid" value="{{ n_processes }}">
-    </form>
-
-    <form class="form-horizontal" action="{{ url_for('config')}}" method="post">
-        <div class="form-group">
-            <div class="col-xs-2">
-                <label class="control-label">
-                    Additional iterations
-                </label>
-            </div>
-            <div class="col-xs-2">
-                <input type="text" class="form-control"
-                 name="additional_iterations" value="1">
-            </div>
-            <div class="col-xs-2">
+                 id="download_data_button" value="Download data"
+                 formaction="{{ download_data_url }}">
                 <input type="submit" class="btn btn-default"
-                 id="add_steps_button" value="Extend">
+                 id="download_plot_button" value="Download plot"
+                 formaction="{{ download_plot_url }}">
             </div>
-        </div>
-        <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
-        <input type="hidden" name="process_uuid" value="{{ n_processes }}">
-    </form>
-    <script>
-        var save_data_to_server_form = 
-            document.getElementById("save_data_to_server_form");
-        save_data_to_server_form.onsubmit = function () {
-            var w = window.open(
-                "about:blank",
-                "save_data_to_server_window",
-                "toolbar=0,scrollbars=0,location=0,statusbar=0,menubar=0," +
-                "resizable=0,width=600,height=200"
-            );
-            save_data_to_server_form.action =
-                "{{ url_for('save_data_to_server') }}";
-            save_data_to_server_form.target = "save_data_to_server_window";
-            save_data_to_server_form.submit();
-        };
-    </script>
-
-    <form class="form-inline" id="download_form" method="post">
-        <!--
-        <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
-        -->
-        <div class="form-group">
-            <input type="submit" class="btn btn-default"
-             id="download_data_button" value="Download data"
-             formaction="{{ download_data_url }}">
-            <input type="submit" class="btn btn-default"
-             id="download_plot_button" value="Download plot"
-             formaction="{{ download_plot_url }}">
-        </div>
-    </form>
-    <br/>
+        </form>
+        <br/>
+    </div>
+</div>
+<div class="container">
 {% endif %}
     <h2>Plot Information</h2>
     <textarea rows="24" cols="80">

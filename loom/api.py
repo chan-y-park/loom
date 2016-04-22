@@ -243,6 +243,10 @@ class SpectralNetworkData:
         z_r = self.sw_data.z_plane_rotation
         self.set_z_rotation(z_r)
 
+    def rotate_back(self):
+        bc_r = self.sw_data.branch_cut_rotation
+        self.set_z_rotation(1/bc_r)
+
 
 def get_logging_formatter(level):
     if level == logging.DEBUG:
