@@ -17,6 +17,7 @@ from io import BytesIO
 from Queue import Empty as QueueEmpty
 
 from api import (
+    SpectralNetworkData,
     get_loom_dir,
     get_logging_handler,
     set_logging,
@@ -180,6 +181,8 @@ class LoomDB(object):
 
     def start_loom_process(
         self, process_uuid, logging_level, loom_config, n_processes=None,
+        additional_n_steps=None, new_mass_limit=None,
+        additional_iterations=None, additional_phases=None,
     ):
         if n_processes is None:
             n_processes = DEFAULT_NUM_PROCESSES
@@ -193,19 +196,38 @@ class LoomDB(object):
             logging_queue=logging_queue,
         )
 
-        result_queue = multiprocessing.Queue()
-        self.result_queues[process_uuid] = result_queue
+        if (additional_n_steps is None and additional_iterations is None):
+            result_queue = multiprocessing.Queue()
+            self.result_queues[process_uuid] = result_queue
 
-        loom_process = multiprocessing.Process(
-            target=generate_spectral_network,
-            args=(loom_config,),
-            kwargs=dict(
-                n_processes=n_processes,
-                result_queue=result_queue,
-                logging_queue=logging_queue,
+            spectral_network_data = SpectralNetworkData(
+                config=loom_config,
                 logger_name=logger_name,
-            ),
-        )
+            )
+
+            loom_process = multiprocessing.Process(
+                target=spectral_network_data.generate,
+                kwargs=dict(
+                    n_processes=n_processes,
+                    result_queue=result_queue,
+                    logging_queue=logging_queue,
+                ),
+            )
+        else:
+            spectral_network_data = self.result_queues[process_uuid].get()
+            loom_process = multiprocessing.Process(
+                target=spectral_network_data.extend,
+                kwargs=dict(
+                    additional_n_steps=additional_n_steps,
+                    new_mass_limit=new_mass_limit,
+                    additional_iterations=additional_iterations,
+                    additional_phases=additional_phases,
+                    n_processes=n_processes,
+                    result_queue=result_queue,
+                    logging_queue=logging_queue,
+                    logger_name=logger_name,
+                )
+            )
         self.loom_processes[process_uuid] = loom_process
         self.is_alive[process_uuid] = True
         loom_process.start()
@@ -450,7 +472,27 @@ def config(n_processes=None):
         else:
             if n_processes is None:
                 n_processes = flask.request.form['n_processes']
-            process_uuid = str(uuid.uuid4())
+            try:
+                process_uuid = flask.request.form['process_uuid']
+            except KeyError:
+                process_uuid = str(uuid.uuid4())
+            try:
+                additional_n_steps = int(
+                    flask.request.form['additional_n_steps']
+                )
+            except KeyError, ValueError:
+                additional_n_steps = None
+            try:
+                new_mass_limit = flask.request.form['new_mass_limit']
+            except KeyError:
+                new_mass_limit = None
+            try:
+                additional_iterations = int(
+                    flask.request.form['additional_iterations']
+                )
+            except KeyError, ValueError:
+                additional_iterations = None
+                
             logger_name = get_logger_name(process_uuid)
             loom_config = get_loom_config(flask.request.form, logger_name) 
 
@@ -458,6 +500,9 @@ def config(n_processes=None):
             app.loom_db.start_loom_process(
                 process_uuid, logging.INFO, loom_config,
                 n_processes=eval(n_processes),
+                additional_n_steps=additional_n_steps,
+                new_mass_limit=new_mass_limit,
+                additional_iterations=additional_iterations,
             )
             event_source_url = flask.url_for(
                 'logging_stream', process_uuid=process_uuid,
@@ -510,12 +555,13 @@ def plot():
             pass
         process_uuid = flask.request.form['process_uuid']
         progress_log = flask.request.form['progress_log']
+        n_processes = flask.request.form['n_processes']
 
         if rotate_back is True:
-            rv = loom_db.result_queues[process_uuid].get()
+            spectral_network_data = loom_db.result_queues[process_uuid].get()
         else:
             # Finish loom_process
-            rv = loom_db.get_result(process_uuid)
+            spectral_network_data = loom_db.get_result(process_uuid)
 
     elif flask.request.method == 'GET':
         data_dir = flask.request.args['data']
@@ -524,12 +570,11 @@ def plot():
         full_data_dir = os.path.join(
             get_loom_dir(), 'data', data_dir
         )
-        rv = load_spectral_network(
-            full_data_dir, logger_name=get_logger_name()
+        spectral_network_data = SpectralNetworkData(
+            data_dir=full_data_dir,
+            logger_name=get_logger_name(process_uuid)
         )
         loom_db.result_queues[process_uuid] = multiprocessing.Queue()
-
-    loom_config, spectral_network_data = rv
 
     # XXX: Remeber to do any operation on data here
     # before putting it back to the queue. Otherwise
@@ -541,11 +586,11 @@ def plot():
         spectral_network_data.reset_z_rotation()
  
     # Put data back into the queue for future use.
-    loom_db.result_queues[process_uuid].put(rv)
+    loom_db.result_queues[process_uuid].put(spectral_network_data)
 
     return render_plot_template(
-        loom_config, spectral_network_data, process_uuid=process_uuid,
-        progress_log=progress_log,
+        spectral_network_data, process_uuid=process_uuid,
+        progress_log=progress_log, n_processes=n_processes,
     )
 
 
@@ -558,8 +603,8 @@ def save_data_to_server():
         logger = logging.getLogger(logger_name)
 
         loom_db = flask.current_app.loom_db
-        rv = loom_db.result_queues[process_uuid].get()
-        loom_config, spectral_network_data = rv
+        spectral_network_data = loom_db.result_queues[process_uuid].get()
+        #loom_config = spectral_network_data.config
 
         data_dir = os.path.join(get_loom_dir(), 'data', data_name,)
         # XXX: check if there is an existing dir with the same name.
@@ -569,12 +614,13 @@ def save_data_to_server():
                 'chose a different name.'.format(data_name)
             )
         else:
-            save_spectral_network(
-                loom_config,
-                spectral_network_data,
-                data_dir=data_dir,
-                logger_name=logger_name,
-            )
+            #save_spectral_network(
+            #    loom_config,
+            #    spectral_network_data,
+            #    data_dir=data_dir,
+            #    logger_name=logger_name,
+            #)
+            spectral_network_data.save(data_dir=data_dir,)
             msg = 'Data successfully saved as "{}".'.format(data_name)
 
     return flask.render_template(
@@ -585,8 +631,8 @@ def save_data_to_server():
 
 def download_data(process_uuid):
     loom_db = flask.current_app.loom_db
-    rv = loom_db.result_queues[process_uuid].get()
-    loom_config, spectral_network_data = rv
+    spectral_network_data = loom_db.result_queues[process_uuid].get()
+    loom_config = spectral_network_data.config
     sw_data = spectral_network_data.sw_data
     spectral_networks = spectral_network_data.spectral_networks
     data = {}
@@ -617,7 +663,7 @@ def download_data(process_uuid):
             zfp.writestr(zip_info, data_str)
     data_zip_fp.seek(0)
 
-    loom_db.result_queues[process_uuid].put(rv)
+    loom_db.result_queues[process_uuid].put(spectral_network_data)
 
     return flask.send_file(
         data_zip_fp,
@@ -629,9 +675,9 @@ def download_data(process_uuid):
 def download_plot(process_uuid):
     loom_db = flask.current_app.loom_db
 
-    rv = loom_db.result_queues[process_uuid].get()
-    loom_config, spectral_network_data = rv
-    loom_db.result_queues[process_uuid].put(rv)
+    spectral_network_data = loom_db.result_queues[process_uuid].get()
+    loom_config = spectral_network_data.config
+    loom_db.result_queues[process_uuid].put(spectral_network_data)
 
     plot_html_zip_fp = BytesIO()
     with zipfile.ZipFile(plot_html_zip_fp, 'w') as zfp:
@@ -805,9 +851,10 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
 
 
 def render_plot_template(
-    loom_config, spectral_network_data, process_uuid=None,
+    spectral_network_data, process_uuid=None,
     progress_log=None, download=False,
 ):
+    loom_config = spectral_network_data.config
     download_data_url = download_plot_url = None
     sw_data = spectral_network_data.sw_data
 

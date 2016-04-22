@@ -60,7 +60,10 @@ class SpectralNetworkData:
             logger_name=self.logger_name,
         )
 
-    def generate(self, phase=None, n_processes=0, extend=False):
+    def generate(
+        self, phase=None, n_processes=0, extend=False
+        result_queue=None, logging_queue=None,
+    ):
         logger = logging.getLogger(self.logger_name)
         
         accuracy = self.config['accuracy']
@@ -143,6 +146,19 @@ class SpectralNetworkData:
             logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
             logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
+            if logging_queue is not None:
+                # Put a mark that generating spectral networks is done.
+                try:
+                    logging_queue.put_nowait(None)
+                except:
+                    logger.warn(
+                        'Failed in putting a finish mark in the logging queue.'
+                    )
+
+            if result_queue is not None:
+                result_queue.put(self)
+
+
     def extend(
         self,
         additional_n_steps=0,
@@ -150,6 +166,8 @@ class SpectralNetworkData:
         additional_iterations=0,
         additional_phases=None,
         n_processes=0,
+        result_queue=None,
+        logging_queue=None,
     ):
         logger = logging.getLogger(self.logger_name)
         start_time = time.time()
@@ -199,6 +217,18 @@ class SpectralNetworkData:
         end_time = time.time()
         logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
         logger.info('elapsed cpu time: %.3f', end_time - start_time)
+
+        if logging_queue is not None:
+            # Put a mark that generating spectral networks is done.
+            try:
+                logging_queue.put_nowait(None)
+            except:
+                logger.warn(
+                    'Failed in putting a finish mark in the logging queue.'
+                )
+
+        if result_queue is not None:
+            result_queue.put(self)
 
     def plot(self, plot_range=None):
         # TODO: Implement if needed.
@@ -360,8 +390,8 @@ def save_config(config, file_path=None, logger_name='loom',):
 def load_spectral_network(
     data_dir=None,
     spectral_network_data=None,
-    logging_queue=None,
-    result_queue=None,
+    #logging_queue=None,
+    #result_queue=None,
     logger_name='loom',
 ):
     if data_dir is None:
@@ -416,12 +446,13 @@ def load_spectral_network(
         sw_data=sw_data,
         spectral_networks=spectral_networks,
     )
-    rv = (config, data)
-    if result_queue is None:
-        return rv
-    else:
-        result_queue.put(rv)
-        return None
+    return (config, data)
+    #rv = (config, data)
+    #if result_queue is None:
+    #    return rv
+    #else:
+    #    result_queue.put(rv)
+    #    return None
 
 
 def save_spectral_network(
@@ -506,8 +537,8 @@ def generate_spectral_network(
     config,
     phase=None,
     n_processes=0,
-    result_queue=None,
-    logging_queue=None,
+    #result_queue=None,
+    #logging_queue=None,
     logger_name='loom',
 ):
     """
@@ -577,12 +608,14 @@ def generate_spectral_network(
                 'Failed in putting a finish mark in the logging queue.'
             )
 
-    if result_queue is not None:
-        rv = (config, spectral_network_data)
-        result_queue.put(rv)
-        return None
-    else:
-        return spectral_network_data
+    #if result_queue is not None:
+    #    rv = (config, spectral_network_data)
+    #    result_queue.put(rv)
+    #    return None
+    #else:
+    #    return spectral_network_data
+
+    return spectral_network_data
 
 
 def make_spectral_network_plot(
