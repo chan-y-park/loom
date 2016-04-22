@@ -7,7 +7,7 @@ import logging
 import subprocess
 import matplotlib
 # import traceback
-# import pdb
+import pdb
 
 from logging.handlers import RotatingFileHandler
 from logutils_queue import QueueHandler
@@ -96,10 +96,18 @@ class SpectralNetworkData:
 
             elif(isinstance(phase, list) or isinstance(phase, dict)):
                 phases = get_phases_from_dict(self.config['phase'], accuracy)
-
+                if extend is True:
+                    phases = [
+                        a_phase for a_phase in phases
+                        if (
+                            min(
+                                [abs(sn.phase - a_phase)
+                                 for sn in self.spectral_networks]
+                            ) > accuracy
+                        )
+                    ]
                 logger.info('Generate multiple spectral networks.')
                 logger.info('phases = {}.'.format(phase))
-
                 seed_spectral_networks = [
                     SpectralNetwork(
                         phase=a_phase,
@@ -107,12 +115,12 @@ class SpectralNetworkData:
                     )
                     for a_phase in phases
                 ]
-
+                
                 spectral_networks = parallel_get_spectral_network(
-                    self.sw_data,
-                    self.config,
-                    seed_spectral_networks,
-                    n_processes,
+                    config=self.config,
+                    sw_data=self.sw_data,
+                    spectral_networks=seed_spectral_networks,
+                    n_processes=n_processes,
                     logger_name=self.logger_name,
                 )
 
@@ -144,10 +152,10 @@ class SpectralNetworkData:
         n_processes=0,
     ):
         logger = logging.getLogger(self.logger_name)
+        start_time = time.time()
+        logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
         if additional_n_steps > 0 or additional_iterations > 0:
-            start_time = time.time()
-            logger.info('Started @ {}'.format(get_date_time_str(start_time)))
             try:
                 logger.info('Extending spectral networks...')
                 if len(self.spectral_networks) == 1:
@@ -208,15 +216,23 @@ class SpectralNetworkData:
 
 def get_logging_formatter(level):
     if level == logging.DEBUG:
-        logging_format = '%(module)s@%(lineno)d: %(funcName)s: %(message)s'
+        logging_format = (
+            '%(process)d: %(module)s@%(lineno)d: %(funcName)s: %(message)s'
+        )
     elif level == logging.INFO:
         logging_format = '%(process)d: %(message)s'
     elif level == logging.WARNING:
-        logging_format = '=== WARNING ===\n%(funcName)s: %(message)s'
+        logging_format = (
+            '%(process)d: === WARNING ===\n'
+            '%(process)d: %(funcName)s: %(message)s'
+        )
     elif level == logging.ERROR:
-        logging_format = '### ERROR ###\n%(funcName)s: %(message)s'
+        logging_format = (
+            '%(process)d: ### ERROR ###\n'
+            '%(process)d: %(funcName)s: %(message)s'
+        )
     else:
-        logging_format = '%(message)s'
+        logging_format = '%(process)d: %(message)s'
     return logging.Formatter(logging_format)
 
 
@@ -649,10 +665,25 @@ def get_current_branch_version():
 
 
 def set_config_phase(config, phase):
+    config_phase = config['phase']
+    if isinstance(config_phase, dict) is False:
+        config_phase_single = []
+        config_phase_range = []
+        if isinstance(config_phase, float):
+            config_phase_single.append(config_phase)
+        elif isinstance(config_phase, list):
+            config_phase_range.append(config_phase)
+        config_phase = {
+            'single': config_phase_single,
+            'range': config_phase_range
+        }
+
     if isinstance(phase, float):
-        config['phase']['single'].append(phase)
+        config_phase['single'].append(phase)
     elif isinstance(phase, list):
-        config['phase']['range'].append(phase)
+        config_phase['range'].append(phase)
     elif(isinstance(phase, dict)):
-        config['phase']['single'] += phase['single']
-        config['phase']['range'] += phase['range']
+        config_phase['single'] += phase['single']
+        config_phase['range'] += phase['range']
+
+    config['phase'] = config_phase

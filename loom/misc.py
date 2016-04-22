@@ -469,8 +469,7 @@ def get_phases_from_dict(phase_dict, accuracy):
         theta_i, theta_f, theta_n = phase_range
         for i in range(theta_n):
             phase_list.append(
-                (float(theta_i) + 
-                 i * float(theta_f - theta_i) / (theta_n - 1))
+                float(theta_i) + i * float(theta_f - theta_i) / theta_n
             )
 
     phase_list.sort()

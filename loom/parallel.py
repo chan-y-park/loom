@@ -82,20 +82,20 @@ def parallel_get_spectral_network(
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
-#    phase = config['phase']
-#    if spectral_networks is None and isinstance(phase, list) is True:
-#        theta_i, theta_f, theta_n = phase
-#        phases = [
-#            (float(theta_i) + i * float(theta_f - theta_i) / (theta_n - 1))
-#            for i in range(theta_n)
-#        ]
-#        spectral_networks = [
-#            SpectralNetwork(
-#                phase=phase, 
-#                logger_name=logger_name,
-#            ) 
-#            for phase in phases
-#        ]
+    phase = config['phase']
+    if spectral_networks is None and isinstance(phase, list) is True:
+        theta_i, theta_f, theta_n = phase
+        phases = [
+            (float(theta_i) + i * float(theta_f - theta_i) / (theta_n - 1))
+            for i in range(theta_n)
+        ]
+        spectral_networks = [
+            SpectralNetwork(
+                phase=phase, 
+                logger_name=logger_name,
+            ) 
+            for phase in phases
+        ]
 
     manager = multiprocessing.Manager()
     shared_n_started_spectral_networks = manager.Value('i', 0)
