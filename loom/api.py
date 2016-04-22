@@ -173,6 +173,10 @@ class SpectralNetworkData:
         start_time = time.time()
         logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
+        # First rotate back the z-plane to the location
+        # where spectral networks are generated.
+        self.rotate_back()
+
         if additional_n_steps > 0 or additional_iterations > 0:
             try:
                 logger.info('Extending spectral networks...')
@@ -648,8 +652,6 @@ def make_spectral_network_plot(
         )
 
     # Rotate the z-plane into the location defined by the curve.
-    #z_r = sw_data.z_plane_rotation
-    #spectral_network_data.set_z_rotation(z_r)
     spectral_network_data.reset_z_rotation()
 
     for spectral_network in spectral_networks:
