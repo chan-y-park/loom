@@ -67,13 +67,12 @@ class SpectralNetworkData:
         logger = logging.getLogger(self.logger_name)
         
         accuracy = self.config['accuracy']
+
         if phase is None:
             phase = self.config['phase']
 
-        if extend is False:
-            self.config['phase'] = {'single': [], 'range': []}
-
-        set_config_phase(self.config, phase)
+#        if extend is False:
+#            self.config['phase'] = {'single': [], 'range': []}
 
         if extend is False:
             start_time = time.time()
@@ -85,7 +84,14 @@ class SpectralNetworkData:
                     self.config, logger_name=self.logger_name
                 )
 
-            if(isinstance(phase, float)):
+            set_config_phase(self.config, phase)
+            phases = get_phases_from_dict(self.config['phase'], accuracy)
+
+            if len(phases) == 0:
+                logger.warning('No phase to generate.')
+                spectral_networks = []
+
+            elif(len(phases) == 1):
                 logger.info('Generate a single spectral network at theta = {}.'
                             .format(phase))
                 spectral_network = SpectralNetwork(
@@ -97,7 +103,7 @@ class SpectralNetworkData:
 
                 spectral_networks = [spectral_network]
 
-            elif(isinstance(phase, list) or isinstance(phase, dict)):
+            else:
                 phases = get_phases_from_dict(self.config['phase'], accuracy)
                 if extend is True:
                     phases = [
@@ -133,8 +139,7 @@ class SpectralNetworkData:
                 'caught {} while generating spectral networks.'
                 .format(type(e))
             )
-            #self.sw_data = None
-            #self.spectral_networks = None
+
         # TODO: handle and print all the other exceptions
         # to web UI.
         if extend is True:
@@ -146,18 +151,17 @@ class SpectralNetworkData:
             logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
             logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
-            if logging_queue is not None:
-                # Put a mark that generating spectral networks is done.
-                try:
-                    logging_queue.put_nowait(None)
-                except:
-                    logger.warn(
-                        'Failed in putting a finish mark in the logging queue.'
-                    )
+        if logging_queue is not None:
+            # Put a mark that generating spectral networks is done.
+            try:
+                logging_queue.put_nowait(None)
+            except:
+                logger.warn(
+                    'Failed in putting a finish mark in the logging queue.'
+                )
 
-            if result_queue is not None:
-                result_queue.put(self)
-
+        if result_queue is not None:
+            result_queue.put(self)
 
     def extend(
         self,
@@ -704,6 +708,11 @@ def get_current_branch_version():
 
 
 def set_config_phase(config, phase):
+    """
+    set config['phase'] to a Python dict of form
+    {'single': [theta_1, theta_2, ...],
+     'range': [[theta_i, theta_f, theta_n], ...]}
+    """
     config_phase = config['phase']
     if isinstance(config_phase, dict) is False:
         config_phase_single = []
