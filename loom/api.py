@@ -95,7 +95,7 @@ def set_logging(
     remove_handlers=True,
     use_rotating_file_handler=False,
 ):
-    logging.basicConfig()
+    #logging.basicConfig()
     logger = logging.getLogger(logger_name)
     if logging_level is None:
         logging_level = logging.getLevelName(logging_level_name)
@@ -128,7 +128,7 @@ def set_logging(
         logger.addHandler(fh)
 
     if logging_stream is not None:
-        # Create a stream handler to stderr.
+        # Create a stream handler to logging_stream.
         logger.addHandler(
             get_logging_handler(
                 logging_level, logging.StreamHandler, logging_stream
