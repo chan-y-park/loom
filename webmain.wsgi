@@ -13,7 +13,7 @@ import time
 import pdb
 
 argv = sys.argv[1:]
-sys.stdout = sys.stderr
+#sys.stdout = sys.stderr
 print 'loom WSGI working directory: {}'.format(os.getcwd())
 
 from loom.api import get_loom_dir
