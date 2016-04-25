@@ -62,7 +62,7 @@ class SpectralNetworkData:
 
     def generate(
         self, phase=None, n_processes=0, extend=False,
-        result_queue=None, logging_queue=None,
+        result_queue=None, logging_queue=None, cache_dir=None,
     ):
         logger = logging.getLogger(self.logger_name)
         
@@ -79,13 +79,21 @@ class SpectralNetworkData:
             logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
         try:
+            set_config_phase(self.config, phase)
+            phases = get_phases_from_dict(self.config['phase'], accuracy)
+            if cache_dir is not None:
+                config_file_path = os.path.join(cache_dir, 'config.ini')
+                config.save(config_file_path)
+
             if extend is False:
                 self.sw_data = SWDataWithTrivialization(
                     self.config, logger_name=self.logger_name
                 )
-
-            set_config_phase(self.config, phase)
-            phases = get_phases_from_dict(self.config['phase'], accuracy)
+                if cache_dir is not None:
+                    sw_data_file_path = os.path.join(
+                        cache_dir, 'sw_data.json',
+                    )
+                    self.sw_data.save(sw_data_file_path)
 
             if len(phases) == 0:
                 logger.warning('No phase to generate.')
@@ -100,6 +108,11 @@ class SpectralNetworkData:
                 )
 
                 spectral_network.grow(self.config, self.sw_data)
+                if cache_dir is not None:
+                    sn_data_file_path = os.path.join(
+                        cache_dir, 'data_0.json',
+                    )
+                    spectral_network.save(sn_data_file_path)
 
                 spectral_networks = [spectral_network]
 
@@ -131,6 +144,7 @@ class SpectralNetworkData:
                     spectral_networks=seed_spectral_networks,
                     n_processes=n_processes,
                     logger_name=self.logger_name,
+                    cache_dir=cache_dir,
                 )
 
         except (KeyboardInterrupt, SystemExit) as e:
@@ -172,6 +186,7 @@ class SpectralNetworkData:
         n_processes=0,
         result_queue=None,
         logging_queue=None,
+        cache_dir=None,
     ):
         logger = logging.getLogger(self.logger_name)
         start_time = time.time()
@@ -193,6 +208,12 @@ class SpectralNetworkData:
                         additional_n_steps=additional_n_steps,
                         new_mass_limit=new_mass_limit,
                     )
+                    if cache_dir is not None:
+                        sn_data_file_path = os.path.join(
+                            cache_dir, 'data_0.json',
+                        )
+                        sn.save(sn_data_file_path)
+
                 else:
                     self.spectral_networks = parallel_get_spectral_network(
                         config=self.config,
@@ -220,6 +241,7 @@ class SpectralNetworkData:
                 phase=additional_phases,
                 n_processes=n_processes,
                 extend=True,
+                cache_dir=cache_dir,
             )
 
         end_time = time.time()
@@ -392,8 +414,9 @@ def save_config(config, file_path=None, logger_name='loom',):
     if file_path is None:
         return None
     logger.info('Saving configuration to {}.'.format(file_path))
-    with open(file_path, 'w') as fp:
-        config.parser.write(fp)
+#    with open(file_path, 'w') as fp:
+#        config.parser.write(fp)
+    config.save(file_path)
     logger.info('Finished saving configuration to {}.'.format(file_path))
 
     return None
@@ -417,14 +440,14 @@ def load_spectral_network(
         config.read(fp)
 
     # Check the version of the saved data.
-    current_version = get_current_branch_version()
-    version_file_path = os.path.join(data_dir, 'version')
     try:
+        current_version = get_current_branch_version()
+        version_file_path = os.path.join(data_dir, 'version')
         with open(version_file_path, 'r') as fp:
             data_version = fp.read()
-    except IOError:
+    except:
         data_version = None
-    if current_version != data_version:
+    if data_version is not None and current_version != data_version:
         logger.debug('The version of the data is different '
                      'from the current version of loom.')
 
@@ -441,10 +464,12 @@ def load_spectral_network(
     for data_file in data_file_list:
         logger.info('Loading {}...'.format(data_file))
         spectral_network = SpectralNetwork(logger_name=logger_name)
-        with open(data_file, 'r') as fp:
-            json_data = json.load(fp)
-            spectral_network.set_from_json_data(json_data, sw_data)
-            spectral_networks.append(spectral_network)
+#        with open(data_file, 'r') as fp:
+#            json_data = json.load(fp)
+#            spectral_network.set_from_json_data(json_data, sw_data)
+        spectral_network.load(data_file)
+        spectral_networks.append(spectral_network)
+    spectral_networks.sort(key=lambda sn: sn.phase)
 
     logger.info('Finished loading data from {}.'.format(data_dir))
 
@@ -509,9 +534,10 @@ def save_spectral_network(
     # Save geometric & trivialization data.
     sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
     logger.info('Saving data to {}.'.format(sw_data_file_path))
-    with open(sw_data_file_path, 'wb') as fp:
-        json_data = sw_data.get_json_data()
-        json.dump(json_data, fp,)
+#    with open(sw_data_file_path, 'wb') as fp:
+#        json_data = sw_data.get_json_data()
+#        json.dump(json_data, fp,)
+    sw_data.save(sw_data_file_path)
 
     # Save spectral network data.
     for i, spectral_network in enumerate(spectral_networks):
@@ -522,9 +548,10 @@ def save_spectral_network(
             )
         )
         logger.info('Saving data to {}.'.format(data_file_path))
-        with open(data_file_path, 'wb') as fp:
-            json_data = spectral_network.get_json_data()
-            json.dump(json_data, fp,)
+#        with open(data_file_path, 'wb') as fp:
+#            json_data = spectral_network.get_json_data()
+#            json.dump(json_data, fp,)
+        spectral_network.save(data_file_path)
 
     if make_zipped_file is True:
         # Make a compressed data file.

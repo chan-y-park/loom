@@ -41,6 +41,16 @@ class SpectralNetwork:
         for joint in self.joints:
             joint.set_z_rotation(z_rotation)
 
+    def save(self, file_path):
+        with open(file_path, 'wb') as fp:
+            json_data = self.get_json_data()
+            json.dump(json_data, fp,)
+
+    def load(self, file_path):
+        with open(file_path, 'r') as fp:
+            json_data = json.load(fp)
+            spectral_network.set_from_json_data(json_data, sw_data)
+
     def get_json_data(self):
         """
         Prepare the spectral network data in a JSON-compatible file.

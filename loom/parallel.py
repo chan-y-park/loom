@@ -1,6 +1,7 @@
 import signal
 import multiprocessing
 import logging
+from spectral_network import SpectralNetwork
 
 #from spectral_network import SpectralNetwork
 
@@ -35,6 +36,7 @@ def a_child_process(
     new_mass_limit,
     additional_iterations,
     logger_name,
+    cache_dir,
 ):
     logger = logging.getLogger(logger_name)
     #theta_i, theta_f, theta_n = config['phase']
@@ -68,7 +70,18 @@ def a_child_process(
     logger.info('Finished generating spectral network #{}/{}.'
                 .format(shared_n_finished_spectral_networks.value, pool_size))
 
-    return spectral_network
+    if cache_dir is None:
+        return spectral_network
+    else:
+        cache_file_path = os.path.join(
+            cache_dir,
+            'data_{}.json'.format(
+                str(job_id).zfill(len(str(len(pool_size) - 1)))
+            )
+        )
+        logger.info('Saving data to {}.'.format(cache_file_path))
+        spectral_network.save(cache_file_path)
+        return cache_file_path
 
 
 def parallel_get_spectral_network(
@@ -80,6 +93,7 @@ def parallel_get_spectral_network(
     new_mass_limit=0,
     additional_iterations=0,
     logger_name='loom',
+    cache_dir=None,
 ):
     logger = logging.getLogger(logger_name)
     phase = config['phase']
@@ -140,6 +154,7 @@ def parallel_get_spectral_network(
                     new_mass_limit,
                     additional_iterations,
                     logger_name,
+                    cache_dir,
                 )
             ) for sn in spectral_networks
         ]
@@ -147,7 +162,13 @@ def parallel_get_spectral_network(
 
         new_spectral_networks = []
         for result in results:
-            new_spectral_networks.append(result.get())
+            if cache_dir is None:
+                new_sn = result.get()
+            else:
+                new_sn_file_path = result.get() 
+                new_sn = SpectralNetwork(logger_name=logger_name)
+                new_sn.load(new_sn_file_path)
+            new_spectral_networks.append(new_sn)
 
     except (KeyboardInterrupt, SystemExit) as e:
         logger.warning('loom.parallel caught {}: {}; terminates processes...'

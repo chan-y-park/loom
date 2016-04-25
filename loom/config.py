@@ -149,3 +149,7 @@ class LoomConfig:
             for option in not_configured_options:
                 self.parser.set(section, option, 'None')
                 self[option] = None
+
+    def save(self, file_path):
+        with open(file_path, 'w') as fp:
+            self.parser.write(fp)
