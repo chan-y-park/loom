@@ -126,6 +126,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                        '------------------------\n')
         plot_legend += get_legend(
             g_data=g_data,
+            regular_punctures=punctures,
             branch_points=branch_points,
             irregular_singularities=irregular_singularities,
         )
