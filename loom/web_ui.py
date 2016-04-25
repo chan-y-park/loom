@@ -40,8 +40,9 @@ PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
 STAT_LOGGER_NAME = 'stat_of_' + WEB_APP_NAME
 DEFAULT_NUM_PROCESSES = 4
-DB_CLEANUP_CYCLE_SECS = 60
-LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
+DB_CLEANUP_CYCLE_SECS = 3600
+LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3600
+KEEP_ALIVE_INTERVAL = 600000  # in milliseconds
 
 # Array of config options. 
 # Entries that will be placed in the same row
@@ -534,6 +535,7 @@ def config(n_processes=None):
         process_uuid=process_uuid,
         event_source_url=event_source_url,
         text_area_content=text_area_content,
+        keep_alive_interval=KEEP_ALIVE_INTERVAL,
     )
 
 
@@ -924,6 +926,7 @@ def render_plot_template(
         advanced_config_options=advanced_config_options,
         initial_phase=initial_phase,
         n_processes=n_processes,
+        keep_alive_interval=KEEP_ALIVE_INTERVAL,
     )
 
 

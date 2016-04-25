@@ -13,7 +13,7 @@
 {% if process_uuid %}
         var keepAlive = setInterval(function () {
             $.get("{{ url_for('keep_alive', process_uuid=process_uuid)}}")
-        }, 3000);
+        }, {{keep_alive_interval}});
 {% endif %}
 
 {% if event_source_url %}
