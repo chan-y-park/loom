@@ -9,7 +9,7 @@ import flask
 import sys
 import logging
 import uuid
-import json
+#import json
 import zipfile
 import glob
 import shutil
@@ -24,7 +24,7 @@ from api import (
     get_logging_handler,
     set_logging,
     load_config,
-    get_current_branch_version,
+    #get_current_branch_version,
 )
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
@@ -677,23 +677,25 @@ def plot():
 def save_data_to_server():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
-        saved_data = eval(flask.request.form['saved_data_dir'])
+        saved_data = eval(flask.request.form['saved_data'])
         data_name = flask.request.form['data_name']
     else:
         raise RuntimeError
 
-        data_dir_to_save = os.path.join(get_loom_dir(), 'data', data_name,)
-        if os.path.exists(data_dir_to_save):
-            msg = (
-                'Data with name "{}" already exists, '
-                'chose a different name.'.format(data_name)
-            )
-        else:
-            full_data_dir = get_full_data_dir(process_uuid, saved_data)
-            files_to_copy = get_data_file_path_list(full_data_dir)
-            for src in files_to_copy:
-                shutil.copy(src, data_dir_to_save)
-            msg = 'Data successfully saved as "{}".'.format(data_name)
+    data_dir_to_save = os.path.join(get_loom_dir(), 'data', data_name,)
+    if os.path.exists(data_dir_to_save):
+        msg = (
+            'Data with name "{}" already exists, '
+            'chose a different name.'.format(data_name)
+        )
+    else:
+        os.makedirs(data_dir_to_save)
+        full_data_dir = get_full_data_dir(process_uuid, saved_data)
+        files_to_copy = get_data_file_path_list(full_data_dir)
+        for src in files_to_copy:
+            print src, data_dir_to_save
+            shutil.copy(src, data_dir_to_save)
+        msg = 'Data successfully saved as "{}".'.format(data_name)
 
     return flask.render_template(
         'save_message.html',
@@ -704,7 +706,7 @@ def save_data_to_server():
 def download_data():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
-        saved_data = eval(flask.request.form['saved_data_dir'])
+        saved_data = eval(flask.request.form['saved_data'])
     else:
         raise RuntimeError
     
@@ -713,8 +715,9 @@ def download_data():
 
     data_zip_fp = BytesIO()
     with zipfile.ZipFile(data_zip_fp, 'w') as zfp:
-        for file_name in files_to_zip:
-            zfp.write(file_name, compress_type=zipfile.ZIP_DEFLATED)
+        for file_path in files_to_zip:
+            arcname = os.path.basename(file_path)
+            zfp.write(file_path, arcname, compress_type=zipfile.ZIP_DEFLATED)
     data_zip_fp.seek(0)
 
     return flask.send_file(
@@ -727,10 +730,10 @@ def download_data():
 def download_plot():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
-        saved_data = eval(flask.request.form['saved_data_dir'])
+        saved_data = eval(flask.request.form['saved_data'])
     else:
         raise RuntimeError
-    
+
     full_data_dir = get_full_data_dir(process_uuid, saved_data)
     spectral_network_data = SpectralNetworkData(data_dir=full_data_dir)
 
@@ -744,8 +747,12 @@ def download_plot():
         zip_info.external_attr = 040664 << 16L
         zfp.writestr(
             zip_info,
-            render_plot_template(loom_config, spectral_network_data,
-                                 download=True,),
+            render_plot_template(
+                spectral_network_data,
+                process_uuid=process_uuid,
+                saved_data=saved_data,
+                download=True,
+            ),
         )
     plot_html_zip_fp.seek(0)
 
@@ -968,7 +975,7 @@ def render_plot_template(
         bokeh_custom_script=bokeh_custom_script,
         #download_data_url=download_data_url,
         #download_plot_url=download_plot_url,
-        download=str(download)
+        download=str(download),
         loom_config=loom_config,
         config_options=config_options,
         advanced_config_options=advanced_config_options,
@@ -1009,13 +1016,13 @@ def get_full_data_dir(process_uuid, saved_data):
     
 
 def get_data_file_path_list(data_dir):
-    data_file_path_list = glob.glob(os.path.join(full_data_dir, 'data_*.json'))
+    data_file_path_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
     data_file_path_list.sort()
 
     data_file_path_list += [
-        os.path.join(full_data_dir, 'version')
-        os.path.join(full_data_dir, 'config.ini')
-        os.path.join(full_data_dir, 'sw_data.json')
+        os.path.join(data_dir, 'version'),
+        os.path.join(data_dir, 'config.ini'),
+        os.path.join(data_dir, 'sw_data.json'),
     ]
 
     return data_file_path_list

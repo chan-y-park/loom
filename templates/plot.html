@@ -13,7 +13,6 @@
     {{ bokeh_plot_script | safe }}
 {% endblock %}
 {% block body %}
-
 <div class="container">
     <h2>Plot</h2>
     <ul style="width:800px;">
@@ -34,6 +33,7 @@
 {{ div['redraw_arrows_button']|safe }}
 {{ div['show_data_points_button']|safe }}
 {{ div['hide_data_points_button']|safe }}
+{% if download == 'False' %}
             <form class="form-inline" action="{{ url_for('plot') }}"
              method="post">
                 <input type="hidden" name="process_uuid" 
@@ -48,13 +48,14 @@
                 <input type="submit" class="btn btn-default"
                  value="Rotate back">
             </form>
+{% endif %}
         </div>
     </div>
     <script type="text/javascript">
         document.getElementById("phase").innerHTML = document.getElementById("initial_phase").innerHTML;
     </script>
 </div>
-{% if download == 'True' %}
+{% if download == 'False' %}
 <div class="container">
     <div class="col-xs-8" style="border:1px solid Gray; border-radius: 10px;">
         <h4>Extend spectral networks</h4>
@@ -177,8 +178,8 @@
         <br/>
     </div>
 </div>
-<div class="container">
 {% endif %}
+<div class="container">
     <h2>Plot Information</h2>
     <textarea rows="24" cols="80">
 {{ plot_legend|safe }}
