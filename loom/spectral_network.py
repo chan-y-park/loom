@@ -6,6 +6,7 @@ import ctypes
 import logging
 import pdb
 import itertools
+import json
 
 from cmath import exp
 from scipy import integrate
@@ -46,10 +47,10 @@ class SpectralNetwork:
             json_data = self.get_json_data()
             json.dump(json_data, fp,)
 
-    def load(self, file_path):
+    def load(self, file_path, sw_data):
         with open(file_path, 'r') as fp:
             json_data = json.load(fp)
-            spectral_network.set_from_json_data(json_data, sw_data)
+            self.set_from_json_data(json_data, sw_data)
 
     def get_json_data(self):
         """

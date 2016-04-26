@@ -2,12 +2,12 @@ import sympy
 import numpy
 import logging
 import copy
+import json
 import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo, I
 from sympy.mpmath import mp
-# from sympy.mpmath.libmp.libhyper import NoConvergence
 from itertools import combinations
 from cmath import phase, pi
 from matplotlib import cm as mpl_color_map
@@ -728,7 +728,10 @@ class SWDataBase(object):
                 'Branch points may be too close to each other '
                 'for numerical trivialization. Spread is {}.\n'
                 'Branch points are:\n{}'
-                .format(spread, [rp.z for rp in ffr_ramification_points])
+                .format(
+                    spread,
+                    [ffr_rp.z for ffr_rp in ffr_ramification_points]
+                )
             )
 
         logger.debug('These are the punctures:')
@@ -901,8 +904,8 @@ class SWDataBase(object):
         self.z_plane_rotation /= z_rotation
 
     def save(self, file_path):
-        with open(sw_data_file_path, 'wb') as fp:
-            json_data = sw_data.get_json_data()
+        with open(file_path, 'wb') as fp:
+            json_data = self.get_json_data()
             json.dump(json_data, fp,)
 
     def get_json_data(self):
@@ -1587,16 +1590,16 @@ def get_ramification_points_using_discriminant(
     for fact in factors:
         logger.debug('stuyding roots of factor {}'.format(fact))
         # separate the factor itself and the multiplicity
-        f_multiplicity = fact[1]
+        #f_multiplicity = fact[1]
         f_P = sympy.Poly(fact[0], z)
         # f_m = fact[1]
-        cs = [
-            c_sym.evalf(
-                subs=subs_dict, n=ROOT_FINDING_PRECISION
-            ).as_real_imag()
-            for c_sym in f_P.all_coeffs()
-        ]
-        f_P_coeffs = [mpmath.mpc(*c) for c in cs]
+        #cs = [
+        #    c_sym.evalf(
+        #        subs=subs_dict, n=ROOT_FINDING_PRECISION
+        #    ).as_real_imag()
+        #    for c_sym in f_P.all_coeffs()
+        #]
+        #f_P_coeffs = [mpmath.mpc(*c) for c in cs]
 
         f_roots = None
 

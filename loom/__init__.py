@@ -1,7 +1,7 @@
 import os
 import time
 import platform
-import logging
+#import logging
 import sys
 import matplotlib
 if matplotlib.rcParams['backend'] == 'nbAgg':

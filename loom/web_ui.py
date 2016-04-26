@@ -184,6 +184,7 @@ class LoomDB(object):
 
     def start_loom_process(
         self, process_uuid, logging_level, loom_config, n_processes=None,
+        full_data_dir=None,
         additional_n_steps=None, new_mass_limit=None,
         additional_iterations=None, additional_phases=None,
     ):
@@ -227,8 +228,10 @@ class LoomDB(object):
             )
 
         else:
-            result_queue = self.result_queues[process_uuid]
-            spectral_network_data = result_queue.get()
+            spectral_network_data = SpectralNetworkData(
+                data_dir=full_data_dir,
+                logger_name=logger_name,
+            )
             loom_process = multiprocessing.Process(
                 target=spectral_network_data.extend,
                 kwargs=dict(
@@ -421,6 +424,23 @@ class LoomDB(object):
             ) 
             pass
 
+        try:
+            # Flush the result queue.
+            result_queue = self.result_queues[process_uuid]
+            while result_queue.empty() is True:
+                try:
+                    result_queue.get_nowait()
+                except QueueEmpty:
+                    break
+            # Remove the result queue.
+            del self.result_queues[process_uuid]
+        except KeyError:
+            web_loom_logger.warning(
+                "Removing result queue {} failed: no such a queue exists."
+                .format(process_uuid)
+            ) 
+            pass
+
 
 class WebLoomApplication(flask.Flask):
     """
@@ -500,6 +520,7 @@ def config(n_processes=None):
             uploaded_config_file = None
 
         if uploaded_config_file is not None:
+            # Load configuration from the uploaded file.
             if uploaded_config_file.filename == '':
                 # Load button clicked without a selected file.
                 # Load the default configuration.
@@ -508,14 +529,22 @@ def config(n_processes=None):
                 loom_config = LoomConfig(logger_name=get_logger_name())
                 loom_config.read(uploaded_config_file)
         else:
+            # Generate/Extend spectral networks.
             if n_processes is None:
                 n_processes_val = eval(flask.request.form['n_processes'])
             else:
                 n_processes_val = eval(n_processes)
+
+            process_uuid = str(uuid.uuid4())
+#            try:
+#                process_uuid = flask.request.form['process_uuid']
+#            except KeyError:
+#                process_uuid = str(uuid.uuid4())
+
             try:
-                process_uuid = flask.request.form['process_uuid']
+                full_data_dir = flask.request.form['full_data_dir']
             except KeyError:
-                process_uuid = str(uuid.uuid4())
+                full_data_dir = None 
 
             additional_params = {
                 'additional_n_steps': None,
@@ -533,6 +562,7 @@ def config(n_processes=None):
                     pass
                 
             logger_name = get_logger_name(process_uuid)
+
             if (
                 additional_params['additional_n_steps'] is None and
                 additional_params['additional_iterations'] is None and
@@ -546,6 +576,7 @@ def config(n_processes=None):
             app.loom_db.start_loom_process(
                 process_uuid, logging.INFO, loom_config,
                 n_processes=n_processes_val,
+                full_data_dir=full_data_dir,
                 **additional_params
             )
             event_source_url = flask.url_for(
@@ -567,6 +598,11 @@ def config(n_processes=None):
         #keep_alive_interval=KEEP_ALIVE_INTERVAL,
     )
 
+
+# FIXME: consider separating progress from config
+def progress():
+    pass
+ 
 
 def logging_stream(process_uuid):
     if flask.request.headers.get('accept') == 'text/event-stream':
@@ -592,68 +628,74 @@ def save_config():
 def plot():
     loom_db = flask.current_app.loom_db
     rotate_back = False
+    saved_data = None
+    full_data_dir = None
 
     if flask.request.method == 'POST':
         try:
-            rotate_back = bool(flask.request.form['rotate_back'])
+            rotate_back = eval(flask.request.form['rotate_back'])
         except KeyError:
             pass
         process_uuid = flask.request.form['process_uuid']
         progress_log = flask.request.form['progress_log']
         n_processes = flask.request.form['n_processes']
+        saved_data = eval(flask.request.form['saved_data'])
 
         if rotate_back is True:
-            #spectral_network_data = loom_db.result_queues[process_uuid].get()
-            cache_dir = get_cache_dir(process_uuid)
+            if saved_data is True:
+                data_dir = process_uuid
+                full_data_dir = os.path.join(
+                    get_loom_dir(), 'data', data_dir
+                )
+            else:
+                full_data_dir = get_cache_dir(process_uuid)
+
             spectral_network_data = SpectralNetworkData(
-                data_dir=cache_dir,
+                data_dir=full_data_dir,
             )
-            process_uuid = str(uuid.uuid4()) 
         else:
             # Finish loom_process
             spectral_network_data = loom_db.get_result(process_uuid)
+            full_data_dir = get_cache_dir(process_uuid)
 
     elif flask.request.method == 'GET':
+        # Load saved data.
         data_dir = flask.request.args['data']
         try:
             n_processes = flask.request.args['n_processes']
         except KeyError:
             n_processes = None
-        process_uuid = str(uuid.uuid4()) 
+        #process_uuid = str(uuid.uuid4()) 
+        process_uuid = data_dir
         progress_log = None
         full_data_dir = os.path.join(
             get_loom_dir(), 'data', data_dir
         )
         spectral_network_data = SpectralNetworkData(
             data_dir=full_data_dir,
-            logger_name=get_logger_name(process_uuid)
+            #logger_name=get_logger_name(process_uuid)
         )
-        #loom_db.result_queues[process_uuid] = multiprocessing.Queue()
+        saved_data = True
 
-    # XXX: Remeber to do any operation on data here
-    # before putting it back to the queue. Otherwise
-    # there can be a complication due to threading.
     if rotate_back is True:
         spectral_network_data.rotate_back()
     else:
         spectral_network_data.reset_z_rotation()
  
-    # Put data back into the queue for future use.
-    #loom_db.result_queues[process_uuid].put(spectral_network_data)
-
     return render_plot_template(
         spectral_network_data, process_uuid=process_uuid,
         progress_log=progress_log, n_processes=n_processes,
+        saved_data=saved_data, full_data_dir=full_data_dir,
     )
 
-
+# FIXME: use cached files
 def save_data_to_server():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
         data_name = flask.request.form['data_name']
 
-        logger_name = get_logger_name(process_uuid)
-        logger = logging.getLogger(logger_name)
+        #logger_name = get_logger_name(process_uuid)
+        #logger = logging.getLogger(logger_name)
 
         loom_db = flask.current_app.loom_db
         spectral_network_data = loom_db.result_queues[process_uuid].get()
@@ -681,7 +723,7 @@ def save_data_to_server():
         msg=msg,
     )
 
-
+# FIXME: use cache files
 def download_data(process_uuid):
     #loom_db = flask.current_app.loom_db
     #spectral_network_data = loom_db.result_queues[process_uuid].get()
@@ -715,7 +757,7 @@ def download_data(process_uuid):
             zip_info = zipfile.ZipInfo(file_name)
             zip_info.date_time = time.localtime(time.time())[:6]
             zip_info.compress_type = zipfile.ZIP_DEFLATED
-            zip_info.external_attr = 0664 << 16L
+            zip_info.external_attr = 040664 << 16L
             zfp.writestr(zip_info, data_str)
     data_zip_fp.seek(0)
 
@@ -735,14 +777,14 @@ def download_plot(process_uuid):
     spectral_network_data = SpectralNetworkData(data_dir=cache_dir,)
 
     loom_config = spectral_network_data.config
-    loom_db.result_queues[process_uuid].put(spectral_network_data)
+    #loom_db.result_queues[process_uuid].put(spectral_network_data)
 
     plot_html_zip_fp = BytesIO()
     with zipfile.ZipFile(plot_html_zip_fp, 'w') as zfp:
         zip_info = zipfile.ZipInfo('loom_plot_{}.html'.format(process_uuid))
         zip_info.date_time = time.localtime(time.time())[:6]
         zip_info.compress_type = zipfile.ZIP_DEFLATED
-        zip_info.external_attr = 0777 << 16L
+        zip_info.external_attr = 040664 << 16L
         zfp.writestr(
             zip_info,
             render_plot_template(loom_config, spectral_network_data,
@@ -764,31 +806,31 @@ def download_E6_E7_data():
     )
 
 
-def keep_alive(process_uuid):
-    """
-    Receive heartbeats from clients.
-    """
-    logger = logging.getLogger(get_logger_name())
-    app = flask.current_app
-    try:
-        is_alive = app.loom_db.is_alive
-        if is_alive[process_uuid] is False:
-            is_alive[process_uuid] = True
-        logger.debug(
-            'is_alive[{}] = {}'
-            .format(process_uuid, app.loom_db.is_alive[process_uuid])
-        )
-    except KeyError:
-        pass
-    return ('', 204)
+#def keep_alive(process_uuid):
+#    """
+#    Receive heartbeats from clients.
+#    """
+#    logger = logging.getLogger(get_logger_name())
+#    app = flask.current_app
+#    try:
+#        is_alive = app.loom_db.is_alive
+#        if is_alive[process_uuid] is False:
+#            is_alive[process_uuid] = True
+#        logger.debug(
+#            'is_alive[{}] = {}'
+#            .format(process_uuid, app.loom_db.is_alive[process_uuid])
+#        )
+#    except KeyError:
+#        pass
+#    return ('', 204)
         
 
-def admin():
-    # TODO: password-protect this page.
-    # app = flask.current_app
-    # loom_db = app.loom_db
-    # pdb.set_trace()
-    return ('', 204)
+#def admin():
+#    # TODO: password-protect this page.
+#    # app = flask.current_app
+#    # loom_db = app.loom_db
+#    # pdb.set_trace()
+#    return ('', 204)
 
 
 def shutdown():
@@ -820,6 +862,9 @@ def get_application(config_file, logging_level):
         '/config', 'config', config, methods=['GET', 'POST'],
     )
     application.add_url_rule(
+        '/progress', 'progress', config, methods=['POST'],
+    )
+    application.add_url_rule(
         '/save_config', 'save_config', save_config, methods=['POST'],
     )
     application.add_url_rule(
@@ -843,18 +888,18 @@ def get_application(config_file, logging_level):
         '/logging_stream/<process_uuid>', 'logging_stream', logging_stream,
         methods=['GET'],
     )
-    application.add_url_rule(
-        '/keep_alive/<process_uuid>', 'keep_alive', keep_alive,
-        methods=['GET'],
-    )
+#    application.add_url_rule(
+#        '/keep_alive/<process_uuid>', 'keep_alive', keep_alive,
+#        methods=['GET'],
+#    )
     application.add_url_rule(
         '/E6_E7_data', 'download_E6_E7_data', download_E6_E7_data,
         methods=['GET'],
     )
-    application.add_url_rule(
-        '/admin', 'admin', admin,
-        methods=['GET'],
-    )
+#    application.add_url_rule(
+#        '/admin', 'admin', admin,
+#        methods=['GET'],
+#    )
     application.add_url_rule(
         '/shutdown', 'shutdown', shutdown,
         methods=['GET'],
@@ -911,7 +956,8 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
 def render_plot_template(
     spectral_network_data, process_uuid=None,
     progress_log=None, n_processes=None,
-    download=False,
+    download=False, saved_data=False,
+    full_data_dir=None,
 ):
     loom_config = spectral_network_data.config
     download_data_url = download_plot_url = None
@@ -963,7 +1009,8 @@ def render_plot_template(
         advanced_config_options=advanced_config_options,
         initial_phase=initial_phase,
         n_processes=n_processes,
-        #keep_alive_interval=KEEP_ALIVE_INTERVAL,
+        saved_data=saved_data,
+        full_data_dir=full_data_dir,
     )
 
 
@@ -1009,3 +1056,4 @@ def record_stat(stat_logger_name, ip, uuid, data_size):
 
     stat_logger = logging.getLogger(stat_logger_name)
     stat_logger.info('{}, {}, {}'.format(ip, uuid, data_size))
+

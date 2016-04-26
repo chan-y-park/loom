@@ -1,6 +1,8 @@
 import signal
 import multiprocessing
 import logging
+import os
+
 from spectral_network import SpectralNetwork
 
 #from spectral_network import SpectralNetwork
@@ -26,37 +28,34 @@ def init_process():
 
 
 def a_child_process(
-    config,
-    sw,
-    spectral_network,
-    pool_size,
-    shared_n_started_spectral_networks,
-    shared_n_finished_spectral_networks,
-    additional_n_steps,
-    new_mass_limit,
-    additional_iterations,
-    logger_name,
-    cache_dir,
+    config=None,
+    sw_data=None,
+    spectral_network=None,
+    job_id=None,
+    n_jobs=None,
+    logger_name='loom',
+    cache_dir=None,
+    #shared_n_started_spectral_networks,
+    #shared_n_finished_spectral_networks,
+    additional_n_steps=0,
+    new_mass_limit=0,
+    additional_iterations=0,
 ):
     logger = logging.getLogger(logger_name)
     #theta_i, theta_f, theta_n = config['phase']
 
-    shared_n_started_spectral_networks.value += 1
-    job_id = shared_n_started_spectral_networks.value
-    logger.info('Start generating spectral network #{}/{}: theta = {}.'
-                .format(job_id, pool_size, spectral_network.phase))
+    #shared_n_started_spectral_networks.value += 1
+    #job_id = shared_n_started_spectral_networks.value
+    logger.info('Start generating spectral network #{}/{}: phase = {}.'
+                .format(job_id, n_jobs, spectral_network.phase))
    
     try:
         spectral_network.grow(
-            config, sw,
+            config, sw_data,
             additional_iterations=additional_iterations,
             additional_n_steps=additional_n_steps,
             new_mass_limit=new_mass_limit,
         )
-#    except (KeyboardInterrupt, SystemExit) as e:
-#        logger.warning('A child process calculating phase = {} '
-#                       'caught {}'.format(phase, type(e)))
-#        return None
     except Exception as e:
         error_msg = (
             'A child process calculating phase = {} caught an exception: {}'
@@ -64,11 +63,12 @@ def a_child_process(
         )
         logger.warning(error_msg)
         spectral_network.errors.append = ('Unknown', error_msg)
-#        return None 
 
-    shared_n_finished_spectral_networks.value += 1
+    #shared_n_finished_spectral_networks.value += 1
+    #logger.info('Finished generating spectral network #{}/{}.'
+    #            .format(shared_n_finished_spectral_networks.value, pool_size))
     logger.info('Finished generating spectral network #{}/{}.'
-                .format(shared_n_finished_spectral_networks.value, pool_size))
+                .format(job_id, n_jobs))
 
     if cache_dir is None:
         return spectral_network
@@ -76,10 +76,10 @@ def a_child_process(
         cache_file_path = os.path.join(
             cache_dir,
             'data_{}.json'.format(
-                str(job_id).zfill(len(str(len(pool_size) - 1)))
+                str(job_id).zfill(len(str(n_jobs - 1)))
             )
         )
-        logger.info('Saving data to {}.'.format(cache_file_path))
+        logger.info('Saving cache data to {}.'.format(cache_file_path))
         spectral_network.save(cache_file_path)
         return cache_file_path
 
@@ -105,15 +105,15 @@ def parallel_get_spectral_network(
         ]
         spectral_networks = [
             SpectralNetwork(
-                phase=phase, 
+                phase=sn_phase, 
                 logger_name=logger_name,
             ) 
-            for phase in phases
+            for sn_phase in phases
         ]
 
-    manager = multiprocessing.Manager()
-    shared_n_started_spectral_networks = manager.Value('i', 0)
-    shared_n_finished_spectral_networks = manager.Value('i', 0)
+    #manager = multiprocessing.Manager()
+    #shared_n_started_spectral_networks = manager.Value('i', 0)
+    #shared_n_finished_spectral_networks = manager.Value('i', 0)
 
     n_cpu = multiprocessing.cpu_count()
     if (n_processes == 0):
@@ -139,35 +139,40 @@ def parallel_get_spectral_network(
     pool = multiprocessing.Pool(n_processes, init_process)
     logger.info('Number of processes in the pool: {}'.format(n_processes))
 
+    n_jobs = len(spectral_networks)
+
     try:
         results = [
             pool.apply_async(
                 a_child_process,
-                args=(
-                    config,
-                    sw_data,
-                    sn,
-                    len(spectral_networks),
-                    shared_n_started_spectral_networks,
-                    shared_n_finished_spectral_networks,
-                    additional_n_steps,
-                    new_mass_limit,
-                    additional_iterations,
-                    logger_name,
-                    cache_dir,
+                kwds=dict(
+                    config=config,
+                    sw_data=sw_data,
+                    spectral_network=sn,
+                    job_id=i+1,
+                    n_jobs=n_jobs,
+                    logger_name=logger_name,
+                    cache_dir=cache_dir,
+                    #shared_n_started_spectral_networks,
+                    #shared_n_finished_spectral_networks,
+                    additional_n_steps=additional_n_steps,
+                    new_mass_limit=new_mass_limit,
+                    additional_iterations=additional_iterations,
                 )
-            ) for sn in spectral_networks
+            ) for i, sn in enumerate(spectral_networks)
         ]
         pool.close()
+        pool.join()
 
         new_spectral_networks = []
         for result in results:
             if cache_dir is None:
                 new_sn = result.get()
             else:
+                # FIXME: Do we really need the following?
                 new_sn_file_path = result.get() 
                 new_sn = SpectralNetwork(logger_name=logger_name)
-                new_sn.load(new_sn_file_path)
+                new_sn.load(new_sn_file_path, sw_data)
             new_spectral_networks.append(new_sn)
 
     except (KeyboardInterrupt, SystemExit) as e:
@@ -175,6 +180,9 @@ def parallel_get_spectral_network(
                        .format(type(e), e.args,))
         pool.terminate()
         pool.join()
-        raise
+        raise e
+    except Exception as e:
+        logger.warning('loom.parallel caught {}.'.format(e))
+        raise e
 
     return new_spectral_networks

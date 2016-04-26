@@ -224,7 +224,8 @@ def get_spectral_network_bokeh_plot(
                     sn_data['root'].append(root_label[:-2])
                     try:
                         color = sw_data.g_data.get_root_color(roots[0])
-                    except Exception as e:
+                    #except Exception as e:
+                    except Exception:
                         color = '#000000'
                         logger.warning(
                             '*** unknown root color for {} ***'
@@ -241,7 +242,8 @@ def get_spectral_network_bokeh_plot(
                     sn_data['root'].append(str(root.tolist()))
                     try:
                         color = sw_data.g_data.get_root_color(root)
-                    except Exception as e:
+                    #except Exception as e:
+                    except Exception:
                         color = '#000000'
                         logger.warning(
                             '*** unknown root color for {} ***'

@@ -79,21 +79,13 @@ class SpectralNetworkData:
             logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
         try:
-            set_config_phase(self.config, phase)
-            phases = get_phases_from_dict(self.config['phase'], accuracy)
-            if cache_dir is not None:
-                config_file_path = os.path.join(cache_dir, 'config.ini')
-                config.save(config_file_path)
-
             if extend is False:
                 self.sw_data = SWDataWithTrivialization(
                     self.config, logger_name=self.logger_name
                 )
-                if cache_dir is not None:
-                    sw_data_file_path = os.path.join(
-                        cache_dir, 'sw_data.json',
-                    )
-                    self.sw_data.save(sw_data_file_path)
+
+            set_config_phase(self.config, phase)
+            phases = get_phases_from_dict(self.config['phase'], accuracy)
 
             if len(phases) == 0:
                 logger.warning('No phase to generate.')
@@ -177,6 +169,16 @@ class SpectralNetworkData:
         if result_queue is not None:
             result_queue.put(self)
 
+        if cache_dir is not None and extend is False:
+            version_file_path = os.path.join(cache_dir, 'version')
+            save_version(version_file_path)
+            sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
+            self.sw_data.save(sw_data_file_path)
+            # NOTE: The following should be placed
+            # after SWData is generated.
+            config_file_path = os.path.join(cache_dir, 'config.ini')
+            self.config.save(config_file_path)
+
     def extend(
         self,
         additional_n_steps=0,
@@ -189,6 +191,7 @@ class SpectralNetworkData:
         cache_dir=None,
     ):
         logger = logging.getLogger(self.logger_name)
+
         start_time = time.time()
         logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
@@ -224,6 +227,7 @@ class SpectralNetworkData:
                         additional_n_steps=additional_n_steps,
                         new_mass_limit=new_mass_limit,
                         logger_name=self.logger_name,
+                        cache_dir=cache_dir,
                     )
             except (KeyboardInterrupt, SystemExit) as e:
                 logger.warning(
@@ -259,6 +263,16 @@ class SpectralNetworkData:
 
         if result_queue is not None:
             result_queue.put(self)
+
+        if cache_dir is not None:
+            version_file_path = os.path.join(cache_dir, 'version')
+            save_version(version_file_path)
+            sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
+            self.sw_data.save(sw_data_file_path)
+            # NOTE: The following should be placed
+            # after SWData is generated.
+            config_file_path = os.path.join(cache_dir, 'config.ini')
+            self.config.save(config_file_path)
 
     def plot(self, plot_range=None):
         # TODO: Implement if needed.
@@ -447,6 +461,7 @@ def load_spectral_network(
             data_version = fp.read()
     except:
         data_version = None
+
     if data_version is not None and current_version != data_version:
         logger.debug('The version of the data is different '
                      'from the current version of loom.')
@@ -467,7 +482,7 @@ def load_spectral_network(
 #        with open(data_file, 'r') as fp:
 #            json_data = json.load(fp)
 #            spectral_network.set_from_json_data(json_data, sw_data)
-        spectral_network.load(data_file)
+        spectral_network.load(data_file, sw_data)
         spectral_networks.append(spectral_network)
     spectral_networks.sort(key=lambda sn: sn.phase)
 
@@ -519,13 +534,7 @@ def save_spectral_network(
 
     # Save version data.
     version_file_path = os.path.join(data_dir, 'version')
-    version = "None"
-    try:
-        version = get_current_branch_version()
-    except:
-        pass
-    with open(version_file_path, 'w') as fp:
-        fp.write(version)
+    save_version(version_file_path)
 
     # Save configuration to a file.
     config_file_path = os.path.join(data_dir, 'config.ini')
@@ -732,6 +741,15 @@ def get_current_branch_version():
     )
 
     return version
+
+
+def save_version(file_path):
+    try:
+        version = get_current_branch_version()
+    except:
+        version = "None"
+    with open(file_path, 'w') as fp:
+        fp.write(version)
 
 
 def set_config_phase(config, phase):

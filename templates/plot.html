@@ -43,6 +43,8 @@
                  value="{{ n_processes }}">
                 <input type="hidden" name="rotate_back"
                  value="True">
+                <input type="hidden" name="saved_data"
+                 value="{{ saved_data }}">
                 <input type="submit" class="btn btn-default"
                  value="Rotate back">
             </form>
@@ -106,7 +108,8 @@
                      id="extend_button" value="Extend">
                 </div>
             </div>
-            <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
+            <input type="hidden" name="full_data_dir"
+             value="{{ full_data_dir }}">
             <input type="hidden" name="n_processes" value="{{ n_processes }}">
         </form>
     </div>
@@ -118,7 +121,7 @@
         <form class="form-horizontal" id="save_data_to_server_form"
          method="post">
             <div class="form-group">
-                <div class="col-xs-2">
+                <div class="col-xs-3">
                     <label for="data_name_text" class="control-label">
                         Save data to server as
                     </label>
