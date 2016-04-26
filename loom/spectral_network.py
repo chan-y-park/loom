@@ -93,10 +93,11 @@ class SpectralNetwork:
             self.joints.append(a_joint)
 
     def grow(
-        self, config, sw_data,
+        self, config=None, sw_data=None,
         additional_iterations=0,
         additional_n_steps=0,
-        new_mass_limit=0,
+        new_mass_limit=None,
+        cache_file_path=None,
     ):
         """
         Grow the spectral network by seeding SWall's
@@ -177,37 +178,46 @@ class SpectralNetwork:
         bpzs = [bp.z for bp in sw_data.branch_points +
                 sw_data.irregular_singularities]
 
-        num_of_iterations = None
-        n_steps = None
-
-        if additional_n_steps == 0 and additional_iterations == 0:
-            num_of_iterations = config['num_of_iterations']
-            n_steps = config['num_of_steps']
+#        num_of_iterations = None
+#        n_steps = None
+#
+#        if additional_n_steps == 0 and additional_iterations == 0:
+#            num_of_iterations = config['num_of_iterations']
+#            n_steps = config['num_of_steps']
+#            self.n_finished_s_walls = 0
+#        else:
+#            num_of_iterations = 1
+#
+#            if additional_n_steps > 0:
+#                # Extend existing S-walls.
+#                config['num_of_steps'] += additional_n_steps
+#
+#            if additional_iterations > 0:
+#                # Grow a spectral network for additional iterations.
+#                config['num_of_iterations'] += additional_iterations
+#                num_of_iterations += additional_iterations
+#
+#            if new_mass_limit > 0:
+#                if additional_n_steps == 0:
+#                    logger.warning(
+#                        'Changing the mass limit without increasing '
+#                        'number of steps has no effect.'
+#                        'The mass limit will be kept to {}'
+#                        .format(config['mass_limit'])
+#                    )
+#                else:
+#                    config['mass_limit'] = new_mass_limit
+#
+        num_of_iterations = config['num_of_iterations']
+        n_steps = config['num_of_steps']
+        if(
+            additional_n_steps == 0 and 
+            additional_iterations == 0 and
+            new_mass_limit is None
+        ):
             self.n_finished_s_walls = 0
         else:
-            num_of_iterations = 1
-
-            if additional_n_steps > 0:
-                # Extend existing S-walls.
-                config['num_of_steps'] += additional_n_steps
-
-            if additional_iterations > 0:
-                # Grow a spectral network for additional iterations.
-                config['num_of_iterations'] += additional_iterations
-                num_of_iterations += additional_iterations
-
-            if new_mass_limit > 0:
-                if additional_n_steps == 0:
-                    logger.warning(
-                        'Changing the mass limit without increasing '
-                        'number of steps has no effect.'
-                        'The mass limit will be kept to {}'
-                        .format(config['mass_limit'])
-                    )
-                else:
-                    config['mass_limit'] = new_mass_limit
-
-            n_steps = config['num_of_steps']
+            num_of_iterations = 1 + additional_iterations
 
         iteration = 1
         # Start iterations.
@@ -227,7 +237,7 @@ class SpectralNetwork:
             # Seed S-walls.
             if (
                 additional_n_steps == 0 and additional_iterations == 0
-                and iteration == 1
+                and new_mass_limit is None and iteration == 1
             ):
                 # S-walls that will be grown at this iteration.
                 new_s_walls = []
@@ -264,7 +274,10 @@ class SpectralNetwork:
                         self.errors.append(('RuntimeError', error_msg))
                         continue
 
-            elif additional_n_steps > 0 and iteration == 1:
+            elif (
+                (additional_n_steps > 0 or new_mass_limit is not None)
+                and iteration == 1
+            ):
                 # Use the endpoint of each S-wall as a seed.
                 logger.info(
                     'Extending S-walls by {} steps.'
@@ -358,18 +371,7 @@ class SpectralNetwork:
                 unfinished_s_walls = (
                     self.s_walls[self.n_finished_s_walls:] + new_s_walls
                 )
-#                # Pair of S-walls to search for joints
-#                pairs = [
-#                    (unfinished_s_wall, finished_s_wall)
-#                    for unfinished_s_wall in unfinished_s_walls
-#                    for finished_s_wall in finished_s_walls
-#                ] + [
-#                    (unfinished_s_wall_1, unfinished_s_wall_1)
-#                    for (unfinished_s_wall_1, unfinished_s_wall_1
-#                    in itertools.combinations(unfinished_s_walls, 2)
-#                ]
-#                    logger.info('Finding new joints from {}...'
-#                                .format(new_s_wall.label))
+
                 for unfinished_s_wall in unfinished_s_walls:
                     try:
                         new_joints += self.get_new_joints(
@@ -487,6 +489,10 @@ class SpectralNetwork:
 
         logger.info('Finished growing a spectral network at phase = {}'
                     .format(self.phase))
+
+        if cache_file_path is not None:
+            logger.info('Saving cache data to {}.'.format(cache_file_path))
+            self.save(cache_file_path)
 
     def get_new_joints(
         self, new_s_wall, prev_s_walls, config, sw_data, 

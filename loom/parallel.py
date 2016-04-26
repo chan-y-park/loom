@@ -34,18 +34,15 @@ def a_child_process(
     job_id=None,
     n_jobs=None,
     logger_name='loom',
-    cache_dir=None,
+    cache_file_path=None,
     #shared_n_started_spectral_networks,
     #shared_n_finished_spectral_networks,
     additional_n_steps=0,
-    new_mass_limit=0,
+    new_mass_limit=None,
     additional_iterations=0,
 ):
     logger = logging.getLogger(logger_name)
-    #theta_i, theta_f, theta_n = config['phase']
 
-    #shared_n_started_spectral_networks.value += 1
-    #job_id = shared_n_started_spectral_networks.value
     logger.info('Start generating spectral network #{}/{}: phase = {}.'
                 .format(job_id, n_jobs, spectral_network.phase))
    
@@ -55,6 +52,7 @@ def a_child_process(
             additional_iterations=additional_iterations,
             additional_n_steps=additional_n_steps,
             new_mass_limit=new_mass_limit,
+            cache_file_path=cache_file_path,
         )
     except Exception as e:
         error_msg = (
@@ -64,23 +62,20 @@ def a_child_process(
         logger.warning(error_msg)
         spectral_network.errors.append = ('Unknown', error_msg)
 
-    #shared_n_finished_spectral_networks.value += 1
-    #logger.info('Finished generating spectral network #{}/{}.'
-    #            .format(shared_n_finished_spectral_networks.value, pool_size))
     logger.info('Finished generating spectral network #{}/{}.'
                 .format(job_id, n_jobs))
 
-    if cache_dir is None:
+    if cache_file_path is None:
         return spectral_network
     else:
-        cache_file_path = os.path.join(
-            cache_dir,
-            'data_{}.json'.format(
-                str(job_id).zfill(len(str(n_jobs - 1)))
-            )
-        )
-        logger.info('Saving cache data to {}.'.format(cache_file_path))
-        spectral_network.save(cache_file_path)
+#        cache_file_path = os.path.join(
+#            cache_dir,
+#            'data_{}.json'.format(
+#                str(job_id).zfill(len(str(n_jobs - 1)))
+#            )
+#        )
+#        logger.info('Saving cache data to {}.'.format(cache_file_path))
+#        spectral_network.save(cache_file_path)
         return cache_file_path
 
 
@@ -90,10 +85,11 @@ def parallel_get_spectral_network(
     spectral_networks=None,
     n_processes=0,
     additional_n_steps=0,
-    new_mass_limit=0,
+    new_mass_limit=None,
     additional_iterations=0,
     logger_name='loom',
     cache_dir=None,
+    data_file_prefix='data',
 ):
     logger = logging.getLogger(logger_name)
     phase = config['phase']
@@ -110,10 +106,6 @@ def parallel_get_spectral_network(
             ) 
             for sn_phase in phases
         ]
-
-    #manager = multiprocessing.Manager()
-    #shared_n_started_spectral_networks = manager.Value('i', 0)
-    #shared_n_finished_spectral_networks = manager.Value('i', 0)
 
     n_cpu = multiprocessing.cpu_count()
     if (n_processes == 0):
@@ -135,11 +127,13 @@ def parallel_get_spectral_network(
             n_processes = n_cpu
 
     # Use n_processes CPUs.
+    n_jobs = len(spectral_networks)
+    if n_jobs < n_processes:
+        n_processes = n_jobs
     multiprocessing.freeze_support()
     pool = multiprocessing.Pool(n_processes, init_process)
     logger.info('Number of processes in the pool: {}'.format(n_processes))
 
-    n_jobs = len(spectral_networks)
 
     try:
         results = [
@@ -152,12 +146,13 @@ def parallel_get_spectral_network(
                     job_id=i+1,
                     n_jobs=n_jobs,
                     logger_name=logger_name,
-                    cache_dir=cache_dir,
-                    #shared_n_started_spectral_networks,
-                    #shared_n_finished_spectral_networks,
                     additional_n_steps=additional_n_steps,
                     new_mass_limit=new_mass_limit,
                     additional_iterations=additional_iterations,
+                    cache_file_path=os.path.join(
+                        cache_dir,
+                        '{}_{}.json'.format(data_file_prefix, i)
+                    )
                 )
             ) for i, sn in enumerate(spectral_networks)
         ]

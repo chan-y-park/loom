@@ -25,6 +25,7 @@ class LoomConfig:
                 'differential_parameters': 'Parameters of differentials',
                 'regular_punctures': 'Regular punctures',
                 'irregular_punctures': 'Irregular punctures',
+                'ramification_points': 'Ramification points',
                 'mt_params': 'Mobius transformation', 
                 'ramification_point_finding_method':
                     'Ramification point finding method', 

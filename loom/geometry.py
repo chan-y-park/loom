@@ -560,6 +560,11 @@ class SWDataBase(object):
         else:
             mt_params = None
 
+        if config['ramification_points'] is not None:
+            ramification_points = sympy.sympify(config['ramification_points'])
+        else:
+            ramification_points = None
+
         casimir_differentials = {}
         for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
             casimir_differentials[eval(k)] = phi_k
@@ -577,6 +582,7 @@ class SWDataBase(object):
                 mt_params=mt_params,
                 casimir_differentials=casimir_differentials,
                 diff_params=diff_params,
+                ramification_points=ramification_points,
             )
         else:
             self.set_from_json_data(json_data)
@@ -631,8 +637,10 @@ class SWDataBase(object):
         for pct in self.regular_punctures + self.irregular_punctures:
             logger.info('{} at z={}'.format(pct.label, pct.z))
 
-    def set_from_config(self, config, mt_params=None,
-                        casimir_differentials=None, diff_params=None,):
+    def set_from_config(
+        self, config, mt_params=None, ramification_points=None,
+        casimir_differentials=None, diff_params=None,
+    ):
         """
         Set attributes by calculating the corresponding 
         values using the configuration.
@@ -698,6 +706,7 @@ class SWDataBase(object):
             mt_params=mt_params,
             accuracy=self.accuracy, 
             punctures=punctures,
+            ramification_points=ramification_points,
             g_data=self.g_data,
             logger_name=self.logger_name,
         )
@@ -1382,6 +1391,7 @@ def get_ramification_points_using_system_of_eqs(
     mt_params=None,
     accuracy=None, 
     punctures=None,
+    ramification_points=None,
     g_data=None,
     logger_name='loom',
 ):
@@ -1392,39 +1402,43 @@ def get_ramification_points_using_system_of_eqs(
          .evalf(n=ROOT_FINDING_PRECISION, chop=True))
     # Make f into the form of f_n/f_d
     f_n, f_d = sympy.cancel(f).as_numer_denom()
-    eq_1 = f_n
 
-    # Check the curve if it has the D-type factorization.
-    # TODO: checking factorization of an E-type curve using SymPy
-    # is too slow. Consider using SAGE.
-    if g_data.type != 'E':
-        num_factor, f_n_factors = sympy.factor_list(f_n)
-        if len(f_n_factors) > 1:
-            # TODO: check Casimir differentials too?
-            if (
-                g_data.type == 'D' and
-                len(f_n_factors) == 2 and
-                (x, 2) in f_n_factors
-            ):
-                eq_1 = sympy.simplify(eq_1 / x ** 2)
-            else:
-                logger.warning('The curve to find ramification points '
-                               'has an unknown factorization: {} = {}.'
-                               .format(f_n, f_n.factor()))
+    if ramification_points is None:
+        # Find ramification points by solving {f = 0, df = 0}.
+        eq_1 = f_n
 
-    eq_2 = eq_1.diff(x)
+        # Check the curve if it has the D-type factorization.
+        # TODO: checking factorization of an E-type curve using SymPy
+        # is too slow. Consider using SAGE.
+        if g_data.type != 'E':
+            num_factor, f_n_factors = sympy.factor_list(f_n)
+            if len(f_n_factors) > 1:
+                # TODO: check Casimir differentials too?
+                if (
+                    g_data.type == 'D' and
+                    len(f_n_factors) == 2 and
+                    (x, 2) in f_n_factors
+                ):
+                    eq_1 = sympy.simplify(eq_1 / x ** 2)
+                else:
+                    logger.warning('The curve to find ramification points '
+                                   'has an unknown factorization: {} = {}.'
+                                   .format(f_n, f_n.factor()))
 
-    # NOTE: solve_poly_system vs. solve
-    # sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
-    # sols = sympy.solve([f, f.diff(x)], z, x)
-    z_x_s = sage_subprocess.solve_system_of_eqs(
-        [eq_1, eq_2],
-        precision=ROOT_FINDING_PRECISION,
-        logger_name=logger_name,
-    )
+        eq_2 = eq_1.diff(x)
 
- 
-    logger.info('Analyze solutions from SAGE.')
+        # NOTE: solve_poly_system vs. solve
+        # sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
+        # sols = sympy.solve([f, f.diff(x)], z, x)
+        z_x_s = sage_subprocess.solve_system_of_eqs(
+            [eq_1, eq_2],
+            precision=ROOT_FINDING_PRECISION,
+            logger_name=logger_name,
+        )
+
+    else:
+        z_x_s = ramification_points
+
     # TODO: Consider calculating the discriminant D(z)
     # and double-check if all the z_i's are found.
     for z_i, x_i in z_x_s:
@@ -1469,6 +1483,7 @@ def get_ramification_points_using_discriminant(
     mt_params=None,
     accuracy=None, 
     punctures=None,
+    ramification_points=None,
     g_data=None,
     logger_name='loom',
 ):

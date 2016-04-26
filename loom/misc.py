@@ -442,6 +442,25 @@ def spread_of_branch_points(z_s, min_spread=None):
         return min_d / (max_d / len(z_s))
 
 
+def get_phase_dict(phase):
+    """
+    Returns a Python dict of form
+    {'single': [theta_1, theta_2, ...],
+     'range': [[theta_i, theta_f, theta_n], ...]}
+    """
+    if isinstance(phase, dict):
+        return phase
+
+    phase_dict = {'single': [], 'range': []}
+
+    if isinstance(phase, float):
+        phase_dict['single'].append(phase)
+    elif isinstance(phase, list):
+        phase_dict['range'].append(phase)
+
+    return phase_dict
+
+
 def get_phases_from_range(phase_range):
     theta_i, theta_f, theta_n = phase_range
     phases = [
@@ -479,4 +498,3 @@ def get_phases_from_dict(phase_dict, accuracy):
             phases.append(entry)
 
     return phases
-            

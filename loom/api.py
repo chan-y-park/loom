@@ -17,6 +17,7 @@ from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
 from misc import get_phases_from_dict 
+from misc import get_phase_dict 
 
 
 class SpectralNetworkData:
@@ -61,37 +62,68 @@ class SpectralNetworkData:
         )
 
     def generate(
-        self, phase=None, n_processes=0, extend=False,
+        self, phases=None, n_processes=0, extend=False,
         result_queue=None, logging_queue=None, cache_dir=None,
     ):
         logger = logging.getLogger(self.logger_name)
-        
+        if cache_dir is not None and os.path.exists(cache_dir) is False:
+            os.makedirs(cache_dir)
+       
         accuracy = self.config['accuracy']
-
-        if phase is None:
-            phase = self.config['phase']
-
-#        if extend is False:
-#            self.config['phase'] = {'single': [], 'range': []}
-
-        if extend is False:
-            start_time = time.time()
-            logger.info('Started @ {}'.format(get_date_time_str(start_time)))
+        data_file_prefix = None
 
         try:
             if extend is False:
+                data_file_prefix = 'data'
+                start_time = time.time()
+                logger.info(
+                    'Started @ {}'.format(get_date_time_str(start_time))
+                )
                 self.sw_data = SWDataWithTrivialization(
                     self.config, logger_name=self.logger_name
                 )
+                if cache_dir is not None:
+                    sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
+                    self.sw_data.save(sw_data_file_path)
 
-            set_config_phase(self.config, phase)
-            phases = get_phases_from_dict(self.config['phase'], accuracy)
+                if phases is None:
+                    phase = get_phases_from_dict(
+                        self.config['phase'], accuracy
+                    )
+
+            else:
+                data_file_prefix = 'data_'
+                # Extend spectral networks with additional phases.
+                if phases is None:       
+                    # No additional phase to add.
+                    logger.warning(
+                        'No additional phase given, '
+                        'stop extending the spectral networks.'
+                    )
+                    return None
+#                else:
+#                    additional_phase_dict = get_phase_dict(phase)
+#                    prev_phases = [sn.phase for sn in self.spectral_networks]
+#                    prev_num_of_spectral_networks = len(prev_phases)
+#                    add_config_phase(self.config, additional_phase_dict)
+#                    new_phases = get_phases_from_dict(
+#                        self.config['phase'], accuracy
+#                    )
+#                    phases = []
+#                    for a_phase in new_phases:
+#                        delta = [
+#                            abs(a_phase - prev_phase) 
+#                            for prev_phase in prev_phases
+#                        ]
+#                        if min(delta) > accuracy:
+#                            phases.append(a_phase)
 
             if len(phases) == 0:
                 logger.warning('No phase to generate.')
                 spectral_networks = []
 
             elif(len(phases) == 1):
+                phase = phases[0]
                 logger.info('Generate a single spectral network at theta = {}.'
                             .format(phase))
                 spectral_network = SpectralNetwork(
@@ -99,29 +131,34 @@ class SpectralNetworkData:
                     logger_name=self.logger_name,
                 )
 
-                spectral_network.grow(self.config, self.sw_data)
                 if cache_dir is not None:
-                    sn_data_file_path = os.path.join(
-                        cache_dir, 'data_0.json',
+                    cache_file_path = os.path.join(
+                        cache_dir,
+                        '{}_0.json'.format(data_file_prefix),
                     )
-                    spectral_network.save(sn_data_file_path)
+                else:
+                    cache_file_path = None
+                spectral_network.grow(
+                    config=self.config, sw_data=self.sw_data,
+                    cache_file_path=cache_file_path,
+                )
 
                 spectral_networks = [spectral_network]
 
             else:
-                phases = get_phases_from_dict(self.config['phase'], accuracy)
-                if extend is True:
-                    phases = [
-                        a_phase for a_phase in phases
-                        if (
-                            min(
-                                [abs(sn.phase - a_phase)
-                                 for sn in self.spectral_networks]
-                            ) > accuracy
-                        )
-                    ]
+#                phases = get_phases_from_dict(self.config['phase'], accuracy)
+#                if extend is True:
+#                    phases = [
+#                        a_phase for a_phase in phases
+#                        if (
+#                            min(
+#                                [abs(sn.phase - a_phase)
+#                                 for sn in self.spectral_networks]
+#                            ) > accuracy
+#                        )
+#                    ]
                 logger.info('Generate multiple spectral networks.')
-                logger.info('phases = {}.'.format(phase))
+                logger.info('Number of phases: {}'.format(len(phases)))
                 seed_spectral_networks = [
                     SpectralNetwork(
                         phase=a_phase,
@@ -137,6 +174,7 @@ class SpectralNetworkData:
                     n_processes=n_processes,
                     logger_name=self.logger_name,
                     cache_dir=cache_dir,
+                    data_file_prefix=data_file_prefix,
                 )
 
         except (KeyboardInterrupt, SystemExit) as e:
@@ -172,17 +210,15 @@ class SpectralNetworkData:
         if cache_dir is not None and extend is False:
             version_file_path = os.path.join(cache_dir, 'version')
             save_version(version_file_path)
-            sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
-            self.sw_data.save(sw_data_file_path)
             # NOTE: The following should be placed
-            # after SWData is generated.
+            # at the last stage of spectral network generation. 
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
 
     def extend(
         self,
         additional_n_steps=0,
-        new_mass_limit=0,
+        new_mass_limit=None,
         additional_iterations=0,
         additional_phases=None,
         n_processes=0,
@@ -191,7 +227,33 @@ class SpectralNetworkData:
         cache_dir=None,
     ):
         logger = logging.getLogger(self.logger_name)
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
 
+        if additional_n_steps > 0:
+            # Extend existing S-walls.
+            self.config['num_of_steps'] += additional_n_steps
+
+        if additional_iterations > 0:
+            # Grow a spectral network for additional iterations.
+            self.config['num_of_iterations'] += additional_iterations
+
+#        if (
+#            new_mass_limit is not None and 
+#            new_mass_limit != self.config['mass_limit']
+#        ):
+#            if additional_n_steps == 0:
+#                logger.warning(
+#                    'Changing the mass limit without increasing '
+#                    'number of steps has no effect.'
+#                    'The mass limit will be kept to {}'
+#                    .format(self.config['mass_limit'])
+#                )
+#            else:
+#                self.config['mass_limit'] = new_mass_limit
+            if new_mass_limit is not None:
+                self.config['mass_limit'] = new_mass_limit
+        
         start_time = time.time()
         logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
@@ -199,7 +261,11 @@ class SpectralNetworkData:
         # where spectral networks are generated.
         self.rotate_back()
 
-        if additional_n_steps > 0 or additional_iterations > 0:
+        if (
+            additional_n_steps > 0 or 
+            additional_iterations > 0 or
+            new_mass_limit is not None
+        ):
             try:
                 logger.info('Extending spectral networks...')
                 if len(self.spectral_networks) == 1:
@@ -235,14 +301,42 @@ class SpectralNetworkData:
                     'caught {} while generating spectral networks.'
                     .format(type(e))
                 )
+        else:
+            # No extension of exhisting spectral networks.
+            if cache_dir is not None:
+                # Save current spectral networks to cache.
+                for i, sn in enumerate(self.spectral_networks):
+                    cache_file_path = os.path.join(
+                        cache_dir,
+                        'data_{}.json'.format(i)
+                    )
+                    logger.info(
+                        'Saving cache data to {}.'.format(cache_file_path)
+                    )
+                    sn.save(cache_file_path)
 
         if additional_phases is not None:
+            additional_phase_dict = get_phase_dict(additional_phases)
+            prev_phases = [sn.phase for sn in self.spectral_networks]
+            add_config_phase(self.config, additional_phase_dict)
+            new_phases = get_phases_from_dict(
+                self.config['phase'], self.config['accuracy'],
+            )
+            phases = []
+            for a_phase in new_phases:
+                delta = [
+                    abs(a_phase - prev_phase) 
+                    for prev_phase in prev_phases
+                ]
+                if min(delta) > self.config['accuracy']:
+                    phases.append(a_phase)
+
             logger.info(
                 'Adding spectral networks with phase = {}'
                 .format(additional_phases)
             )
             self.generate(
-                phase=additional_phases,
+                phases=phases,
                 n_processes=n_processes,
                 extend=True,
                 cache_dir=cache_dir,
@@ -270,7 +364,7 @@ class SpectralNetworkData:
             sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
             self.sw_data.save(sw_data_file_path)
             # NOTE: The following should be placed
-            # after SWData is generated.
+            # at the last stage of spectral network generation. 
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
 
@@ -475,7 +569,7 @@ def load_spectral_network(
     spectral_networks = []
 
     data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
-    data_file_list.sort()
+#    data_file_list.sort()
     for data_file in data_file_list:
         logger.info('Loading {}...'.format(data_file))
         spectral_network = SpectralNetwork(logger_name=logger_name)
@@ -752,31 +846,13 @@ def save_version(file_path):
         fp.write(version)
 
 
-def set_config_phase(config, phase):
+def add_config_phase(config, phase_dict):
     """
-    set config['phase'] to a Python dict of form
-    {'single': [theta_1, theta_2, ...],
-     'range': [[theta_i, theta_f, theta_n], ...]}
+    Add to config['phase'] a phase dict.
     """
     config_phase = config['phase']
-    if isinstance(config_phase, dict) is False:
-        config_phase_single = []
-        config_phase_range = []
-        if isinstance(config_phase, float):
-            config_phase_single.append(config_phase)
-        elif isinstance(config_phase, list):
-            config_phase_range.append(config_phase)
-        config_phase = {
-            'single': config_phase_single,
-            'range': config_phase_range
-        }
-
-    if isinstance(phase, float):
-        config_phase['single'].append(phase)
-    elif isinstance(phase, list):
-        config_phase['range'].append(phase)
-    elif(isinstance(phase, dict)):
-        config_phase['single'] += phase['single']
-        config_phase['range'] += phase['range']
+    config_phase['single'] += phase_dict['single']
+    config_phase['range'] += phase_dict['range']
 
     config['phase'] = config_phase
+
