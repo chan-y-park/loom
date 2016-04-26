@@ -11,6 +11,8 @@ import logging
 import uuid
 import json
 import zipfile
+import glob
+import shutil
 
 from cStringIO import StringIO
 from io import BytesIO
@@ -22,9 +24,6 @@ from api import (
     get_logging_handler,
     set_logging,
     load_config,
-#    load_spectral_network,
-#    save_spectral_network,
-#    generate_spectral_network,
     get_current_branch_version,
 )
 from config import LoomConfig
@@ -536,13 +535,10 @@ def config(n_processes=None):
                 n_processes_val = eval(n_processes)
 
             process_uuid = str(uuid.uuid4())
-#            try:
-#                process_uuid = flask.request.form['process_uuid']
-#            except KeyError:
-#                process_uuid = str(uuid.uuid4())
 
             try:
-                full_data_dir = flask.request.form['full_data_dir']
+                saved_data = eval(flask.request.form['saved_data_dir'])
+                full_data_dir = get_full_data_dir(process_uuid, saved_data)
             except KeyError:
                 full_data_dir = None 
 
@@ -595,7 +591,6 @@ def config(n_processes=None):
         process_uuid=process_uuid,
         event_source_url=event_source_url,
         text_area_content=text_area_content,
-        #keep_alive_interval=KEEP_ALIVE_INTERVAL,
     )
 
 
@@ -627,28 +622,22 @@ def save_config():
 
 def plot():
     loom_db = flask.current_app.loom_db
-    rotate_back = False
+    rotate_back = None 
     saved_data = None
-    full_data_dir = None
 
     if flask.request.method == 'POST':
         try:
             rotate_back = eval(flask.request.form['rotate_back'])
         except KeyError:
-            pass
+            rotate_back = False
+
         process_uuid = flask.request.form['process_uuid']
         progress_log = flask.request.form['progress_log']
         n_processes = flask.request.form['n_processes']
         saved_data = eval(flask.request.form['saved_data'])
 
         if rotate_back is True:
-            if saved_data is True:
-                data_dir = process_uuid
-                full_data_dir = os.path.join(
-                    get_loom_dir(), 'data', data_dir
-                )
-            else:
-                full_data_dir = get_cache_dir(process_uuid)
+            full_data_dir = get_full_data_dir(process_uuid, saved_data)
 
             spectral_network_data = SpectralNetworkData(
                 data_dir=full_data_dir,
@@ -656,26 +645,22 @@ def plot():
         else:
             # Finish loom_process
             spectral_network_data = loom_db.get_result(process_uuid)
-            full_data_dir = get_cache_dir(process_uuid)
+            #full_data_dir = get_cache_dir(process_uuid)
 
     elif flask.request.method == 'GET':
         # Load saved data.
+        saved_data = True
         data_dir = flask.request.args['data']
         try:
             n_processes = flask.request.args['n_processes']
         except KeyError:
             n_processes = None
-        #process_uuid = str(uuid.uuid4()) 
         process_uuid = data_dir
         progress_log = None
-        full_data_dir = os.path.join(
-            get_loom_dir(), 'data', data_dir
-        )
+        full_data_dir = get_full_data_dir(process_uuid, saved_data)
         spectral_network_data = SpectralNetworkData(
             data_dir=full_data_dir,
-            #logger_name=get_logger_name(process_uuid)
         )
-        saved_data = True
 
     if rotate_back is True:
         spectral_network_data.rotate_back()
@@ -685,37 +670,29 @@ def plot():
     return render_plot_template(
         spectral_network_data, process_uuid=process_uuid,
         progress_log=progress_log, n_processes=n_processes,
-        saved_data=saved_data, full_data_dir=full_data_dir,
+        saved_data=saved_data,
     )
 
 # FIXME: use cached files
 def save_data_to_server():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
+        saved_data = eval(flask.request.form['saved_data_dir'])
         data_name = flask.request.form['data_name']
+    else:
+        raise RuntimeError
 
-        #logger_name = get_logger_name(process_uuid)
-        #logger = logging.getLogger(logger_name)
-
-        loom_db = flask.current_app.loom_db
-        spectral_network_data = loom_db.result_queues[process_uuid].get()
-        #loom_config = spectral_network_data.config
-
-        data_dir = os.path.join(get_loom_dir(), 'data', data_name,)
-        # XXX: check if there is an existing dir with the same name.
-        if os.path.exists(data_dir):
+        data_dir_to_save = os.path.join(get_loom_dir(), 'data', data_name,)
+        if os.path.exists(data_dir_to_save):
             msg = (
                 'Data with name "{}" already exists, '
                 'chose a different name.'.format(data_name)
             )
         else:
-            #save_spectral_network(
-            #    loom_config,
-            #    spectral_network_data,
-            #    data_dir=data_dir,
-            #    logger_name=logger_name,
-            #)
-            spectral_network_data.save(data_dir=data_dir,)
+            full_data_dir = get_full_data_dir(process_uuid, saved_data)
+            files_to_copy = get_data_file_path_list(full_data_dir)
+            for src in files_to_copy:
+                shutil.copy(src, data_dir_to_save)
             msg = 'Data successfully saved as "{}".'.format(data_name)
 
     return flask.render_template(
@@ -724,44 +701,21 @@ def save_data_to_server():
     )
 
 # FIXME: use cache files
-def download_data(process_uuid):
-    #loom_db = flask.current_app.loom_db
-    #spectral_network_data = loom_db.result_queues[process_uuid].get()
-    cache_dir = get_cache_dir(process_uuid)
-    spectral_network_data = SpectralNetworkData(data_dir=cache_dir,)
-
-    loom_config = spectral_network_data.config
-    sw_data = spectral_network_data.sw_data
-    spectral_networks = spectral_network_data.spectral_networks
-    data = {}
+def download_data():
+    if flask.request.method == 'POST':
+        process_uuid = flask.request.form['process_uuid']
+        saved_data = eval(flask.request.form['saved_data_dir'])
+    else:
+        raise RuntimeError
     
-    data['version'] = get_current_branch_version()
-
-    # fp = StringIO()
-    fp = BytesIO()
-    loom_config.parser.write(fp)
-    fp.seek(0)
-    data['config.ini'] = fp.read()
-
-    data['sw_data.json'] = json.dumps(sw_data.get_json_data())
-
-    for i, spectral_network in enumerate(spectral_networks):
-        file_name_idx = str(i).zfill(len(str(len(spectral_networks) - 1)))
-        data['data_{}.json'.format(file_name_idx)] = json.dumps(
-            spectral_network.get_json_data()
-        )
+    full_data_dir = get_full_data_dir(process_uuid, saved_data)
+    files_to_zip = get_data_file_path_list(full_data_dir)
 
     data_zip_fp = BytesIO()
     with zipfile.ZipFile(data_zip_fp, 'w') as zfp:
-        for file_name, data_str in data.iteritems():
-            zip_info = zipfile.ZipInfo(file_name)
-            zip_info.date_time = time.localtime(time.time())[:6]
-            zip_info.compress_type = zipfile.ZIP_DEFLATED
-            zip_info.external_attr = 040664 << 16L
-            zfp.writestr(zip_info, data_str)
+        for file_name in files_to_zip:
+            zfp.write(file_name, compress_type=zipfile.ZIP_DEFLATED)
     data_zip_fp.seek(0)
-
-    #loom_db.result_queues[process_uuid].put(spectral_network_data)
 
     return flask.send_file(
         data_zip_fp,
@@ -770,14 +724,17 @@ def download_data(process_uuid):
     )
 
 
-def download_plot(process_uuid):
-    #loom_db = flask.current_app.loom_db
-    #spectral_network_data = loom_db.result_queues[process_uuid].get()
-    cache_dir = get_cache_dir(process_uuid)
-    spectral_network_data = SpectralNetworkData(data_dir=cache_dir,)
+def download_plot():
+    if flask.request.method == 'POST':
+        process_uuid = flask.request.form['process_uuid']
+        saved_data = eval(flask.request.form['saved_data_dir'])
+    else:
+        raise RuntimeError
+    
+    full_data_dir = get_full_data_dir(process_uuid, saved_data)
+    spectral_network_data = SpectralNetworkData(data_dir=full_data_dir)
 
     loom_config = spectral_network_data.config
-    #loom_db.result_queues[process_uuid].put(spectral_network_data)
 
     plot_html_zip_fp = BytesIO()
     with zipfile.ZipFile(plot_html_zip_fp, 'w') as zfp:
@@ -877,13 +834,21 @@ def get_application(config_file, logging_level):
         methods=['POST'],
     )
     application.add_url_rule(
-        '/download_data/<process_uuid>', 'download_data', download_data,
+        '/download_data', 'download_data', download_data,
         methods=['POST'],
     )
     application.add_url_rule(
-        '/download_plot/<process_uuid>', 'download_plot', download_plot,
+        '/download_plot', 'download_plot', download_plot,
         methods=['POST'],
     )
+#    application.add_url_rule(
+#        '/download_data/<process_uuid>', 'download_data', download_data,
+#        methods=['POST'],
+#    )
+#    application.add_url_rule(
+#        '/download_plot/<process_uuid>', 'download_plot', download_plot,
+#        methods=['POST'],
+#    )
     application.add_url_rule(
         '/logging_stream/<process_uuid>', 'logging_stream', logging_stream,
         methods=['GET'],
@@ -957,10 +922,9 @@ def render_plot_template(
     spectral_network_data, process_uuid=None,
     progress_log=None, n_processes=None,
     download=False, saved_data=False,
-    full_data_dir=None,
 ):
     loom_config = spectral_network_data.config
-    download_data_url = download_plot_url = None
+#    download_data_url = download_plot_url = None
     sw_data = spectral_network_data.sw_data
 
     # Make a Bokeh plot
@@ -981,15 +945,15 @@ def render_plot_template(
         irregular_singularities=sw_data.irregular_singularities,
     )
 
-    if download is False:
-        download_data_url = flask.url_for(
-            'download_data',
-            process_uuid=process_uuid,
-        )
-        download_plot_url = flask.url_for(
-            'download_plot',
-            process_uuid=process_uuid,
-        )
+#    if download is False:
+#        download_data_url = flask.url_for(
+#            'download_data',
+#            process_uuid=process_uuid,
+#        )
+#        download_plot_url = flask.url_for(
+#            'download_plot',
+#            process_uuid=process_uuid,
+#        )
 
     with open('static/bokeh_callbacks.js', 'r') as fp:
         bokeh_custom_script = fp.read()
@@ -1002,15 +966,15 @@ def render_plot_template(
         progress_log=progress_log,
         plot_legend=legend,
         bokeh_custom_script=bokeh_custom_script,
-        download_data_url=download_data_url,
-        download_plot_url=download_plot_url,
+        #download_data_url=download_data_url,
+        #download_plot_url=download_plot_url,
+        download=str(download)
         loom_config=loom_config,
         config_options=config_options,
         advanced_config_options=advanced_config_options,
         initial_phase=initial_phase,
         n_processes=n_processes,
         saved_data=saved_data,
-        full_data_dir=full_data_dir,
     )
 
 
@@ -1030,6 +994,32 @@ def get_cache_dir(process_uuid):
         process_uuid,
     )
     return cache_dir
+
+
+def get_full_data_dir(process_uuid, saved_data):
+    if saved_data is True:
+        data_dir = process_uuid
+        full_data_dir = os.path.join(
+            get_loom_dir(), 'data', data_dir
+        )
+    else:
+        full_data_dir = get_cache_dir(process_uuid)
+
+    return full_data_dir
+    
+
+def get_data_file_path_list(data_dir):
+    data_file_path_list = glob.glob(os.path.join(full_data_dir, 'data_*.json'))
+    data_file_path_list.sort()
+
+    data_file_path_list += [
+        os.path.join(full_data_dir, 'version')
+        os.path.join(full_data_dir, 'config.ini')
+        os.path.join(full_data_dir, 'sw_data.json')
+    ]
+
+    return data_file_path_list
+
 
 
 #def record_stat(rv, stat_logger_name, ip, uuid):
