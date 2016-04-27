@@ -409,10 +409,13 @@ def get_logging_formatter(level):
 
 
 class LoomLoggingFormatter(logging.Formatter):
-    debug_format = '%(module)s@%(lineno)d: %(funcName)s: %(message)s'
+    debug_format = (
+        '%(process)d: %(module)s@%(lineno)d: '
+        '%(funcName)s: %(message)s'
+    )
     info_format = '%(process)d: %(message)s'
-    warning_format = '=== WARNING ===\n%(funcName)s: %(message)s'
-    error_format = '### ERROR ###\n%(funcName)s: %(message)s'
+    warning_format = '%(process)d: === WARNING === %(funcName)s: %(message)s'
+    error_format = '%(process)d: ### ERROR ### %(funcName)s: %(message)s'
     default_format = '%(message)s'
 
     def __init__(self, fmt=default_format):
