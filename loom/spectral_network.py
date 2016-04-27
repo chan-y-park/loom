@@ -400,15 +400,20 @@ class SpectralNetwork:
                 if additional_n_steps > 0 and iteration == 1:
                     # Attach new S-walls to existing S-walls
                     esw = self.s_walls[i]
-                    esw_n_t = len(esw.z)
                     asw = new_s_wall
                     if asw.label != esw.label:
-                        raise RuntimeError(
-                            'S-wall exntesion mismatch: '
-                            'cannot extend {} with {}.'
-                            .format(esw.label, asw.label)
-                        )
+                        esw = None
+                        for s_wall in self.s_walls:
+                            if s_wall.label == asw.label:
+                                esw = s_wall
+                        if esw is None:
+                            raise RuntimeError(
+                                'S-wall exntesion mismatch: '
+                                'cannot attach a new {}.'
+                                .format(asw.label)
+                            )
 
+                    esw_n_t = len(esw.z)
                     esw.z = numpy.concatenate((esw.z, asw.z[1:])) 
                     esw.x = numpy.concatenate((esw.x, asw.x[1:])) 
                     esw.M = numpy.concatenate((esw.M, asw.M[1:])) 
