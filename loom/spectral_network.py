@@ -390,14 +390,20 @@ class SpectralNetwork:
                         )
                     finished_s_walls.append(unfinished_s_wall)
                 
-                if additional_n_steps > 0 and iteration == 1:
+                if (
+                    (additional_n_steps > 0 or new_mass_limit is not None)
+                    and iteration == 1
+                ):
                     self.n_finished_s_walls = len(self.s_walls)
                 else:
                     self.n_finished_s_walls += len(unfinished_s_walls)
 
             for i, new_s_wall in enumerate(new_s_walls):
                 # Add the new S-wall to the spectral network
-                if additional_n_steps > 0 and iteration == 1:
+                if (
+                    (additional_n_steps > 0 or new_mass_limit is not None)
+                    and iteration == 1
+                ):
                     # Attach new S-walls to existing S-walls
                     esw = self.s_walls[i]
                     asw = new_s_wall

@@ -227,7 +227,7 @@ class SpectralNetworkData:
         cache_dir=None,
     ):
         logger = logging.getLogger(self.logger_name)
-        if not os.path.exists(cache_dir):
+        if cache_dir is not None and os.path.exists(cache_dir) is not True:
             os.makedirs(cache_dir)
 
         if additional_n_steps > 0:

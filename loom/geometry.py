@@ -281,7 +281,8 @@ class GData:
         # still give a color, so the plot can be displayed
         logger.warning('No color mapped for the root {}'
                        .format(root.tolist()))
-        return self.root_color_map[0]
+        raise RuntimeError
+        #return self.root_color_map[0]
 
 
 class RamificationPoint:
@@ -665,6 +666,10 @@ class SWDataBase(object):
         elif method == 'system_of_eqs':
             get_ramification_points = (
                 get_ramification_points_using_system_of_eqs
+            )
+        elif method == 'manual':
+            get_ramification_points = (
+                get_ramification_points_multiplicity
             )
         else:
             logger.warning(
@@ -1397,51 +1402,103 @@ def get_ramification_points_using_system_of_eqs(
 ):
     logger = logging.getLogger(logger_name)
 
-    sols = []
+    #sols = []
     f = (curve.sym_eq.subs(diff_params)
          .evalf(n=ROOT_FINDING_PRECISION, chop=True))
     # Make f into the form of f_n/f_d
     f_n, f_d = sympy.cancel(f).as_numer_denom()
 
-    if ramification_points is None:
-        # Find ramification points by solving {f = 0, df = 0}.
-        eq_1 = f_n
+    # Find ramification points by solving {f = 0, df = 0}.
+    eq_1 = f_n
 
-        # Check the curve if it has the D-type factorization.
-        # TODO: checking factorization of an E-type curve using SymPy
-        # is too slow. Consider using SAGE.
-        if g_data.type != 'E':
-            num_factor, f_n_factors = sympy.factor_list(f_n)
-            if len(f_n_factors) > 1:
-                # TODO: check Casimir differentials too?
-                if (
-                    g_data.type == 'D' and
-                    len(f_n_factors) == 2 and
-                    (x, 2) in f_n_factors
-                ):
-                    eq_1 = sympy.simplify(eq_1 / x ** 2)
-                else:
-                    logger.warning('The curve to find ramification points '
-                                   'has an unknown factorization: {} = {}.'
-                                   .format(f_n, f_n.factor()))
+    # Check the curve if it has the D-type factorization.
+    # TODO: checking factorization of an E-type curve using SymPy
+    # is too slow. Consider using SAGE.
+    if g_data.type != 'E':
+        num_factor, f_n_factors = sympy.factor_list(f_n)
+        if len(f_n_factors) > 1:
+            # TODO: check Casimir differentials too?
+            if (
+                g_data.type == 'D' and
+                len(f_n_factors) == 2 and
+                (x, 2) in f_n_factors
+            ):
+                eq_1 = sympy.simplify(eq_1 / x ** 2)
+            else:
+                logger.warning('The curve to find ramification points '
+                               'has an unknown factorization: {} = {}.'
+                               .format(f_n, f_n.factor()))
 
-        eq_2 = eq_1.diff(x)
+    eq_2 = eq_1.diff(x)
 
-        # NOTE: solve_poly_system vs. solve
-        # sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
-        # sols = sympy.solve([f, f.diff(x)], z, x)
-        z_x_s = sage_subprocess.solve_system_of_eqs(
-            [eq_1, eq_2],
-            precision=ROOT_FINDING_PRECISION,
-            logger_name=logger_name,
-        )
+    # NOTE: solve_poly_system vs. solve
+    # sols = sympy.solve_poly_system([f, f.diff(x)], z, x)
+    # sols = sympy.solve([f, f.diff(x)], z, x)
+    z_x_s = sage_subprocess.solve_system_of_eqs(
+        [eq_1, eq_2],
+        precision=ROOT_FINDING_PRECISION,
+        logger_name=logger_name,
+    )
 
-    else:
-        z_x_s = ramification_points
+#    # TODO: Consider calculating the discriminant D(z)
+#    # and double-check if all the z_i's are found.
+#    for z_i, x_i in z_x_s:
+#        #logger.info('Analyze a solution (z, x) = ({}, {})'.format(z_i, x_i))
+#        # Check if z_i is one of the punctures.
+#        is_puncture = False
+#        for p in punctures:
+#            if abs(z_i - p.Ciz) < accuracy:
+#                is_puncture = True
+#        if is_puncture:
+#            continue
+#
+#        # Calculate the multiplicity of x_i 
+#        # by finding the maximum k that satisfies
+#        # (d_x)^k f_n(x, z_i)|_{x = x_i} = 0.
+#        f_n_i = f_n.subs(z, z_i)
+#        m_x = 1
+#        while (
+#            abs(f_n_i.diff(x, m_x).subs(x, x_i)
+#                .evalf(n=ROOT_FINDING_PRECISION)) < accuracy
+#        ):
+#            m_x += 1
+#
+#        if m_x == 1:
+#            dfdx = f_n_i.diff(x).subs(x, x_i).evalf(n=ROOT_FINDING_PRECISION)
+#            logger.warning(
+#                'multiplicity of x is 1 at z = {}, x = {}: '
+#                'df/dx = {}.'.format(z_i, x_i, dfdx)
+#            )
+#
+#        sols.append(
+#            [complex(mpmath.chop(z_i)), 
+#             (complex(mpmath.chop(x_i)), m_x)]
+#        )
+
+    sols = get_ramification_points_multiplicity(
+        ramification_points=z_x_s,
+        logger_name=logger_name,
+    )
+
+    return sols      
+
+
+def get_ramification_points_multiplicity(
+    curve=None, 
+    diff_params=None, 
+    mt_params=None,
+    accuracy=None, 
+    punctures=None,
+    ramification_points=None,
+    g_data=None,
+    logger_name='loom',
+):
+    logger = logging.getLogger(logger_name)
+    sols = []
 
     # TODO: Consider calculating the discriminant D(z)
     # and double-check if all the z_i's are found.
-    for z_i, x_i in z_x_s:
+    for z_i, x_i in ramification_points:
         #logger.info('Analyze a solution (z, x) = ({}, {})'.format(z_i, x_i))
         # Check if z_i is one of the punctures.
         is_puncture = False
@@ -1474,8 +1531,7 @@ def get_ramification_points_using_system_of_eqs(
              (complex(mpmath.chop(x_i)), m_x)]
         )
 
-    return sols      
-
+    return sols
 
 def get_ramification_points_using_discriminant(
     curve=None, 
