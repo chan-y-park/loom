@@ -10,7 +10,9 @@ import json
 
 from cmath import exp
 from scipy import integrate
-from s_wall import SWall, Joint, get_s_wall_seeds
+from s_wall import (
+    SWall, Joint, get_s_wall_seeds, MIN_NUM_OF_DATA_PTS,
+)
 from misc import (
     n_nearest_indices, get_turning_points, get_splits_with_overlap,
     get_descendant_roots, sort_roots,
@@ -173,41 +175,13 @@ class SpectralNetwork:
         # ODE solver setup
         logger.debug('Setup the ODE integrator...')
         ode = get_ode(sw_data, self.phase, accuracy)
+
+        # Gather singularities of the ODE.
         punctures = sw_data.regular_punctures + sw_data.irregular_punctures
         ppzs = [p.z for p in punctures]
         bpzs = [bp.z for bp in sw_data.branch_points +
                 sw_data.irregular_singularities]
 
-#        num_of_iterations = None
-#        n_steps = None
-#
-#        if additional_n_steps == 0 and additional_iterations == 0:
-#            num_of_iterations = config['num_of_iterations']
-#            n_steps = config['num_of_steps']
-#            self.n_finished_s_walls = 0
-#        else:
-#            num_of_iterations = 1
-#
-#            if additional_n_steps > 0:
-#                # Extend existing S-walls.
-#                config['num_of_steps'] += additional_n_steps
-#
-#            if additional_iterations > 0:
-#                # Grow a spectral network for additional iterations.
-#                config['num_of_iterations'] += additional_iterations
-#                num_of_iterations += additional_iterations
-#
-#            if new_mass_limit > 0:
-#                if additional_n_steps == 0:
-#                    logger.warning(
-#                        'Changing the mass limit without increasing '
-#                        'number of steps has no effect.'
-#                        'The mass limit will be kept to {}'
-#                        .format(config['mass_limit'])
-#                    )
-#                else:
-#                    config['mass_limit'] = new_mass_limit
-#
         num_of_iterations = config['num_of_iterations']
         n_steps = config['num_of_steps']
         if(
@@ -217,6 +191,8 @@ class SpectralNetwork:
         ):
             self.n_finished_s_walls = 0
         else:
+            # self.n_finished_s_walls is loaded from data
+            # and is not None.
             num_of_iterations = 1 + additional_iterations
 
         iteration = 1
@@ -279,23 +255,59 @@ class SpectralNetwork:
                 and iteration == 1
             ):
                 # Use the endpoint of each S-wall as a seed.
-                logger.info(
-                    'Extending S-walls by {} steps.'
-                    .format(additional_n_steps)
-                )
-                new_s_walls = [
-                    SWall(
-                            z_0=s_wall.z[-1],
-                            x_0=s_wall.x[-1],
-                            M_0=s_wall.z[-1],
-                            parents=s_wall.parents,
-                            parent_roots=s_wall.parent_roots,
-                            label=s_wall.label,
-                            n_steps=additional_n_steps,
-                            logger_name=self.logger_name,
+                msg = 'Extending S-walls'
+                if additional_n_steps > 0:
+                    msg += (
+                        ' by {} steps'
+                        .format(additional_n_steps)
                     )
-                    for s_wall in self.s_walls
-                ]
+                if new_mass_limit is not None:
+                    msg += (
+                        ' with new mass limit {}'
+                        .format(new_mass_limit)
+                    )
+                logger.info(msg + '.')
+
+#                new_s_walls = [
+#                    SWall(
+#                            z_0=s_wall.z[-1],
+#                            x_0=s_wall.x[-1],
+#                            M_0=s_wall.M[-1],
+#                            parents=s_wall.parents,
+#                            parent_roots=s_wall.parent_roots,
+#                            label=s_wall.label,
+#                            n_steps=(
+#                                n_steps - len(s_wall.z) + additional_n_steps
+#                            ),
+#                            logger_name=self.logger_name,
+#                    )
+#                    for s_wall in self.s_walls
+#                ]
+
+                new_s_walls = []
+                for s_wall in self.s_walls:
+                    prev_array_size = len(s_wall.z)
+                    if prev_array_size == 0:
+                        logger.warning(
+                            '{} has zero data.'.format(s_wall)
+                        )
+                        continue
+                    new_n_steps = (
+                        n_steps - prev_array_size + additional_n_steps
+                    )
+                    if new_n_steps > MIN_NUM_OF_DATA_PTS:
+                        new_s_walls.append(
+                            SWall(
+                                    z_0=s_wall.z[-1],
+                                    x_0=s_wall.x[-1],
+                                    M_0=s_wall.M[-1],
+                                    parents=s_wall.parents,
+                                    parent_roots=s_wall.parent_roots,
+                                    label=s_wall.label,
+                                    n_steps=new_n_steps,
+                                    logger_name=self.logger_name,
+                            )
+                        )
             elif additional_iterations > 0 and iteration == 1:
                 logger.info(
                     'Do {} additional iteration(s) to find joints '
@@ -310,16 +322,26 @@ class SpectralNetwork:
                 s_i = new_s_walls[i]
                 logger.info('Growing {}...'.format(s_i.label))
                 try:
-                    if additional_n_steps > 0 and iteration == 1:
-                        s_i.grow(
-                            ode, bpzs, ppzs, config,
-                            num_of_steps=additional_n_steps,
+#                    if additional_n_steps > 0 and iteration == 1:
+#                        s_i.grow(
+#                            ode, bpzs, ppzs, config,
+#                            num_of_steps=additional_n_steps,
+#                        )
+#                    else:
+#                        s_i.grow(
+#                            ode, bpzs, ppzs, config,
+#                            num_of_steps=n_steps,
+#                        )
+                    s_i.grow(ode, bpzs, ppzs, config,)
+
+                    if len(s_i.z) < MIN_NUM_OF_DATA_PTS:
+                        logger.warning(
+                            '{} has only {} data point(s); remove this S-wall.'
+                            .format(s_i, len(s_i).z)
                         )
-                    else:
-                        s_i.grow(
-                            ode, bpzs, ppzs, config,
-                            num_of_steps=n_steps,
-                        )
+                        new_s_walls.pop(i)
+                        continue
+
                 except RuntimeError as e:
                     error_msg = (
                         'Error while growing {}: {}\n'

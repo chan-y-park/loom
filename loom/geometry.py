@@ -563,6 +563,7 @@ class SWDataBase(object):
 
         if config['ramification_points'] is not None:
             ramification_points = sympy.sympify(config['ramification_points'])
+            config['ramification_point_finding_method'] = 'manual'
         else:
             ramification_points = None
 

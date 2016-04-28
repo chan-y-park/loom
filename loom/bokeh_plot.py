@@ -228,7 +228,7 @@ def get_spectral_network_bokeh_plot(
                     except Exception:
                         color = '#000000'
                         logger.warning(
-                            'Unknown root color for {}'
+                            'Unknown root color for {} '
                             'of a spectral network with phase = {}.'
                             .format(s_wall.label, sn.phase)
                         )

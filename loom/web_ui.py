@@ -56,7 +56,6 @@ config_options = [
     ['differential_parameters'],
     ['regular_punctures'],
     ['irregular_punctures'],
-    ['ramification_points'],
     ['plot_range'],
     ['num_of_steps'],
     ['num_of_iterations'],
@@ -67,6 +66,7 @@ config_options = [
 advanced_config_options = [
     ['mt_params'], 
     ['ramification_point_finding_method'],
+    ['ramification_points'],
     ['size_of_small_step'],
     ['size_of_large_step'],
     ['size_of_bp_neighborhood'],

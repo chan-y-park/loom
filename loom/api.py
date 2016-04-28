@@ -251,8 +251,8 @@ class SpectralNetworkData:
 #                )
 #            else:
 #                self.config['mass_limit'] = new_mass_limit
-            if new_mass_limit is not None:
-                self.config['mass_limit'] = new_mass_limit
+        if new_mass_limit is not None:
+            self.config['mass_limit'] = new_mass_limit
         
         start_time = time.time()
         logger.info('Started @ {}'.format(get_date_time_str(start_time)))

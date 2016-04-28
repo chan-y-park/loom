@@ -280,7 +280,7 @@ class SWall(object):
         branch_point_zs,
         puncture_point_zs,
         config,
-        num_of_steps=None,
+        #num_of_steps=None,
     ):
         bpzs = branch_point_zs
         ppzs = puncture_point_zs
@@ -298,7 +298,18 @@ class SWall(object):
         y_i = self[0]
         ode.set_initial_value(y_i)
 
-        while ode.successful() and step < num_of_steps:
+        array_size = len(self.z)
+#        if num_of_steps > array_size:
+#            logger.warning(
+#                'The number of ODE steps {} is larger '
+#                'then the size of the array {}; '
+#                'adjusts num_of_steps to {}.'
+#                .format(num_of_steps, array_size, array_size)
+#            )
+#            num_of_steps = array_size
+
+        #while ode.successful() and step < num_of_steps:
+        while ode.successful() and step < array_size:
             step += 1
             if step > MIN_NUM_OF_DATA_PTS:
                 # Stop if z is inside a cutoff of a puncture.
