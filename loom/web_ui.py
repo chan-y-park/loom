@@ -932,7 +932,10 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
                         value = root_system
                     else:
                         value = request_dict[option]
-                    if (section == 'numerical parameters'):
+                    if (
+                        section == 'numerical parameters'
+                        or value == 'None'
+                    ):
                         loom_config[option] = eval(value)
                     else:
                         loom_config[option] = value
