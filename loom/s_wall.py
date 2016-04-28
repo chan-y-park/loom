@@ -309,7 +309,7 @@ class SWall(object):
 #            num_of_steps = array_size
 
         #while ode.successful() and step < num_of_steps:
-        while ode.successful() and step < array_size:
+        while ode.successful() and step < (array_size - 1):
             step += 1
             if step > MIN_NUM_OF_DATA_PTS:
                 # Stop if z is inside a cutoff of a puncture.
