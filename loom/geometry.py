@@ -1476,7 +1476,14 @@ def get_ramification_points_using_system_of_eqs(
 #        )
 
     sols = get_ramification_points_multiplicity(
+        curve=curve, 
+        diff_params=diff_params, 
+        mt_params=mt_params,
+        accuracy=accuracy, 
+        punctures=punctures,
         ramification_points=z_x_s,
+        g_data=g_data,
+        f_n=f_n,
         logger_name=logger_name,
     )
 
@@ -1491,10 +1498,17 @@ def get_ramification_points_multiplicity(
     punctures=None,
     ramification_points=None,
     g_data=None,
+    f_n=None,
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
     sols = []
+
+    if f_n is None:
+        f = (curve.sym_eq.subs(diff_params)
+             .evalf(n=ROOT_FINDING_PRECISION, chop=True))
+        # Make f into the form of f_n/f_d
+        f_n, f_d = sympy.cancel(f).as_numer_denom()
 
     # TODO: Consider calculating the discriminant D(z)
     # and double-check if all the z_i's are found.

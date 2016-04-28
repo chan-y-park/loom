@@ -359,12 +359,11 @@ class SpectralNetwork:
                 .format(iteration)
             )
 
-            # New joints found in each iteration.
-            new_joints = [] 
+            # Find joints between the new S-wall and the previous S-walls,
+            # and among the new S-walls.
+            
+            new_joints = []     # New joints found in each iteration. 
             if iteration < num_of_iterations:
-                # Find joints between the new S-wall and the previous S-walls,
-                # and among the new S-walls.
-
                 # S-walls that are already searched for joints.
                 finished_s_walls = self.s_walls[:self.n_finished_s_walls]
                 # S-walls that are not searched for joints.
@@ -398,52 +397,48 @@ class SpectralNetwork:
                 else:
                     self.n_finished_s_walls += len(unfinished_s_walls)
 
-            for i, new_s_wall in enumerate(new_s_walls):
-                # Add the new S-wall to the spectral network
-                if (
-                    (additional_n_steps > 0 or new_mass_limit is not None)
-                    and iteration == 1
-                ):
+            # Add the new S-wall to the spectral network
+            if (
+                (additional_n_steps > 0 or new_mass_limit is not None)
+                and iteration == 1
+            ):
+                prev_s_walls = {}
+                for s_wall in self.s_walls:
+                    prev_s_walls[s_wall.label] = s_wall
+
+                #for i, new_s_wall in enumerate(new_s_walls):
+                #    esw = self.s_walls[i]
+                for nsw in new_s_walls:
                     # Attach new S-walls to existing S-walls
-                    esw = self.s_walls[i]
-                    asw = new_s_wall
-                    if asw.label != esw.label:
-                        esw = None
-                        for s_wall in self.s_walls:
-                            if s_wall.label == asw.label:
-                                esw = s_wall
-                        if esw is None:
-                            raise RuntimeError(
-                                'S-wall exntesion mismatch: '
-                                'cannot attach a new {}.'
-                                .format(asw.label)
-                            )
+                    try:
+                        psw = prev_s_walls[nsw.label]
+                    except KeyError:
+                        raise RuntimeError(
+                            'S-wall exntesion mismatch: '
+                            'cannot attach a new {}.'
+                            .format(nsw.label)
+                        )
 
-                    esw_n_t = len(esw.z)
-                    esw.z = numpy.concatenate((esw.z, asw.z[1:])) 
-                    esw.x = numpy.concatenate((esw.x, asw.x[1:])) 
-                    esw.M = numpy.concatenate((esw.M, asw.M[1:])) 
+                    psw_n_t = len(psw.z)
+                    psw.z = numpy.concatenate((psw.z, nsw.z[1:])) 
+                    psw.x = numpy.concatenate((psw.x, nsw.x[1:])) 
+                    psw.M = numpy.concatenate((psw.M, nsw.M[1:])) 
 
-                    esw.local_roots += asw.local_roots[1:]
-                    esw.multiple_local_roots += asw.multiple_local_roots[1:]
-                    esw.local_weight_pairs += asw.local_weight_pairs[1:]
+                    psw.local_roots += nsw.local_roots[1:]
+                    psw.multiple_local_roots += nsw.multiple_local_roots[1:]
+                    psw.local_weight_pairs += nsw.local_weight_pairs[1:]
 
-                    for ci in asw.cuts_intersections:
+                    for ci in nsw.cuts_intersections:
                         bp, t, d = ci
-                        esw.cuts_intersections.append(
-                            [bp, esw_n_t + t, d]
+                        psw.cuts_intersections.append(
+                            [bp, psw_n_t + t, d]
                         )
                     logger.info(
                         'Extended {} by {} steps.'
-                        .format(new_s_wall.label, len(new_s_wall.z))
+                        .format(nsw.label, len(nsw.z))
                     )
-                else:
-                    self.s_walls.append(new_s_wall)
-                    #logger.info(
-                    #    'Added {} to the spectral network.'
-                    #    .format(new_s_wall.label)
-                    #)
-
+            else:
+                self.s_walls += new_s_walls
 
             if(len(new_joints) == 0):
                 if iteration < num_of_iterations:
@@ -462,14 +457,6 @@ class SpectralNetwork:
             new_s_walls = []
             # Seed an S-wall for each new joint.
             for joint in new_joints:
-#                joint_is_new = True
-#                # check if this is not in the previous joint list
-#                for old_joint in self.joints:
-#                    if joint.is_equal_to(old_joint, accuracy):
-#                        joint_is_new = False
-#                        break
-#                if not joint_is_new:
-#                    continue
                 joint.label = 'joint #{}'.format(len(self.joints))
                 self.joints.append(joint)
                 label = 'S-wall #{}'.format(
