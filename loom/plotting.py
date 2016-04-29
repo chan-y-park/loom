@@ -23,7 +23,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         spectral_network,
         branch_points,
         punctures=None,
-        irregular_singularities=None, 
+        irregular_singularities=None,
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
@@ -31,7 +31,6 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         g_data=None,
         branch_cut_rotation=1,
     ):
-        
         labels = {'branch_points': [], 'joints': [], 'punctures': [],
                   'walls': [], 'irregular_singularities': []}
         if self.plot_range is None:
@@ -46,7 +45,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                 bp_z = bp.z
             branch_points_z.append([bp_z.real, bp_z.imag])
             labels['branch_points'].append(bp.label)
-   
+
         joints_z = []
         for i, jp in enumerate(spectral_network.joints):
             if plot_on_cylinder is True:
@@ -76,7 +75,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
             else:
                 irs_z = irs.z
             irregular_singularities_z.append([irs_z.real, irs_z.imag])
-            labels['irregular_singularities'].append(irs.label)        
+            labels['irregular_singularities'].append(irs.label)
 
         walls = []
         wall_segments = []
@@ -109,10 +108,9 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                     get_splits_with_overlap(s_wall.get_splits())
                 )
                 wall_roots.append(s_wall.local_roots)
-                
-                seg_labels = [s_wall.label + '\n' + root_str 
+
+                seg_labels = [s_wall.label + '\n' + root_str
                               for root_str in map(str, s_wall.local_roots)]
-            
                 labels['walls'].append(seg_labels)
 
         wall_colors = [
@@ -132,7 +130,7 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         )
 
         plot_legend += get_spectral_network_data_legend(
-            s_walls=spectral_network.s_walls, 
+            s_walls=spectral_network.s_walls,
             g_data=g_data,
         )
 
@@ -283,7 +281,7 @@ class NetworkPlotTk(SpectralNetworkPlotBase):
         toolbar = NavigationToolbar(self.canvas, self.toplevel)
         toolbar.update()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-   
+
     def on_closing(self):
         self.toplevel.destroy()
         if self.master is None:
@@ -412,7 +410,7 @@ def get_legend(
     root_labels = root_dictionary.keys()
     roots = root_dictionary.values()
     weight_pairs = [
-        [str('(mu_' + str(p[0]) + ', mu_' + str(p[1]) + ')') 
+        [str('(mu_' + str(p[0]) + ', mu_' + str(p[1]) + ')')
          for p in g_data.ordered_weight_pairs(rt)]
         for rt in roots
     ]
@@ -434,7 +432,7 @@ def get_legend(
         legend += ('\t--- Regular punctures ---\n')
         for p in regular_punctures:
             legend += (
-                p.label + 
+                p.label +
                 '\tposition : {}\n'.format(p.z)
             )
 
@@ -444,7 +442,7 @@ def get_legend(
             rt_labels = [get_label(rt, root_dictionary)
                          for rt in bp.positive_roots]
             legend += (
-                bp.label + 
+                bp.label +
                 '\tposition : {}\n'.format(bp.z) +
                 '\t\troot type : {}\n'.format(rt_labels) +
                 '\t\tmonodromy matrix : \n{}\n'.format(bp.monodromy)
@@ -454,8 +452,8 @@ def get_legend(
         legend += ('\t--- Irregular Singularities ---\n')
         for irs in irregular_singularities:
             legend += (
-                irs.label + 
-                '\tposition : {}\n'.format(irs.z) + 
+                irs.label +
+                '\tposition : {}\n'.format(irs.z) +
                 '\tmonodomry matrix : \n{}\n'.format(irs.monodromy)
             )
 
@@ -473,16 +471,14 @@ def get_spectral_network_data_legend(
         rt_labels = [get_label(rt, root_dictionary) for rt in s.local_roots]
         wt_labels = [
             [
-                ['mu_' + str(pair[0]), 'mu_' + str(pair[1])] 
+                ['mu_' + str(pair[0]), 'mu_' + str(pair[1])]
                 for pair in loc_wts
             ] for loc_wts in s.local_weight_pairs
         ]
         legend += (
-            s.label + 
+            s.label +
             '\troot types : {}\n'.format(rt_labels) +
             '\t\tsheet pairs : {}\n'.format(wt_labels)
         )
 
     return legend
-
-

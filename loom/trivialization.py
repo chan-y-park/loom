@@ -40,8 +40,9 @@ ZOOM_FACTOR = 10
 # Tolerance for recognizing colliding sheets at a branch-point
 BP_PROXIMITY_THRESHOLD = 0.05
 
-# Used in set_trivialization() 
+# Used in set_trivialization()
 SINGLE_BRANCH_LOCUS_MAX_DISTANCE = 3.0
+
 
 class BranchPoint:
     """
@@ -156,7 +157,6 @@ class BranchPoint:
             'ffr_ramification_points': [
                 rp.label for rp in self.ffr_ramification_points
             ],
-            # 'seeds': map(ctor2, self.seeds),
         }
         return json_data
 
@@ -168,7 +168,6 @@ class BranchPoint:
         self.positive_roots = numpy.array(json_data['positive_roots'])
         self.order = json_data['order']
         self.ffr_ramification_points = []
-        # self.seeds = map(r2toc, json_data['seeds'])
         for rp_label in json_data['ffr_ramification_points']:
             for rp in ffr_ramification_points:
                 if rp_label == rp.label:
@@ -266,22 +265,22 @@ class SWDataWithTrivialization(SWDataBase):
         a list of x's
             [x_0, x_1, ..., x_i, ...]
         where 'i' is an integer label for the sheet,
-        and 'x' is its position in the fiber of T^*C 
-        over the basepoint. This is aligned with 
+        and 'x' is its position in the fiber of T^*C
+        over the basepoint. This is aligned with
         g_data.ffr_weights.
 
     get_sheets_at_z(z) :
-        this method returns the set of sheets and their integer label 
+        this method returns the set of sheets and their integer label
         identifier at any point 'z' on the C-plane.
         The labels are consistent with those at the basepoint.
-        To get the corresponding weights, of the first fundamental 
+        To get the corresponding weights, of the first fundamental
         representation, use g_data.weights[i].
         The output looks like this
         {0 : x_0, ... , i : x_i, ...}
     """
-    # NOTE: I am assuming that branch points NOR irregular singularities 
+    # NOTE: I am assuming that branch points NOR irregular singularities
     # overlap vertically.
-    # This should be guaranteed by the automatic rotation of 
+    # This should be guaranteed by the automatic rotation of
     # the z-plane which is performed before calling this class.
     def __init__(self, config, logger_name='loom', json_data=None,):
         super(SWDataWithTrivialization, self).__init__(
@@ -296,10 +295,10 @@ class SWDataWithTrivialization(SWDataBase):
         self.branch_cut_rotation = 1
 
         # The following attributes are not used outside this module,
-        self.min_distance = None 
-        self.min_horizontal_distance = None 
-        self.farthest_branching_locus = None 
-        self.base_point = None 
+        self.min_distance = None
+        self.min_horizontal_distance = None
+        self.farthest_branching_locus = None
+        self.base_point = None
 
         if json_data is None:
             self.set_trivialization()
@@ -307,7 +306,7 @@ class SWDataWithTrivialization(SWDataBase):
             self.set_trivialization_from_json_data(json_data)
 
         self.data_attributes += [
-            'branch_points', 'irregular_singularities', 
+            'branch_points', 'irregular_singularities',
             'min_distance', 'min_horizontal_distance',
             'farthest_branching_locus', 'base_point',
             'reference_ffr_xs', 'reference_xs', 'branch_cut_rotation',
@@ -355,7 +354,7 @@ class SWDataWithTrivialization(SWDataBase):
         logger = logging.getLogger(self.logger_name)
 
         self.branch_points = [
-            BranchPoint(json_data=data, 
+            BranchPoint(json_data=data,
                         ffr_ramification_points=self.ffr_ramification_points,)
             for data in json_data['branch_points']
         ]
@@ -376,9 +375,9 @@ class SWDataWithTrivialization(SWDataBase):
         except KeyError:
             pass
 
-        self.min_distance = json_data['min_distance'] 
+        self.min_distance = json_data['min_distance']
         self.min_horizontal_distance = json_data['min_horizontal_distance']
-        self.base_point = r2toc(json_data['base_point']) 
+        self.base_point = r2toc(json_data['base_point'])
         try:
             self.farthest_branching_locus = r2toc(
                 json_data['farthest_branching_locus']
@@ -387,6 +386,7 @@ class SWDataWithTrivialization(SWDataBase):
             logger.warning('No JSON data for farthest_branching_locus, '
                            'setting to None.')
             self.farthest_branching_locus = None
+
     def set_trivialization(self):
         logger = logging.getLogger(self.logger_name)
 
@@ -405,21 +405,20 @@ class SWDataWithTrivialization(SWDataBase):
 
         # z-coords of punctures.
         rpzs = n_remove_duplicate(
-            [p.z for p in self.regular_punctures 
+            [p.z for p in self.regular_punctures
              if p.z != oo],
             self.accuracy,
         )
         ipzs = n_remove_duplicate(
-            [p.z for p in self.irregular_punctures 
+            [p.z for p in self.irregular_punctures
              if p.z != oo],
             self.accuracy,
         )
-        
+
         # Automatically choose a basepoint, based on the positions of
         # both branch points and irregular singularities
         all_points_z = bpzs + rpzs + ipzs
         n_critical_loci = len(all_points_z)
-        
         if n_critical_loci > 1:
             all_distances = [
                 abs(x - y) for x in all_points_z for y in all_points_z
@@ -432,7 +431,7 @@ class SWDataWithTrivialization(SWDataBase):
             ]
             self.min_distance = min(non_zero_distances)
             horizontal_distances = [
-                abs(x.real - y.real) for x in all_points_z 
+                abs(x.real - y.real) for x in all_points_z
                 for y in all_points_z
             ]
             self.min_horizontal_distance = min(
@@ -441,11 +440,10 @@ class SWDataWithTrivialization(SWDataBase):
             self.farthest_branching_locus = max(
                 [abs(x) for x in all_points_z]
             )
-            
         elif n_critical_loci == 1:
             # If there is only one branching locus, we still
-            # need to set distance scales, as these will be used to 
-            # circumvent the branch locus when constructing paths 
+            # need to set distance scales, as these will be used to
+            # circumvent the branch locus when constructing paths
             # to trivializae the cover, as well as to fix a basepoint
             # for the trivialization
             max_distance = SINGLE_BRANCH_LOCUS_MAX_DISTANCE
@@ -465,7 +463,7 @@ class SWDataWithTrivialization(SWDataBase):
         # Fix reference x's at the basepoint.
         # These sheets are aligned in the order of
         # sw.g_data.weights, i.e. reference_sheets[i]
-        # is the value of x corresponding to 
+        # is the value of x corresponding to
         # sw.g_data.weights[i].
         logger.info(
             "Getting aligned x's at the base point z = {}."
@@ -475,8 +473,8 @@ class SWDataWithTrivialization(SWDataBase):
             self.base_point,
         )
 
-        # Construct the list of branch points. 
-        # Also assign them the respective ramification points 
+        # Construct the list of branch points.
+        # Also assign them the respective ramification points
         # and analyze them
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
@@ -486,9 +484,9 @@ class SWDataWithTrivialization(SWDataBase):
             if bp.order > 1:
                 # only add if there are any positive roots associated
                 # otherwise may be an accidental BP
-                # FIXME: Must handle also accidental BP; for example 
+                # FIXME: Must handle also accidental BP; for example
                 # a point like F~ z + x^2(1+x^2) can happen in D-type
-                # and will have no obvious monodromy. Need to deal with it. 
+                # and will have no obvious monodromy. Need to deal with it.
                 self.branch_points.append(bp)
 
         # Construct the list of irregular singularities
@@ -514,10 +512,10 @@ class SWDataWithTrivialization(SWDataBase):
             ram_loci, key=lambda rl: rl.z.real
         )]
 
-        # If there is no irregular singularity at infinity, 
+        # If there is no irregular singularity at infinity,
         # we make a check that the numerically computed monodromy is trivial
         m_oo = None
-        for p in self.irregular_punctures: 
+        for p in self.irregular_punctures:
             if p.z == oo:
                 m_oo = True
                 logger.debug(
@@ -550,13 +548,13 @@ class SWDataWithTrivialization(SWDataBase):
         elif m_oo is True:
             m_oo = numerical_m_oo
 
-        # Check that product of all monodromies equals 
-        # the monodromy at infinity    
+        # Check that product of all monodromies equals
+        # the monodromy at infinity
         m_tot = numpy.identity(rep_d)
         for m_i in ordered_monodromies:
-            # NOTE: since monodromies are counter-clockwise and 
-            # ramification loci are ordered according to ascending 
-            # real part of their coordinate, multiplication must 
+            # NOTE: since monodromies are counter-clockwise and
+            # ramification loci are ordered according to ascending
+            # real part of their coordinate, multiplication must
             # be to the right.
             m_tot = numpy.dot(m_tot, m_i)
 
@@ -571,10 +569,6 @@ class SWDataWithTrivialization(SWDataBase):
                 'Monodromy at infinity does not agree with the product '
                 'of all monodromies. Probable error in trivialization.'
             )
-            # raise RuntimeError(
-            #     'Monodromy at infinity does not agree with the product '
-            #     'of all monodromies. Probable error in trivialization.'
-            # )
 
         # Now we check consistency for various combinations of monodromies
         # e.g. M_1 M_2 ... M_k = M_{k+1} ... M_N (M_{oo})^{-1}
@@ -583,15 +577,15 @@ class SWDataWithTrivialization(SWDataBase):
             m_1 = numpy.identity(rep_d)
             m_2 = numpy.identity(rep_d)
             for m_i in ordered_monodromies[:(i + 1)]:
-                # NOTE: since monodromies are counter-clockwise and 
-                # ramification loci are ordered according to ascending 
-                # real part of their coordinate, multiplication must 
+                # NOTE: since monodromies are counter-clockwise and
+                # ramification loci are ordered according to ascending
+                # real part of their coordinate, multiplication must
                 # be to the right.
                 m_1 = numpy.dot(m_1, m_i)
             for m_i in ordered_monodromies[(i + 1):]:
-                # NOTE: since monodromies are counter-clockwise and 
-                # ramification loci are ordered according to ascending 
-                # real part of their coordinate, multiplication must 
+                # NOTE: since monodromies are counter-clockwise and
+                # ramification loci are ordered according to ascending
+                # real part of their coordinate, multiplication must
                 # be to the right.
                 m_2 = numpy.dot(m_2, m_i)
             if numpy.array_equal(numpy.dot(m_1, m_2), m_oo):
@@ -602,12 +596,6 @@ class SWDataWithTrivialization(SWDataBase):
                     'does not match the (inverse of) the remaining ones'
                     .format(i + 1)
                 )
-                # raise RuntimeError(
-                #     'The product of the first {} monodromies '
-                #     'does not match the (inverse of) the remaining ones'
-                #     .format(i + 1)
-                # )
-
 
     def get_sheets_along_path(
         self, z_path, is_path_to_bp=False, ffr=False,
@@ -620,23 +608,22 @@ class SWDataWithTrivialization(SWDataBase):
         meaning that all sheets can be distinguished correctly.
         This would fail if we choose a path ending on a branch-point.
         For tracking roots as we run into a branch point, one should
-        set the variable 'is_path_to_bp=True', and the check for 
+        set the variable 'is_path_to_bp=True', and the check for
         sheets becoming too similar will be ignored altogether.
         If tracking fails, an attempt will be made to 'zoom in',
         up to a certain number of times.
-        If zooming also fails, the tracking will take into account 
+        If zooming also fails, the tracking will take into account
         the first derivative of sheets and match them according to it.
-        """       
+        """
         logger = logging.getLogger(self.logger_name)
         g_data = self.g_data
         if accuracy is None:
             accuracy = self.accuracy
-        # If the initial sheets are unspecified, 
-        # the initial point should be the basepoint of the trivialization 
+        # If the initial sheets are unspecified,
+        # the initial point should be the basepoint of the trivialization
         if ffr_xs_0 is None:
             if abs(z_path[0] - self.base_point) < self.accuracy:
                 ffr_xs_0 = self.reference_ffr_xs
-                # xs_0 = self.reference_xs
             else:
                 raise RuntimeError(
                     'get_sheets_along_path() :'
@@ -648,28 +635,27 @@ class SWDataWithTrivialization(SWDataBase):
         # Each element is a sheet, which is a list of x's along the path.
         # Initialized with reference_xs.
         # TODO: set each element to an integer rather than a float.
-        
         if ffr_sheets_along_path is None:
             ffr_sheets_along_path = [[x] for x in ffr_xs_0]
-        
+
         for i, z in enumerate(z_path):
             near_degenerate_branch_locus = False
             if is_path_to_bp is True and abs(z - z_path[-1]) < self.accuracy:
                 near_degenerate_branch_locus = True
             # NOTE: Commenting this, since we don't need to bother
-            # with alignment for now. This saves a lot of problems 
+            # with alignment for now. This saves a lot of problems
             # with numerics and make the code much faster.
             # Delete the following commend after EXTENSIVE testing.
             # ffr_xs_1, xs_1 = self.get_aligned_xs(
-            #     z, 
+            #     z,
             #     near_degenerate_branch_locus=near_degenerate_branch_locus
             # )
-            ffr_xs_1 = self.ffr_curve.get_xs(z) 
+            ffr_xs_1 = self.ffr_curve.get_xs(z)
 
             # if it's not a path to branch point, check tracking
             if is_path_to_bp is False:
                 sorted_ffr_xs = get_sorted_xs(
-                    ffr_xs_0, ffr_xs_1, 
+                    ffr_xs_0, ffr_xs_1,
                     accuracy=accuracy,
                     check_tracking=True, index=i,
                     z_0=z_path[i - 1], z_1=z_path[i],
@@ -689,7 +675,7 @@ class SWDataWithTrivialization(SWDataBase):
                     logger_name=self.logger_name,
                     sw_curve=self.curve,
                 )
-            # if it's a path to a branch point and we are getting close to it, 
+            # if it's a path to a branch point and we are getting close to it,
             # don't check tracking anymore
             else:
                 sorted_ffr_xs = get_sorted_xs(
@@ -708,17 +694,17 @@ class SWDataWithTrivialization(SWDataBase):
                     if i > 0:
                         delta_z = (z_path[i] - z_path[i - 1]) / ZOOM_FACTOR
                         zoomed_path = [
-                            z_path[i - 1] + j * delta_z  
+                            z_path[i - 1] + j * delta_z
                             for j in range(ZOOM_FACTOR + 1)
                         ]
                     else:
                         delta_z = (z_path[1] - z_path[0]) / ZOOM_FACTOR
                         zoomed_path = [
-                            z_path[0] + j * delta_z  
+                            z_path[0] + j * delta_z
                             for j in range(ZOOM_FACTOR + 1)
                         ]
                     sheets_along_zoomed_path = self.get_sheets_along_path(
-                        zoomed_path, 
+                        zoomed_path,
                         is_path_to_bp=near_degenerate_branch_locus,
                         ffr=True,
                         ffr_xs_0=ffr_xs_0,
@@ -726,17 +712,15 @@ class SWDataWithTrivialization(SWDataBase):
                         accuracy=(accuracy / ZOOM_FACTOR),
                         ffr_sheets_along_path=ffr_sheets_along_path,
                     )
-                    # Just keep the last tracked value for each sheet 
+                    # Just keep the last tracked value for each sheet
                     sorted_ffr_xs = [
                         zoom_s[-1] for zoom_s in sheets_along_zoomed_path
                     ]
-                    # for j, s_j in enumerate(ffr_sheets_along_path):
-                    #     s_j += sorted_ffr_xs[j]
 
                 else:
                     old_ffr_xs = [s[-2] for s in ffr_sheets_along_path]
                     delta_xs = [
-                        ffr_xs_0[j] - old_ffr_xs[j] 
+                        ffr_xs_0[j] - old_ffr_xs[j]
                         for j in range(len(ffr_xs_0))
                     ]
                     sorted_ffr_xs = sort_xs_by_derivative(
@@ -763,13 +747,13 @@ class SWDataWithTrivialization(SWDataBase):
                                 'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
                             )
 
-            # this is just the ordinary step, where we add the 
+            # this is just the ordinary step, where we add the
             # latest value of ordered sheets
             for j, s_j in enumerate(ffr_sheets_along_path):
                 s_j.append(sorted_ffr_xs[j])
 
             ffr_xs_0 = sorted_ffr_xs
-            
+
         # the result is of the form [sheet_path_1, sheet_path_2, ...]
         # where sheet_path_i = [x_0, x_1, ...] are the fiber coordinates
         # of the sheet along the path
@@ -777,14 +761,14 @@ class SWDataWithTrivialization(SWDataBase):
             return ffr_sheets_along_path
         elif ffr is False:
             rep_dim = len(g_data.weights)
-            # Warning: the following is offset by 1 from len(z_path)!
+            # XXX Warning: the following is offset by 1 from len(z_path)!
             n_steps = len(ffr_sheets_along_path[0])
             sheets_along_path = [
                 [0 for j in range(n_steps)] for i in range(rep_dim)
             ]
 
             for i in range(n_steps):
-                # Note: here it is crucial that the sheets are 
+                # Note: here it is crucial that the sheets are
                 # ordered according to the weights of the rep
                 # to quich they correspond
                 ffr_xs_at_step_i = [s[i] for s in ffr_sheets_along_path]
@@ -798,7 +782,7 @@ class SWDataWithTrivialization(SWDataBase):
 
     def get_sheets_at_z(self, z_pt, g_data=None, ffr=False):
         """
-        Returns a dict of (sheet_index, x) at a point ''z_pt'', 
+        Returns a dict of (sheet_index, x) at a point ''z_pt'',
         which cannot be a branch point or a singularity.
         """
         z_path = get_path_to(z_pt, self)
@@ -819,17 +803,17 @@ class SWDataWithTrivialization(SWDataBase):
         is_irr_sing=False
     ):
         """
-        Compares the x-coordinates of sheets at the 
+        Compares the x-coordinates of sheets at the
         beginning and at the end of a CLOSED path.
-        Returns a permutation matrix, expressed in 
+        Returns a permutation matrix, expressed in
         the basis of reference sheets, such that
         new_sheets = M . old_sheets
 
         There are subtleties associarted with representations
         of D and E-type algebras, where two or more sheets
-        can be identically zero. Then one needs to 
+        can be identically zero. Then one needs to
         figure out how to permute them, if at all.
-        For this reason, it is important to specify whenever 
+        For this reason, it is important to specify whenever
         we are computing the monodromy around an irregular singularity.
         """
         logger = logging.getLogger(self.logger_name)
@@ -843,11 +827,11 @@ class SWDataWithTrivialization(SWDataBase):
         final_xs = [s_t[-1] for s_t in sheet_tracks]
         final_sheets = [[i, x] for i, x in enumerate(final_xs)]
 
-        # Now we compare the initial and final sheets 
+        # Now we compare the initial and final sheets
         # to extract the monodromy permutation
         # recall that each entry of initial_sheets and final_sheets
         # is of the form [i, x] with i the integer label
-        # and x the actual position of the sheet in the fiber 
+        # and x the actual position of the sheet in the fiber
         # above the basepoint.
         sorted_sheets = []
         for s_1 in initial_sheets:
@@ -858,9 +842,9 @@ class SWDataWithTrivialization(SWDataBase):
                     min_d = abs(s_2[1] - s_1[1])
                     closest_candidate = s_2
             sorted_sheets.append(closest_candidate)
-        
+
         # Now we check that sheet tracking is not making a mistake.
-        # NOTE: cannot use the function 'delete_duplicates' with this 
+        # NOTE: cannot use the function 'delete_duplicates' with this
         # data structure.
         seen = set()
         uniq = []
@@ -875,30 +859,30 @@ class SWDataWithTrivialization(SWDataBase):
             # Do not raise an error in this case.
             # Likewise for E-type
             if (
-                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy 
+                min(map(abs, [s[1] for s in sorted_sheets])) < self.accuracy
             ) and (
                 self.g_data.type == 'D' and len(sorted_sheets) - len(uniq) == 1
             ) or (
                 self.g_data.type == 'E' and len(sorted_sheets) - len(uniq) == 2
             ):
-                # If two or more sheets are equal (and both zero) then the 
-                # (integer) labels they got assigned in sorting above may 
+                # If two or more sheets are equal (and both zero) then the
+                # (integer) labels they got assigned in sorting above may
                 # be the same, this would lead to a singular permutation matrix
                 # and must be corrected, as follows.
                 int_labels = [s[0] for s in sorted_sheets]
                 uniq_labels = list(set(int_labels))
                 labels_multiplicities = [
-                    len([i for i, x in enumerate(int_labels) if x == u]) 
+                    len([i for i, x in enumerate(int_labels) if x == u])
                     for u in uniq_labels
                 ]
                 multiple_labels = []
                 for i, u in enumerate(uniq_labels):
                     if labels_multiplicities[i] > 1:
                         if (
-                            labels_multiplicities[i] == 2 
+                            labels_multiplicities[i] == 2
                             and self.g_data.type == 'D'
                         ) or (
-                            labels_multiplicities[i] == 3 
+                            labels_multiplicities[i] == 3
                             and self.g_data.type == 'E'
                         ):
                             multiple_labels.append(u)
@@ -923,11 +907,11 @@ class SWDataWithTrivialization(SWDataBase):
 
                 if self.g_data.type == 'D':
                     double_sheets = [
-                        i for i, s in enumerate(sorted_sheets) 
+                        i for i, s in enumerate(sorted_sheets)
                         if s[0] == multiple_labels[0]
                     ]
 
-                    corrected_sheets = sorted_sheets 
+                    corrected_sheets = sorted_sheets
                     if is_higher_bp is False and is_irr_sing is False:
                         corrected_sheets[double_sheets[0]] = (
                             initial_sheets[double_sheets[0]]
@@ -937,28 +921,28 @@ class SWDataWithTrivialization(SWDataBase):
                         )
                     elif (
                         is_higher_bp is True and (
-                            higher_bp_type == 'type_II' 
+                            higher_bp_type == 'type_II'
                             or higher_bp_type == 'type_III'
-                            # FIXME: remove this after removing 'type_AD' 
+                            # FIXME: remove this after removing 'type_AD'
                             # placeholder
                             or higher_bp_type == 'type_AD'
 
                         ) or is_irr_sing is True
                     ):
-                        # Should decide case-by-case whether to employ 
+                        # Should decide case-by-case whether to employ
                         # (0,1) -> (0,1) or (0,1) -> (1,0)
-                        # One way to do so would be to pick each of them, and 
-                        # construct the whole monodromy, then see if applying 
+                        # One way to do so would be to pick each of them, and
+                        # construct the whole monodromy, then see if applying
                         # the monodromy to every root gives back a root
                         # By direct checks, only one of the two options works
                         # so there should be no ambiguity left.
 
-                        # TODO: print a warning if BOTH options give a Weyl 
-                        # sheet matrix, because in that case there may be 
+                        # TODO: print a warning if BOTH options give a Weyl
+                        # sheet matrix, because in that case there may be
                         # ambiguity
 
-                        # UPDATE: Disabling the option 0. Because in these 
-                        # types  of ramification points there should be no 
+                        # UPDATE: Disabling the option 0. Because in these
+                        # types  of ramification points there should be no
                         # sheet that remains fixed by the permutation.
                         # Keep it in comment in case we encounter trouble
 
@@ -995,7 +979,6 @@ class SWDataWithTrivialization(SWDataBase):
                                 'get_sheet_monodromy(): '
                                 'Failed to assign a Weyl-type monodromy.'
                             )
-                        
                     else:
                         raise RuntimeError(
                             'get_sheet_monodromy(): '
@@ -1008,11 +991,11 @@ class SWDataWithTrivialization(SWDataBase):
 
                 elif self.g_data.type == 'E':
                     triple_sheets = [
-                        i for i, s in enumerate(sorted_sheets) 
+                        i for i, s in enumerate(sorted_sheets)
                         if s[0] == multiple_labels[0]
                     ]
 
-                    corrected_sheets = sorted_sheets 
+                    corrected_sheets = sorted_sheets
                     if is_higher_bp is False and is_irr_sing is False:
                         corrected_sheets[triple_sheets[0]] = (
                             initial_sheets[triple_sheets[0]]
@@ -1028,21 +1011,21 @@ class SWDataWithTrivialization(SWDataBase):
                         (is_higher_bp is True and higher_bp_type == 'type_IV')
                         or is_irr_sing is True
                     ):
-                        # Should decide case-by-case whether to employ 
+                        # Should decide case-by-case whether to employ
                         # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
-                        # One way to do so would be to pick each of them, and 
-                        # construct the whole monodromy, then see if applying 
+                        # One way to do so would be to pick each of them, and
+                        # construct the whole monodromy, then see if applying
                         # the monodromy to every root gives back a root
                         # By direct checks, only one of the two options works
                         # so there should be no ambiguity left.
-                        
-                        # TODO: print a warning if BOTH options give a Weyl 
-                        # sheet matrix, because in that case there may be 
+
+                        # TODO: print a warning if BOTH options give a Weyl
+                        # sheet matrix, because in that case there may be
                         # ambiguity
 
-                        # UPDATE: Disabling the option 0. 
+                        # UPDATE: Disabling the option 0.
                         # Because in these types of ramification points
-                        # there should be no sheet that remains fixed by 
+                        # there should be no sheet that remains fixed by
                         # the permutation.
                         # Keep this in comment in case we encounter trouble
 
@@ -1101,7 +1084,6 @@ class SWDataWithTrivialization(SWDataBase):
                                 'get_sheet_monodromy(): '
                                 'Failed to assign a Weyl-type monodromy.'
                             )
-                            
                     else:
                         raise RuntimeError(
                             'get_sheet_monodromy(): '
@@ -1115,7 +1097,7 @@ class SWDataWithTrivialization(SWDataBase):
             else:
                 raise RuntimeError(
                     'get_sheet_monodromy(): '
-                    'Cannot match uniquely the initial sheets ' 
+                    'Cannot match uniquely the initial sheets '
                     'to the final ones.'
                 )
         else:
@@ -1157,7 +1139,7 @@ class SWDataWithTrivialization(SWDataBase):
         )
         xs_at_bp = [s_i[-1] for s_i in sheets_along_path]
         enum_sh = [[i, x_i] for i, x_i in enumerate(xs_at_bp)]
-        
+
         clusters = []
         for i, x in enum_sh:
             is_single = True
@@ -1170,9 +1152,7 @@ class SWDataWithTrivialization(SWDataBase):
             if is_single is True:
                 clusters.append([i])
 
-        # bp.enum_sh = enum_sh
         bp.groups = [c for c in clusters if len(c) > 1]
-        # bp.singles = [c[0] for c in clusters if len(c) == 1]
 
         bp.positive_roots = get_positive_roots_of_branch_point(
             bp, self.g_data, self.logger_name,
@@ -1185,7 +1165,7 @@ class SWDataWithTrivialization(SWDataBase):
         ]
 
         ramification_types = ([
-            rp.ramification_type for rp in bp.ffr_ramification_points 
+            rp.ramification_type for rp in bp.ffr_ramification_points
             if rp.ramification_type != 'type_I'
         ])
 
@@ -1197,7 +1177,7 @@ class SWDataWithTrivialization(SWDataBase):
         else:
             if len(delete_duplicates(ramification_types)) == 1:
                 bp.monodromy = self.get_sheet_monodromy(
-                    path_around_bp, 
+                    path_around_bp,
                     is_higher_bp=True, higher_bp_type=ramification_types[0]
                 )
             else:
@@ -1206,7 +1186,7 @@ class SWDataWithTrivialization(SWDataBase):
                     'Multiple ramification types for BP at z = {}'.format(bp.z)
                 )
 
-        # If the order of the branch point is 1, it means that it does 
+        # If the order of the branch point is 1, it means that it does
         # not correspond to a root, and will be dropped later on.
         # Since all branch points should be of weyl-type, there
         # should be no monodromy around this branch point.
@@ -1225,15 +1205,15 @@ class SWDataWithTrivialization(SWDataBase):
                     "Probable error in trivialization of the covering."
                 )
 
-        # TODO: it would be good to make a check here, e.g. on the 
+        # TODO: it would be good to make a check here, e.g. on the
         # relation between vanishing roots and the monodromy.
 
         # XXX: Temporary analysis for D-type AD theories.
-        # TODO: Delete this, 'for' cycle, and implement this fix 
+        # TODO: Delete this, 'for' cycle, and implement this fix
         # inside the routine get_sheet_monodromy as for all the other types.
         for rp in bp.ffr_ramification_points:
             if (
-                rp.ramification_type == 'type_AD' 
+                rp.ramification_type == 'type_AD'
                 # or rp.ramification_type == 'type_III'
                 # NOTE: no need to do this for type_III, already handled
                 # in the routine get_sheet_monodromy
@@ -1269,28 +1249,25 @@ class SWDataWithTrivialization(SWDataBase):
         irr_sing.monodromy = self.get_sheet_monodromy(
             path_around_z, is_irr_sing=True
         )
-    
+
 
 def get_path_to(z_pt, sw_data, logger_name='loom'):
     """
     Return a rectangular path from the base point to z_pt.
-    If the path has to pass too close to a branch point or a puncture, 
+    If the path has to pass too close to a branch point or a puncture,
     we avoid the latter by drawing an arc around it.
     """
     logger = logging.getLogger(logger_name)
     base_pt = sw_data.base_point
     closest_z_pt = None
-    # if n_loci==None:
-    #     n_loci = len(sw_data.branch_points + sw_data.irregular_singularities)
-    # radius = sw_data.min_distance / n_loci
     radius = sw_data.min_horizontal_distance / 2.0
 
     logger.debug("Constructing a path [{}, {}]".format(base_pt, z_pt))
 
-    # Determine if the path will need to pass 
+    # Determine if the path will need to pass
     # close to a branch point or a puncture.
     for p in (
-        sw_data.branch_points + sw_data.regular_punctures + 
+        sw_data.branch_points + sw_data.regular_punctures +
         sw_data.irregular_punctures
     ):
         if p.z == oo:
@@ -1310,10 +1287,10 @@ def get_path_to(z_pt, sw_data, logger_name='loom'):
         z_2 = z_pt
         half_steps = int(N_PATH_TO_PT / 2)
         return (
-            [z_0 + ((z_1 - z_0) / half_steps) * i 
-             for i in range(half_steps + 1)] + 
-            [z_1 + ((z_2 - z_1) / half_steps) * i 
-             for i in range(half_steps + 1)]                
+            [z_0 + ((z_1 - z_0) / half_steps) * i
+             for i in range(half_steps + 1)] +
+            [z_1 + ((z_2 - z_1) / half_steps) * i
+             for i in range(half_steps + 1)]
         )
 
     # If there the path needs to pass near a branch point:
@@ -1323,7 +1300,7 @@ def get_path_to(z_pt, sw_data, logger_name='loom'):
         z_2 = 1j * (closest_z_pt.imag - radius) + closest_z_pt.real
         z_3 = closest_z_pt + radius * exp(1j * phase(z_pt - closest_z_pt))
         z_4 = z_pt
-        
+
         if (z_pt - closest_z_pt).real > 0:
             # way_around = 'ccw'
             sign = 1.0
@@ -1331,13 +1308,13 @@ def get_path_to(z_pt, sw_data, logger_name='loom'):
         else:
             # way_around = 'cw'
             sign = -1.0
-            delta_theta = 3 * pi / 2 - phase(z_pt - closest_z_pt) 
+            delta_theta = 3 * pi / 2 - phase(z_pt - closest_z_pt)
 
         steps = int(N_PATH_TO_PT / 5)
 
         path_segment_1 = [z_0 + ((z_1 - z_0) / steps) * i
                           for i in range(steps + 1)]
-        path_segment_2 = [z_1 + ((z_2 - z_1) / steps) * i 
+        path_segment_2 = [z_1 + ((z_2 - z_1) / steps) * i
                           for i in range(steps + 1)]
         path_segment_3 = [
             closest_z_pt + radius * (-1j) * exp(
@@ -1347,22 +1324,19 @@ def get_path_to(z_pt, sw_data, logger_name='loom'):
         path_segment_4 = [
             z_3 + ((z_4 - z_3) / steps) * i for i in range(steps + 1)
         ]
-        
+
         return (
             path_segment_1 + path_segment_2 + path_segment_3 + path_segment_4
         )
-    
+
 
 def get_path_around(z_pt, base_pt, sw):
     logger = logging.getLogger(sw.logger_name)
     logger.debug("Constructing a closed path around z = {}".format(z_pt))
     z_0 = base_pt
-    
+
     if z_pt != oo:
         z_1 = 1j * base_pt.imag + z_pt.real
-        # if n_loci==None:
-        #     n_loci = len(sw.branch_points + sw.irregular_singularities)
-        # radius = min_distance / n_loci
         radius = sw.min_horizontal_distance / 2.0
         z_2 = z_pt - 1j * radius
 
@@ -1374,13 +1348,13 @@ def get_path_around(z_pt, base_pt, sw):
             z_1 + ((z_2 - z_1) / steps) * i for i in range(steps + 1)
         ]
         path_segment_3 = [
-            z_pt + radius * (-1j) * exp(i * 2.0 * pi * 1j / steps) 
+            z_pt + radius * (-1j) * exp(i * 2.0 * pi * 1j / steps)
             for i in range(steps + 1)
         ]
         path_segment_4 = path_segment_2[::-1]
         path_segment_5 = path_segment_1[::-1]
         return (
-            path_segment_1 + path_segment_2 + path_segment_3 + 
+            path_segment_1 + path_segment_2 + path_segment_3 +
             path_segment_4 + path_segment_5
         )
     else:
@@ -1398,27 +1372,26 @@ def get_path_around(z_pt, base_pt, sw):
             z_1 + ((z_2 - z_1) / steps) * i for i in range(steps + 1)
         ]
         path_segment_3 = [
-            radius * (-1j) * exp(i * 2.0 * pi * 1j / large_steps) 
+            radius * (-1j) * exp(i * 2.0 * pi * 1j / large_steps)
             for i in range(large_steps + 1)
         ]
         path_segment_4 = path_segment_2[::-1]
         path_segment_5 = path_segment_1[::-1]
         return (
-            path_segment_1 + path_segment_2 + path_segment_3 + 
+            path_segment_1 + path_segment_2 + path_segment_3 +
             path_segment_4 + path_segment_5
         )
-
 
 
 # TODO: Try using numba.
 # TODO: Make smarter checks based on the types
 # of ramification points above the branch point.
-def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True, 
+def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                   index=None, z_0=None, z_1=None, g_data=None,
                   logger_name='loom', sw_curve=None):
     """
     Returns a sorted version of 'new_xs'
-    based on matching the closest points with 
+    based on matching the closest points with
     'ref_xs'
     """
     logger = logging.getLogger(logger_name)
@@ -1430,10 +1403,10 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
     # but sometimes numpy returns as many as 14 sheets with x=0
     # then the above check will fail because the unique sheets are
     # far less than 27 - (3-1), to begin with.
-    # In such case, one can use SAGE to get a better accuracy for 
-    # the values of sheets x's. But sage is slow, so keep it for 
+    # In such case, one can use SAGE to get a better accuracy for
+    # the values of sheets x's. But sage is slow, so keep it for
     # neceessary cases.
-    # Maybe introduce a similar check for D-type, but it seems 
+    # Maybe introduce a similar check for D-type, but it seems
     # not necessary
     if g_data.type == 'E' and check_tracking is True:
         if (27 - len(n_remove_duplicate(new_xs, accuracy))) > 2:
@@ -1447,7 +1420,7 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
     for s_1 in ref_xs:
         closest_candidate = nsmallest(1, new_xs, key=lambda x: abs(x - s_1))[0]
         sorted_xs.append(closest_candidate)
-    
+
     if check_tracking is True:
         # Now we check that sheet tracking is not making a mistake.
         unique_sorted_xs = n_remove_duplicate(sorted_xs, accuracy)
@@ -1477,10 +1450,10 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
                 logger.debug(
                     "At step %s, between %s and %s " % (index, z_0, z_1)
                 )
-                logger.debug("ref_xs:\n{}".format(ref_xs)) 
-                logger.debug("new_xs:\n{}".format(new_xs)) 
-                logger.debug("sorted_xs:\n{}".format(sorted_xs)) 
-                logger.debug("unique_sorted_xs:\n{}".format(unique_sorted_xs)) 
+                logger.debug("ref_xs:\n{}".format(ref_xs))
+                logger.debug("new_xs:\n{}".format(new_xs))
+                logger.debug("sorted_xs:\n{}".format(sorted_xs))
+                logger.debug("unique_sorted_xs:\n{}".format(unique_sorted_xs))
                 logger.debug('Having trouble tracking sheets, will zoom in.')
                 return 'sorting failed'
         # don't trust tracking if dx/dt for a single step is larger than
@@ -1490,19 +1463,19 @@ def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
         else:
             return sorted_xs
     else:
-        # If the path is one ending on a branch-point, 
+        # If the path is one ending on a branch-point,
         # the check that tracking is correct is disabled
         # because it would produce an error, since by definition
         # sheets will be indistinguishable at the very end.
         return sorted_xs
 
 
-def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy, 
+def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
                           logger_name='loom'):
-    # will only work if there are at most two sheets being 
+    # will only work if there are at most two sheets being
     # too close two each other, not three or more.
     # Unless there are three or more sheets all equal to zero
-    # In this case we assume it's a degenerate curve and we 
+    # In this case we assume it's a degenerate curve and we
     # sort those sheets accordingly.
     # TODO: generalize to handle more general cases (if we need it at all)
     logger = logging.getLogger(logger_name)
@@ -1513,11 +1486,11 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
     for s_1 in ref_xs:
         closest_candidate = nsmallest(1, new_xs, key=lambda x: abs(x - s_1))[0]
         ys.append(closest_candidate)
-        
+
     # the list of ys corresponds to the ref_xs as
     # ref_xs = [x_1, x_2, x_3, ...]
     #     ys = [y_1, y_2, y_1, ...]
-    # and will contain doubles. 
+    # and will contain doubles.
     # We use them to identify the pairs that give trouble
     correct_xy_pairs = {}   # (a dictionary)
     trouble_xs = []
@@ -1538,7 +1511,7 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
 
     for x_pair in trouble_xs:
         if len(x_pair) != 2:
-            # Check if we are dealing with a set of 
+            # Check if we are dealing with a set of
             # sheets which are all (approximately) 0.0
             if max(map(abs, x_pair)) < accuracy:
                 for x_pair_i in x_pair:
@@ -1557,21 +1530,21 @@ def sort_xs_by_derivative(ref_xs, new_xs, delta_xs, accuracy,
             )
             # a check
             if (
-                closest_ys_0 != closest_ys_1 and 
+                closest_ys_0 != closest_ys_1 and
                 closest_ys_0 != closest_ys_1.reverse()
             ):
                 logger.warning((
                     'the closest sheets to the reference pair {}'
                     '\ndont match: they are respectively:\n{}\n{}'
                 ).format(x_pair, closest_ys_0, closest_ys_1))
-            
+
             # compute the differences of the various combinations
             dx_00 = closest_ys_0[0] - x_pair[0]
             dx_01 = closest_ys_0[1] - x_pair[0]
             dx_10 = closest_ys_1[0] - x_pair[1]
             dx_11 = closest_ys_1[1] - x_pair[1]
-            # pick for each x in the x_pair its companion based on 
-            # the phase of the displacement, choosing the closest to 
+            # pick for each x in the x_pair its companion based on
+            # the phase of the displacement, choosing the closest to
             # the previous step in the tracking
             i_0 = ref_xs.index(x_pair[0])
             i_1 = ref_xs.index(x_pair[1])
@@ -1609,7 +1582,7 @@ def kr_delta(i, j):
 
 def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
     """
-    Determines the positive roots associated with 
+    Determines the positive roots associated with
     a branch point's 'structure', i.e. how the sheets
     collide at the branch point.
     It will return a minimal list, i.e. it will drop
@@ -1626,7 +1599,7 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
 
     for g in bp.groups:
         # Within each group of colliding sheets/weights,
-        # consider all possible pairs, and compute 
+        # consider all possible pairs, and compute
         # the corresponding difference.
         # Then add it to the vanishing positive roots.
         for s_1, s_2 in combinations(g, 2):
@@ -1642,7 +1615,7 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
                 continue
     if vanishing_positive_roots == []:
         # TODO: Check if the situation is what we expect and is normal.
-        # If that's the case, don't print a message. 
+        # If that's the case, don't print a message.
         # Otherwise print a warning instead of info.
         logger.debug(
             "Branch point doesn't correspond "
@@ -1650,7 +1623,7 @@ def get_positive_roots_of_branch_point(bp, g_data, logger_name='loom'):
         )
         return []
 
-    # Finally, cleanup the duplicates, 
+    # Finally, cleanup the duplicates,
     # as well as the roots which are not linearly independent
     return numpy.array(
         keep_linearly_independent_vectors(vanishing_positive_roots)
@@ -1683,17 +1656,16 @@ def belongs_to_cluster(x, c, enum_sh):
 
 def keep_linearly_independent_vectors(vector_list):
     """
-    Takes a list of numpy arrays and returns a 
+    Takes a list of numpy arrays and returns a
     subset of linearly independent ones.
     """
-    
     first_vector = vector_list[0]
     independent_list = [first_vector]
 
     m_rank = 1
     m = numpy.matrix([first_vector])
     for v in vector_list:
-        # add the vector as a row to the matrix, 
+        # add the vector as a row to the matrix,
         # then compute the rank
         new_m = numpy.vstack([m, v])
         new_m_rank = matrix_rank(new_m)
@@ -1724,8 +1696,6 @@ def build_monodromy_matrix(initial_sheets, sorted_sheets, logger_name='loom'):
         new_sheet_index = sorted_sheets[i][0]
         perm_list.append(basis_e(new_sheet_index))
 
-    # perm_matrix = numpy.array(perm_list).transpose()
     perm_matrix = numpy.array(perm_list)
     logger.debug('Permutation matrix {}'.format(perm_matrix))
     return perm_matrix
-

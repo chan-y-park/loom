@@ -4,7 +4,7 @@ import numpy
 import sympy
 import ctypes
 import logging
-import pdb
+# import pdb
 import itertools
 import json
 
@@ -35,8 +35,9 @@ class SpectralNetwork:
         self.logger_name = logger_name
         # errors is a list of (error type string, error value tuples).
         self.errors = []
-        self.data_attributes = ['phase', 's_walls', 'joints', 
-                                'errors',]
+        self.data_attributes = [
+            'phase', 's_walls', 'joints', 'errors'
+        ]
 
     def set_z_rotation(self, z_rotation):
         for s_wall in self.s_walls:
@@ -111,7 +112,7 @@ class SpectralNetwork:
         if the depth of the joint is too deep.
         """
         logger = logging.getLogger(self.logger_name)
-        
+
         accuracy = config['accuracy']
 
         # Determine the intersection-finding algorithm
@@ -132,11 +133,11 @@ class SpectralNetwork:
 
             # Load CGAL shared library.
             libcgal_intersection = numpy.ctypeslib.load_library(
-                lib_name, 
+                lib_name,
                 (os.path.dirname(os.path.realpath(__file__)) +
                  '/cgal_intersection/'),
             )
-            
+
             get_intersections = (libcgal_intersection.
                                  find_intersections_of_curves)
 
@@ -157,7 +158,7 @@ class SpectralNetwork:
                 # array_2d_float,
                 array_2d_complex,
                 ctypes.c_long,
-                # array_2d_float, 
+                # array_2d_float,
                 array_2d_complex,
                 ctypes.c_long,
                 array_2d_float, ctypes.c_int,
@@ -185,7 +186,7 @@ class SpectralNetwork:
         num_of_iterations = config['num_of_iterations']
         n_steps = config['num_of_steps']
         if(
-            additional_n_steps == 0 and 
+            additional_n_steps == 0 and
             additional_iterations == 0 and
             new_mass_limit is None
         ):
@@ -268,22 +269,6 @@ class SpectralNetwork:
                     )
                 logger.info(msg + '.')
 
-#                new_s_walls = [
-#                    SWall(
-#                            z_0=s_wall.z[-1],
-#                            x_0=s_wall.x[-1],
-#                            M_0=s_wall.M[-1],
-#                            parents=s_wall.parents,
-#                            parent_roots=s_wall.parent_roots,
-#                            label=s_wall.label,
-#                            n_steps=(
-#                                n_steps - len(s_wall.z) + additional_n_steps
-#                            ),
-#                            logger_name=self.logger_name,
-#                    )
-#                    for s_wall in self.s_walls
-#                ]
-
                 new_s_walls = []
                 for s_wall in self.s_walls:
                     prev_array_size = len(s_wall.z)
@@ -298,14 +283,14 @@ class SpectralNetwork:
                     if new_n_steps > MIN_NUM_OF_DATA_PTS:
                         new_s_walls.append(
                             SWall(
-                                    z_0=s_wall.z[-1],
-                                    x_0=s_wall.x[-1],
-                                    M_0=s_wall.M[-1],
-                                    parents=s_wall.parents,
-                                    parent_roots=s_wall.parent_roots,
-                                    label=s_wall.label,
-                                    n_steps=new_n_steps,
-                                    logger_name=self.logger_name,
+                                z_0=s_wall.z[-1],
+                                x_0=s_wall.x[-1],
+                                M_0=s_wall.M[-1],
+                                parents=s_wall.parents,
+                                parent_roots=s_wall.parent_roots,
+                                label=s_wall.label,
+                                n_steps=new_n_steps,
+                                logger_name=self.logger_name,
                             )
                         )
             elif additional_iterations > 0 and iteration == 1:
@@ -317,21 +302,11 @@ class SpectralNetwork:
                 new_s_walls = []
 
             # Grow each newly-seeded S-wall.
-            i = 0 
+            i = 0
             while (i < len(new_s_walls)):
                 s_i = new_s_walls[i]
                 logger.info('Growing {}...'.format(s_i.label))
                 try:
-#                    if additional_n_steps > 0 and iteration == 1:
-#                        s_i.grow(
-#                            ode, bpzs, ppzs, config,
-#                            num_of_steps=additional_n_steps,
-#                        )
-#                    else:
-#                        s_i.grow(
-#                            ode, bpzs, ppzs, config,
-#                            num_of_steps=n_steps,
-#                        )
                     s_i.grow(ode, bpzs, ppzs, config,)
 
                     if len(s_i.z) < MIN_NUM_OF_DATA_PTS:
@@ -383,8 +358,8 @@ class SpectralNetwork:
 
             # Find joints between the new S-wall and the previous S-walls,
             # and among the new S-walls.
-            
-            new_joints = []     # New joints found in each iteration. 
+
+            new_joints = []     # New joints found in each iteration.
             if iteration < num_of_iterations:
                 # S-walls that are already searched for joints.
                 finished_s_walls = self.s_walls[:self.n_finished_s_walls]
@@ -410,7 +385,7 @@ class SpectralNetwork:
                             ('RuntimeError', error_msg)
                         )
                     finished_s_walls.append(unfinished_s_wall)
-                
+
                 if (
                     (additional_n_steps > 0 or new_mass_limit is not None)
                     and iteration == 1
@@ -428,8 +403,6 @@ class SpectralNetwork:
                 for s_wall in self.s_walls:
                     prev_s_walls[s_wall.label] = s_wall
 
-                #for i, new_s_wall in enumerate(new_s_walls):
-                #    esw = self.s_walls[i]
                 for nsw in new_s_walls:
                     # Attach new S-walls to existing S-walls
                     try:
@@ -442,9 +415,9 @@ class SpectralNetwork:
                         )
 
                     psw_n_t = len(psw.z)
-                    psw.z = numpy.concatenate((psw.z, nsw.z[1:])) 
-                    psw.x = numpy.concatenate((psw.x, nsw.x[1:])) 
-                    psw.M = numpy.concatenate((psw.M, nsw.M[1:])) 
+                    psw.z = numpy.concatenate((psw.z, nsw.z[1:]))
+                    psw.x = numpy.concatenate((psw.x, nsw.x[1:]))
+                    psw.M = numpy.concatenate((psw.M, nsw.M[1:]))
 
                     psw.local_roots += nsw.local_roots[1:]
                     psw.multiple_local_roots += nsw.multiple_local_roots[1:]
@@ -515,11 +488,11 @@ class SpectralNetwork:
             self.save(cache_file_path)
 
     def get_new_joints(
-        self, new_s_wall, prev_s_walls, config, sw_data, 
+        self, new_s_wall, prev_s_walls, config, sw_data,
         get_intersections, use_cgal,
     ):
         """
-        Find intersections between S-walls using 
+        Find intersections between S-walls using
         either CGAL 2d curve intersection or scipy interpolation
         according to the availability, then form joints
         from the intersection points.
@@ -534,7 +507,7 @@ class SpectralNetwork:
                 'There is no joint for the given root system {}.'
                 .format(config['root_system'])
             )
-            return [] 
+            return []
 
         for prev_s_wall in prev_s_walls:
 
@@ -542,11 +515,11 @@ class SpectralNetwork:
             # for forming a joint.
 
             # 1. Check if the new S-wall is a descendant
-            # of an existing S-wall. 
+            # of an existing S-wall.
             if prev_s_wall.label in new_s_wall.parents:
                 continue
-            
-            # 2. Split the two S-walls into segments 
+
+            # 2. Split the two S-walls into segments
             # according to the trivialization, then
             # check the compatibility of a pair
             # of segments.
@@ -554,7 +527,7 @@ class SpectralNetwork:
             num_n_z_segs = len(new_s_wall.local_roots)
             p_z_splits = prev_s_wall.get_splits(endpoints=True)
             num_p_z_segs = len(prev_s_wall.local_roots)
-                
+
             for n_z_seg_i, p_z_seg_i in itertools.product(
                 range(num_n_z_segs), range(num_p_z_segs)
             ):
@@ -563,15 +536,12 @@ class SpectralNetwork:
                 p_z_i = p_z_splits[p_z_seg_i]
                 p_z_f = p_z_splits[p_z_seg_i + 1]
 
-#                n_seg_root = new_s_wall.local_roots[n_z_seg_i]
-#                p_seg_root = prev_s_wall.local_roots[p_z_seg_i]
                 descendant_roots = get_descendant_roots(
                     (prev_s_wall.multiple_local_roots[p_z_seg_i] +
                      new_s_wall.multiple_local_roots[n_z_seg_i]),
                     sw_data.g_data,
                 )
 
-#                if not is_root(p_seg_root + n_seg_root, sw_data.g_data):
                 if len(descendant_roots) == 0:
                     # The two segments are not compatible for
                     # forming a joint.
@@ -583,13 +553,13 @@ class SpectralNetwork:
                     intersection_search_finished = False
 
                     while not intersection_search_finished:
-                        intersections = numpy.empty((buffer_size, 2), 
+                        intersections = numpy.empty((buffer_size, 2),
                                                     dtype=numpy.float64)
                         num_of_intersections = get_intersections(
                             new_s_wall.z[n_z_i:n_z_f + 1],
-                            ctypes.c_long(n_z_f + 1 - n_z_i), 
+                            ctypes.c_long(n_z_f + 1 - n_z_i),
                             prev_s_wall.z[p_z_i:p_z_f + 1],
-                            ctypes.c_long(p_z_f + 1 - p_z_i), 
+                            ctypes.c_long(p_z_f + 1 - p_z_i),
                             intersections, buffer_size
                         )
                         if num_of_intersections == 0:
@@ -615,13 +585,13 @@ class SpectralNetwork:
                 for ip_x, ip_y in intersections:
                     ip_z = ip_x + 1j * ip_y
 
-                    # Discard apparent intersections of sibling S-walls 
-                    # that emanate from the same branch point, if they occur 
+                    # Discard apparent intersections of sibling S-walls
+                    # that emanate from the same branch point, if they occur
                     # at the beginning of the S-walls
-                    # Also discard any intersectins that occur near the 
+                    # Also discard any intersectins that occur near the
                     # beginning of an S-wall
                     if (
-                        prev_s_wall.parents == new_s_wall.parents 
+                        prev_s_wall.parents == new_s_wall.parents
                         and abs(ip_z - prev_s_wall.z[0]) < accuracy
                         and abs(ip_z - new_s_wall.z[0]) < accuracy
                     ):
@@ -634,13 +604,13 @@ class SpectralNetwork:
                     else:
                         # t_n: index of new_s_wall.z nearest to ip_z
                         t_n = get_nearest_point_index(
-                            new_s_wall.z, ip_z, sw_data.branch_points, 
+                            new_s_wall.z, ip_z, sw_data.branch_points,
                             accuracy,
                         )
 
                         # t_p: index of z_seg_p nearest to ip_z
                         t_p = get_nearest_point_index(
-                            prev_s_wall.z, ip_z, sw_data.branch_points, 
+                            prev_s_wall.z, ip_z, sw_data.branch_points,
                             accuracy,
                         )
 
@@ -711,8 +681,8 @@ def get_ode(sw, phase, accuracy):
     x, z = sympy.symbols('x z')
     ode_absolute_tolerance = accuracy
 
-    # Even for higher-reps, we always use the 
-    # first fundamental representation curve 
+    # Even for higher-reps, we always use the
+    # first fundamental representation curve
     # for evolving the network
     f = sw.ffr_curve.num_eq
     df_dz = f.diff(z)
@@ -744,7 +714,7 @@ def get_ode(sw, phase, accuracy):
 def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                             logger_name='loom',):
     """
-    Get the index of the point on the S-wall that is nearest to 
+    Get the index of the point on the S-wall that is nearest to
     the given point on the z-plane.
 
     When the point found is within the accuracy limit from a branch cut,
@@ -772,7 +742,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
             )
 
         elif (
-            abs(s_wall_z[t].real - bp.z.real) < accuracy 
+            abs(s_wall_z[t].real - bp.z.real) < accuracy
             and s_wall_z[t].imag - bp.z.imag > 0
         ):
             logger.info(
@@ -813,7 +783,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                     'as the reference point.'
                 )
                 break
-            
+
     if t_before == 0 and t_after == t_max:
         raise RuntimeError(
             'get_nearest_point_index(): '

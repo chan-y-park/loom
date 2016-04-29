@@ -1,7 +1,7 @@
 import logging
 import numpy
 import sympy
-import pdb
+# import pdb
 
 from cmath import exp, pi
 from math import floor
@@ -12,7 +12,7 @@ from geometry import (
     find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
 )
 from misc import (
-    cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root, 
+    cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root,
     get_descendant_roots, sort_roots, n_nearest
 )
 
@@ -22,7 +22,7 @@ x, z = sympy.symbols('x z')
 NUM_ODE_XS_OVER_Z = 2
 
 # Desired precision on the phase of seeds
-# Warning: setting it too small will bring the seeding point
+# XXX Warning: setting it too small will bring the seeding point
 # too close to a branch point.
 SEED_PHASE_PRECISION = 0.001
 SEED_PRECISION_MAX_DEPTH = 5
@@ -50,7 +50,7 @@ class Joint:
 
         self.z = z
         self.M = M
-        self.parents = parents 
+        self.parents = parents
         self.roots = roots
         self.ode_xs = ode_xs
 
@@ -102,7 +102,7 @@ class Joint:
             if numpy.array_equal(self.roots[i], other.roots[i]) is not True:
                 return False
 
-        # FIXME: Probably the following comparison is not needed 
+        # FIXME: Probably the following comparison is not needed
         # after comparing the roots of two S-walls.
         # Decide whether to do the comparison or not.
         for i in range(NUM_ODE_XS_OVER_Z):
@@ -112,7 +112,7 @@ class Joint:
         return True
 
 
-# TODO: Instead of seeding with x_0, it would make 
+# TODO: Instead of seeding with x_0, it would make
 # more sense to give the initial root-type.
 # From that, and the trivialization module, we can
 # extract the value of x_0, in principle.
@@ -126,8 +126,8 @@ class SWall(object):
         where z[t] is the base coordinate.
 
         SWall.x is a Numpy array of the fiber coordinates at t, i.e.
-        SWall.x[t] = [x[t][0], x[t][1], ...]. 
-        (NOTE: for now, we just use two sheets, they serve only for 
+        SWall.x[t] = [x[t][0], x[t][1], ...].
+        (NOTE: for now, we just use two sheets, they serve only for
         numerical ode evolution. To get the sheets use the method
         SWall.get_sheets_at_t() instead.)
         """
@@ -150,14 +150,13 @@ class SWall(object):
 
         # cuts_intersections = [[branch_point, i, '(c)cw'], ...]
         self.cuts_intersections = []
-        #self.root_basepoint = []
         self.local_roots = []
         self.multiple_local_roots = None
         # local_weight_pairs is a list of pair of intgers.
-        self.local_weight_pairs = []        
+        self.local_weight_pairs = []
 
         self.data_attributes = [
-            'z', 'M', 'x', 'parents', 'parent_roots', 'label', 
+            'z', 'M', 'x', 'parents', 'parent_roots', 'label',
             'cuts_intersections',
             'local_roots', 'multiple_local_roots', 'local_weight_pairs',
         ]
@@ -203,10 +202,6 @@ class SWall(object):
                 [br_loc.label, t, d]
                 for br_loc, t, d in self.cuts_intersections
             ],
-            #'root_basepoint': (
-            #    [self.root_basepoint[0], ctor2(self.root_basepoint[1]),
-            #        [ctor2(x) for x in self.root_basepoint[2]]]
-            #),
             'local_roots': [root.tolist() for root in self.local_roots],
             # TODO: Restore the following after multiple_local_roots
             # becomes the default.
@@ -259,13 +254,6 @@ class SWall(object):
         except KeyError:
             pass
         self.local_weight_pairs = json_data['local_weight_pairs']
-        #self.root_basepoint = (
-        #    [json_data['root_basepoint'][0], 
-        #        r2toc(json_data['root_basepoint'][1]),
-        #        numpy.array(
-        #            [r2toc(x) for x in json_data['root_basepoint'][2]]
-        #        )]
-        #)
 
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
@@ -280,11 +268,9 @@ class SWall(object):
         branch_point_zs,
         puncture_point_zs,
         config,
-        #num_of_steps=None,
     ):
         bpzs = branch_point_zs
         ppzs = puncture_point_zs
-        #num_of_steps = config['num_of_steps']
         size_of_small_step = config['size_of_small_step']
         size_of_large_step = config['size_of_large_step']
         size_of_bp_neighborhood = config['size_of_bp_neighborhood']
@@ -299,16 +285,7 @@ class SWall(object):
         ode.set_initial_value(y_i)
 
         array_size = len(self.z)
-#        if num_of_steps > array_size:
-#            logger.warning(
-#                'The number of ODE steps {} is larger '
-#                'then the size of the array {}; '
-#                'adjusts num_of_steps to {}.'
-#                .format(num_of_steps, array_size, array_size)
-#            )
-#            num_of_steps = array_size
 
-        #while ode.successful() and step < num_of_steps:
         while ode.successful() and step < (array_size - 1):
             step += 1
             if step > MIN_NUM_OF_DATA_PTS:
@@ -340,12 +317,12 @@ class SWall(object):
 
     def determine_root_types(self, sw_data, cutoff_radius=0,):
         """
-        Determine at which points the wall crosses a cut, 
-        for instance [55, 107, 231] would mean that 
-        it changes root-type 3 times. 
-        Then, pick a suitable point along the swall, away 
-        from branch points or singularities, and determine 
-        the root there. Finally, extend the determination 
+        Determine at which points the wall crosses a cut,
+        for instance [55, 107, 231] would mean that
+        it changes root-type 3 times.
+        Then, pick a suitable point along the swall, away
+        from branch points or singularities, and determine
+        the root there. Finally, extend the determination
         of the root type to other segments by following
         the wall across the various splits induced by cuts,
         both forward and backwards, using the Weyl monodromy.
@@ -354,7 +331,7 @@ class SWall(object):
         g_data = sw_data.g_data
         # branching will occur at branch points or irregular singularities
         branch_loci = sw_data.branch_points + sw_data.irregular_singularities
-        # Adding a minimal radius of 1.0 is necessary 
+        # Adding a minimal radius of 1.0 is necessary
         # in case there is only a single branch point at z=0,
         # otherwise max_radius would be 0.
         max_radius = 2 * max(
@@ -365,9 +342,9 @@ class SWall(object):
         num_of_zs = len(self.z)
         traj_t = numpy.arange(num_of_zs)
         traj_z_r = self.z.real
-        
-        # Scan over branching loci cuts, see if path ever crosses one 
-        # based on x-coordinates only, and create a list of intersections, 
+
+        # Scan over branching loci cuts, see if path ever crosses one
+        # based on x-coordinates only, and create a list of intersections,
         # each element being [br_loc, t, 'cw'|'ccw'].
         cuts_intersections = []
         for br_loc in branch_loci:
@@ -380,7 +357,7 @@ class SWall(object):
                 # to find the intersections between cuts and the S-wall.
                 g = interpolate.splrep(traj_t, traj_z_r - br_loc_x, s=0)
 
-                # Produce a list of integers corresponding to indices of  
+                # Produce a list of integers corresponding to indices of
                 # the S-wall's coordinate list that seem to cross branch-cuts
                 # based on the z-coordinate's real part.
                 t_zeros = interpolate.sproot(g).tolist()
@@ -403,19 +380,19 @@ class SWall(object):
                 # Remove a duplicate, if any.
                 if (t in intersection_ts):
                     continue
-                # Enforce imaginary-part of z-coordinate intersection 
+                # Enforce imaginary-part of z-coordinate intersection
                 # criterion: branch cuts extend vertically.
                 if self.z[t].imag > br_loc_y:
                     intersection_ts.append(t)
 
             for t in intersection_ts:
-                # Drop intersections of a primary S-wall with the 
+                # Drop intersections of a primary S-wall with the
                 # branch cut emanating from its parent branch-point
-                # if such intersections happens within a short 
+                # if such intersections happens within a short
                 # distance from the starting point.
                 if (
                     br_loc.__class__.__name__ == 'BranchPoint' and
-                    br_loc.label == self.parents[0] and 
+                    br_loc.label == self.parents[0] and
                     (abs(br_loc.z - self.z[t]) < cutoff_radius)
                 ):
                     continue
@@ -431,7 +408,7 @@ class SWall(object):
                     )
                     continue
 
-                # Add 
+                # Add
                 # [the branch-point, t,
                 #  the direction (either 'cw' or 'ccw')]
                 # to each intersection.
@@ -439,8 +416,8 @@ class SWall(object):
                     [br_loc, t, clock(left_right(self.z, t))]
                 )
 
-        # Now sort intersections according to where they happen in proper 
-        # time; recall that the elements of cuts_intersections are 
+        # Now sort intersections according to where they happen in proper
+        # time; recall that the elements of cuts_intersections are
         # organized  as      [..., [branch_point_idx, t, 'ccw'] ,...]
         # where 't' is the integer of proper time at the intersection.
         self.cuts_intersections = sorted(
@@ -452,26 +429,26 @@ class SWall(object):
         )
 
         # Add the actual intersection point to the S-wall
-        # then update the attribute SWall.cuts_intersections accordingly    
+        # then update the attribute SWall.cuts_intersections accordingly
         self.enhance_at_cuts(sw_data)
 
         # Choose a suitable point along the wall
-        # we pick the one whose z coordinate's real part is 
-        # farthest from critical loci of the fibration, including 
-        # branch points and all types of punctures.        
-        # Ideally, we would like this basepoint to be not too far away 
+        # we pick the one whose z coordinate's real part is
+        # farthest from critical loci of the fibration, including
+        # branch points and all types of punctures.
+        # Ideally, we would like this basepoint to be not too far away
         # on the C-plane, because getting close to infinity
         # means colliding sheets usually.
         # But some walls are born beyond the max_radius in general
         # in that case, we just choose the t=0 coordinate
-        # Also we keep t < 500, to avoid numerical errors induced by 
-        # numerics of ode_int, which tend to spoil the values of 
+        # Also we keep t < 500, to avoid numerical errors induced by
+        # numerics of ode_int, which tend to spoil the values of
         # s_wall.x[t] far along the trajectory.
         # FIXME: this fact of choosing t < 500 can cause trouble
-        # if we have a primary S-wall that is almost vertical 
+        # if we have a primary S-wall that is almost vertical
         # and (running upwards), because then its
-        # points are very close to a branch cut, and 
-        # it is better to take t as large as possible to take 
+        # points are very close to a branch cut, and
+        # it is better to take t as large as possible to take
         # advantage of the distance from the cut, to compute the root.
         # This can be handled by checking explicitly for such cases.
         t_0 = sorted(
@@ -481,13 +458,12 @@ class SWall(object):
                 )]
                 for t_i, z_i in enumerate(self.z) if (
                     (abs(z_i) < max_radius or t_i == 0) and t_i < 500
-                ) 
+                )
             ]), cmp=lambda a, b: cmp(a[1], b[1])
         )[-1][0]
 
         z_0 = self.z[t_0]
         xs_0 = self.x[t_0]
-        #self.root_basepoint = [t_0, z_0, xs_0]
 
         # Determine the initial root-type
         initial_root = get_s_wall_root(z_0, xs_0, sw_data,)
@@ -503,10 +479,10 @@ class SWall(object):
         initial_weight_pairs = (
             sw_data.g_data.ordered_weight_pairs(initial_root,)
         )
-            
+
         self.local_roots = [initial_root]
         self.local_weight_pairs = [initial_weight_pairs]
-        
+
         if len(self.cuts_intersections) > 0:
             # Note that we reverse the time-ordering!
             intersections_before_t_0 = [
@@ -567,7 +543,7 @@ class SWall(object):
             self.multiple_local_roots = [[root] for root in self.local_roots]
         elif len(self.parent_roots) > 1:
             multiple_local_roots_0 = [root_0]
-            all_roots_from_parents = (self.parent_roots + 
+            all_roots_from_parents = (self.parent_roots +
                                       [-root for root in self.parent_roots])
             descendant_roots = get_descendant_roots(all_roots_from_parents,
                                                     sw_data.g_data,)
@@ -590,12 +566,12 @@ class SWall(object):
             self.multiple_local_roots = [
                 sort_roots(multiple_local_roots_0, sw_data.g_data)
             ]
-            # We prepared all the base roots, 
-            # now we find how they change 
+            # We prepared all the base roots,
+            # now we find how they change
             # as the S-wall crosses cuts.
             for k in range(len(self.cuts_intersections)):
                 br_loc, t, direction = self.cuts_intersections[k]
-                new_roots = [] 
+                new_roots = []
                 for current_root in self.multiple_local_roots[k]:
                     new_root = g_data.weyl_monodromy(
                         current_root, br_loc, direction
@@ -608,8 +584,8 @@ class SWall(object):
 
     def get_roots_at_t(self, t):
         """
-        Given an integer t which parametrizes a point 
-        of the trajectory in proper time, return the local 
+        Given an integer t which parametrizes a point
+        of the trajectory in proper time, return the local
         root at that point.
         """
         t_max = len(self.z) - 1
@@ -630,10 +606,10 @@ class SWall(object):
 
     def get_weight_pairs_at_t(self, t):
         """
-        Given an integer t which parametrizes a point 
-        of the trajectory in proper time, return the local 
+        Given an integer t which parametrizes a point
+        of the trajectory in proper time, return the local
         pair of weights at that point.
-        """        
+        """
         t_max = len(self.z) - 1
         if t < 0 or t > t_max:
             raise RuntimeError(
@@ -652,8 +628,8 @@ class SWall(object):
 
     def get_sheets_at_t(self, t, sw_data):
         """
-        Given an integer t which parametrizes a point 
-        of the trajectory in proper time, return 
+        Given an integer t which parametrizes a point
+        of the trajectory in proper time, return
         a list of pairs of values.
         For sheet labels [... [i, j] ...] at given t,
         return [... [x_i, x_j] ...]
@@ -676,7 +652,7 @@ class SWall(object):
         wall_pieces_x = []
         wall_pieces_M = []
 
-        # split the wall into pieces, at the end of each 
+        # split the wall into pieces, at the end of each
         # piece add the corresponding intersection point
         t_0 = 0
         for int_data in self.cuts_intersections:
@@ -684,7 +660,6 @@ class SWall(object):
 
             z_1 = self.z[t]
             z_2 = self.z[t + 1]
-            
             z_to_add = get_intermediate_z_point(z_1, z_2, br_loc.z)
 
             xs_1 = self.x[t]
@@ -717,7 +692,7 @@ class SWall(object):
         wall_pieces_x.append(self.x[t_0:])
         wall_pieces_M.append(self.M[t_0:])
 
-        # Make updates. 
+        # Make updates.
         self.z = numpy.concatenate(wall_pieces_z)
         self.x = numpy.concatenate(wall_pieces_x)
         self.M = numpy.concatenate(wall_pieces_M)
@@ -728,17 +703,16 @@ class SWall(object):
             br_loc, t_old, chi = int_data
             t_new = t_old + i + 1
             new_cuts_intersections.append([br_loc, t_new, chi])
-        
         self.cuts_intersections = new_cuts_intersections
 
 
 def get_s_wall_root(z, ffr_xs, sw_data):
     x_i, x_j = ffr_xs
-    
+
     # Recall that S-wall numerical evolution
     # is based on the first fundamental representation.
-    # In particular, the xs above are values of sheets 
-    # from the 1st fundamental rep cover, and should 
+    # In particular, the xs above are values of sheets
+    # from the 1st fundamental rep cover, and should
     # be compared with the corresponding trivialization.
     # This is taken care of by setting the key argument
     # ffr=True when calling get_sheets_at_z.
@@ -747,7 +721,7 @@ def get_s_wall_root(z, ffr_xs, sw_data):
     xs_at_z = sheets_at_z.values()
 
     if (
-        (sw_data.g_data.type == 'D' or sw_data.g_data.type == 'E') and 
+        (sw_data.g_data.type == 'D' or sw_data.g_data.type == 'E') and
         (abs(x_i) < SHEET_NULL_TOLERANCE or abs(x_j) < SHEET_NULL_TOLERANCE)
     ):
         if sw_data.g_data.type == 'D':
@@ -757,26 +731,26 @@ def get_s_wall_root(z, ffr_xs, sw_data):
         if abs(x_i) < SHEET_NULL_TOLERANCE:
             # Several sheets matching x_i
             closest_to_x_i = sorted(
-                [[k, x_k] for k, x_k in enumerate(xs_at_z)], 
+                [[k, x_k] for k, x_k in enumerate(xs_at_z)],
                 key=lambda y: abs(y[1] - x_i)
             )[0:n_w]
             i_s = [y[0] for y in closest_to_x_i]
             # Sheet matching x_j
             closest_to_x_j = sorted(xs_at_z, key=lambda x: abs(x - x_j))[0]
             j = (
-                [k for k, v in sheets_at_z.iteritems() 
+                [k for k, v in sheets_at_z.iteritems()
                     if v == closest_to_x_j][0]
             )
             for k in i_s:
-                # NOTE: Assuming that there is precisely ONE pair 
-                # whose difference is a root. In D-type it's really two pairs. 
-                # But either is fine, and they will be automatically 
+                # NOTE: Assuming that there is precisely ONE pair
+                # whose difference is a root. In D-type it's really two pairs.
+                # But either is fine, and they will be automatically
                 # orthogonal to each other, so they are part of the same
                 # "multi-root" set.
                 # For E-type should introduce a little check to see if
                 # there is actually more than one combo that works.
                 alpha = (
-                    sw_data.g_data.ffr_weights[j] 
+                    sw_data.g_data.ffr_weights[j]
                     - sw_data.g_data.ffr_weights[k]
                 )
                 if is_root(alpha, sw_data.g_data):
@@ -787,25 +761,25 @@ def get_s_wall_root(z, ffr_xs, sw_data):
             # Sheet matching x_i
             closest_to_x_i = sorted(xs_at_z, key=lambda x: abs(x - x_i))[0]
             i = (
-                [k for k, v in sheets_at_z.iteritems() 
+                [k for k, v in sheets_at_z.iteritems()
                     if v == closest_to_x_i][0]
             )
             # Several sheets matching x_j
             closest_to_x_j = sorted(
-                [[k, x_k] for k, x_k in enumerate(xs_at_z)], 
+                [[k, x_k] for k, x_k in enumerate(xs_at_z)],
                 key=lambda y: abs(y[1] - x_j)
             )[0:n_w]
             j_s = [y[0] for y in closest_to_x_j]
             for k in j_s:
-                # NOTE: Assuming that there is precisely ONE pair 
-                # whose difference is a root. In D-type it's really two pairs. 
-                # But either is fine, and they will be automatically 
+                # NOTE: Assuming that there is precisely ONE pair
+                # whose difference is a root. In D-type it's really two pairs.
+                # But either is fine, and they will be automatically
                 # orthogonal to each other, so they are part of the same
                 # "multi-root" set.
                 # For E-type should introduce a little check to see if
                 # there is actually more than one combo that works.
                 alpha = (
-                    sw_data.g_data.ffr_weights[k] 
+                    sw_data.g_data.ffr_weights[k]
                     - sw_data.g_data.ffr_weights[i]
                 )
                 if is_root(alpha, sw_data.g_data):
@@ -826,14 +800,14 @@ def get_s_wall_root(z, ffr_xs, sw_data):
 def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     """
     S-walls are seeded from branch points.
-    Each branch point has a number of ramification 
+    Each branch point has a number of ramification
     points lying above it.
     Regardless of the representation, it is sufficient
     to consider one of these ramification points
     to extract the seed data.
-    We thus stick to (any)one ramification point of the 
+    We thus stick to (any)one ramification point of the
     fundamental representation to get the seeds.
-    It is assumed that we are working in the first 
+    It is assumed that we are working in the first
     fundamental representation of the Lie algebra.
     """
     logger = logging.getLogger(logger_name)
@@ -845,7 +819,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     initial_seed_size = config['size_of_small_step']
     seeds = []
     min_dt = 1.0
-    
+
     for rp in branch_point.ffr_ramification_points:
         z_0 = rp.z
         x_0 = rp.x
@@ -856,10 +830,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
         logger.debug('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
         logger.debug('Ramification index = {}'.format(r_i))
         logger.debug('Ramification type = {}'.format(rp_type))
-        #logger.debug(
-        #    'leading coefficients of SW diff: a = {}\t b={}\n'
-        #    .format(sw_diff_coeffs_a_b[0], sw_diff_coeffs_a_b[1])
-        #)
         logger.debug(
             'leading coefficient of SW diff: {}\t'
             .format(sw_diff_coeff)
@@ -874,12 +844,11 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
             omega = exp(2.0 * pi * 1j * float(r_i) / float(r_i + 1))
 
-            # a, b = sw_diff_coeffs_a_b
             dz_phases = ([
                 (1.0 / cpow((sw_diff_coeff), r_i, r_i + 1)) *
                 exp(1j * theta * float(r_i) / (r_i + 1)) *
                 ((-1.0 / phi[i][j]) ** (float(r_i) / (r_i + 1))) * (omega ** s)
-                for i in range(r_i) for j in range(r_i) 
+                for i in range(r_i) for j in range(r_i)
                 for s in range(r_i + 1) if i != j
             ])
 
@@ -889,7 +858,6 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             zetas = remove_duplicate(
                 norm_dz_phases, lambda p1, p2: abs(p1 - p2) < (accuracy)
             )
-        
         elif rp_type == 'type_II':
             if r_i % 2 == 1:
                 raise RuntimeError(
@@ -897,7 +865,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     'Cannot have a type II ramification point '
                     'with odd ramification index.'
                 )
-            # defining this object just for enhanced readability of code 
+            # defining this object just for enhanced readability of code
             # in comparing with notes on classification of ramifications
             r_k = r_i / 2
             phases = [
@@ -907,22 +875,21 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             psi = [[
                 (phases[i] + phases[j]) * numpy.sign(i - j) for i in range(r_k)
             ] for j in range(r_k)]
-            
             omega = exp(2.0 * pi * 1j * float(2 * r_k) / float(2 * r_k + 1))
 
             dz_phases = ([
                 (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
                 exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
-                ((-1.0 / phi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
+                ((-1.0 / phi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1)))
                 * (omega ** s)
-                for i in range(r_k) for j in range(r_k) 
+                for i in range(r_k) for j in range(r_k)
                 for s in range(2 * r_k + 1) if i != j
             ] + [
                 (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
                 exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
-                ((-1.0 / psi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) 
+                ((-1.0 / psi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1)))
                 * (omega ** s)
-                for i in range(r_k) for j in range(r_k) 
+                for i in range(r_k) for j in range(r_k)
                 for s in range(2 * r_k + 1) if i != j
             ])
 
@@ -940,18 +907,18 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     'Cannot have a type III ramification point '
                     'with odd ramification index.'
                 )
-            # defining this object just for enhanced readability of code 
+            # defining this object just for enhanced readability of code
             # in comparing with notes on classification of ramifications
             r_k = r_i / 2
 
             phases = [
-                exp(2 * pi * 1j * float(i) / (2.0 * (r_k - 1))) 
+                exp(2 * pi * 1j * float(i) / (2.0 * (r_k - 1)))
                 for i in range(r_k - 1)
             ] + [0.0]
 
             phi = [[p1 - p2 for p1 in phases] for p2 in phases]
             psi = [[
-                (phases[i] + phases[j]) * numpy.sign(i - j) 
+                (phases[i] + phases[j]) * numpy.sign(i - j)
                 for i in range(r_k)
             ] for j in range(r_k)]
 
@@ -962,16 +929,16 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             dz_phases = ([
                 (1.0 / cpow(sw_diff_coeff, 2 * r_k - 2, 2 * r_k - 1)) *
                 exp(1j * theta * float(2 * r_k - 2) / (2 * r_k - 1)) *
-                ((-1.0 / phi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
+                ((-1.0 / phi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) *
                 (omega ** s)
-                for i in range(r_k) for j in range(r_k) 
+                for i in range(r_k) for j in range(r_k)
                 for s in range(2 * r_k - 1) if i != j
             ] + [
                 (1.0 / cpow(sw_diff_coeff, 2 * r_k - 2, 2 * r_k - 1)) *
                 exp(1j * theta * float(2 * r_k - 2) / (2 * r_k - 1)) *
-                ((-1.0 / psi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) * 
+                ((-1.0 / psi[i][j]) ** (float(2 * r_k - 2) / (2 * r_k - 1))) *
                 (omega ** s)
-                for i in range(r_k) for j in range(r_k) 
+                for i in range(r_k) for j in range(r_k)
                 for s in range(2 * r_k - 1) if i != j
             ])
 
@@ -984,7 +951,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
         elif rp_type == 'type_IV':
             # note: the following nomenclature of variables is
-            # chose to match to the notes on seeding. 
+            # chose to match to the notes on seeding.
             # It would be better not to change it to avoid
             # potential confusion.
 
@@ -992,28 +959,28 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             # as in the notes, rather they are a 12-th root of those.
             sw_c_plus, sw_c_minus = sw_diff_coeff
 
-            # computing the seed reference sheets -- see notes 
-            # for an explanation of what they are, and how they 
+            # computing the seed reference sheets -- see notes
+            # for an explanation of what they are, and how they
             # will be employed
             seed_ref_xs = (
-                [0.0, 0.0, 0.0] + 
-                [sw_c_plus * exp(2 * pi * 1j * float(i) / (12.0)) 
-                for i in range(12)] +
-                [sw_c_minus * exp(2 * pi * 1j * float(i) / (12.0)) 
-                for i in range(12)]
+                [0.0, 0.0, 0.0] +
+                [sw_c_plus * exp(2 * pi * 1j * float(i) / (12.0))
+                 for i in range(12)] +
+                [sw_c_minus * exp(2 * pi * 1j * float(i) / (12.0))
+                 for i in range(12)]
             )
 
             aligned_seed_ref_xs = align_sheets_for_e_6_ffr(
-                        seed_ref_xs, 
-                        sw.g_data.weights, 
-                        near_degenerate_branch_locus=False
-                    )
+                seed_ref_xs,
+                sw.g_data.weights,
+                near_degenerate_branch_locus=False
+            )
 
-            # now for each pair of reference sheets 
-            # which actually differs by a root, we consider 
+            # now for each pair of reference sheets
+            # which actually differs by a root, we consider
             # their difference to define a seed location
             delta_seed_xs = []
-            for i, x_i in enumerate(aligned_seed_ref_xs): 
+            for i, x_i in enumerate(aligned_seed_ref_xs):
                 w_i = sw.g_data.weights[i]
                 for j, x_j in enumerate(aligned_seed_ref_xs):
                     w_j = sw.g_data.weights[j]
@@ -1024,9 +991,9 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
             dz_phases = ([
                 exp(1j * theta * 12.0 / 13.0) *
-                ((-1.0 / delta_xs) ** (12.0 / 13.0)) * 
+                ((-1.0 / delta_xs) ** (12.0 / 13.0)) *
                 (omega ** s)
-                for s in range(13) for delta_xs in delta_seed_xs 
+                for s in range(13) for delta_xs in delta_seed_xs
             ])
 
             norm_dz_phases = [d / abs(d) for d in dz_phases]
@@ -1042,7 +1009,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             raise_precision = True
             precision_level = 0
             while (
-                raise_precision is True and 
+                raise_precision is True and
                 precision_level <= SEED_PRECISION_MAX_DEPTH
             ):
                 logger.debug(
@@ -1055,13 +1022,13 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
                 if rp_type == 'type_I':
                     all_x_s = find_xs_at_z_0(sw, z_1, x_0, r_i, ffr=True)
-                    # just pick those sheets that are close enough 
+                    # just pick those sheets that are close enough
                     # to the ramification point
                     x_s = n_nearest(all_x_s, x_0, r_i)
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
                     x_i_x_j_phases = []
-                    for i, x_i in enumerate(x_s): 
+                    for i, x_i in enumerate(x_s):
                         for j, x_j in enumerate(x_s):
                             if i != j:
                                 lambda_i = complex(
@@ -1071,7 +1038,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
                                 )
                                 ij_factor = (
-                                    -1.0 * exp(1j * theta) 
+                                    -1.0 * exp(1j * theta)
                                     / (lambda_j - lambda_i)
                                 )
                                 x_i_x_j_phases.append(
@@ -1083,30 +1050,30 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     # therefore we ask for all the sheets at z_1.
                     x_s = find_xs_at_z_0(sw, z_1, ffr=True)
 
-                    # order of magnitude of expected separation 
+                    # order of magnitude of expected separation
                     # of sheets at z_1
                     if rp_type == 'type_II':
                         dx = (
-                            abs(cpow(sw_diff_coeff, 2 * r_k)) 
+                            abs(cpow(sw_diff_coeff, 2 * r_k))
                             * (dt ** (1.0 / float(r_i)))
                         )
                     elif rp_type == 'type_III':
                         dx = (
-                            abs(cpow(sw_diff_coeff, 2 * r_k - 2)) 
+                            abs(cpow(sw_diff_coeff, 2 * r_k - 2))
                             * (dt ** (1.0 / float(r_i)))
                         )
                     x_accuracy = min([accuracy, dx])
 
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
-                    # where we eclude x_i=x_j and x_i=-x_j 
-                    # since in D-type there are no roots 
+                    # where we eclude x_i=x_j and x_i=-x_j
+                    # since in D-type there are no roots
                     # between a weight v and -v.
                     x_i_x_j_phases = []
                     for i, x_i in enumerate(x_s):
                         for j, x_j in enumerate(x_s):
                             if (
-                                abs(x_j - x_i) > x_accuracy 
+                                abs(x_j - x_i) > x_accuracy
                                 and abs(x_j + x_i) > x_accuracy
                             ):
                                 lambda_i = complex(
@@ -1116,7 +1083,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
                                 )
                                 ij_factor = (
-                                    -1.0 * exp(1j * theta) 
+                                    -1.0 * exp(1j * theta)
                                     / (lambda_j - lambda_i)
                                 )
                                 x_i_x_j_phases.append(
@@ -1125,22 +1092,21 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
                 elif rp_type == 'type_IV':
                     x_s = find_xs_at_z_0(
-                        sw, z_1, x_0, r_i, 
+                        sw, z_1, x_0, r_i,
                         ffr=True, use_sage=True
                     )
                     # Note: although we are working near a degenerate locus,
                     # it is correct to enforce the option
                     # near_degenerate_branch_locus=False
                     aligned_xs = align_sheets_for_e_6_ffr(
-                        x_s, 
-                        sw.g_data.weights, 
+                        x_s,
+                        sw.g_data.weights,
                         near_degenerate_branch_locus=False
                     )
-                    
                     # a list of the type
                     # [... [phase, [x_i, x_j]] ...]
                     x_i_x_j_phases = []
-                    for i, x_i in enumerate(aligned_xs): 
+                    for i, x_i in enumerate(aligned_xs):
                         w_i = sw.g_data.weights[i]
                         for j, x_j in enumerate(aligned_xs):
                             w_j = sw.g_data.weights[j]
@@ -1152,7 +1118,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
                                 )
                                 ij_factor = (
-                                    -1.0 * exp(1j * theta) 
+                                    -1.0 * exp(1j * theta)
                                     / (lambda_j - lambda_i)
                                 )
                                 x_i_x_j_phases.append(
@@ -1185,13 +1151,12 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                         )
                         raise_precision = False
                         break
-            
             M_0 = 0
             seeds.append([z_1, closest_pair, M_0])
 
-    # for higher-index ramification points we need greater accuracy to 
+    # for higher-index ramification points we need greater accuracy to
     # keep all the correct seeds, since dt is also their displacement
-    # |z_1-z_0| we cannot just use dt, but must choose a small 
+    # |z_1-z_0| we cannot just use dt, but must choose a small
     # fraction of it
     seeds = delete_duplicates(seeds, lambda s: s[0], accuracy=(min_dt / 100))
     logger.debug('Number of S-walls emanating = {}'.format(len(seeds)))
@@ -1202,7 +1167,7 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
 def z_r_distance_from_critical_loci(z, sw_data):
     critical_loci = (
-        sw_data.branch_points + sw_data.irregular_singularities 
+        sw_data.branch_points + sw_data.irregular_singularities
         + sw_data.regular_punctures
     )
     return [abs(z.real - c_l.z.real)
@@ -1231,10 +1196,10 @@ def clock(direction):
 
 def left_right(l, point):
     """
-    given the list 
+    given the list
     l = [..., z, ...]
     and a point in the list (specified by the corresponding integer),
-    determines whether x increases or decreases at that point, 
+    determines whether x increases or decreases at that point,
     returning repsectively 'left' or 'right'
     """
     if point > len(l) - 1:
@@ -1260,15 +1225,15 @@ def left_right(l, point):
 #     Given two integers i,j =0, ..., 12
 #     determine whether the corresponding phases
 #     in the E_6 seeds can be paired together.
-#     This accounts for which sheets actually differ 
+#     This accounts for which sheets actually differ
 #     by a root, or not. The following prescription
-#     is derived from the Coxeter projection diagram 
+#     is derived from the Coxeter projection diagram
 #     of E_6, and looking for roots that connect
 #     a given weight with other weights.
 #     """
 #     dist = abs(i - j) % 12
 #     if (
-#         (0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or 
+#         (0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or
 #         (i == 12 or j == 12)
 #     ):
 #         return True
@@ -1302,5 +1267,3 @@ def get_intermediate_value(v_1, v_2, z_1, z_2, z_med):
     slope = (v_2 - v_1) / (z_2 - z_1)
     v_med = v_1 + slope * (z_med - z_1)
     return v_med
-
-    

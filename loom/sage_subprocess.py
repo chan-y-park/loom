@@ -6,7 +6,7 @@ from sympy.mpmath import mp, mpc
 import logging
 import os
 import subprocess
-import pdb
+# import pdb
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 sage_script_dir = base_dir + '/sage_scripts/'
@@ -33,7 +33,7 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
         )
     except (KeyboardInterrupt, SystemExit):
         raise
-    
+
     rv = eval(rv_str)
     sols_str_list, messages = rv
 
@@ -73,13 +73,13 @@ def solve_single_eq_single_var(
             )
         except (KeyboardInterrupt, SystemExit):
             raise
-    
+
     rv = eval(rv_str)
     sols_str_list, mult_str_list, messages = rv
 
     for msg in messages:
         logger.warning(msg)
-    
+
     for i, sols_str in enumerate(sols_str_list):
         (z_re, z_im) = sols_str
         for j in range(mult_str_list[i]):
@@ -100,7 +100,7 @@ def get_g_data(root_system, highest_weight):
         raise
 
     g_data = eval(g_data_str)
-    
+
     return g_data
 
 
@@ -122,5 +122,3 @@ def compute_discriminant(f):
         return 0
     else:
         return poly(disc_sym)
-
-

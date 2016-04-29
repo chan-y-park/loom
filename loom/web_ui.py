@@ -4,12 +4,11 @@ import signal
 import multiprocessing
 import threading
 import time
-import pdb
+# import pdb
 import flask
 import sys
 import logging
 import uuid
-#import json
 import zipfile
 import glob
 import shutil
@@ -24,14 +23,13 @@ from api import (
     get_logging_handler,
     set_logging,
     load_config,
-    #get_current_branch_version,
 )
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
 from plotting import get_legend
 from misc import get_data_size_of
-from misc import get_phases_from_dict 
-from misc import get_phase_dict 
+from misc import get_phases_from_dict
+from misc import get_phase_dict
 from cmath import pi
 
 # Flask configuration
@@ -44,10 +42,9 @@ STAT_LOGGER_NAME = 'stat_of_' + WEB_APP_NAME
 DEFAULT_NUM_PROCESSES = 4
 DB_CLEANUP_CYCLE_SECS = 3600
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
-#KEEP_ALIVE_INTERVAL = 600000  # in milliseconds
 LOOM_CACHE_DIR = 'cache'
 
-# Array of config options. 
+# Array of config options.
 # Entries that will be placed in the same row
 # are in the same row of this array.
 config_options = [
@@ -64,7 +61,7 @@ config_options = [
 ]
 
 advanced_config_options = [
-    ['mt_params'], 
+    ['mt_params'],
     ['ramification_point_finding_method'],
     ['ramification_points'],
     ['branch_points'],
@@ -74,6 +71,7 @@ advanced_config_options = [
     ['size_of_puncture_cutoff'],
     ['accuracy'],
 ]
+
 
 # TODO: kill an orphaned process gracefully.
 class LoomDB(object):
@@ -85,10 +83,8 @@ class LoomDB(object):
         self.result_queues = {}
         self.loom_processes = {}
         self.logging_level = logging_level
-        #self.is_alive = {}
 
         signal.signal(signal.SIGINT, self.loom_db_stop_signal_handler)
-        #signal.signal(signal.SIGTERM, self.loom_db_stop_signal_handler)
 
         self.db_manager = threading.Thread(
             target=self.db_manager,
@@ -104,9 +100,6 @@ class LoomDB(object):
         if signum == signal.SIGINT:
             msg = 'LoomDB caught SIGINT; raises KeyboardInterrrupt.'
             e = KeyboardInterrupt
-        #elif signum == signal.SIGTERM:
-        #    msg = 'LoomDB caught SIGTERM; raises SystemExit.'
-        #    e = SystemExit
 
         logger.warning(msg)
         self.db_manager_stop.set()
@@ -125,47 +118,7 @@ class LoomDB(object):
         # break the while-loop and finish all the processes.
         while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
             pass
-#            to_delete = []
-#            try:
-#                for process_uuid, alive in self.is_alive.iteritems():
-#                    if alive is True:
-#                        # Reset the heartbeat counter so that
-#                        # it can be cleaned up later.
-#                        self.is_alive[process_uuid] = False
-#                    else:
-#                        to_delete.append(process_uuid)
-#
-#                        try:
-#                            # Flush the result queue.
-#                            result_queue = self.result_queues[process_uuid]
-#                            while result_queue.empty() is False:
-#                                result_queue.get_nowait()
-#                            # Remove the result queue
-#                            del self.result_queues[process_uuid]
-#                        except KeyError:
-#                            logger.warning(
-#                                "Removing result queue {} failed: "
-#                                "no such a queue exists."
-#                                .format(process_uuid)
-#                            ) 
-#                            pass
-#
-#                for process_uuid in to_delete:
-#                    try:
-#                        del self.is_alive[process_uuid]
-#                    except KeyError:
-#                        logger.warning(
-#                            "Deleting is_alive[{}] failed."
-#                            .format(process_uuid)
-#                        ) 
-#                        pass
-#
-#            except (KeyboardInterrupt, SystemExit) as e:
-#                msg = ('LoomDB manager thread caught {}; '
-#                       'finishes the manager.'.format(type(e)))
-#                logger.warning(msg)
-#                raise e(msg)
-        
+
         # Received a stop event; finish all the processes.
         process_uuids = self.loom_processes.keys()
         for process_uuid in process_uuids:
@@ -183,7 +136,7 @@ class LoomDB(object):
                     "Removing result queue {} failed: "
                     "no such a queue exists."
                     .format(process_uuid)
-                ) 
+                )
                 pass
         logger.info('LoomDB manager thread is finished.')
 
@@ -262,7 +215,6 @@ class LoomDB(object):
             )
 
         self.loom_processes[process_uuid] = loom_process
-        #self.is_alive[process_uuid] = True
         loom_process.start()
 
         return None
@@ -286,7 +238,6 @@ class LoomDB(object):
             logging.StreamHandler,
             logging_stream,
         )
-        #stop_finish = False
 
         try:
             result_queue = self.result_queues[process_uuid]
@@ -300,7 +251,7 @@ class LoomDB(object):
                                             logging_stream_handler,)
                 yield 'data: {}\n\n'.format(logs)
             except QueueEmpty:
-                pass 
+                pass
             except (KeyboardInterrupt, SystemExit):
                 raise
             except KeyError:
@@ -318,7 +269,7 @@ class LoomDB(object):
                                             logging_stream_handler,)
                 yield 'data: {}\n\n'.format(logs)
             except QueueEmpty:
-                break 
+                break
             except (KeyboardInterrupt, SystemExit):
                 raise
             except KeyError:
@@ -332,8 +283,6 @@ class LoomDB(object):
     def get_result(self, process_uuid):
         logger_name = get_logger_name(process_uuid)
         logger = logging.getLogger(logger_name)
-
-        #rv = None
 
         result_queue = self.result_queues[process_uuid]
         loom_process = self.loom_processes[process_uuid]
@@ -349,11 +298,10 @@ class LoomDB(object):
                     .format(loom_process.pid,
                             loom_process.exitcode,)
                 )
-                return None 
+                return None
         else:
             # Result queue has the data returned from the loom_process.
-            #rv = result_queue.get()
-            spectral_network_data= result_queue.get()
+            spectral_network_data = result_queue.get()
             logger.info(
                 'Process {} finished generating spectral network data.'
                 .format(process_uuid)
@@ -369,13 +317,12 @@ class LoomDB(object):
             data_size = get_data_size_of(spectral_network_data)
             stat_thread = threading.Thread(
                 target=record_stat,
-                #args=(rv, STAT_LOGGER_NAME, user_ip, process_uuid),
                 args=(STAT_LOGGER_NAME, user_ip, process_uuid, data_size),
             )
             stat_thread.start()
 
             self.finish_loom_process(process_uuid)
-            return spectral_network_data 
+            return spectral_network_data
 
     def finish_loom_process(
         self, process_uuid,
@@ -407,7 +354,7 @@ class LoomDB(object):
             web_loom_logger.warning(
                 "Terminating loom_process {} failed: no such a process exists."
                 .format(process_uuid)
-            ) 
+            )
             pass
 
         try:
@@ -419,7 +366,7 @@ class LoomDB(object):
             web_loom_logger.warning(
                 "Removing logger {} failed: no such a logger exists."
                 .format(logger_name)
-            ) 
+            )
             pass
 
         try:
@@ -436,7 +383,7 @@ class LoomDB(object):
             web_loom_logger.warning(
                 "Removing logging queue {} failed: no such a queue exists."
                 .format(process_uuid)
-            ) 
+            )
             pass
 
         try:
@@ -453,7 +400,7 @@ class LoomDB(object):
             web_loom_logger.warning(
                 "Removing result queue {} failed: no such a queue exists."
                 .format(process_uuid)
-            ) 
+            )
             pass
 
 
@@ -468,7 +415,6 @@ class WebLoomApplication(flask.Flask):
             logger_name=WEB_APP_NAME,
             logging_level=logging_level,
             logging_file_name=get_logging_file_path(WEB_APP_NAME),
-            #use_rotating_file_handler=True,
         )
         # Set a logger for recording the stat
         # with a non-rotating file handler.
@@ -488,7 +434,7 @@ class WebLoomApplication(flask.Flask):
 def index():
     # Make a list of contributors from git logs.
     ps = subprocess.Popen(
-        ['git', 'log', '--date-order', '--reverse', '--format="%aN"'], 
+        ['git', 'log', '--date-order', '--reverse', '--format="%aN"'],
         stdout=subprocess.PIPE,
     )
     loom_contributors_str = subprocess.check_output(
@@ -510,7 +456,7 @@ def index():
 
     return flask.render_template(
         'index.html',
-        loom_contributors=loom_contributors,     
+        loom_contributors=loom_contributors,
     )
 
 
@@ -518,7 +464,7 @@ def config(n_processes=None):
     # XXX: n_processes is a string.
     loom_config = None
     event_source_url = None
-    text_area_content = '' 
+    text_area_content = ''
     process_uuid = None
     full_data_dir = None
 
@@ -567,7 +513,7 @@ def config(n_processes=None):
                     )
                 except (KeyError, SyntaxError):
                     pass
-                
+
             logger_name = get_logger_name(process_uuid)
 
             if (
@@ -576,7 +522,7 @@ def config(n_processes=None):
                 additional_params['new_mass_limit'] is None and
                 additional_params['additional_phases'] is None
             ):
-                loom_config = get_loom_config(flask.request.form, logger_name) 
+                loom_config = get_loom_config(flask.request.form, logger_name)
             else:
                 loom_config = None
                 try:
@@ -620,7 +566,7 @@ def config(n_processes=None):
 # FIXME: consider separating progress from config
 def progress():
     pass
- 
+
 
 def logging_stream(process_uuid):
     if flask.request.headers.get('accept') == 'text/event-stream':
@@ -641,11 +587,11 @@ def save_config():
                          attachment_filename='config.ini',
                          add_etags=True,)
     return rv
-        
+
 
 def plot():
     loom_db = flask.current_app.loom_db
-    rotate_back = None 
+    rotate_back = None
     saved_data = None
 
     if flask.request.method == 'POST':
@@ -668,7 +614,6 @@ def plot():
         else:
             # Finish loom_process
             spectral_network_data = loom_db.get_result(process_uuid)
-            #full_data_dir = get_cache_dir(process_uuid)
 
     elif flask.request.method == 'GET':
         # Load saved data.
@@ -689,14 +634,14 @@ def plot():
         spectral_network_data.rotate_back()
     else:
         spectral_network_data.reset_z_rotation()
- 
+
     return render_plot_template(
         spectral_network_data, process_uuid=process_uuid,
         progress_log=progress_log, n_processes=n_processes,
         saved_data=saved_data,
     )
 
-# FIXME: use cached files
+
 def save_data_to_server():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
@@ -716,7 +661,6 @@ def save_data_to_server():
         full_data_dir = get_full_data_dir(process_uuid, saved_data)
         files_to_copy = get_data_file_path_list(full_data_dir)
         for src in files_to_copy:
-            print src, data_dir_to_save
             shutil.copy(src, data_dir_to_save)
         msg = 'Data successfully saved as "{}".'.format(data_name)
 
@@ -725,14 +669,14 @@ def save_data_to_server():
         msg=msg,
     )
 
-# FIXME: use cache files
+
 def download_data():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
         saved_data = eval(flask.request.form['saved_data'])
     else:
         raise RuntimeError
-    
+
     full_data_dir = get_full_data_dir(process_uuid, saved_data)
     files_to_zip = get_data_file_path_list(full_data_dir)
 
@@ -760,8 +704,6 @@ def download_plot():
     full_data_dir = get_full_data_dir(process_uuid, saved_data)
     spectral_network_data = SpectralNetworkData(data_dir=full_data_dir)
     spectral_network_data.reset_z_rotation()
-
-    #loom_config = spectral_network_data.config
 
     plot_html_zip_fp = BytesIO()
     with zipfile.ZipFile(plot_html_zip_fp, 'w') as zfp:
@@ -792,33 +734,6 @@ def download_E6_E7_data():
         'data/E6_E7_data.tar.gz',
         as_attachment=True,
     )
-
-
-#def keep_alive(process_uuid):
-#    """
-#    Receive heartbeats from clients.
-#    """
-#    logger = logging.getLogger(get_logger_name())
-#    app = flask.current_app
-#    try:
-#        is_alive = app.loom_db.is_alive
-#        if is_alive[process_uuid] is False:
-#            is_alive[process_uuid] = True
-#        logger.debug(
-#            'is_alive[{}] = {}'
-#            .format(process_uuid, app.loom_db.is_alive[process_uuid])
-#        )
-#    except KeyError:
-#        pass
-#    return ('', 204)
-        
-
-#def admin():
-#    # TODO: password-protect this page.
-#    # app = flask.current_app
-#    # loom_db = app.loom_db
-#    # pdb.set_trace()
-#    return ('', 204)
 
 
 def shutdown():
@@ -872,30 +787,14 @@ def get_application(config_file, logging_level):
         '/download_plot', 'download_plot', download_plot,
         methods=['POST'],
     )
-#    application.add_url_rule(
-#        '/download_data/<process_uuid>', 'download_data', download_data,
-#        methods=['POST'],
-#    )
-#    application.add_url_rule(
-#        '/download_plot/<process_uuid>', 'download_plot', download_plot,
-#        methods=['POST'],
-#    )
     application.add_url_rule(
         '/logging_stream/<process_uuid>', 'logging_stream', logging_stream,
         methods=['GET'],
     )
-#    application.add_url_rule(
-#        '/keep_alive/<process_uuid>', 'keep_alive', keep_alive,
-#        methods=['GET'],
-#    )
     application.add_url_rule(
         '/E6_E7_data', 'download_E6_E7_data', download_E6_E7_data,
         methods=['GET'],
     )
-#    application.add_url_rule(
-#        '/admin', 'admin', admin,
-#        methods=['GET'],
-#    )
     application.add_url_rule(
         '/shutdown', 'shutdown', shutdown,
         methods=['GET'],
@@ -958,7 +857,6 @@ def render_plot_template(
     download=False, saved_data=False,
 ):
     loom_config = spectral_network_data.config
-#    download_data_url = download_plot_url = None
     sw_data = spectral_network_data.sw_data
 
     # Make a Bokeh plot
@@ -979,16 +877,6 @@ def render_plot_template(
         irregular_singularities=sw_data.irregular_singularities,
     )
 
-#    if download is False:
-#        download_data_url = flask.url_for(
-#            'download_data',
-#            process_uuid=process_uuid,
-#        )
-#        download_plot_url = flask.url_for(
-#            'download_plot',
-#            process_uuid=process_uuid,
-#        )
-
     with open('static/bokeh_callbacks.js', 'r') as fp:
         bokeh_custom_script = fp.read()
 
@@ -1000,8 +888,6 @@ def render_plot_template(
         progress_log=progress_log,
         plot_legend=legend,
         bokeh_custom_script=bokeh_custom_script,
-        #download_data_url=download_data_url,
-        #download_plot_url=download_plot_url,
         download=str(download),
         loom_config=loom_config,
         config_options=config_options,
@@ -1040,7 +926,7 @@ def get_full_data_dir(process_uuid, saved_data):
         full_data_dir = get_cache_dir(process_uuid)
 
     return full_data_dir
-    
+
 
 def get_data_file_path_list(data_dir):
     data_file_path_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
@@ -1055,29 +941,6 @@ def get_data_file_path_list(data_dir):
     return data_file_path_list
 
 
-
-#def record_stat(rv, stat_logger_name, ip, uuid):
 def record_stat(stat_logger_name, ip, uuid, data_size):
-#    spectral_network_data = rv
-#    config = spectral_network_data.config
-#    # Make a zipped config file and record the stat.
-#    config_file_name = '{}.ini'.format(uuid)
-#    zipfile_path = os.path.join(
-#        get_loom_dir(), 'logs', '{}.zip'.format(config_file_name),
-#    )
-#    config_fp = BytesIO()
-#    config.parser.write(config_fp)
-#    config_fp.seek(0)
-#    with zipfile.ZipFile(zipfile_path, 'w') as zfp:
-#        zip_info = zipfile.ZipInfo(config_file_name)
-#        zip_info.date_time = time.localtime(time.time())[:6]
-#        zip_info.compress_type = zipfile.ZIP_DEFLATED
-#        #zip_info.external_attr = 0777 << 16L
-#        zip_info.external_attr = 040755 << 16L
-#        zfp.writestr(zip_info, config_fp.read())
-#
-    #data_size = get_data_size_of(spectral_network_data)
-
     stat_logger = logging.getLogger(stat_logger_name)
     stat_logger.info('{}, {}, {}'.format(ip, uuid, data_size))
-
