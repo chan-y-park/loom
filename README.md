@@ -113,6 +113,10 @@ To run ``loom``'s web frontend, the preparation is more involved. Please contact
 * The most well-maintained but user-friendly UI is an web UI. You can launch a local web frontend by running ``webmain.wsgi``.
   * You need [Flask](http://flask.pocoo.org/) to run the web UI, which can be easily installed via any usual way of installing a ``Python`` package.
   * When you execute ``webmain.wsgi`` there will be a local web server running and listening to port ``8888``. Open your favourite web browser and go to ``localhost:8888/config`` for the [configuration page](#configuration-page).
+  * Sometimes the port is occupied by another program. In such a case, run ``webmain.wsgi -p xxxx`` where ``xxxx`` is a port number, for example ``9999``. Then go to ``localhost:xxxx/config``.
+  * When running a web UI and in the middle of a run ``loom`` crashes, there can still be a ``Python`` process running. You need to manually kill the process by first finding its ``pid`` using for example ``ps -aux`` and ``kill -9 xxxxx`` where ``xxxxx`` is the ``pid`` of the ``Python`` process.
+  * Using ``pdb`` while running ``loom`` using the web UI is not recommended, as it usually won't work unless you carefully place ``pdb.set_trace()`` in an appropriate location. The reason is, as all UI frontends do, ``loom`` runs as a child process behind a parent process driving the ``UI``, and using ``pdb`` on ``loom`` only stops the ``loom`` process, which the parent process sees as the child not responding to itself.
+* The most debugging-friendly way and also the most convenient way of running ``loom`` for whom knows about ``Python`` is running it using ``IPython`` and ``Jupyter``. As an example, see [how_to_run_loom.ipynb](how_to_run_loom.ipynb) for the ``Python`` code and [how_to_run_loom.html] how it looks like when it is run successfully.
 * ```gmain.py``` is an executable Python script that launches a GUI version of ```loom```.
 * In the Python interpreter import ```loom``` module.
 
