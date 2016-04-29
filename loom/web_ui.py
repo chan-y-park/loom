@@ -67,6 +67,7 @@ advanced_config_options = [
     ['mt_params'], 
     ['ramification_point_finding_method'],
     ['ramification_points'],
+    ['branch_points'],
     ['size_of_small_step'],
     ['size_of_large_step'],
     ['size_of_bp_neighborhood'],

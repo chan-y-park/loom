@@ -35,6 +35,8 @@ DEFAULT_LARGE_STEP_SIZE = 0.01
 
 MIN_SPREAD = 0.1
 
+X_ROOTS_ACCURACY_FACTOR = 1e-3
+
 
 class GData:
     """
@@ -567,6 +569,12 @@ class SWDataBase(object):
         else:
             ramification_points = None
 
+        if config['branch_points'] is not None:
+            branch_points = sympy.sympify(config['branch_points'])
+            config['ramification_point_finding_method'] = 'from_branch_points'
+        else:
+            branch_points = None
+
         casimir_differentials = {}
         for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
             casimir_differentials[eval(k)] = phi_k
@@ -585,6 +593,7 @@ class SWDataBase(object):
                 casimir_differentials=casimir_differentials,
                 diff_params=diff_params,
                 ramification_points=ramification_points,
+                branch_points=branch_points,
             )
         else:
             self.set_from_json_data(json_data)
@@ -640,7 +649,8 @@ class SWDataBase(object):
             logger.info('{} at z={}'.format(pct.label, pct.z))
 
     def set_from_config(
-        self, config, mt_params=None, ramification_points=None,
+        self, config, mt_params=None, 
+        ramification_points=None, branch_points=None,
         casimir_differentials=None, diff_params=None,
     ):
         """
@@ -663,6 +673,10 @@ class SWDataBase(object):
         if method == 'discriminant':
             get_ramification_points = (
                 get_ramification_points_using_discriminant
+            )
+        elif method == 'from_branch_points':
+            get_ramification_points = (
+                get_ramification_points_from_branch_points
             )
         elif method == 'system_of_eqs':
             get_ramification_points = (
@@ -713,6 +727,7 @@ class SWDataBase(object):
             accuracy=self.accuracy, 
             punctures=punctures,
             ramification_points=ramification_points,
+            branch_points=branch_points,
             g_data=self.g_data,
             logger_name=self.logger_name,
         )
@@ -1398,12 +1413,12 @@ def get_ramification_points_using_system_of_eqs(
     accuracy=None, 
     punctures=None,
     ramification_points=None,
+    branch_points=None,
     g_data=None,
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
 
-    #sols = []
     f = (curve.sym_eq.subs(diff_params)
          .evalf(n=ROOT_FINDING_PRECISION, chop=True))
     # Make f into the form of f_n/f_d
@@ -1441,41 +1456,7 @@ def get_ramification_points_using_system_of_eqs(
         logger_name=logger_name,
     )
 
-#    # TODO: Consider calculating the discriminant D(z)
-#    # and double-check if all the z_i's are found.
-#    for z_i, x_i in z_x_s:
-#        #logger.info('Analyze a solution (z, x) = ({}, {})'.format(z_i, x_i))
-#        # Check if z_i is one of the punctures.
-#        is_puncture = False
-#        for p in punctures:
-#            if abs(z_i - p.Ciz) < accuracy:
-#                is_puncture = True
-#        if is_puncture:
-#            continue
-#
-#        # Calculate the multiplicity of x_i 
-#        # by finding the maximum k that satisfies
-#        # (d_x)^k f_n(x, z_i)|_{x = x_i} = 0.
-#        f_n_i = f_n.subs(z, z_i)
-#        m_x = 1
-#        while (
-#            abs(f_n_i.diff(x, m_x).subs(x, x_i)
-#                .evalf(n=ROOT_FINDING_PRECISION)) < accuracy
-#        ):
-#            m_x += 1
-#
-#        if m_x == 1:
-#            dfdx = f_n_i.diff(x).subs(x, x_i).evalf(n=ROOT_FINDING_PRECISION)
-#            logger.warning(
-#                'multiplicity of x is 1 at z = {}, x = {}: '
-#                'df/dx = {}.'.format(z_i, x_i, dfdx)
-#            )
-#
-#        sols.append(
-#            [complex(mpmath.chop(z_i)), 
-#             (complex(mpmath.chop(x_i)), m_x)]
-#        )
-
+    pdb.set_trace()
     sols = get_ramification_points_multiplicity(
         curve=curve, 
         diff_params=diff_params, 
@@ -1498,6 +1479,7 @@ def get_ramification_points_multiplicity(
     accuracy=None, 
     punctures=None,
     ramification_points=None,
+    branch_points=None,
     g_data=None,
     f_n=None,
     logger_name='loom',
@@ -1514,7 +1496,6 @@ def get_ramification_points_multiplicity(
     # TODO: Consider calculating the discriminant D(z)
     # and double-check if all the z_i's are found.
     for z_i, x_i in ramification_points:
-        #logger.info('Analyze a solution (z, x) = ({}, {})'.format(z_i, x_i))
         # Check if z_i is one of the punctures.
         is_puncture = False
         for p in punctures:
@@ -1555,67 +1536,20 @@ def get_ramification_points_using_discriminant(
     accuracy=None, 
     punctures=None,
     ramification_points=None,
+    branch_points=None,
     g_data=None,
     logger_name='loom',
 ):
     logger = logging.getLogger(logger_name)
-    sols = []    
+    #sols = []    
+    branch_points = []
     f = curve.sym_eq
     # Make f into the form of rf = f_n/f_d
     subs_dict = copy.deepcopy(diff_params)
     rf = sympy.simplify(sympy.cancel(sympy.simplify(f.subs(subs_dict))))
     f_n, f_d = rf.as_numer_denom()
-    
-    # BEGINNING of bifurcation here: must decide which of 
-    # these methods to employ in the long run
 
-    # FIRST METHOD: Use sympy to compute discriminants
-    # D_z = sympy.discriminant(f_n, x)
-
-    # if D_z == 0:
-    #     logger.info(
-    #         'The discriminant of F(x,z) is identically zero. '
-    #         'Will work with an effective discriminant.'
-    #     )
-    #     if g_data.type == 'A':
-    #         D_z = sympy.discriminant(f_n / x, x)
-    #     if g_data.type == 'D':
-    #         D_z = sympy.discriminant(f_n / (x ** 2), x)
-    #     # TODO: think through possible generalizations here,
-    #     # this is only handling certain special cases with E_6
-    #     # i.e. the maximally degenerate branch-point, occurring 
-    #     # at the origin of the coulomb branch of pure E_6 SYM
-    #     if g_data.type == 'E':
-    #         logger.info(
-    #             'will work with renormalized curve \n{}'.format(
-    #                 f_n / (x ** 3)
-    #             )
-    #         )
-    #         logger.debug(
-    #             'after simplification \n{}'.format(
-    #                 sympy.simplify(f_n / (x ** 3))
-    #             )
-    #         )
-    #         # FIXME: this is a temporary fix, the computation of the 
-    #         # discriminant with sage or sympy is just stuck. Mathematica 
-    #         # is able to do this in a fraction of a second though
-    #         if (
-    #             sympy.expand(f_n / (x ** 3)) == (
-    #                 -108 * x ** 24 * z ** 26 - 540 * I * x ** 12 * z ** 15 
-    #                 + 540 * I * x ** 12 * z ** 13 - z ** 4 + 2 * z ** 2 - 1
-    #             )
-    #         ):
-    #             D_z = z ** 598 * (z ** 2 - 1) ** 46
-    #         else:
-    #             D_z = sympy.discriminant(
-    #                 sympy.simplify(f_n / (x ** 3)), x
-    #             )
-
-    #     logger.debug(
-    #         'Will work with the effective discriminant:\n{}'.format(D_z)
-    #     )
-
-    # SECOND METHOD: Use SAGE to compute discriminants
+    # Use SAGE to compute discriminants
     D_z = sage_subprocess.compute_discriminant(
         sympy.expand(f_n)
     )
@@ -1676,16 +1610,7 @@ def get_ramification_points_using_discriminant(
     for fact in factors:
         logger.debug('stuyding roots of factor {}'.format(fact))
         # separate the factor itself and the multiplicity
-        #f_multiplicity = fact[1]
         f_P = sympy.Poly(fact[0], z)
-        # f_m = fact[1]
-        #cs = [
-        #    c_sym.evalf(
-        #        subs=subs_dict, n=ROOT_FINDING_PRECISION
-        #    ).as_real_imag()
-        #    for c_sym in f_P.all_coeffs()
-        #]
-        #f_P_coeffs = [mpmath.mpc(*c) for c in cs]
 
         f_roots = None
 
@@ -1703,8 +1628,6 @@ def get_ramification_points_using_discriminant(
 
         # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
         for z_i, zs in gathered_f_roots.iteritems():
-            # m_z is the multiplicity of z_i.
-            # m_z = len(zs)
             # Check if z_i is one of the punctures.
             is_puncture = False
             for p in punctures:
@@ -1712,29 +1635,84 @@ def get_ramification_points_using_discriminant(
                     is_puncture = True
             if is_puncture:
                 continue
-
-            subs_dict[z] = z_i
-            f_x_eq = f.subs(subs_dict).evalf(n=ROOT_FINDING_PRECISION)
-            f_x_roots = sage_subprocess.solve_single_eq_single_var(
-                f_x_eq,
-                var='x',
-                precision=ROOT_FINDING_PRECISION,
-                logger_name=logger_name,
-            )
-
-            # In general x-roots have worse errors.
-            is_same_x = lambda a, b: abs(a - b) < accuracy / 1e-3
-            gathered_f_x_roots = gather(f_x_roots, is_same_x)
-            for x_j, xs in gathered_f_x_roots.iteritems():
-                # m_x is the multiplicity of x_j.
-                # m_x = len(xs) * f_multiplicity
-                m_x = len(xs)
-                if m_x == 1:
-                    continue
-                else:
-                    sols.append([complex(z_i), (complex(x_j), m_x)])
+            branch_points.append(z_i)
+#
+#            subs_dict[z] = z_i
+#            f_x_eq = f.subs(subs_dict).evalf(n=ROOT_FINDING_PRECISION)
+#            f_x_roots = sage_subprocess.solve_single_eq_single_var(
+#                f_x_eq,
+#                var='x',
+#                precision=ROOT_FINDING_PRECISION,
+#                logger_name=logger_name,
+#            )
+#
+#            # In general x-roots have worse errors.
+#            is_same_x = (
+#                lambda a, b: abs(a - b) < accuracy / X_ROOTS_ACCURACY_FACTOR
+#            )
+#            gathered_f_x_roots = gather(f_x_roots, is_same_x)
+#            for x_j, xs in gathered_f_x_roots.iteritems():
+#                # m_x is the multiplicity of x_j.
+#                # m_x = len(xs) * f_multiplicity
+#                m_x = len(xs)
+#                if m_x == 1:
+#                    continue
+#                else:
+#                    sols.append([complex(z_i), (complex(x_j), m_x)])
+    sols = get_ramification_points_from_branch_points(
+        curve=curve, 
+        diff_params=diff_params, 
+        mt_params=mt_params,
+        accuracy=accuracy, 
+        punctures=punctures,
+        ramification_points=ramification_points,
+        branch_points=branch_points,
+        g_data=g_data,
+        logger_name='loom',
+    )
     return sols
 
+
+def get_ramification_points_from_branch_points(
+    curve=None, 
+    diff_params=None, 
+    mt_params=None,
+    accuracy=None, 
+    punctures=None,
+    ramification_points=None,
+    branch_points=None,
+    g_data=None,
+    logger_name='loom',
+):
+    logger = logging.getLogger(logger_name)
+    sols = []
+    f = curve.sym_eq
+    subs_dict = copy.deepcopy(diff_params)
+
+    # Find the roots of f(x, z=z_i) for the branch points {z_i}.
+    for z_i in branch_points:
+        subs_dict[z] = z_i
+        f_x_eq = f.subs(subs_dict).evalf(n=ROOT_FINDING_PRECISION)
+        f_x_roots = sage_subprocess.solve_single_eq_single_var(
+            f_x_eq,
+            var='x',
+            precision=ROOT_FINDING_PRECISION,
+            logger_name=logger_name,
+        )
+
+        # In general x-roots have worse errors.
+        is_same_x = (
+            lambda a, b: abs(a - b) < accuracy / X_ROOTS_ACCURACY_FACTOR
+        )
+        gathered_f_x_roots = gather(f_x_roots, is_same_x)
+        for x_j, xs in gathered_f_x_roots.iteritems():
+            # m_x is the multiplicity of x_j.
+            m_x = len(xs)
+            if m_x == 1:
+                continue
+            else:
+                sols.append([complex(z_i), (complex(x_j), m_x)])
+    return sols
 
 def find_xs_at_z_0(
         sw_data, z_0, x_0=None, num_x=1, ffr=False, use_sage=False

@@ -87,7 +87,10 @@ class SpectralNetworkData:
                     self.sw_data.save(sw_data_file_path)
 
                 if phases is None:
-                    phase = get_phases_from_dict(
+                    self.config['phase'] = get_phase_dict(
+                        self.config['phase']
+                    )
+                    phases = get_phases_from_dict(
                         self.config['phase'], accuracy
                     )
 
