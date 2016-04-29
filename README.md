@@ -78,13 +78,21 @@ where ``v_2`` and ``v_3`` are complex parameters whose numerical values are to b
 * Use the mouse wheel to zoom in or out the plot, drag the plot to move it.
 * On the upper right corner of the plot there are tools to save the plot in ``.png``, reset the zoon and the displacement, etc.
 * On the right side of the plot, the phase of the displayed spectral network is shown. Below the phase are buttons to change the display of the plot.
-  * When you zoomed in and lost some arrows on an S-wall, click ``Redraw arrows`` to redraw arrows within the plot area so that the corresponding tooltips can be shown by placing the mouse cursor on them.
-  * Use ``Show data points`` and ``Hide data points`` to display/hide the acutall numerical points on S-walls instead of lines connecting them.
-  * ``Rotate back`` makes the plot and the data to be rotated to the poisition where the calculation of ``loom`` is actually done, this is mostly for the purpose of debugging.
+  * When you zoomed in and lost some arrows on an S-wall, click **Redraw arrows** to redraw arrows within the plot area so that the corresponding tooltips can be shown by placing the mouse cursor on them.
+  * Use **Show data points** and **Hide data points** to display/hide the acutall numerical points on S-walls instead of lines connecting them.
+  * **Rotate back** makes the plot and the data to be rotated to the poisition where the calculation of ``loom`` is actually done, this is mostly for the purpose of debugging.
 * When multiple spectral networks are displayed, use the slider under the plot to change between spectral networks.
-* To save the data on the server, first specify the name of the data in the text box on the right of ``Save data to server as``, then click the ``Save`` button. The data can be retrieved by going to ``\plot?data=data_name`` for data named as ``data_name``.
-* Use ``Download data`` to save the ``loom`` data on your local machine, but you need ``loom`` to load the data.
-* Use ``Download plot`` to save the plot in HTML on your local machine, you don't need to install ``loom`` on your local machine to see this plot as long as it is connected to the internet.
+* Extending spectral networks
+  * Input **Additional steps**, **New mass limit**, or **Additional iterations** to extend spectral networks by those additional parameters.
+  * Input **Additional phases** to add more spectral networks of different phases. The data can be one of the following form:
+    * a number, such as ``1.0``, in radian.
+    * a ``Python`` list, such as ``[0.01, 3.14, 10]``, which specifies the start, the end, and the number of additional phases.
+    * a ``Python`` dict, such as ``{'single': [1.0, 2.0], 'range': [0.01, 3.14, 10], [1.53, 1.55, 10]}``, where ``single`` is a ``Python`` ``dict`` of single phases and ``range`` is a ``Python`` list of ``Python`` lists, each of which specifies a phase range. ``loom`` will automatically generate a list of phases out of this ``dict`` and remove any duplicate, so you don't have to worry about excluding duplicate phases.
+  * Click **Extend** to start running ``loom`` for the extension. 
+* Saving data and plot
+  * To save the data on the server, first specify the name of the data in the text box on the right of **Save data to server as**, then click the **Save** button. The data can be retrieved by going to ``\plot?data=data_name`` for data named as ``data_name``.
+  * Use **Download data** to save the ``loom`` data on your local machine, but you need ``loom`` to load the data.
+  * Use **Download plot** to save the plot in HTML on your local machine, you don't need to install ``loom`` on your local machine to see this plot as long as it is connected to the internet.
 
 ## How to run ``loom``
 ``loom`` is expected to run on a Linux system. Although ``loom`` does not require any platform-specific library and therefore should run on any platform that runs Python 2.X in principle, it usually runs into a platform-specific problem when run on a platform other than Linux; for example, on Windows it has an issue with multiple processes, and on Mac it has an issue with TKinter GUI.
