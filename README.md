@@ -59,17 +59,17 @@ where ``v_2`` and ``v_3`` are complex parameters whose numerical values are to b
 * By clicking **Save configuration** button you can save the configuration specified in this page to an ``.ini`` file on your local machine.
 * To load the saved configuration, first click **Browse...** button to select the file from your local machine, and click **Load configuration** to apply the configuration, which will show you the configuration from the file on this page.
 * Click **Generate spectral networks** button to start running ``loom`` with the specified configuration.
-* By clicking ``Show/hide advanced options`` you can change more options.
-  * ``Mobius transformation`` specifies an ``SL(2, \mathbb{C})`` transformation on the UV curve. However it is not fully implemented yet.
-  * ``Ramification point finding methods`` specifies how to find ramification points of the IR curve, therefore the branch points on the UV curve. There are currently four methods available, ``system_of_eqs``, ``discriminant``, ``from_branch_points``, and ``manual``.
+* By clicking **Show/hide advanced options** you can change more options.
+  * **Mobius transformation** specifies an ``SL(2, \mathbb{C})`` transformation on the UV curve. **However it is not fully implemented yet**.
+  * **Ramification point finding methods** specifies how to find ramification points of the IR curve, therefore the branch points on the UV curve. There are currently four methods available, ``system_of_eqs``, ``discriminant``, ``from_branch_points``, and ``manual``.
     * If none is specifies the default option is ``system_of_eqs``. For the detail of the methods please see [geometry.py](loom/geometry.py).
-    * When using ``from_branch_points``, you need to provide the locations of the branch points on the z-plane as a list of ``sympy`` expressions in ``Branch points``, whose example is given in the default configuration. When both ``system_of_eqs`` and ``discriminant`` methods fail to give answers, use this method as this is more robust than those two because the locations of branch points are manually provided by you, but more convenient than ``manual`` method because you don't have to find the ``x`` roots by yourself.
-    * When using ``manual``, you need to provide the locations of the ramification points in ``Ramification points`` as a list of ``(z_i, x_i)``, each of which is a ``sympy`` expression. This is the most robust method, simply because you already did all the calculations for finding the locations of the ramification points and all ``loom`` does is finding the ramification point index, or the multiplicity of the ``x`` root over a branch point.
-  * When ``Ramification points`` is not ``None``, the ramification point finding method is automatically set to ``manual``.
-  * When ``Branch points`` is not ``None``, the ramification point finding method is automatically set to ``from_branch_points``.
-  * ``Size of a small step`` and ``Size of a large step`` are two step sizes that ``loom`` adpatively chooses as the size of one step when solving the differential equation for S-walls.
-  * ``Size of a branch point neighborhood`` and ``Size of a puncture cutoff`` specify the radius around the loci that ``loom`` will stop evaluating the differential equation as the points are singular for the differential equation.
-  * ``Accuracy`` is a cutoff below which a numerical value is considered to be zero.
+    * When using ``from_branch_points``, you need to provide the locations of the branch points on the z-plane as a ``Python`` list of ``SymPy`` expressions in **Branch points**, whose example is given in the default configuration. When both ``system_of_eqs`` and ``discriminant`` methods fail to give answers, use this method as this is more robust than those two because the locations of branch points are manually provided by you, but more convenient than ``manual`` method because you don't have to find the ``x`` roots by yourself.
+    * When using ``manual``, you need to provide the locations of the ramification points in **Ramification points** as a ``Python`` list of ``(z_i, x_i)``, each of which is a ``sympy`` expression. This is the most robust method, simply because you already did all the calculations for finding the locations of the ramification points and all ``loom`` does is finding the ramification point index, or the multiplicity of the ``x`` root over a branch point.
+  * When **Ramification points** is not ``None``, the ramification point finding method is automatically set to ``manual``.
+  * When **Branch points** is not ``None``, the ramification point finding method is automatically set to ``from_branch_points``.
+  * **Size of a small step** and **Size of a large step** are two step sizes that ``loom`` adpatively chooses as the size of one step when solving the differential equation for S-walls.
+  * **Size of a branch point neighborhood** and **Size of a puncture cutoff** specify the radius around the loci that ``loom`` will stop evaluating the differential equation as the points are singular for the differential equation.
+  * **Accuracy** is a cutoff below which a numerical value is considered to be zero.
 
 ### Plot page
 
