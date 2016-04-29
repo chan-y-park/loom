@@ -15,7 +15,7 @@ class LoomConfig:
         self.data = {}
         self.parser = ConfigParser.SafeConfigParser()
         # attribute options has the following structure:
-        # options['section']['option'] = 'label' 
+        # options['section']['option'] = 'label'
         self.options = {
             'Seiberg-Witten data': {
                 'description': 'Description',
@@ -27,9 +27,9 @@ class LoomConfig:
                 'irregular_punctures': 'Irregular punctures',
                 'ramification_points': 'Ramification points',
                 'branch_points': 'Branch points',
-                'mt_params': 'Mobius transformation', 
+                'mt_params': 'Mobius transformation',
                 'ramification_point_finding_method':
-                    'Ramification point finding method', 
+                    'Ramification point finding method',
             },
             'numerical parameters': {
                 'accuracy': 'Accuracy',
@@ -39,7 +39,7 @@ class LoomConfig:
                 'size_of_small_step': 'Size of a small step',
                 'size_of_large_step': 'Size of a large step',
                 'size_of_bp_neighborhood':
-                    'Size of a branch point neighborhood', 
+                    'Size of a branch point neighborhood',
                 'size_of_puncture_cutoff': 'Size of a puncture cutoff',
                 'mass_limit': 'Mass limit',
                 'phase': 'Phase (single value or range)',
@@ -119,7 +119,7 @@ class LoomConfig:
                 parser_value = self.parser.get(section, option)
 
                 # Check deprecated options
-                if option in self.deprecated_options: 
+                if option in self.deprecated_options:
                     old_option = option
                     option = self.deprecated_options[old_option]
                     logger.warning(
@@ -146,7 +146,7 @@ class LoomConfig:
                 except ValueError:
                     raise ValueError('Unknown option \'{}\'.'.format(option))
 
-                self.data[option] = value 
+                self.data[option] = value
 
             for option in not_configured_options:
                 self.parser.set(section, option, 'None')

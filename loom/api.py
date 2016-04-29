@@ -7,7 +7,7 @@ import logging
 import subprocess
 import matplotlib
 # import traceback
-import pdb
+# import pdb
 
 from logging.handlers import RotatingFileHandler
 from logutils_queue import QueueHandler
@@ -16,8 +16,8 @@ from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
-from misc import get_phases_from_dict 
-from misc import get_phase_dict 
+from misc import get_phases_from_dict
+from misc import get_phase_dict
 
 
 class SpectralNetworkData:
@@ -39,7 +39,7 @@ class SpectralNetworkData:
         self.config = config
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
-        self.data_attributes = ['sw_data', 'spectral_networks',]
+        self.data_attributes = ['sw_data', 'spectral_networks']
 
         if config_file_path is not None:
             self.config = load_config(
@@ -68,7 +68,7 @@ class SpectralNetworkData:
         logger = logging.getLogger(self.logger_name)
         if cache_dir is not None and os.path.exists(cache_dir) is False:
             os.makedirs(cache_dir)
-       
+
         accuracy = self.config['accuracy']
         data_file_prefix = None
 
@@ -97,29 +97,12 @@ class SpectralNetworkData:
             else:
                 data_file_prefix = 'data_'
                 # Extend spectral networks with additional phases.
-                if phases is None:       
+                if phases is None:
                     # No additional phase to add.
                     logger.warning(
                         'No additional phase given, '
                         'stop extending the spectral networks.'
                     )
-                    return None
-#                else:
-#                    additional_phase_dict = get_phase_dict(phase)
-#                    prev_phases = [sn.phase for sn in self.spectral_networks]
-#                    prev_num_of_spectral_networks = len(prev_phases)
-#                    add_config_phase(self.config, additional_phase_dict)
-#                    new_phases = get_phases_from_dict(
-#                        self.config['phase'], accuracy
-#                    )
-#                    phases = []
-#                    for a_phase in new_phases:
-#                        delta = [
-#                            abs(a_phase - prev_phase) 
-#                            for prev_phase in prev_phases
-#                        ]
-#                        if min(delta) > accuracy:
-#                            phases.append(a_phase)
 
             if len(phases) == 0:
                 logger.warning('No phase to generate.')
@@ -149,17 +132,6 @@ class SpectralNetworkData:
                 spectral_networks = [spectral_network]
 
             else:
-#                phases = get_phases_from_dict(self.config['phase'], accuracy)
-#                if extend is True:
-#                    phases = [
-#                        a_phase for a_phase in phases
-#                        if (
-#                            min(
-#                                [abs(sn.phase - a_phase)
-#                                 for sn in self.spectral_networks]
-#                            ) > accuracy
-#                        )
-#                    ]
                 logger.info('Generate multiple spectral networks.')
                 logger.info('Number of phases: {}'.format(len(phases)))
                 seed_spectral_networks = [
@@ -169,7 +141,6 @@ class SpectralNetworkData:
                     )
                     for a_phase in phases
                 ]
-                
                 spectral_networks = parallel_get_spectral_network(
                     config=self.config,
                     sw_data=self.sw_data,
@@ -214,7 +185,7 @@ class SpectralNetworkData:
             version_file_path = os.path.join(cache_dir, 'version')
             save_version(version_file_path)
             # NOTE: The following should be placed
-            # at the last stage of spectral network generation. 
+            # at the last stage of spectral network generation.
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
 
@@ -241,22 +212,9 @@ class SpectralNetworkData:
             # Grow a spectral network for additional iterations.
             self.config['num_of_iterations'] += additional_iterations
 
-#        if (
-#            new_mass_limit is not None and 
-#            new_mass_limit != self.config['mass_limit']
-#        ):
-#            if additional_n_steps == 0:
-#                logger.warning(
-#                    'Changing the mass limit without increasing '
-#                    'number of steps has no effect.'
-#                    'The mass limit will be kept to {}'
-#                    .format(self.config['mass_limit'])
-#                )
-#            else:
-#                self.config['mass_limit'] = new_mass_limit
         if new_mass_limit is not None:
             self.config['mass_limit'] = new_mass_limit
-        
+
         start_time = time.time()
         logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
@@ -265,7 +223,7 @@ class SpectralNetworkData:
         self.rotate_back()
 
         if (
-            additional_n_steps > 0 or 
+            additional_n_steps > 0 or
             additional_iterations > 0 or
             new_mass_limit is not None
         ):
@@ -328,7 +286,7 @@ class SpectralNetworkData:
             phases = []
             for a_phase in new_phases:
                 delta = [
-                    abs(a_phase - prev_phase) 
+                    abs(a_phase - prev_phase)
                     for prev_phase in prev_phases
                 ]
                 if min(delta) > self.config['accuracy']:
@@ -367,7 +325,7 @@ class SpectralNetworkData:
             sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
             self.sw_data.save(sw_data_file_path)
             # NOTE: The following should be placed
-            # at the last stage of spectral network generation. 
+            # at the last stage of spectral network generation.
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
 
@@ -387,28 +345,6 @@ class SpectralNetworkData:
     def rotate_back(self):
         bc_r = self.sw_data.branch_cut_rotation
         self.set_z_rotation(1/bc_r)
-
-
-def get_logging_formatter(level):
-    if level == logging.DEBUG:
-        logging_format = (
-            '%(process)d: %(module)s@%(lineno)d: %(funcName)s: %(message)s'
-        )
-    elif level == logging.INFO:
-        logging_format = '%(process)d: %(message)s'
-    elif level == logging.WARNING:
-        logging_format = (
-            '%(process)d: === WARNING ===\n'
-            '%(process)d: %(funcName)s: %(message)s'
-        )
-    elif level == logging.ERROR:
-        logging_format = (
-            '%(process)d: ### ERROR ###\n'
-            '%(process)d: %(funcName)s: %(message)s'
-        )
-    else:
-        logging_format = '%(process)d: %(message)s'
-    return logging.Formatter(logging_format)
 
 
 class LoomLoggingFormatter(logging.Formatter):
@@ -453,18 +389,11 @@ def set_logging(
     remove_handlers=True,
     use_rotating_file_handler=False,
 ):
-    #logging.basicConfig()
     logger = logging.getLogger(logger_name)
     if logging_level is None:
         logging_level = logging.getLevelName(logging_level_name)
     logger.setLevel(logging_level)
-    #formatter = get_logging_formatter(logging_level)
     formatter = LoomLoggingFormatter()
-
-    #stdout_h = logging.StreamHandler(sys.stdout)
-    #stdout_h.setFormatter(formatter)
-    #logging.root.addHandler(stdout_h)
-    #logging.root.setLevel(logging_level)
 
     if remove_handlers is True:
         # Remove other handlers.
@@ -539,8 +468,6 @@ def save_config(config, file_path=None, logger_name='loom',):
 def load_spectral_network(
     data_dir=None,
     spectral_network_data=None,
-    #logging_queue=None,
-    #result_queue=None,
     logger_name='loom',
 ):
     if data_dir is None:
@@ -575,13 +502,9 @@ def load_spectral_network(
     spectral_networks = []
 
     data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
-#    data_file_list.sort()
     for data_file in data_file_list:
         logger.info('Loading {}...'.format(data_file))
         spectral_network = SpectralNetwork(logger_name=logger_name)
-#        with open(data_file, 'r') as fp:
-#            json_data = json.load(fp)
-#            spectral_network.set_from_json_data(json_data, sw_data)
         spectral_network.load(data_file, sw_data)
         spectral_networks.append(spectral_network)
     spectral_networks.sort(key=lambda sn: sn.phase)
@@ -599,12 +522,6 @@ def load_spectral_network(
         spectral_networks=spectral_networks,
     )
     return (config, data)
-    #rv = (config, data)
-    #if result_queue is None:
-    #    return rv
-    #else:
-    #    result_queue.put(rv)
-    #    return None
 
 
 def save_spectral_network(
@@ -643,9 +560,6 @@ def save_spectral_network(
     # Save geometric & trivialization data.
     sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
     logger.info('Saving data to {}.'.format(sw_data_file_path))
-#    with open(sw_data_file_path, 'wb') as fp:
-#        json_data = sw_data.get_json_data()
-#        json.dump(json_data, fp,)
     sw_data.save(sw_data_file_path)
 
     # Save spectral network data.
@@ -657,9 +571,6 @@ def save_spectral_network(
             )
         )
         logger.info('Saving data to {}.'.format(data_file_path))
-#        with open(data_file_path, 'wb') as fp:
-#            json_data = spectral_network.get_json_data()
-#            json.dump(json_data, fp,)
         spectral_network.save(data_file_path)
 
     if make_zipped_file is True:
@@ -685,8 +596,6 @@ def generate_spectral_network(
     config,
     phase=None,
     n_processes=0,
-    #result_queue=None,
-    #logging_queue=None,
     logger_name='loom',
 ):
     """
@@ -747,22 +656,6 @@ def generate_spectral_network(
         sw_data=sw_data, spectral_networks=spectral_networks,
     )
 
-    #if logging_queue is not None:
-    #    # Put a mark that generating spectral networks is done.
-    #    try:
-    #        logging_queue.put_nowait(None)
-    #    except:
-    #        logger.warn(
-    #            'Failed in putting a finish mark in the logging queue.'
-    #        )
-
-    #if result_queue is not None:
-    #    rv = (config, spectral_network_data)
-    #    result_queue.put(rv)
-    #    return None
-    #else:
-    #    return spectral_network_data
-
     return spectral_network_data
 
 
@@ -808,10 +701,6 @@ def make_spectral_network_plot(
             **kwargs
         )
         logger.info(plot_legend)
-
-    # Set the z-plane rotation back.
-    # TODO: Decide whether to save a rotated data or a raw data.
-    #spectral_network_data.set_z_rotation(1/z_r)
 
     if show_plot is True:
         spectral_network_plot.show()
@@ -861,4 +750,3 @@ def add_config_phase(config, phase_dict):
     config_phase['range'] += phase_dict['range']
 
     config['phase'] = config_phase
-

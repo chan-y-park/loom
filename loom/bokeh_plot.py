@@ -87,8 +87,9 @@ def get_spectral_network_bokeh_plot(
     bokeh_figure.grid.grid_line_color = None
 
     # Data source for marked points, which are drawn for an illustration.
-    mpds = ColumnDataSource({'x': [], 'y': [], 'color':[],
-                             'label': [], 'root': []})
+    mpds = ColumnDataSource(
+        {'x': [], 'y': [], 'color': [], 'label': [], 'root': []}
+    )
     for mp in marked_points:
         z, color = mp
         mpds.data['x'].append(z.real)
@@ -178,7 +179,7 @@ def get_spectral_network_bokeh_plot(
                 skip_plotting = True
         if skip_plotting is True:
             continue
-                
+
         sn_phase = '{:.3f}'.format(sn.phase / pi)
         pds.data['phase'].append(sn_phase)
 
@@ -199,7 +200,7 @@ def get_spectral_network_bokeh_plot(
                 z_r = s_wall.z[start:stop].real
                 z_i = s_wall.z[start:stop].imag
                 a_i = int(numpy.floor(len(z_r) / 2.0))
-                #TODO: Check if the arrow is within the plot range.
+                # TODO: Check if the arrow is within the plot range.
                 a_angle = pi
                 a_angle = (
                     phase((z_r[a_i] - z_r[a_i - 1]) +
@@ -224,7 +225,6 @@ def get_spectral_network_bokeh_plot(
                     sn_data['root'].append(root_label[:-2])
                     try:
                         color = sw_data.g_data.get_root_color(roots[0])
-                    #except Exception as e:
                     except Exception:
                         color = '#000000'
                         logger.warning(
@@ -232,28 +232,20 @@ def get_spectral_network_bokeh_plot(
                             'of a spectral network with phase = {}.'
                             .format(s_wall.label, sn.phase)
                         )
-                        
                     sn_data['color'].append(color)
-#                    sn_data['color'].append(
-#                        sw_data.g_data.get_root_color(roots[0])
-#                    )
             else:
                 for root in s_wall.local_roots:
                     sn_data['label'].append(str(s_wall.label))
                     sn_data['root'].append(str(root.tolist()))
                     try:
                         color = sw_data.g_data.get_root_color(root)
-                    #except Exception as e:
                     except Exception:
                         color = '#000000'
                         logger.warning(
                             '*** unknown root color for {} ***'
                             .format(s_wall.label)
                         )
-                        
                     sn_data['color'].append(color)
-#                    sn_data['color'].append(sw_data.g_data
-#                                            .get_root_color(root))
 
         snds.data['spectral_networks'].append(sn_data)
 

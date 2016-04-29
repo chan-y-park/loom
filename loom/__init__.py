@@ -1,7 +1,6 @@
 import os
 import time
 import platform
-#import logging
 import sys
 import matplotlib
 if matplotlib.rcParams['backend'] == 'nbAgg':
@@ -14,7 +13,7 @@ elif platform.system() == 'Linux':
         matplotlib.use('TkAgg')
         print('Use TkAgg backend for matplotlib.')
     except KeyError:
-        matplotlib.use('Agg') 
+        matplotlib.use('Agg')
         print('Use Agg backend for matplotlib.')
 else:
     print('Use default backend defined in matplotlibrc: '
