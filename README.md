@@ -97,7 +97,7 @@ where ``v_2`` and ``v_3`` are complex parameters whose numerical values are to b
 ## How to run ``loom``
 ``loom`` is expected to run on a Linux system. Although ``loom`` does not require any platform-specific library and therefore should run on any platform that runs Python 2.X in principle, it usually runs into a platform-specific problem when run on a platform other than Linux; for example, on Windows it has an issue with multiple processes, and on Mac it has an issue with TKinter GUI.
 
-To run ``loom``'s web frontend, the preparation is more involved, which will be posted here soon. In the meanwhile, please contact https://github.com/chan-y-park for the detail.
+To run ``loom``'s web frontend, the preparation is more involved. Please contact https://github.com/chan-y-park for the detail.
 
 ### Installation
 * The following instruction is based on Ubuntu 14.04 LTS.
@@ -110,6 +110,9 @@ To run ``loom``'s web frontend, the preparation is more involved, which will be 
 * Then clone this repository.
 
 ### Running ``loom``
+* The most well-maintained but user-friendly UI is an web UI. You can launch a local web frontend by running ``webmain.wsgi``.
+  * You need [Flask](http://flask.pocoo.org/) to run the web UI, which can be easily installed via any usual way of installing a ``Python`` package.
+  * When you execute ``webmain.wsgi`` there will be a local web server running and listening to port ``8888``. Open your favourite web browser and go to ``localhost:8888/config`` for the [configuration page](#configuration-page).
 * ```gmain.py``` is an executable Python script that launches a GUI version of ```loom```.
 * In the Python interpreter import ```loom``` module.
 
