@@ -1456,7 +1456,6 @@ def get_ramification_points_using_system_of_eqs(
         logger_name=logger_name,
     )
 
-    pdb.set_trace()
     sols = get_ramification_points_multiplicity(
         curve=curve, 
         diff_params=diff_params, 
@@ -1636,29 +1635,7 @@ def get_ramification_points_using_discriminant(
             if is_puncture:
                 continue
             branch_points.append(z_i)
-#
-#            subs_dict[z] = z_i
-#            f_x_eq = f.subs(subs_dict).evalf(n=ROOT_FINDING_PRECISION)
-#            f_x_roots = sage_subprocess.solve_single_eq_single_var(
-#                f_x_eq,
-#                var='x',
-#                precision=ROOT_FINDING_PRECISION,
-#                logger_name=logger_name,
-#            )
-#
-#            # In general x-roots have worse errors.
-#            is_same_x = (
-#                lambda a, b: abs(a - b) < accuracy / X_ROOTS_ACCURACY_FACTOR
-#            )
-#            gathered_f_x_roots = gather(f_x_roots, is_same_x)
-#            for x_j, xs in gathered_f_x_roots.iteritems():
-#                # m_x is the multiplicity of x_j.
-#                # m_x = len(xs) * f_multiplicity
-#                m_x = len(xs)
-#                if m_x == 1:
-#                    continue
-#                else:
-#                    sols.append([complex(z_i), (complex(x_j), m_x)])
+
     sols = get_ramification_points_from_branch_points(
         curve=curve, 
         diff_params=diff_params, 
