@@ -216,12 +216,11 @@ def delete_duplicates(l, key=None, accuracy=False):
     else:
         for x in l:
             if (
-                len(n_remove_duplicate(list(seen) + [key(x)], accuracy)) 
+                len(n_remove_duplicate(list(seen) + [key(x)], accuracy))
                 > len(seen)
             ):
                 uniq.append(x)
                 seen.add(key(x))
-            
     return uniq
 
 
@@ -269,10 +268,10 @@ def get_descendant_roots(parent_roots, g_data):
             root_sum = root_1 + root_2
             if is_root(root_sum, g_data):
                 # XXX: Needs review --- why no multiple descendant roots?
-                # Pietro: Also need some care in how we chack that sum of 
-                # roots is a root: we should "pair up" one root from 
+                # Pietro: Also need some care in how we chack that sum of
+                # roots is a root: we should "pair up" one root from
                 # parent 1 with exactly one root from parent 2.
-                # Moreover, the roots of the descendant wall must all 
+                # Moreover, the roots of the descendant wall must all
                 # be mutually orthogonal. Need to check all these things.
                 found = False
                 for prev_root in prev_roots + root_buffer:
@@ -353,7 +352,7 @@ def get_turning_points(zs):
         y_2 = zs[t + 1].imag
         if (
             (x_1 - x_0) * (x_2 - x_1) < 0 or (y_1 - y_0) * (y_2 - y_1) < 0
-        ): 
+        ):
             tps.append(t)
         x_0 = x_1
         y_0 = y_1
@@ -419,7 +418,7 @@ def get_data_size_of(obj, debug=False):
 
 def spread_of_branch_points(z_s, min_spread=None):
     """
-    Give a measure of how much branch points are separated 
+    Give a measure of how much branch points are separated
     from each other.
     """
     if len(z_s) == 0:

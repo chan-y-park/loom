@@ -136,13 +136,13 @@ class QueueHandler(logging.Handler):
 #     This class implements an internal threaded listener which watches for
 #     LogRecords being added to a queue, removes them and passes them to a
 #     list of handlers for processing.
-#             
+#
 #     :param record: The queue to listen to.
 #     :param handlers: The handlers to invoke on everything received from
 #                      the queue.
 #     """
 #     _sentinel = None
-# 
+#
 #     def __init__(self, queue, *handlers):
 #         """
 #         Initialise an instance with the specified queue and
@@ -152,62 +152,62 @@ class QueueHandler(logging.Handler):
 #         self.handlers = handlers
 #         self._stop = threading.Event()
 #         self._thread = None
-# 
+#
 #     def dequeue(self, block):
 #         """
 #         Dequeue a record and return it, optionally blocking.
-# 
+#
 #         The base implementation uses :meth:`~queue.Queue.get`. You may want to
 #         override this method if you want to use timeouts or work with custom
 #         queue implementations.
-#         
+#
 #         :param block: Whether to block if the queue is empty. If `False` and
 #                       the queue is empty, an :class:`~queue.Empty` exception
 #                       will be thrown.
 #         """
 #         return self.queue.get(block)
-# 
+#
 #     def start(self):
 #         """
 #         Start the listener.
-# 
+#
 #         This starts up a background thread to monitor the queue for
 #         LogRecords to process.
 #         """
 #         self._thread = t = threading.Thread(target=self._monitor)
 #         t.setDaemon(True)
 #         t.start()
-# 
+#
 #     def prepare(self , record):
 #         """
 #         Prepare a record for handling.
-# 
+#
 #         This method just returns the passed-in record. You may want to
 #         override this method if you need to do any custom marshalling or
 #         manipulation of the record before passing it to the handlers.
-#         
+#
 #         :param record: The record to prepare.
 #         """
 #         return record
-# 
+#
 #     def handle(self, record):
 #         """
 #         Handle a record.
-# 
+#
 #         This just loops through the handlers offering them the record
 #         to handle.
-# 
+#
 #         :param record: The record to handle.
 #         """
 #         record = self.prepare(record)
 #         for handler in self.handlers:
 #             handler.handle(record)
-# 
+#
 #     def _monitor(self):
 #         """
 #         Monitor the queue for records, and ask the handler
 #         to deal with them.
-# 
+#
 #         This method runs on a separate, internal thread.
 #         The thread will terminate if it sees a sentinel object in the queue.
 #         """
@@ -234,7 +234,7 @@ class QueueHandler(logging.Handler):
 #                     q.task_done()
 #             except queue.Empty:
 #                 break
-# 
+#
 #     def enqueue_sentinel(self):
 #         """
 #         Writes a sentinel to the queue to tell the listener to quit. This
@@ -243,11 +243,11 @@ class QueueHandler(logging.Handler):
 #         implementations.
 #         """
 #         self.queue.put_nowait(self._sentinel)
-# 
+#
 #     def stop(self):
 #         """
 #         Stop the listener.
-# 
+#
 #         This asks the thread to terminate, and then waits for it to do so.
 #         Note that if you don't call this before your application exits, there
 #         may be some records still left on the queue, which won't be processed.

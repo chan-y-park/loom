@@ -10,7 +10,7 @@ from Queue import Empty as QueueEmpty
 
 from api import (set_logging, get_logging_handler,
                  generate_spectral_network, load_config, load_spectral_network,
-                 save_config, save_spectral_network, 
+                 save_config, save_spectral_network,
                  make_spectral_network_plot, SpectralNetworkData,)
 
 GUI_LOOP_DELAY = 100    # in millisec
@@ -60,9 +60,9 @@ class GUILoom:
         self.check = {}
         self.button = {}
         self.sw_data = None
-        self.spectral_networks = [] 
+        self.spectral_networks = []
 
-        # Array of config options. 
+        # Array of config options.
         # Entries that will be placed in the same row
         # are in the same row of this array.
         self.entry_array = [
@@ -72,7 +72,7 @@ class GUILoom:
             ['differential_parameters'],
             ['regular_punctures'],
             ['irregular_punctures'],
-            ['mt_params'], 
+            ['mt_params'],
             ['ramification_point_finding_method'],
             ['plot_range'],
             ['num_of_steps'],
@@ -85,7 +85,7 @@ class GUILoom:
             ['mass_limit'],
             ['phase'],
         ]
-    
+
     def create_widgets(self):
         # Layout variables
         grid_row = 0
@@ -112,7 +112,7 @@ class GUILoom:
             label='Save data',
             command=self.menu_save_data_action,
         )
-        
+
         # Entry & Label layout
         # TODO: display config file name.
         for entry_row in self.entry_array:
@@ -122,7 +122,7 @@ class GUILoom:
                 entry_label_text = self.config.get_label(config_option)
                 label = tk.Label(self.root, text=entry_label_text)
                 label.grid(row=grid_row, column=grid_col)
-                
+
                 self.entry_var[config_option] = tk.StringVar()
                 self.entry[config_option] = tk.Entry(
                     self.root,
@@ -213,7 +213,7 @@ class GUILoom:
         self.log_text.grid(
             row=grid_row, column=grid_col, columnspan=4, sticky=tk.EW
         )
-        grid_col = 4 
+        grid_col = 4
         log_text_scroll = tk.Scrollbar(self.root)
         log_text_scroll.grid(row=grid_row, column=grid_col, sticky=tk.NS)
         log_text_scroll.config(command=self.log_text.yview)
@@ -232,7 +232,7 @@ class GUILoom:
                 self.log_text.insert(tk.END, logs)
                 self.log_text.see(tk.END)
         except QueueEmpty:
-            pass 
+            pass
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
@@ -342,19 +342,19 @@ class GUILoom:
             else:
                 logger.warning(
                     'Loading data failed: pid = {}, exitcode= {}'
-                    .format(load_data_process.pid, 
+                    .format(load_data_process.pid,
                             load_data_process.exitcode,)
                 )
                 self.change_gui_state('on')
                 return None
 
-        config, spectral_network_data = result_queue.get() 
+        config, spectral_network_data = result_queue.get()
         load_data_process.join()
         if config is None:
             logger.warning('Data contains no configuration.')
             self.change_gui_state('on')
             return None
-        self.config = config 
+        self.config = config
         self.update_entries_from_config()
         self.spectral_networks = spectral_network_data.spectral_networks
         self.sw_data = spectral_network_data.sw_data
@@ -380,7 +380,7 @@ class GUILoom:
         save_data_process = multiprocessing.Process(
             target=save_spectral_network,
             args=(
-                self.config, 
+                self.config,
                 SpectralNetworkData(self.sw_data, self.spectral_networks,),
             ),
             kwargs=dict(
@@ -391,8 +391,8 @@ class GUILoom:
         )
         save_data_process.start()
         self.root.after(
-            GUI_LOOP_DELAY, 
-            self.finish_save_data, 
+            GUI_LOOP_DELAY,
+            self.finish_save_data,
             save_data_process,
         )
         return None
@@ -478,7 +478,7 @@ class GUILoom:
             logger_name=self.logger_name,
         )
         self.change_gui_state('on')
-        
+
         return None
 
     def change_gui_state(self, state):
@@ -492,7 +492,7 @@ class GUILoom:
             button_widget.config(state=tk_state)
         for name, entry_widget in self.entry.iteritems():
             entry_widget.config(state=tk_state)
-        self.mb.config(state=tk_state) 
+        self.mb.config(state=tk_state)
 
     # For debugging purpose only.
     def button_print_config_action(self):
@@ -520,7 +520,7 @@ class GUILoom:
 
     def update_entries_from_config(self):
         """
-        Update the text values of the entries 
+        Update the text values of the entries
         when a new configuration is loaded to self.config.
         """
         logger = logging.getLogger(self.logger_name)
@@ -567,7 +567,7 @@ def open_gui(config_file_path=None, logging_level=None,):
     gui_loom.root.protocol("WM_DELETE_WINDOW", lambda: quit_gui(gui_loom),)
     gui_loom.root.mainloop()
 
-    return None 
+    return None
 
 
 def quit_gui(gui_loom):

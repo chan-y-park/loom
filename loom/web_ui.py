@@ -759,6 +759,7 @@ def download_plot():
 
     full_data_dir = get_full_data_dir(process_uuid, saved_data)
     spectral_network_data = SpectralNetworkData(data_dir=full_data_dir)
+    spectral_network_data.reset_z_rotation()
 
     #loom_config = spectral_network_data.config
 

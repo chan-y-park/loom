@@ -5,11 +5,8 @@ import os
 
 from spectral_network import SpectralNetwork
 
-#from spectral_network import SpectralNetwork
-
 
 def child_sigint_handler(signum, frame):
-    # print("SIGINT catched by a child of loom.parallel.")
     raise KeyboardInterrupt("SIGINT catched by a child of loom.parallel.")
 
 
@@ -24,7 +21,6 @@ def init_process():
     Take care of a keyboard interrupt and a SIGTERM.
     """
     signal.signal(signal.SIGINT, child_sigint_handler)
-    # signal.signal(signal.SIGTERM, child_sigterm_handler)
 
 
 def a_child_process(
@@ -35,8 +31,6 @@ def a_child_process(
     n_jobs=None,
     logger_name='loom',
     cache_file_path=None,
-    #shared_n_started_spectral_networks,
-    #shared_n_finished_spectral_networks,
     additional_n_steps=0,
     new_mass_limit=None,
     additional_iterations=0,
@@ -45,7 +39,6 @@ def a_child_process(
 
     logger.info('Start generating spectral network #{}/{}: phase = {}.'
                 .format(job_id, n_jobs, spectral_network.phase))
-   
     try:
         spectral_network.grow(
             config, sw_data,
@@ -67,21 +60,12 @@ def a_child_process(
 
     if cache_file_path is None:
         return spectral_network
-    else:
-#        cache_file_path = os.path.join(
-#            cache_dir,
-#            'data_{}.json'.format(
-#                str(job_id).zfill(len(str(n_jobs - 1)))
-#            )
-#        )
-#        logger.info('Saving cache data to {}.'.format(cache_file_path))
-#        spectral_network.save(cache_file_path)
         return cache_file_path
 
 
 def parallel_get_spectral_network(
     config=None,
-    sw_data=None, 
+    sw_data=None,
     spectral_networks=None,
     n_processes=0,
     additional_n_steps=0,
@@ -101,9 +85,9 @@ def parallel_get_spectral_network(
         ]
         spectral_networks = [
             SpectralNetwork(
-                phase=sn_phase, 
+                phase=sn_phase,
                 logger_name=logger_name,
-            ) 
+            )
             for sn_phase in phases
         ]
 
@@ -134,7 +118,6 @@ def parallel_get_spectral_network(
     pool = multiprocessing.Pool(n_processes, init_process)
     logger.info('Number of processes in the pool: {}'.format(n_processes))
 
-
     try:
         results = [
             pool.apply_async(
@@ -164,7 +147,7 @@ def parallel_get_spectral_network(
                 new_sn = result.get()
             else:
                 # FIXME: Do we really need the following?
-                new_sn_file_path = result.get() 
+                new_sn_file_path = result.get()
                 new_sn = SpectralNetwork(logger_name=logger_name)
                 new_sn.load(new_sn_file_path, sw_data)
             new_spectral_networks.append(new_sn)
@@ -184,7 +167,7 @@ def parallel_get_spectral_network(
 
 def get_cache_file_path(cache_dir, data_file_prefix, i):
     if cache_dir is not None and data_file_prefix is not None:
-        cache_file_path=os.path.join(
+        cache_file_path = os.path.join(
             cache_dir,
             '{}_{}.json'.format(data_file_prefix, i)
         )

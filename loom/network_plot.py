@@ -12,10 +12,10 @@ class NetworkPlotBase(object):
         self.figure = matplotlib_figure
         if self.figure is not None:
             self.figure.clf()
-    
+
     def draw(
         self, phase=None, branch_points=None, joints=None, punctures=None,
-        irregular_singularities=None, walls=None, wall_segments=None, 
+        irregular_singularities=None, walls=None, wall_segments=None,
         wall_colors=None, labels=None, plot_joints=False,
         plot_data_points=False, branch_cut_rotation=1,
     ):
@@ -29,7 +29,6 @@ class NetworkPlotBase(object):
                   'joints': [jp1_label, ...],
                   'walls': [[wall_i_seg_j_label], ...]}
         """
-        
         rect = [.1, 0.15, .8, .8]
 
         axes = self.figure.add_axes(
@@ -65,15 +64,15 @@ class NetworkPlotBase(object):
         # Plot branch points.
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8, 
-                      color='k', 
+            axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8,
+                      color='k',
                       label=labels['branch_points'][i],)
 
         # Plot irregular singularities
         for i, irr_sing in enumerate(irregular_singularities):
             isx, isy = irr_sing
             axes.plot(isx, isy, 'o', markeredgewidth=2, markersize=8,
-                      color='k', markerfacecolor='none', 
+                      color='k', markerfacecolor='none',
                       label=labels['irregular_singularities'][i],)
 
         # Plot branch cuts according to the z-plane rotation.
@@ -81,16 +80,16 @@ class NetworkPlotBase(object):
 
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot([bpx, bpx + y_r.real], [bpy, bpy + y_r.imag], 
-                      ':', color='k', 
+            axes.plot([bpx, bpx + y_r.real], [bpy, bpy + y_r.imag],
+                      ':', color='k',
                       label='Cut of ' + labels['branch_points'][i],)
 
         for i, irr_sing in enumerate(irregular_singularities):
             isx, isy = irr_sing
             axes.plot([isx, isx + y_r.real], [isy, isy + y_r.imag],
-                      ':', color='k', 
+                      ':', color='k',
                       label='Cut of ' + labels['irregular_singularities'][i],)
-   
+
         # Plot joints.
         if plot_joints is True:
             for i, jp in enumerate(joints):
@@ -101,7 +100,7 @@ class NetworkPlotBase(object):
         # Plot puncturess.
         for i, p in enumerate(punctures):
             px, py = p
-            axes.plot(px, py, 'o', markeredgewidth=2, markersize=8, 
+            axes.plot(px, py, 'o', markeredgewidth=2, markersize=8,
                       color='k', markerfacecolor='none',
                       label=labels['punctures'][i],)
 
