@@ -26,6 +26,13 @@ In addition, ``loom`` contains a web frontend that drives a WSGI application, wh
 
 ### Screenshots
 
+#### Web UI
+![config](https://github.com/chan-y-park/loom/blob/master/screeenshots/web_ui_config.png "configuration page")
+![progress](https://github.com/chan-y-park/loom/blob/master/screeenshots/web_ui_progress.png "showing progress")
+![plot](https://github.com/chan-y-park/loom/blob/master/screeenshots/web_ui_plot.png "plot page")
+
+
+#### GUI
 ![loom screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_desktop.png "loom desktop")
 ![loom menu screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_menu.png "loom menu")
 ![loom plot screenshot](https://github.com/chan-y-park/loom/blob/master/screeenshots/loom_plot.png "loom plot")
