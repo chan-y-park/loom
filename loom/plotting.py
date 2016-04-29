@@ -429,31 +429,34 @@ def get_legend(
     for i in range(len(weights)):
         legend += (weight_labels[i] + ' : {}\n'.format(list(weights[i])))
 
-    legend += ('\t--- Regular punctures ---\n')
-    for p in regular_punctures:
-        legend += (
-            p.label + 
-            '\tposition : {}\n'.format(p.z)
-        )
+    if regular_punctures is not None:
+        legend += ('\t--- Regular punctures ---\n')
+        for p in regular_punctures:
+            legend += (
+                p.label + 
+                '\tposition : {}\n'.format(p.z)
+            )
 
-    legend += ('\t--- Branch Points ---\n')
-    for bp in branch_points:
-        rt_labels = [get_label(rt, root_dictionary)
-                     for rt in bp.positive_roots]
-        legend += (
-            bp.label + 
-            '\tposition : {}\n'.format(bp.z) +
-            '\t\troot type : {}\n'.format(rt_labels) +
-            '\t\tmonodromy matrix : \n{}\n'.format(bp.monodromy)
-        )
+    if branch_points is not None:
+        legend += ('\t--- Branch Points ---\n')
+        for bp in branch_points:
+            rt_labels = [get_label(rt, root_dictionary)
+                         for rt in bp.positive_roots]
+            legend += (
+                bp.label + 
+                '\tposition : {}\n'.format(bp.z) +
+                '\t\troot type : {}\n'.format(rt_labels) +
+                '\t\tmonodromy matrix : \n{}\n'.format(bp.monodromy)
+            )
 
-    legend += ('\t--- Irregular Singularities ---\n')
-    for irs in irregular_singularities:
-        legend += (
-            irs.label + 
-            '\tposition : {}\n'.format(irs.z) + 
-            '\tmonodomry matrix : \n{}\n'.format(irs.monodromy)
-        )
+    if irregular_singularities is not None:
+        legend += ('\t--- Irregular Singularities ---\n')
+        for irs in irregular_singularities:
+            legend += (
+                irs.label + 
+                '\tposition : {}\n'.format(irs.z) + 
+                '\tmonodomry matrix : \n{}\n'.format(irs.monodromy)
+            )
 
     return legend
 

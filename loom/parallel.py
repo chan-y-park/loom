@@ -149,9 +149,8 @@ def parallel_get_spectral_network(
                     additional_n_steps=additional_n_steps,
                     new_mass_limit=new_mass_limit,
                     additional_iterations=additional_iterations,
-                    cache_file_path=os.path.join(
-                        cache_dir,
-                        '{}_{}.json'.format(data_file_prefix, i)
+                    cache_file_path=get_cache_file_path(
+                        cache_dir, data_file_prefix, i,
                     )
                 )
             ) for i, sn in enumerate(spectral_networks)
@@ -181,3 +180,14 @@ def parallel_get_spectral_network(
         raise e
 
     return new_spectral_networks
+
+
+def get_cache_file_path(cache_dir, data_file_prefix, i):
+    if cache_dir is not None and data_file_prefix is not None:
+        cache_file_path=os.path.join(
+            cache_dir,
+            '{}_{}.json'.format(data_file_prefix, i)
+        )
+        return cache_file_path
+    else:
+        return None
