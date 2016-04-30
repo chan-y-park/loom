@@ -112,11 +112,6 @@ class Joint:
         return True
 
 
-# TODO: Instead of seeding with x_0, it would make
-# more sense to give the initial root-type.
-# From that, and the trivialization module, we can
-# extract the value of x_0, in principle.
-
 class SWall(object):
     def __init__(self, z_0=None, x_0=None, M_0=None, parents=None,
                  parent_roots=None, label=None, n_steps=None,
@@ -150,6 +145,8 @@ class SWall(object):
 
         # cuts_intersections = [[branch_point, i, '(c)cw'], ...]
         self.cuts_intersections = []
+        # roots_basepoint = [t_0, z_0, x_0, root]
+        self.roots_basepoint = []
         self.local_roots = []
         self.multiple_local_roots = None
         # local_weight_pairs is a list of pair of intgers.
@@ -317,12 +314,13 @@ class SWall(object):
 
     def determine_root_types(self, sw_data, cutoff_radius=0,):
         """
-        Determine at which points the wall crosses a cut,
+        1- Determine at which points the wall crosses a cut,
         for instance [55, 107, 231] would mean that
         it changes root-type 3 times.
-        Then, pick a suitable point along the swall, away
+        2- Then, pick a suitable point along the swall, away
         from branch points or singularities, and determine
-        the root there. Finally, extend the determination
+        the root there. 
+        3- Finally, extend the determination
         of the root type to other segments by following
         the wall across the various splits induced by cuts,
         both forward and backwards, using the Weyl monodromy.
@@ -473,6 +471,8 @@ class SWall(object):
                 'Warning: could not assign a root to {}'
                 .format(self.label)
             )
+
+        self.roots_basepoint = [t_0, z_0, x_0, initial_root]
 
         # A list of ordered pairs [...[i, j]...]
         # such that weights[j] - weights[i] = root
