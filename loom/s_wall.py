@@ -259,7 +259,7 @@ class SWall(object):
         self.local_weight_pairs = json_data['local_weight_pairs']
         roots_basepoint_data = json_data['roots_basepoint']
         self.roots_basepoint = [
-                roots_basepoint_data[0]
+                roots_basepoint_data[0],
                 r2toc(roots_basepoint_data[1]),
                 numpy.array([r2toc(x) for x in list(roots_basepoint_data[2])]),
                 numpy.array(roots_basepoint_data[3])
@@ -485,7 +485,7 @@ class SWall(object):
                 .format(self.label)
             )
 
-        self.roots_basepoint = [t_0, z_0, x_0, initial_root]
+        self.roots_basepoint = [t_0, z_0, xs_0, initial_root]
 
         # A list of ordered pairs [...[i, j]...]
         # such that weights[j] - weights[i] = root
