@@ -206,7 +206,13 @@ class SWall(object):
             #     [root.tolist() for root in multiple_roots]
             #     for multiple_roots in self.multiple_local_roots
             # ],
-            'local_weight_pairs': self.local_weight_pairs
+            'local_weight_pairs': self.local_weight_pairs,
+            'roots_basepoint': [
+                self.roots_basepoint[0],
+                ctor2(self.roots_basepoint[1]),
+                [ctor2(x) for x in list(self.roots_basepoint[2])],
+                list(self.roots_basepoint[3])
+            ]
         }
         # TODO: Remove the following after multiple_local_roots
         # becomes the default.
@@ -251,6 +257,13 @@ class SWall(object):
         except KeyError:
             pass
         self.local_weight_pairs = json_data['local_weight_pairs']
+        roots_basepoint_data = json_data['roots_basepoint']
+        self.roots_basepoint = [
+                roots_basepoint_data[0]
+                r2toc(roots_basepoint_data[1]),
+                numpy.array([r2toc(x) for x in list(roots_basepoint_data[2])]),
+                numpy.array(roots_basepoint_data[3])
+            ],
 
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
