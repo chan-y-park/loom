@@ -281,7 +281,7 @@ class GData:
 
         logger.warning('No color mapped for the root {}'
                        .format(root.tolist()))
-        raise RuntimeError
+        # raise RuntimeError
 
 
 class RamificationPoint:
