@@ -257,13 +257,19 @@ class SWall(object):
         except KeyError:
             pass
         self.local_weight_pairs = json_data['local_weight_pairs']
-        roots_basepoint_data = json_data['roots_basepoint']
-        self.roots_basepoint = [
-                roots_basepoint_data[0],
-                r2toc(roots_basepoint_data[1]),
-                numpy.array([r2toc(x) for x in list(roots_basepoint_data[2])]),
-                numpy.array(roots_basepoint_data[3])
-            ],
+        
+        try:
+            roots_basepoint_data = json_data['roots_basepoint']
+            self.roots_basepoint = [
+                    roots_basepoint_data[0],
+                    r2toc(roots_basepoint_data[1]),
+                    numpy.array(
+                        [r2toc(x) for x in list(roots_basepoint_data[2])]
+                    ),
+                    numpy.array(roots_basepoint_data[3])
+                ],
+        except KeyError:
+            pass
 
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
