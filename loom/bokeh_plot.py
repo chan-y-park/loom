@@ -223,9 +223,8 @@ def get_spectral_network_bokeh_plot(
                     for root in roots:
                         root_label += str(root.tolist()) + ', '
                     sn_data['root'].append(root_label[:-2])
-                    try:
-                        color = sw_data.g_data.get_root_color(roots[0])
-                    except Exception:
+                    color = sw_data.g_data.get_root_color(roots[0])
+                    if color is None:
                         color = '#000000'
                         logger.warning(
                             'Unknown root color for {} '
@@ -237,13 +236,13 @@ def get_spectral_network_bokeh_plot(
                 for root in s_wall.local_roots:
                     sn_data['label'].append(str(s_wall.label))
                     sn_data['root'].append(str(root.tolist()))
-                    try:
-                        color = sw_data.g_data.get_root_color(root)
-                    except Exception:
+                    color = sw_data.g_data.get_root_color(root)
+                    if color is None:
                         color = '#000000'
                         logger.warning(
-                            '*** unknown root color for {} ***'
-                            .format(s_wall.label)
+                            'Unknown root color for {} '
+                            'of a spectral network with phase = {}.'
+                            .format(s_wall.label, sn.phase)
                         )
                     sn_data['color'].append(color)
 

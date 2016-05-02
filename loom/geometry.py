@@ -3,7 +3,7 @@ import numpy
 import logging
 import copy
 import json
-# import pdb
+import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo, I
@@ -281,7 +281,7 @@ class GData:
 
         logger.warning('No color mapped for the root {}'
                        .format(root.tolist()))
-        # raise RuntimeError
+        return None
 
 
 class RamificationPoint:
@@ -1666,6 +1666,7 @@ def get_ramification_points_from_branch_points(
                 continue
             else:
                 sols.append([complex(z_i), (complex(x_j), m_x)])
+        pdb.set_trace()
     return sols
 
 

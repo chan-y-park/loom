@@ -207,13 +207,20 @@ class SWall(object):
             #     for multiple_roots in self.multiple_local_roots
             # ],
             'local_weight_pairs': self.local_weight_pairs,
-            'roots_basepoint': [
+#            'roots_basepoint': [
+#                self.roots_basepoint[0],
+#                ctor2(self.roots_basepoint[1]),
+#                [ctor2(x) for x in list(self.roots_basepoint[2])],
+#                list(self.roots_basepoint[3])
+#            ]
+        }
+        if len(self.roots_basepoint) > 0:
+            json_data['roots_basepoint'] = [
                 self.roots_basepoint[0],
                 ctor2(self.roots_basepoint[1]),
                 [ctor2(x) for x in list(self.roots_basepoint[2])],
                 list(self.roots_basepoint[3])
             ]
-        }
         # TODO: Remove the following after multiple_local_roots
         # becomes the default.
         if self.multiple_local_roots is not None:

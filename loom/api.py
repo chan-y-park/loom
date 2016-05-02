@@ -698,6 +698,7 @@ def make_spectral_network_plot(
             irregular_singularities=sw_data.irregular_singularities,
             g_data=sw_data.g_data,
             branch_cut_rotation=sw_data.branch_cut_rotation,
+            logger_name=logger_name,
             **kwargs
         )
         logger.info(plot_legend)

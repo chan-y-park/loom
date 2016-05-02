@@ -1,5 +1,6 @@
 import os
 import numpy
+import logging
 # import pdb
 import Tkinter as tk
 
@@ -30,7 +31,9 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
         C=[[1, 0], [0, 1]],
         g_data=None,
         branch_cut_rotation=1,
+        logger_name='loom',
     ):
+        logger = logging.getLogger(logger_name)
         labels = {'branch_points': [], 'joints': [], 'punctures': [],
                   'walls': [], 'irregular_singularities': []}
         if self.plot_range is None:
@@ -113,10 +116,25 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                               for root_str in map(str, s_wall.local_roots)]
                 labels['walls'].append(seg_labels)
 
-        wall_colors = [
-            [g_data.get_root_color(root) for root in seg_roots]
-            for seg_roots in wall_roots
-        ]
+#        wall_colors = [
+#            [g_data.get_root_color(root) for root in seg_roots]
+#            for seg_roots in wall_roots
+#        ]
+    
+        wall_colors = []
+        for seg_roots in wall_roots:
+            colors = []
+            for root in seg_roots:
+                color = g_data.get_root_color(root)
+                if color is None:
+                    color = '#000000'
+                    logger.warning(
+                        'Unknown root color for {} '
+                        'of a spectral network with phase = {}.'
+                        .format(s_wall.label, spectral_network.phase)
+                    )
+                colors.append(color)
+            wall_colors.append(colors)
 
         plot_legend = ('\n'
                        '------------------------\n'
