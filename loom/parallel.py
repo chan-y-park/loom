@@ -60,6 +60,7 @@ def a_child_process(
 
     if cache_file_path is None:
         return spectral_network
+    else:
         return cache_file_path
 
 
@@ -146,7 +147,10 @@ def parallel_get_spectral_network(
             if cache_dir is None:
                 new_sn = result.get()
             else:
-                # FIXME: Do we really need the following?
+                # XXX: Do we really need the following?
+                # It's probably good to use cache files
+                # just in case the internal queue size
+                # of the pool is too small.
                 new_sn_file_path = result.get()
                 new_sn = SpectralNetwork(logger_name=logger_name)
                 new_sn.load(new_sn_file_path, sw_data)
