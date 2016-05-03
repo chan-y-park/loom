@@ -277,6 +277,7 @@ class SpectralNetworkData:
                     sn.save(cache_file_path)
 
         if additional_phases is not None:
+            self.config['phase'] = get_phase_dict(self.config['phase'])
             additional_phase_dict = get_phase_dict(additional_phases)
             prev_phases = [sn.phase for sn in self.spectral_networks]
             add_config_phase(self.config, additional_phase_dict)
