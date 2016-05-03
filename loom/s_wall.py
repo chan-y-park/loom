@@ -565,7 +565,7 @@ class SWall(object):
 
         ffr_xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=True).values()
 
-        if len(self.parent_roots) == 1:
+        if self.parent_roots is None or len(self.parent_roots) == 1:
             self.multiple_local_roots = [[root] for root in self.local_roots]
         elif len(self.parent_roots) > 1:
             multiple_local_roots_0 = [root_0]
