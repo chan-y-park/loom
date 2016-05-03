@@ -268,13 +268,13 @@ class SWall(object):
         try:
             roots_basepoint_data = json_data['roots_basepoint']
             self.roots_basepoint = [
-                    roots_basepoint_data[0],
-                    r2toc(roots_basepoint_data[1]),
-                    numpy.array(
-                        [r2toc(x) for x in list(roots_basepoint_data[2])]
-                    ),
-                    numpy.array(roots_basepoint_data[3])
-                ],
+                roots_basepoint_data[0],
+                r2toc(roots_basepoint_data[1]),
+                numpy.array(
+                    [r2toc(x) for x in list(roots_basepoint_data[2])]
+                ),
+                numpy.array(roots_basepoint_data[3])
+            ]
         except KeyError:
             pass
 
