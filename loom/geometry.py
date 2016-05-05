@@ -1666,7 +1666,6 @@ def get_ramification_points_from_branch_points(
                 continue
             else:
                 sols.append([complex(z_i), (complex(x_j), m_x)])
-        pdb.set_trace()
     return sols
 
 
