@@ -277,6 +277,7 @@ class SpectralNetworkData:
                     sn.save(cache_file_path)
 
         if additional_phases is not None:
+            self.config['phase'] = get_phase_dict(self.config['phase'])
             additional_phase_dict = get_phase_dict(additional_phases)
             prev_phases = [sn.phase for sn in self.spectral_networks]
             add_config_phase(self.config, additional_phase_dict)
@@ -698,6 +699,7 @@ def make_spectral_network_plot(
             irregular_singularities=sw_data.irregular_singularities,
             g_data=sw_data.g_data,
             branch_cut_rotation=sw_data.branch_cut_rotation,
+            logger_name=logger_name,
             **kwargs
         )
         logger.info(plot_legend)

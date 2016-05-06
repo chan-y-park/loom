@@ -151,6 +151,8 @@ class LoomDB(object):
     ):
         logging_level = self.logging_level
         cache_dir = get_cache_dir(process_uuid)
+        if os.path.exists(cache_dir) is False:
+            os.makedirs(cache_dir)
 
         if n_processes is None:
             n_processes = DEFAULT_NUM_PROCESSES
@@ -162,6 +164,7 @@ class LoomDB(object):
             logger_name=logger_name,
             logging_level=logging_level,
             logging_queue=logging_queue,
+            logging_file_name=os.path.join(cache_dir, 'log'),
         )
 
         result_queue = multiprocessing.Queue()

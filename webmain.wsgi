@@ -13,7 +13,6 @@ import time
 import pdb
 
 argv = sys.argv[1:]
-#sys.stdout = sys.stderr
 print 'loom WSGI working directory: {}'.format(os.getcwd())
 
 from loom.api import get_loom_dir
@@ -32,12 +31,12 @@ if __name__ == '__main__':
             port = int(arg)
 
     pid_file = os.path.join(get_loom_dir(), 'logs/webmain_pid')
-    try:
-        with open(pid_file, 'r') as fp:
-            old_pid = int(fp.read())
-            os.kill(old_pid, signal.SIGKILL)
-    except (IOError, OSError):
-        pass
+#    try:
+#        with open(pid_file, 'r') as fp:
+#            old_pid = int(fp.read())
+#            os.kill(old_pid, signal.SIGKILL)
+#    except (IOError, OSError):
+#        pass
     with open(pid_file, 'w') as fp:
         pid = os.getpid()
         fp.write(str(pid))

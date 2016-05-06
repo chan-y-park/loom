@@ -207,13 +207,20 @@ class SWall(object):
             #     for multiple_roots in self.multiple_local_roots
             # ],
             'local_weight_pairs': self.local_weight_pairs,
-            'roots_basepoint': [
+#            'roots_basepoint': [
+#                self.roots_basepoint[0],
+#                ctor2(self.roots_basepoint[1]),
+#                [ctor2(x) for x in list(self.roots_basepoint[2])],
+#                list(self.roots_basepoint[3])
+#            ]
+        }
+        if len(self.roots_basepoint) > 0:
+            json_data['roots_basepoint'] = [
                 self.roots_basepoint[0],
                 ctor2(self.roots_basepoint[1]),
                 [ctor2(x) for x in list(self.roots_basepoint[2])],
                 list(self.roots_basepoint[3])
             ]
-        }
         # TODO: Remove the following after multiple_local_roots
         # becomes the default.
         if self.multiple_local_roots is not None:
@@ -261,13 +268,13 @@ class SWall(object):
         try:
             roots_basepoint_data = json_data['roots_basepoint']
             self.roots_basepoint = [
-                    roots_basepoint_data[0],
-                    r2toc(roots_basepoint_data[1]),
-                    numpy.array(
-                        [r2toc(x) for x in list(roots_basepoint_data[2])]
-                    ),
-                    numpy.array(roots_basepoint_data[3])
-                ],
+                roots_basepoint_data[0],
+                r2toc(roots_basepoint_data[1]),
+                numpy.array(
+                    [r2toc(x) for x in list(roots_basepoint_data[2])]
+                ),
+                numpy.array(roots_basepoint_data[3])
+            ]
         except KeyError:
             pass
 
@@ -558,7 +565,7 @@ class SWall(object):
 
         ffr_xs_at_z_0 = sw_data.get_sheets_at_z(z_0, ffr=True).values()
 
-        if len(self.parent_roots) == 1:
+        if self.parent_roots is None or len(self.parent_roots) == 1:
             self.multiple_local_roots = [[root] for root in self.local_roots]
         elif len(self.parent_roots) > 1:
             multiple_local_roots_0 = [root_0]
