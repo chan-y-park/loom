@@ -131,7 +131,9 @@ class LoomConfig:
                     self.parser.remove_option(section, old_option)
                     self.parser.set(section, option, parser_value)
 
-                if (section == 'Seiberg-Witten data'):
+                if (parser_value == 'None'):
+                    value = eval(parser_value)
+                elif (section == 'Seiberg-Witten data'):
                     value = parser_value
                 elif (section == 'numerical parameters'):
                     value = eval(parser_value)
