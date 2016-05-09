@@ -195,15 +195,21 @@ class NetworkPlot(SpectralNetworkPlotBase):
         self.axes_button_next = None
         self.index_text = None
 
-    def save(self, plot_dir, file_prefix=''):
+    def save(self, plot_dir, file_prefix='', svg=False, pdf=False):
         # TODO: change the current figure to plot_id.
         digits = len(str(len(self.plots) - 1))
         for i, axes in enumerate(self.plots):
             self.change_current_plot(i)
-            plot_file_path = os.path.join(
-                plot_dir, file_prefix + str(i).zfill(digits) + '.png'
-            )
-            self.figure.savefig(plot_file_path)
+            file_types = [".png"]
+            if svg is True:
+                file_types.append(".svg")
+            if pdf is True:
+                file_types.append(".pdf")
+            for ft in file_types:
+                plot_file_path = os.path.join(
+                    plot_dir, file_prefix + str(i).zfill(digits) + ft
+                )
+                self.figure.savefig(plot_file_path)
 
     def change_current_plot(self, new_plot_idx):
         super(NetworkPlot, self).change_current_plot(new_plot_idx)
