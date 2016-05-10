@@ -11,6 +11,8 @@ from sympy import oo
 from geometry import (
     find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
 )
+from trivialization import BranchPoint
+
 from misc import (
     cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root,
     get_descendant_roots, sort_roots, n_nearest
@@ -64,7 +66,7 @@ class Joint:
         json_data = {
             'z': ctor2(self.z),
             'M': ctor2(self.M),
-            'parents': [parent for parent in self.parents],
+            'parents': [parent.label for parent in self.parents],
             'label': self.label,
             # XXX: Enable the following once self.root is deprecated.
             # 'roots': [root.tolist() for root in self.roots],
@@ -76,10 +78,14 @@ class Joint:
             json_data['roots'] = [self.root.tolist()]
         return json_data
 
-    def set_from_json_data(self, json_data):
+    def set_from_json_data(self, json_data, obj_dict):
         self.z = r2toc(json_data['z'])
         self.M = r2toc(json_data['M'])
-        self.parents = [parent for parent in json_data['parents']]
+        #self.parents = [parent for parent in json_data['parents']]
+        # NOTE: Joint.parents is loaded from JSON with labels of parents,
+        # but is replaced with parent objects 
+        # in SpectralNetwork.set_from_json_data()
+        self.parents = json_data['parents']
         self.label = json_data['label']
         # TODO: remove Joint.root & the following exception handling.
         try:
@@ -192,7 +198,7 @@ class SWall(object):
             'x': numpy.rollaxis(
                 numpy.array([self.x.real, self.x.imag]), 0, 3
             ).tolist(),
-            'parents': [parent for parent in self.parents],
+            'parents': [parent.label for parent in self.parents],
             'parent_roots': [root.tolist() for root in self.parent_roots],
             'label': self.label,
             'cuts_intersections': [
@@ -230,13 +236,16 @@ class SWall(object):
             ]
         return json_data
 
-    def set_from_json_data(self, json_data, branch_loci):
+    def set_from_json_data(self, json_data):
         self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
         self.M = numpy.array([r2toc(M_t) for M_t in json_data['M']])
         self.x = numpy.array(
             [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
         )
-        self.parents = [parent for parent in json_data['parents']]
+        # NOTE: SWall.parents is loaded from JSON with labels of parents,
+        # but is replaced with parent objects 
+        # in SpectralNetwork.set_from_json_data()
+        self.parents = json_data['parents']
         try:
             self.parent_roots = [
                 numpy.array(root)
@@ -245,11 +254,16 @@ class SWall(object):
         except KeyError:
             pass
         self.label = json_data['label']
-        self.cuts_intersections = []
-        for br_loc_label, t, d in json_data['cuts_intersections']:
-            for br_loc in branch_loci:
-                if br_loc_label == br_loc.label:
-                    self.cuts_intersections.append([br_loc, t, d])
+        # NOTE: SWall.cuts_intersections is loaded from JSON 
+        # with labels of branch points,
+        # but is replaced with branch point objects 
+        # in SpectralNetwork.set_from_json_data()
+        self.cuts_intersections = json_data['cuts_intersections']
+#        self.cuts_intersections = []
+#        for br_loc_label, t, d in json_data['cuts_intersections']:
+#            for br_loc in branch_loci:
+#                if br_loc_label == br_loc.label:
+#                    self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = [
             numpy.array(root)
             for root in json_data['local_roots']
@@ -416,8 +430,9 @@ class SWall(object):
                 # if such intersections happens within a short
                 # distance from the starting point.
                 if (
-                    br_loc.__class__.__name__ == 'BranchPoint' and
-                    br_loc.label == self.parents[0] and
+                    #br_loc.__class__.__name__ == 'BranchPoint' and
+                    isinstance(br_loc, BranchPoint) and
+                    br_loc == self.parents[0] and
                     (abs(br_loc.z - self.z[t]) < cutoff_radius)
                 ):
                     continue
