@@ -625,7 +625,10 @@ class SWall(object):
             closed_splits = self.get_splits() + [len(self.z) - 1]
             for i, sp in enumerate(closed_splits):
                 if t <= sp:
-                    return self.multiple_local_roots[i]
+                    if self.multiple_local_roots is not None:
+                        return self.multiple_local_roots[i]
+                    else:
+                        return [self.local_roots[i]]
                     break
                 else:
                     pass

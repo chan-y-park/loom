@@ -22,6 +22,54 @@ from intersection import (
 )
 
 
+class SWallTreeNode:
+    def __init__(
+        self,
+        me=None,
+        children=None,
+        parents=None,
+    ):
+        self.me = me
+        self.child = child
+        self.parents = parents
+
+
+class SWallTree:
+    def __init__(
+        self,
+        root_s_wall=None,
+        tree_dict=None,
+        spectral_network=None,
+    ):
+        self.tree_dict = tree_dict
+        self.spectral_network = spectral_network
+        root_s_wall_node = SWallTreeNode(
+            me=root_s_wall,
+            parents=[
+                self.tree_dict[parent_label]
+                for parent_label in s_wall.parents
+            ],
+        )
+        self.nodes = [root_s_wall_node]
+        self.grow(root_s_wall_node)
+
+    def grow(self, node=None):
+        for parent in node.parents:
+            parent_node = SWallTreeNode(
+                me=parent,
+                child=node.me,
+                parents=[
+                    self.tree_dict[parent_label]
+                    for parent_label in parent.parents
+                ],
+            )
+            self.nodes.append(parent_node)
+            self.grow(parent_node)
+                
+    def trim(self):
+            
+
+
 class SpectralNetwork:
     def __init__(
         self,
@@ -676,6 +724,55 @@ class SpectralNetwork:
 
         return checked_new_joints
 
+    def get_two_way_streets(
+        self, config=None, sw_data=None,
+        search_radius=None,
+        cache_file_path=None,
+    ):
+        logger = logging.getLogger(self.logger_name)
+
+        # A subnetwork W_c
+        sn_c = SpectralNetwork(
+            phase=self.phase,
+            logger_name=self.logger_name,
+        )
+
+        if search_radius is None:
+            search_radius = config['size_of_large_step']
+
+        s_wall_trees = []
+        tree_dict = {}
+        for bp in sw_data.branch_points:
+            tree_dict[bp.label] = bp
+        for s_wall in self.s_walls:
+            tree_dict[s_wall.label] = s_wall
+
+        # Search for roots of S-wall trees
+        # corresponding to two-way streets.
+        for s_wall in self.s_walls:
+            for bp in sw_data.branch_points:
+                tree = None
+
+                # Skip if the S-wall is a child of the branch point.
+                if bp.label in s_wall.parents:
+                    continue
+                min_t = numpy.argmin(s_wall.z - bp.z)
+
+                if ((s_wall.z[min_t] - bp.z) < search_radius):
+                    bp_roots = (
+                        bp.positive_roots.tolist() +
+                        (-bp.positive_roots).tolist()
+                    )
+                    s_wall_roots = s_wall.get_roots_at_t(min_t)
+                    if(len(s_wall_roots) > 1):
+                        raise NotImplementedError
+                    s_wall_root = s_wall_roots[0].tolist()
+                    if s_wall_root in bp_roots:
+                        # Found a root of this S-wall tree.
+                        tree = SWallTree(root_s_wall=s_wall)
+
+                if tree is not None:
+                    
 
 def get_ode(sw, phase, accuracy):
     x, z = sympy.symbols('x z')
