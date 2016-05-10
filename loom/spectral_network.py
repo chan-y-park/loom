@@ -20,54 +20,130 @@ from misc import (
 from intersection import (
     NoIntersection, find_intersection_of_segments,
 )
+from trivialization import BranchPoint
 
 
-class SWallTreeNode:
+#class SWallTreeNode:
+#    def __init__(
+#        self,
+#        me=None,
+#        child=None,
+#        parents=None,
+#    ):
+#        self.me = me
+#        self.child = child
+#        self.parents = parents
+#
+#
+#class SWallTree:
+#    def __init__(
+#        self,
+#        root_s_wall=None,
+#        root_branch_point=None,
+#        tree_dict=None,
+#        spectral_network=None,
+#    ):
+#        self.tree_dict = tree_dict
+#        self.spectral_network = spectral_network
+#        self.root_branch_point = root_branch_point
+#        root_s_wall_node = SWallTreeNode(
+#            me=root_s_wall,
+#            child=None,
+#            parents=[
+#                self.tree_dict[parent_label]
+#                for parent_label in s_wall.parents
+#            ],
+#        )
+#        self.nodes = [root_s_wall_node]
+#        self.grow(root_s_wall_node)
+#
+#    def grow(self, node=None):
+#        if 'Branch point' in node.me.label:
+#            # Branch points are leaves of this tree.
+#            return None
+#
+#        for parent in node.parents:
+#            parent_node = SWallTreeNode(
+#                me=parent,
+#                child=node.me,
+#                parents=[
+#                    self.tree_dict[parent_label]
+#                    for parent_label in parent.parents
+#                ],
+#            )
+#            self.nodes.append(parent_node)
+#            self.grow(parent_node)
+#                
+#    def trim(self):
+#        for node in self.nodes:
+#            if node.child is None:
+#                # This is the root node.
+#                end_z = self.root_branch_point.z
+#            else:
+#                end_z = node.child.z[0]
+#
+#            end_t = numpy.argmin(node.me.z - end_z) 
+
+class Street(SWall):
     def __init__(
         self,
-        me=None,
-        children=None,
+        s_wall=None,
+        end_z=None,
         parents=None,
+        logger_name='loom',
     ):
-        self.me = me
-        self.child = child
+        super(Street, self).__init__(logger_name=logger_name)
+        end_t = numpy.argmin(s_wall.z - end_z)
+        self.z = s_wall.z[:end_t]
+        self.x = s_wall.x[:end_t]
+        self.M = s_wall.M[:end_t]
         self.parents = parents
+        self.parent_roots = s_wall.parent_roots
+        self.label = s_wall.label
+        self.cuts_intersections = [
+            br_loc t, d for br_loc, t, d in s_wall.cuts_intersections
+            if t <= end_t
+        ]
+        n_segs = len(self.cuts_intersections) + 1
+        self.local_roots = s_wall.local_roots[:n_segs]
+        self.multiple_local_roots = s_wall.multiple_local_roots[:n_segs]
+        self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
 
-class SWallTree:
+class SolitonTree:
     def __init__(
         self,
         root_s_wall=None,
+        root_branch_point=None,
         tree_dict=None,
         spectral_network=None,
     ):
         self.tree_dict = tree_dict
         self.spectral_network = spectral_network
-        root_s_wall_node = SWallTreeNode(
-            me=root_s_wall,
-            parents=[
-                self.tree_dict[parent_label]
-                for parent_label in s_wall.parents
-            ],
+        self.root_branch_point = root_branch_point
+        root_street = Street(
+            s_wall=root_s_wall,
+            end_z=root_branch_point.z
+            parents=s_wall.parents,
         )
-        self.nodes = [root_s_wall_node]
-        self.grow(root_s_wall_node)
+        self.streets = [root_street]
+        self.grow(root_street)
 
-    def grow(self, node=None):
-        for parent in node.parents:
-            parent_node = SWallTreeNode(
-                me=parent,
-                child=node.me,
-                parents=[
-                    self.tree_dict[parent_label]
-                    for parent_label in parent.parents
-                ],
+    def grow(self, street=None):
+        for parent in street.parents:
+            #if 'Branch point' in parent.label:
+            if isinstance(parent, BranchPoint):
+                # Branch points are leaves of this tree.
+                continue
+            parent_street = Street(
+                s_wall=parent,
+                end_z=street.z[0]
+                parents=parent.parents,
             )
-            self.nodes.append(parent_node)
-            self.grow(parent_node)
-                
-    def trim(self):
-            
+            self.streets.append(parent_street)
+            self.grow(parent_street)
+
+        return None
 
 
 class SpectralNetwork:
@@ -769,7 +845,10 @@ class SpectralNetwork:
                     s_wall_root = s_wall_roots[0].tolist()
                     if s_wall_root in bp_roots:
                         # Found a root of this S-wall tree.
-                        tree = SWallTree(root_s_wall=s_wall)
+                        tree = SWallTree(
+                            root_branch_point=bp,
+                            root_s_wall=s_wall,
+                        )
 
                 if tree is not None:
                     

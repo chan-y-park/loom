@@ -281,6 +281,7 @@ class SWall(object):
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
         if endpoints is True:
+            # Add values of t's of endpoints to the return value.
             return [0] + splits + [len(self.z) - 1]
         else:
             return splits
