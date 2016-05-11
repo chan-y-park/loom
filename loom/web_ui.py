@@ -927,6 +927,7 @@ def render_plot_template(
         initial_phase=initial_phase,
         n_processes=n_processes,
         saved_data=saved_data,
+        default_search_radius=loom_config['size_of_bp_neighborhood'],
     )
 
 
