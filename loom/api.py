@@ -47,11 +47,6 @@ class SpectralNetworkData:
                 logger_name=self.logger_name,
             )
         elif data_dir is not None:
-#            load_spectral_network(
-#                data_dir=data_dir,
-#                spectral_network_data=self,
-#                logger_name=self.logger_name,
-#            )
             self.load(data_dir=data_dir)
 
     def load(self, data_dir=None, logger_name=None,):
@@ -108,12 +103,6 @@ class SpectralNetworkData:
         self, data_dir=None, make_zipped_file=False,
         logger_name=None,
     ):
-#        save_spectral_network(
-#            self.config,
-#            self,
-#            data_dir=data_dir,
-#            logger_name=self.logger_name,
-#        )
         if logger_name is None:
             logger_name = self.logger_name
         logger = logging.getLogger(logger_name)
@@ -177,7 +166,6 @@ class SpectralNetworkData:
 
         logger.info('Finished saving data to {}.'.format(data_dir))
         return None
-
 
     def generate(
         self, phases=None, n_processes=0, extend=False,
@@ -451,6 +439,13 @@ class SpectralNetworkData:
     def plot(self, plot_range=None):
         # TODO: Implement if needed.
         return None
+
+    def find_two_way_streets(self):
+        for sn in self.spectral_networks:
+            sn.find_two_way_streets(
+                config=self.config,
+                sw_data=self.sw_data,
+            )
 
     def set_z_rotation(self, z_rotation):
         self.sw_data.set_z_rotation(z_rotation)

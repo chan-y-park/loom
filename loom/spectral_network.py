@@ -23,92 +23,40 @@ from intersection import (
 from trivialization import BranchPoint
 
 
-#class SWallTreeNode:
-#    def __init__(
-#        self,
-#        me=None,
-#        child=None,
-#        parents=None,
-#    ):
-#        self.me = me
-#        self.child = child
-#        self.parents = parents
-#
-#
-#class SWallTree:
-#    def __init__(
-#        self,
-#        root_s_wall=None,
-#        root_branch_point=None,
-#        tree_dict=None,
-#        spectral_network=None,
-#    ):
-#        self.tree_dict = tree_dict
-#        self.spectral_network = spectral_network
-#        self.root_branch_point = root_branch_point
-#        root_s_wall_node = SWallTreeNode(
-#            me=root_s_wall,
-#            child=None,
-#            parents=[
-#                self.tree_dict[parent_label]
-#                for parent_label in s_wall.parents
-#            ],
-#        )
-#        self.nodes = [root_s_wall_node]
-#        self.grow(root_s_wall_node)
-#
-#    def grow(self, node=None):
-#        if 'Branch point' in node.me.label:
-#            # Branch points are leaves of this tree.
-#            return None
-#
-#        for parent in node.parents:
-#            parent_node = SWallTreeNode(
-#                me=parent,
-#                child=node.me,
-#                parents=[
-#                    self.tree_dict[parent_label]
-#                    for parent_label in parent.parents
-#                ],
-#            )
-#            self.nodes.append(parent_node)
-#            self.grow(parent_node)
-#                
-#    def trim(self):
-#        for node in self.nodes:
-#            if node.child is None:
-#                # This is the root node.
-#                end_z = self.root_branch_point.z
-#            else:
-#                end_z = node.child.z[0]
-#
-#            end_t = numpy.argmin(node.me.z - end_z) 
-
 class Street(SWall):
     def __init__(
         self,
         s_wall=None,
         end_z=None,
         parents=None,
+        json_data=None,
         logger_name='loom',
     ):
         super(Street, self).__init__(logger_name=logger_name)
-        end_t = numpy.argmin(abs(s_wall.z - end_z))
-        self.z = s_wall.z[:end_t]
-        self.x = s_wall.x[:end_t]
-        self.M = s_wall.M[:end_t]
-        self.parents = parents
-        self.parent_roots = s_wall.parent_roots
-        self.label = s_wall.label
-        self.cuts_intersections = [
-            [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
-            if t <= end_t
-        ]
-        n_segs = len(self.cuts_intersections) + 1
-        self.local_roots = s_wall.local_roots[:n_segs]
-        if s_wall.multiple_local_roots is not None:
-            self.multiple_local_roots = s_wall.multiple_local_roots[:n_segs]
-        self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
+        if json_data is not None:
+            self.set_from_json_data(json_data)
+        else:
+            end_t = numpy.argmin(abs(s_wall.z - end_z))
+            # XXX: Because a joint is not back-inserted into S-walls,
+            # neither [:end_t] nor [:end_t+1] is always correct.
+            # However, inserting a joint is an expensive operation.
+            self.z = s_wall.z[:end_t]
+            self.x = s_wall.x[:end_t]
+            self.M = s_wall.M[:end_t]
+            self.parents = parents
+            self.parent_roots = s_wall.parent_roots
+            self.label = s_wall.label
+            self.cuts_intersections = [
+                [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
+                if t <= end_t
+            ]
+            n_segs = len(self.cuts_intersections) + 1
+            self.local_roots = s_wall.local_roots[:n_segs]
+            if s_wall.multiple_local_roots is not None:
+                self.multiple_local_roots = (
+                    s_wall.multiple_local_roots[:n_segs]
+                )
+            self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
 
 class SolitonTree:
@@ -171,16 +119,18 @@ class SpectralNetwork:
         self.phase = phase
         self.n_finished_s_walls = None
         self.s_walls = []
+        # Streets that make up two-way streets.
+        self.streets = []
         self.joints = []
         self.logger_name = logger_name
         # errors is a list of (error type string, error value tuples).
         self.errors = []
         self.data_attributes = [
-            'phase', 's_walls', 'joints', 'errors'
+            'phase', 's_walls', 'streets', 'joints', 'errors'
         ]
 
     def set_z_rotation(self, z_rotation):
-        for s_wall in self.s_walls:
+        for s_wall in self.s_walls + self.streets:
             s_wall.set_z_rotation(z_rotation)
         for joint in self.joints:
             joint.set_z_rotation(z_rotation)
@@ -204,6 +154,8 @@ class SpectralNetwork:
         json_data['n_finished_s_walls'] = self.n_finished_s_walls
         json_data['s_walls'] = [s_wall.get_json_data()
                                 for s_wall in self.s_walls]
+        json_data['streets'] = [street.get_json_data()
+                                for street in self.streets]
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
         json_data['errors'] = self.errors
@@ -234,8 +186,19 @@ class SpectralNetwork:
             self.s_walls.append(an_s_wall)
             obj_dict[an_s_wall.label] = an_s_wall
 
+        try:
+            for street_data in json_data['streets']:
+                self.streets.append(
+                    Street(
+                        json_data=street_data,
+                        logger_name=self.logger_name,
+                    )
+                )
+        except KeyError:
+            pass
+
         # Substitute labels with objects
-        for s_wall in self.s_walls:
+        for s_wall in self.s_walls + self.streets:
             s_wall.parents = [
                 obj_dict[parent_label]
                 for parent_label in s_wall.parents
@@ -837,18 +800,23 @@ class SpectralNetwork:
 
         return checked_new_joints
 
-    def get_W_c(
+    def find_two_way_streets(
         self, config=None, sw_data=None,
         search_radius=None,
         #cache_file_path=None,
     ):
+        """
+        Find soliton trees that make up two-way streets
+        of the spectral network, set the streets attribute,
+        and return the soliton trees.
+        """
         #logger = logging.getLogger(self.logger_name)
 
         # A subnetwork W_c
-        sn_c = SpectralNetwork(
-            phase=self.phase,
-            logger_name=self.logger_name,
-        )
+        #sn_c = SpectralNetwork(
+        #    phase=self.phase,
+        #    logger_name=self.logger_name,
+        #)
 
         if search_radius is None:
             search_radius = config['size_of_bp_neighborhood']
@@ -883,9 +851,10 @@ class SpectralNetwork:
                 if tree is not None:
                     soliton_trees.append(tree)
                     for street in tree.streets:
-                        sn_c.s_walls.append(street)
+                        #sn_c.s_walls.append(street)
+                        self.streets.append(street)
 
-        return (sn_c, soliton_trees)
+        return soliton_trees
                     
 
 def get_ode(sw, phase, accuracy):

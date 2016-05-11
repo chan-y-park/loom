@@ -199,27 +199,20 @@ class SWall(object):
                 numpy.array([self.x.real, self.x.imag]), 0, 3
             ).tolist(),
             'parents': [parent.label for parent in self.parents],
-            'parent_roots': [root.tolist() for root in self.parent_roots],
+            #'parent_roots': [root.tolist() for root in self.parent_roots],
             'label': self.label,
             'cuts_intersections': [
                 [br_loc.label, t, d]
                 for br_loc, t, d in self.cuts_intersections
             ],
             'local_roots': [root.tolist() for root in self.local_roots],
-            # TODO: Restore the following after multiple_local_roots
-            # becomes the default.
-            # 'multiple_local_roots': [
-            #     [root.tolist() for root in multiple_roots]
-            #     for multiple_roots in self.multiple_local_roots
-            # ],
             'local_weight_pairs': self.local_weight_pairs,
-#            'roots_basepoint': [
-#                self.roots_basepoint[0],
-#                ctor2(self.roots_basepoint[1]),
-#                [ctor2(x) for x in list(self.roots_basepoint[2])],
-#                list(self.roots_basepoint[3])
-#            ]
         }
+        if self.parent_roots is not None:
+            json_data['parent_roots'] = [
+                root.tolist() for root in self.parent_roots
+            ]
+
         if len(self.roots_basepoint) > 0:
             json_data['roots_basepoint'] = [
                 self.roots_basepoint[0],
@@ -227,8 +220,6 @@ class SWall(object):
                 [ctor2(x) for x in list(self.roots_basepoint[2])],
                 list(self.roots_basepoint[3])
             ]
-        # TODO: Remove the following after multiple_local_roots
-        # becomes the default.
         if self.multiple_local_roots is not None:
             json_data['multiple_local_roots'] = [
                 [root.tolist() for root in multiple_roots]
@@ -259,17 +250,10 @@ class SWall(object):
         # but is replaced with branch point objects 
         # in SpectralNetwork.set_from_json_data()
         self.cuts_intersections = json_data['cuts_intersections']
-#        self.cuts_intersections = []
-#        for br_loc_label, t, d in json_data['cuts_intersections']:
-#            for br_loc in branch_loci:
-#                if br_loc_label == br_loc.label:
-#                    self.cuts_intersections.append([br_loc, t, d])
         self.local_roots = [
             numpy.array(root)
             for root in json_data['local_roots']
         ]
-        # TODO: Remove the following exception handling
-        # after multiple_local_roots becomes the default.
         try:
             self.multiple_local_roots = [
                 [numpy.array(root) for root in multiple_roots]

@@ -19,6 +19,7 @@ from misc import get_splits_with_overlap
 def get_spectral_network_bokeh_plot(
     spectral_network_data, plot_range=None,
     plot_joints=False, plot_data_points=False, plot_on_cylinder=False,
+    plot_two_way_streets=False,
     plot_width=800, plot_height=800,
     notebook=False, logger_name=None,
     marked_points=[],
@@ -172,11 +173,18 @@ def get_spectral_network_bokeh_plot(
     })
 
     for sn in spectral_networks:
+        if plot_two_way_streets is True:
+            s_walls = sn.streets
+        else:
+            s_walls = sn.s_walls
+
         skip_plotting = False
         for error in sn.errors:
             error_type, error_msg = error
             if error_type == 'Unknown':
                 skip_plotting = True
+        if len(s_walls) == 0:
+            skip_plotting = True
         if skip_plotting is True:
             continue
 
@@ -194,7 +202,7 @@ def get_spectral_network_bokeh_plot(
         sn_data['label'] = []
         sn_data['root'] = []
 
-        for s_wall in sn.s_walls:
+        for s_wall in s_walls:
             z_segs = get_splits_with_overlap(s_wall.get_splits())
             for start, stop in z_segs:
                 z_r = s_wall.z[start:stop].real
@@ -296,9 +304,10 @@ def get_spectral_network_bokeh_plot(
         'hide_data_points_button': hide_data_points_button,
     }
 
-    if len(spectral_networks) > 1:
+    num_of_plots = len(snds.data['spectral_networks'])
+    if num_of_plots > 1:
         # Add a slider.
-        slider = Slider(start=0, end=len(spectral_networks) - 1,
+        slider = Slider(start=0, end=num_of_plots - 1,
                         value=0, step=1, title="plot index")
 
         custom_js_args = {
