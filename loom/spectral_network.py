@@ -33,10 +33,14 @@ class Street(SWall):
         logger_name='loom',
     ):
         super(Street, self).__init__(logger_name=logger_name)
+        logger = logging.getLogger(self.logger_name)
+
         if json_data is not None:
             self.set_from_json_data(json_data)
         else:
             end_t = numpy.argmin(abs(s_wall.z - end_z))
+            if end_t == 0:
+                raise RuntimeError('Street.__init__(): end_t == 0')
             # XXX: Because a joint is not back-inserted into S-walls,
             # neither [:end_t] nor [:end_t+1] is always correct.
             # However, inserting a joint is an expensive operation.
@@ -48,7 +52,7 @@ class Street(SWall):
             self.label = s_wall.label
             self.cuts_intersections = [
                 [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
-                if t <= end_t
+                if t < end_t
             ]
             n_segs = len(self.cuts_intersections) + 1
             self.local_roots = s_wall.local_roots[:n_segs]
@@ -810,7 +814,7 @@ class SpectralNetwork:
         of the spectral network, set the streets attribute,
         and return the soliton trees.
         """
-        #logger = logging.getLogger(self.logger_name)
+        logger = logging.getLogger(self.logger_name)
 
         # A subnetwork W_c
         #sn_c = SpectralNetwork(
@@ -845,10 +849,20 @@ class SpectralNetwork:
                     s_wall_root = s_wall_roots[0].tolist()
                     if s_wall_root in bp_roots:
                         # Found a root of this S-wall tree.
-                        tree = SolitonTree(
-                            root_s_wall=s_wall,
-                            root_branch_point=bp,
-                        )
+                        try:
+                            tree = SolitonTree(
+                                root_s_wall=s_wall,
+                                root_branch_point=bp,
+                            )
+                        except RuntimeError as e:
+                            logger.warning(e)
+                            logger.warning(
+                                'Finding two-way streets '
+                                'for a spectral network at phase = {} '
+                                'using {} and {} failed.'
+                                .format(self.phase, s_wall.label, bp.label)
+                            )
+                            continue
 
                 if tree is not None:
                     soliton_trees.append(tree)
