@@ -4,7 +4,7 @@ import numpy
 import sympy
 import ctypes
 import logging
-# import pdb
+import pdb
 import itertools
 import json
 
@@ -93,7 +93,7 @@ class Street(SWall):
         logger_name='loom',
     ):
         super(Street, self).__init__(logger_name=logger_name)
-        end_t = numpy.argmin(s_wall.z - end_z)
+        end_t = numpy.argmin(abs(s_wall.z - end_z))
         self.z = s_wall.z[:end_t]
         self.x = s_wall.x[:end_t]
         self.M = s_wall.M[:end_t]
@@ -106,7 +106,8 @@ class Street(SWall):
         ]
         n_segs = len(self.cuts_intersections) + 1
         self.local_roots = s_wall.local_roots[:n_segs]
-        self.multiple_local_roots = s_wall.multiple_local_roots[:n_segs]
+        if s_wall.multiple_local_roots is not None:
+            self.multiple_local_roots = s_wall.multiple_local_roots[:n_segs]
         self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
 
@@ -129,7 +130,6 @@ class SolitonTree:
 
     def grow(self, street=None):
         for parent in street.parents:
-            #if 'Branch point' in parent.label:
             if isinstance(parent, BranchPoint):
                 # Branch points are leaves of this tree.
                 continue
@@ -142,6 +142,24 @@ class SolitonTree:
             self.grow(parent_street)
 
         return None
+
+    def draw(self, file_name='soliton_tree.pdf'):
+        # XXX: Move the following import to the beginning of this module
+        # if draw() becomes a permanent feature.
+        import pygraphviz as pgv
+        soliton_tree_graph = pgv.AGraph(directed=True)
+        soliton_tree_graph.add_edge(
+            self.streets[0].label,
+            'root: ' + self.root_branch_point.label,
+        )
+        for street in self.streets:
+            for parent in street.parents:
+                soliton_tree_graph.add_edge(
+                    street.label,
+                    parent.label,
+                )
+        soliton_tree_graph.layout(args='-Goverlap=false')
+        soliton_tree_graph.draw(file_name)
 
 
 class SpectralNetwork:
@@ -822,7 +840,7 @@ class SpectralNetwork:
     def get_W_c(
         self, config=None, sw_data=None,
         search_radius=None,
-        cache_file_path=None,
+        #cache_file_path=None,
     ):
         #logger = logging.getLogger(self.logger_name)
 
@@ -833,8 +851,9 @@ class SpectralNetwork:
         )
 
         if search_radius is None:
-            search_radius = config['size_of_large_step']
+            search_radius = config['size_of_bp_neighborhood']
 
+        soliton_trees = []
         # Search for the root of a soliton tree.
         for s_wall in self.s_walls:
             for bp in sw_data.branch_points:
@@ -843,9 +862,9 @@ class SpectralNetwork:
                 # Skip if the S-wall is a child of the branch point.
                 if bp in s_wall.parents:
                     continue
-                min_t = numpy.argmin(s_wall.z - bp.z)
+                min_t = numpy.argmin(abs(s_wall.z - bp.z))
 
-                if ((s_wall.z[min_t] - bp.z) < search_radius):
+                if (abs(s_wall.z[min_t] - bp.z) < search_radius):
                     bp_roots = (
                         bp.positive_roots.tolist() +
                         (-bp.positive_roots).tolist()
@@ -862,10 +881,11 @@ class SpectralNetwork:
                         )
 
                 if tree is not None:
+                    soliton_trees.append(tree)
                     for street in tree.streets:
                         sn_c.s_walls.append(street)
 
-        return sn_c
+        return (sn_c, soliton_trees)
                     
 
 def get_ode(sw, phase, accuracy):

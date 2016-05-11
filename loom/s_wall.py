@@ -78,7 +78,7 @@ class Joint:
             json_data['roots'] = [self.root.tolist()]
         return json_data
 
-    def set_from_json_data(self, json_data, obj_dict):
+    def set_from_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
         self.M = r2toc(json_data['M'])
         #self.parents = [parent for parent in json_data['parents']]
