@@ -828,6 +828,8 @@ class SpectralNetwork:
                 tree = None
 
                 # Skip if the S-wall is a child of the branch point.
+                # TODO: This prevents a closed loop around a regular puncture
+                # being counted, a better algorithm needed.
                 if bp in s_wall.parents:
                     continue
                 min_t = numpy.argmin(abs(s_wall.z - bp.z))

@@ -440,11 +440,12 @@ class SpectralNetworkData:
         # TODO: Implement if needed.
         return None
 
-    def find_two_way_streets(self):
+    def find_two_way_streets(self, search_radius=None,):
         for sn in self.spectral_networks:
             sn.find_two_way_streets(
                 config=self.config,
                 sw_data=self.sw_data,
+                search_radius=search_radius,
             )
 
     def set_z_rotation(self, z_rotation):
