@@ -8,7 +8,7 @@ from sympy import oo
 from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
 from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
-                          ResetTool, PreviewSaveTool)
+                          ResetTool, PreviewSaveTool, TapTool,)
 from bokeh.models.widgets import Button
 # from bokeh.models.widgets import Toggle
 from bokeh.plotting import figure
@@ -78,7 +78,7 @@ def get_spectral_network_bokeh_plot(
     plot_idx_ds = ColumnDataSource({'i': ['0']})
     bokeh_figure = figure(
         tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(),
-               PreviewSaveTool(), hover],
+               PreviewSaveTool(), TapTool(), hover],
         plot_width=plot_width,
         plot_height=plot_height,
         title=None,
@@ -183,8 +183,8 @@ def get_spectral_network_bokeh_plot(
             error_type, error_msg = error
             if error_type == 'Unknown':
                 skip_plotting = True
-        if len(s_walls) == 0:
-            skip_plotting = True
+        #if len(s_walls) == 0:
+        #    skip_plotting = True
         if skip_plotting is True:
             continue
 

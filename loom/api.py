@@ -6,10 +6,13 @@ import zipfile
 import logging
 import subprocess
 import matplotlib
+import mpldatacursor
 # import traceback
 # import pdb
 
 from logging.handlers import RotatingFileHandler
+from matplotlib import pyplot
+
 from logutils_queue import QueueHandler
 from config import LoomConfig
 from trivialization import SWDataWithTrivialization
@@ -460,6 +463,52 @@ class SpectralNetworkData:
     def rotate_back(self):
         bc_r = self.sw_data.branch_cut_rotation
         self.set_z_rotation(1/bc_r)
+
+    def plot_s_walls(self, walls, plot_range=None, plot_data_points=False,):
+        """
+        Plot walls on a complex plane for debugging purpose.
+        """
+        pyplot.figure()
+        pyplot.axes().set_aspect('equal')
+
+        sw_data = self.sw_data
+
+        for pp in (sw_data.regular_punctures + sw_data.irregular_punctures):
+            pyplot.plot(
+                pp.z.real, pp.z.imag, 'o',
+                markeredgewidth=2, markersize=8,
+                color='k', markerfacecolor='none',
+                label=pp.label,
+            )
+
+        for bp in sw_data.branch_points:
+            pyplot.plot(
+                bp.z.real, bp.z.imag, 'x',
+                markeredgewidth=2, markersize=8,
+                color='k', label=bp.label,
+            )
+
+        for wall in walls:
+            xs = wall.z.real 
+            ys = wall.z.imag 
+            pyplot.plot(xs, ys, '-', label=wall.label)
+
+            if(plot_data_points == True):
+                pyplot.plot(xs, ys, 'o', color='k', markersize=4)
+
+        if plot_range is None:
+            pyplot.autoscale(enable=True, axis='both', tight=None)
+        else:
+            [[x_min, x_max], [y_min, y_max]] = plot_range
+            pyplot.xlim(x_min, x_max)
+            pyplot.ylim(y_min, y_max)
+
+        mpldatacursor.datacursor(
+            formatter='{label}'.format,
+            hover=True,
+        )
+
+        pyplot.show()
 
 
 class LoomLoggingFormatter(logging.Formatter):

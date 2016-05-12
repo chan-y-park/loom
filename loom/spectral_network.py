@@ -28,6 +28,7 @@ class Street(SWall):
         self,
         s_wall=None,
         end_z=None,
+        end_t=None,
         parents=None,
         json_data=None,
         logger_name='loom',
@@ -38,7 +39,9 @@ class Street(SWall):
         if json_data is not None:
             self.set_from_json_data(json_data)
         else:
-            end_t = numpy.argmin(abs(s_wall.z - end_z))
+            if end_t is None:
+                end_t = numpy.argmin(abs(s_wall.z - end_z))
+                
             if end_t == 0:
                 raise RuntimeError('Street.__init__(): end_t == 0')
             # XXX: Because a joint is not back-inserted into S-walls,
@@ -67,6 +70,7 @@ class SolitonTree:
     def __init__(
         self,
         root_s_wall=None,
+        root_s_wall_end_t=None,
         root_branch_point=None,
         #spectral_network=None,
     ):
@@ -74,7 +78,8 @@ class SolitonTree:
         self.root_branch_point = root_branch_point
         root_street = Street(
             s_wall=root_s_wall,
-            end_z=root_branch_point.z,
+            end_t=root_s_wall_end_t,
+            #end_z=root_branch_point.z,
             parents=root_s_wall.parents,
         )
         self.streets = [root_street]
@@ -825,6 +830,7 @@ class SpectralNetwork:
         if search_radius is None:
             search_radius = config['size_of_bp_neighborhood']
 
+        self.streets = [] 
         soliton_trees = []
         # Search for the root of a soliton tree.
         for s_wall in self.s_walls:
@@ -832,11 +838,16 @@ class SpectralNetwork:
                 tree = None
 
                 # Skip if the S-wall is a child of the branch point.
-                # TODO: This prevents a closed loop around a regular puncture
-                # being counted, a better algorithm needed.
+                # unless it forms a loop and comes back to the branch point.
                 if bp in s_wall.parents:
-                    continue
-                min_t = numpy.argmin(abs(s_wall.z - bp.z))
+                    tps = get_turning_points(s_wall.z)
+                    if len(tps) >= 3:
+                        min_t = (numpy.argmin(abs(s_wall.z[tps[2]:] - bp.z))
+                                 + tps[2])
+                    else:
+                        continue
+                else:
+                    min_t = numpy.argmin(abs(s_wall.z - bp.z))
 
                 if (abs(s_wall.z[min_t] - bp.z) < search_radius):
                     bp_roots = (
@@ -847,11 +858,15 @@ class SpectralNetwork:
                     if(len(s_wall_roots) > 1):
                         raise NotImplementedError
                     s_wall_root = s_wall_roots[0].tolist()
+                    # XXX: If a branch cut goes through the z[min_t]
+                    # then the following criterion may not work.
+                    # Consider checking ODE x's?
                     if s_wall_root in bp_roots:
                         # Found a root of this S-wall tree.
                         try:
                             tree = SolitonTree(
                                 root_s_wall=s_wall,
+                                root_s_wall_end_t=min_t,
                                 root_branch_point=bp,
                             )
                         except RuntimeError as e:
