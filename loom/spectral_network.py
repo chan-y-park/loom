@@ -837,17 +837,18 @@ class SpectralNetwork:
             for bp in sw_data.branch_points:
                 tree = None
 
-                # Skip if the S-wall is a child of the branch point.
-                # unless it forms a loop and comes back to the branch point.
-                if bp in s_wall.parents:
+                if bp not in s_wall.parents:
+                    min_t = numpy.argmin(abs(s_wall.z - bp.z))
+                else:
+                    # Skip if the S-wall is a child of the branch point.
+                    # unless it forms a loop and comes back
+                    # to the branch point.
                     tps = get_turning_points(s_wall.z)
                     if len(tps) >= 3:
                         min_t = (numpy.argmin(abs(s_wall.z[tps[2]:] - bp.z))
                                  + tps[2])
                     else:
                         continue
-                else:
-                    min_t = numpy.argmin(abs(s_wall.z - bp.z))
 
                 if (abs(s_wall.z[min_t] - bp.z) < search_radius):
                     bp_roots = (
