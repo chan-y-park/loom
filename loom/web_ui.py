@@ -651,7 +651,7 @@ def plot():
                 search_radius = eval(search_radius_str)
         except KeyError:
             search_radius = None
-     
+
         process_uuid = data_dir
         progress_log = None
         full_data_dir = get_full_data_dir(process_uuid, saved_data)

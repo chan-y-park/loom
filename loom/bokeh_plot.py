@@ -1,7 +1,7 @@
 import logging
 import numpy
 import bokeh
-import pdb
+# import pdb
 
 from cmath import phase, pi
 from sympy import oo
@@ -26,7 +26,7 @@ def get_spectral_network_bokeh_plot(
     marked_points=[],
     without_errors=False,
 ):
-    #logger = logging.getLogger(logger_name)
+    logger = logging.getLogger(logger_name)
 
     if without_errors is True:
         spectral_networks = [
@@ -203,9 +203,8 @@ def get_spectral_network_bokeh_plot(
                     data_entry.append(tree_data)
 
             snds.data['spectral_networks'].append(data_entry)
-        
+
         init_data = snds.data['spectral_networks'][0][0]
-                
     else:
         # snds['spectral_networks'] is a 1-dim array,
         # of spectral network data.
@@ -336,12 +335,6 @@ def get_spectral_network_bokeh_plot(
             value=0, step=1, title="spectral network #"
         )
 
-        custom_js_args = {
-            'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
-            'dpds': dpds, 'pds': pds, 'hover': hover,
-            'plot_options': plot_options_ds, 'tree_idx_ds': tree_idx_ds
-        }
-
         sn_slider.callback = CustomJS(
             args={
                 'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
@@ -364,11 +357,11 @@ def get_spectral_network_bokeh_plot(
             [bokeh_figure] + notebook_vform_elements
         )
 
-    bokeh_obj['plot'] = plot 
+    bokeh_obj['plot'] = plot
 
     if notebook is True:
-        # XXX: Include phase text input
-        return vform(*notebook_vform_elements, width=plot_width) 
+        # TODO: Include phase text input
+        return vform(*notebook_vform_elements, width=plot_width)
     else:
         return bokeh.embed.components(bokeh_obj)
 

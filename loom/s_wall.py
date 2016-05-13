@@ -68,8 +68,6 @@ class Joint:
             'M': ctor2(self.M),
             'parents': [parent.label for parent in self.parents],
             'label': self.label,
-            # XXX: Enable the following once self.root is deprecated.
-            # 'roots': [root.tolist() for root in self.roots],
             'ode_xs': [ctor2(x) for x in self.ode_xs],
         }
         if self.roots is not None:
@@ -81,9 +79,8 @@ class Joint:
     def set_from_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
         self.M = r2toc(json_data['M'])
-        #self.parents = [parent for parent in json_data['parents']]
         # NOTE: Joint.parents is loaded from JSON with labels of parents,
-        # but is replaced with parent objects 
+        # but is replaced with parent objects
         # in SpectralNetwork.set_from_json_data()
         self.parents = json_data['parents']
         self.label = json_data['label']
@@ -199,7 +196,6 @@ class SWall(object):
                 numpy.array([self.x.real, self.x.imag]), 0, 3
             ).tolist(),
             'parents': [parent.label for parent in self.parents],
-            #'parent_roots': [root.tolist() for root in self.parent_roots],
             'label': self.label,
             'cuts_intersections': [
                 [br_loc.label, t, d]
@@ -234,7 +230,7 @@ class SWall(object):
             [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
         )
         # NOTE: SWall.parents is loaded from JSON with labels of parents,
-        # but is replaced with parent objects 
+        # but is replaced with parent objects
         # in SpectralNetwork.set_from_json_data()
         self.parents = json_data['parents']
         try:
@@ -245,9 +241,9 @@ class SWall(object):
         except KeyError:
             pass
         self.label = json_data['label']
-        # NOTE: SWall.cuts_intersections is loaded from JSON 
+        # NOTE: SWall.cuts_intersections is loaded from JSON
         # with labels of branch points,
-        # but is replaced with branch point objects 
+        # but is replaced with branch point objects
         # in SpectralNetwork.set_from_json_data()
         self.cuts_intersections = json_data['cuts_intersections']
         self.local_roots = [
@@ -262,7 +258,7 @@ class SWall(object):
         except KeyError:
             pass
         self.local_weight_pairs = json_data['local_weight_pairs']
-        
+
         try:
             roots_basepoint_data = json_data['roots_basepoint']
             self.roots_basepoint = [
@@ -344,7 +340,7 @@ class SWall(object):
         it changes root-type 3 times.
         2- Then, pick a suitable point along the swall, away
         from branch points or singularities, and determine
-        the root there. 
+        the root there.
         3- Finally, extend the determination
         of the root type to other segments by following
         the wall across the various splits induced by cuts,
@@ -414,7 +410,6 @@ class SWall(object):
                 # if such intersections happens within a short
                 # distance from the starting point.
                 if (
-                    #br_loc.__class__.__name__ == 'BranchPoint' and
                     isinstance(br_loc, BranchPoint) and
                     br_loc == self.parents[0] and
                     (abs(br_loc.z - self.z[t]) < cutoff_radius)

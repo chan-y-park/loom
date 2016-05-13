@@ -4,7 +4,7 @@ import numpy
 import sympy
 import ctypes
 import logging
-import pdb
+# import pdb
 import itertools
 import json
 
@@ -41,7 +41,7 @@ class Street(SWall):
         else:
             if end_t is None:
                 end_t = numpy.argmin(abs(s_wall.z - end_z))
-                
+
             if end_t == 0:
                 raise RuntimeError('Street.__init__(): end_t == 0')
             # XXX: Because a joint is not back-inserted into S-walls,
@@ -72,14 +72,11 @@ class SolitonTree:
         root_s_wall=None,
         root_s_wall_end_t=None,
         root_branch_point=None,
-        #spectral_network=None,
     ):
-        #self.spectral_network = spectral_network
         self.root_branch_point = root_branch_point
         root_street = Street(
             s_wall=root_s_wall,
             end_t=root_s_wall_end_t,
-            #end_z=root_branch_point.z,
             parents=root_s_wall.parents,
         )
         self.streets = [root_street]
@@ -128,19 +125,15 @@ class SpectralNetwork:
         self.phase = phase
         self.n_finished_s_walls = None
         self.s_walls = []
-        # Streets that make up two-way streets.
-        #self.streets = []
         self.joints = []
         self.logger_name = logger_name
         # errors is a list of (error type string, error value tuples).
         self.errors = []
         self.data_attributes = [
             'phase', 's_walls', 'joints', 'errors'
-            #'streets', 
         ]
 
     def set_z_rotation(self, z_rotation):
-        #for s_wall in self.s_walls + self.streets:
         for s_wall in self.s_walls:
             s_wall.set_z_rotation(z_rotation)
         for joint in self.joints:
@@ -165,8 +158,6 @@ class SpectralNetwork:
         json_data['n_finished_s_walls'] = self.n_finished_s_walls
         json_data['s_walls'] = [s_wall.get_json_data()
                                 for s_wall in self.s_walls]
-        #json_data['streets'] = [street.get_json_data()
-        #                        for street in self.streets]
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
         json_data['errors'] = self.errors
@@ -197,19 +188,7 @@ class SpectralNetwork:
             self.s_walls.append(an_s_wall)
             obj_dict[an_s_wall.label] = an_s_wall
 
-#        try:
-#            for street_data in json_data['streets']:
-#                self.streets.append(
-#                    Street(
-#                        json_data=street_data,
-#                        logger_name=self.logger_name,
-#                    )
-#                )
-#        except KeyError:
-#            pass
-
         # Substitute labels with objects
-        #for s_wall in self.s_walls + self.streets:
         for s_wall in self.s_walls:
             s_wall.parents = [
                 obj_dict[parent_label]
@@ -815,7 +794,6 @@ class SpectralNetwork:
     def find_two_way_streets(
         self, config=None, sw_data=None,
         search_radius=None,
-        #cache_file_path=None,
     ):
         """
         Find soliton trees that make up two-way streets
@@ -824,16 +802,9 @@ class SpectralNetwork:
         """
         logger = logging.getLogger(self.logger_name)
 
-        # A subnetwork W_c
-        #sn_c = SpectralNetwork(
-        #    phase=self.phase,
-        #    logger_name=self.logger_name,
-        #)
-
         if search_radius is None:
             search_radius = config['size_of_bp_neighborhood']
 
-        #self.streets = [] 
         soliton_trees = []
         # Search for the root of a soliton tree.
         for s_wall in self.s_walls:
@@ -885,11 +856,9 @@ class SpectralNetwork:
 
                 if tree is not None:
                     soliton_trees.append(tree)
-#                    for street in tree.streets:
-#                        self.streets.append(street)
 
         return soliton_trees
-                    
+
 
 def get_ode(sw, phase, accuracy):
     x, z = sympy.symbols('x z')

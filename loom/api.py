@@ -493,11 +493,11 @@ class SpectralNetworkData:
             )
 
         for wall in walls:
-            xs = wall.z.real 
-            ys = wall.z.imag 
+            xs = wall.z.real
+            ys = wall.z.imag
             pyplot.plot(xs, ys, '-', label=wall.label)
 
-            if(plot_data_points == True):
+            if(plot_data_points is True):
                 pyplot.plot(xs, ys, 'o', color='k', markersize=4)
 
         if plot_range is None:
@@ -625,8 +625,6 @@ def save_config(config, file_path=None, logger_name='loom',):
     if file_path is None:
         return None
     logger.info('Saving configuration to {}.'.format(file_path))
-#    with open(file_path, 'w') as fp:
-#        config.parser.write(fp)
     config.save(file_path)
     logger.info('Finished saving configuration to {}.'.format(file_path))
 
@@ -637,7 +635,6 @@ def save_config(config, file_path=None, logger_name='loom',):
 # Use SpectralNetworkData.load().
 def load_spectral_network(
     data_dir=None,
-    #spectral_network_data=None,
     logger_name='loom',
 ):
     data = SpectralNetworkData(
@@ -645,58 +642,6 @@ def load_spectral_network(
         logger_name=logger_name,
     )
     return (data.config, data)
-#    if data_dir is None:
-#        return (None, None)
-#
-#    logger = logging.getLogger(logger_name)
-#    logger.info('Opening data directory "{}"...'.format(data_dir))
-#
-#    config = LoomConfig(logger_name=logger_name)
-#    with open(os.path.join(data_dir, 'config.ini')) as fp:
-#        config.read(fp)
-#
-#    # Check the version of the saved data.
-#    try:
-#        current_version = get_current_branch_version()
-#        version_file_path = os.path.join(data_dir, 'version')
-#        with open(version_file_path, 'r') as fp:
-#            data_version = fp.read()
-#    except:
-#        data_version = None
-#
-#    if data_version is not None and current_version != data_version:
-#        logger.debug('The version of the data is different '
-#                     'from the current version of loom.')
-#
-#    sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
-#    with open(sw_data_file_path, 'r') as fp:
-#        json_data = json.load(fp)
-#        sw_data = SWDataWithTrivialization(config, logger_name=logger_name,
-#                                           json_data=json_data,)
-#
-#    spectral_networks = []
-#
-#    data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
-#    for data_file in data_file_list:
-#        logger.info('Loading {}...'.format(data_file))
-#        spectral_network = SpectralNetwork(logger_name=logger_name)
-#        spectral_network.load(data_file, sw_data)
-#        spectral_networks.append(spectral_network)
-#    spectral_networks.sort(key=lambda sn: sn.phase)
-#
-#    logger.info('Finished loading data from {}.'.format(data_dir))
-#
-#    if spectral_network_data is not None:
-#        spectral_network_data.config = config
-#        spectral_network_data.sw_data = sw_data
-#        spectral_network_data.spectral_networks = spectral_networks
-#        return None
-#
-#    data = SpectralNetworkData(
-#        sw_data=sw_data,
-#        spectral_networks=spectral_networks,
-#    )
-#    return (config, data)
 
 
 # XXX: save_spectral_network() will be deprecated.
@@ -706,70 +651,13 @@ def save_spectral_network(
     spectral_network_data,
     data_dir=None,
     make_zipped_file=False,
-    #logger_name='loom',
+    logger_name='loom',
 ):
     spectral_network_data.save(
         data_dir=data_dir,
         make_zipped_file=make_zipped_file,
-        #logger_name=logger_name,
+        logger_name=logger_name,
     )
-#    logger = logging.getLogger(logger_name)
-#
-#    sw_data = spectral_network_data.sw_data
-#    spectral_networks = spectral_network_data.spectral_networks
-#
-#    if data_dir is None:
-#        # Prepare to save spectral network data to files.
-#        timestamp = str(int(time.time()))
-#        data_dir = os.path.join(
-#            get_loom_dir(),
-#            'data',
-#            timestamp
-#        )
-#
-#    logger.info('Make a directory {} to save data.'.format(data_dir))
-#    if not os.path.exists(data_dir):
-#        os.makedirs(data_dir)
-#
-#    # Save version data.
-#    version_file_path = os.path.join(data_dir, 'version')
-#    save_version(version_file_path)
-#
-#    # Save configuration to a file.
-#    config_file_path = os.path.join(data_dir, 'config.ini')
-#    save_config(config, file_path=config_file_path, logger_name=logger_name)
-#
-#    # Save geometric & trivialization data.
-#    sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
-#    logger.info('Saving data to {}.'.format(sw_data_file_path))
-#    sw_data.save(sw_data_file_path)
-#
-#    # Save spectral network data.
-#    for i, spectral_network in enumerate(spectral_networks):
-#        data_file_path = os.path.join(
-#            data_dir,
-#            'data_{}.json'.format(
-#                str(i).zfill(len(str(len(spectral_networks) - 1)))
-#            )
-#        )
-#        logger.info('Saving data to {}.'.format(data_file_path))
-#        spectral_network.save(data_file_path)
-#
-#    if make_zipped_file is True:
-#        # Make a compressed data file.
-#        file_list = [config_file_path, sw_data_file_path]
-#        file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
-#        # TODO: the following routine for getting zipped_file_name has a bug.
-#        zipped_file_name = os.path.basename(os.path.normpath(data_dir))
-#        zipped_file_path = data_dir + '{}.zip'.format(zipped_file_name)
-#        logger.info('Save compressed data to {}.'.format(zipped_file_path))
-#        with zipfile.ZipFile(zipped_file_path, 'w',
-#                             zipfile.ZIP_DEFLATED) as fp:
-#            for a_file in file_list:
-#                fp.write(a_file, os.path.relpath(a_file, data_dir))
-#
-#    logger.info('Finished saving data to {}.'.format(data_dir))
-#    return None
 
 
 # XXX: generate_spectral_network() will be deprecated.
