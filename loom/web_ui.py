@@ -639,6 +639,19 @@ def plot():
             n_processes = flask.request.args['n_processes']
         except KeyError:
             n_processes = None
+        try:
+            plot_two_way_streets = eval(
+                flask.request.args['plot_two_way_streets']
+            )
+        except KeyError:
+            plot_two_way_streets = False
+        try:
+            search_radius_str = flask.request.args['search_radius']
+            if search_radius_str != '':
+                search_radius = eval(search_radius_str)
+        except KeyError:
+            search_radius = None
+     
         process_uuid = data_dir
         progress_log = None
         full_data_dir = get_full_data_dir(process_uuid, saved_data)
@@ -650,11 +663,6 @@ def plot():
         spectral_network_data.rotate_back()
     else:
         spectral_network_data.reset_z_rotation()
-
-#    if plot_two_way_streets is True:
-#        spectral_network_data.find_two_way_streets(
-#            search_radius=search_radius
-#        )
 
     return render_plot_template(
         spectral_network_data,
@@ -925,6 +933,11 @@ def render_plot_template(
     with open('static/bokeh_callbacks.js', 'r') as fp:
         bokeh_custom_script = fp.read()
 
+    if len(spectral_network_data.spectral_networks) > 1:
+        show_sn_slider = True
+    else:
+        show_sn_slider = False
+
     return flask.render_template(
         'plot.html',
         process_uuid=process_uuid,
@@ -942,6 +955,7 @@ def render_plot_template(
         saved_data=saved_data,
         default_search_radius=loom_config['size_of_bp_neighborhood'],
         plot_two_way_streets=str(plot_two_way_streets),
+        show_sn_slider=str(show_sn_slider),
     )
 
 

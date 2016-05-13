@@ -240,15 +240,27 @@ def get_spectral_network_bokeh_plot(
         size=8, source=cds,
     )
 
+    bokeh_obj = {}
+    notebook_vform_elements = []
+
+    # XXX: Where is a good place to put the following?
+    custom_js_code = ''
+    if notebook is True:
+        with open('static/bokeh_callbacks.js', 'r') as fp:
+            custom_js_code += fp.read()
+            custom_js_code += '\n'
+
     # 'Redraw arrows' button.
     redraw_arrows_button = Button(
         label='Redraw arrows',
         callback=CustomJS(
             args={'cds': cds, 'x_range': bokeh_figure.x_range,
                   'y_range': bokeh_figure.y_range},
-            code='redraw_arrows(cds, x_range, y_range);',
+            code=(custom_js_code + 'redraw_arrows(cds, x_range, y_range);'),
         ),
     )
+    bokeh_obj['redraw_arrows_button'] = redraw_arrows_button
+    notebook_vform_elements.append(redraw_arrows_button)
 
     # 'Show data points' button
     show_data_points_button = Button(
@@ -256,8 +268,10 @@ def get_spectral_network_bokeh_plot(
     )
     show_data_points_button.callback = CustomJS(
         args={'cds': cds, 'dpds': dpds, 'hover': hover},
-        code="show_data_points(cds, dpds, hover);",
+        code=(custom_js_code + 'show_data_points(cds, dpds, hover);'),
     )
+    bokeh_obj['show_data_points_button'] = show_data_points_button
+    notebook_vform_elements.append(show_data_points_button)
 
     # 'Hide data points' button
     hide_data_points_button = Button(
@@ -265,14 +279,12 @@ def get_spectral_network_bokeh_plot(
     )
     hide_data_points_button.callback = CustomJS(
         args={'cds': cds, 'dpds': dpds, 'hover': hover},
-        code="hide_data_points(cds, dpds, hover);",
+        code=(custom_js_code + 'hide_data_points(cds, dpds, hover);'),
     )
-    bokeh_obj = {
-        'redraw_arrows_button': redraw_arrows_button,
-        'show_data_points_button': show_data_points_button,
-        'hide_data_points_button': hide_data_points_button,
-    }
+    bokeh_obj['hide_data_points_button'] = hide_data_points_button
+    notebook_vform_elements.append(hide_data_points_button)
 
+    # Prev/Next soliton tree button
     tree_idx_ds = ColumnDataSource({'j': ['0']})
     sn_idx_ds = ColumnDataSource({'i': ['0']})
     plot_options_ds = ColumnDataSource(
@@ -280,6 +292,24 @@ def get_spectral_network_bokeh_plot(
     )
 
     if plot_two_way_streets is True:
+        prev_soliton_tree_button = Button(
+            label='<',
+        )
+        prev_soliton_tree_button.callback = CustomJS(
+            args={
+                'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
+                'tree_idx_ds': tree_idx_ds,
+                'plot_options_ds': plot_options_ds,
+            },
+            code=(
+                custom_js_code +
+                'show_prev_soliton_tree(cds, snds, sn_idx_ds, tree_idx_ds, '
+                'plot_options_ds);'
+            ),
+        )
+        bokeh_obj['prev_soliton_tree_button'] = prev_soliton_tree_button
+        notebook_vform_elements.append(prev_soliton_tree_button)
+
         next_soliton_tree_button = Button(
             label='>',
         )
@@ -287,28 +317,23 @@ def get_spectral_network_bokeh_plot(
             args={
                 'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
                 'tree_idx_ds': tree_idx_ds,
+                'plot_options_ds': plot_options_ds,
             },
             code=(
-                'show_next_soliton_tree(cds, snds, sn_idx_ds, tree_idx_ds);'
+                custom_js_code +
+                'show_next_soliton_tree(cds, snds, sn_idx_ds, tree_idx_ds, '
+                'plot_options_ds);'
             ),
         )
         bokeh_obj['next_soliton_tree_button'] = next_soliton_tree_button
+        notebook_vform_elements.append(next_soliton_tree_button)
 
+    # Slider
     num_of_plots = len(snds.data['spectral_networks'])
     if num_of_plots > 1:
-        # Add a slider.
         sn_slider = Slider(
             start=0, end=num_of_plots - 1,
             value=0, step=1, title="spectral network #"
-        )
-
-        custom_js_code = ''
-        with open('static/bokeh_callbacks.js', 'r') as fp:
-            custom_js_code += fp.read()
-            custom_js_code += '\n'
-        custom_js_code += (
-            'sn_slider(cb_obj, cds, snds, sn_idx_ds, dpds, pds, hover, '
-            'plot_options, tree_idx_ds);'
         )
 
         custom_js_args = {
@@ -317,15 +342,33 @@ def get_spectral_network_bokeh_plot(
             'plot_options': plot_options_ds, 'tree_idx_ds': tree_idx_ds
         }
 
-        sn_slider.callback = CustomJS(args=custom_js_args, code=custom_js_code)
+        sn_slider.callback = CustomJS(
+            args={
+                'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
+                'dpds': dpds, 'pds': pds, 'hover': hover,
+                'plot_options': plot_options_ds, 'tree_idx_ds': tree_idx_ds
+            },
+            code=(
+                custom_js_code +
+                'sn_slider(cb_obj, cds, snds, sn_idx_ds, dpds, pds, hover, '
+                'plot_options, tree_idx_ds);'
+            ),
+        )
         plot = vform(bokeh_figure, sn_slider, width=plot_width,)
+        notebook_vform_elements = (
+            [bokeh_figure, sn_slider] + notebook_vform_elements
+        )
     else:
         plot = bokeh_figure
+        notebook_vform_elements = (
+            [bokeh_figure] + notebook_vform_elements
+        )
 
-    bokeh_obj['plot'] = plot
+    bokeh_obj['plot'] = plot 
 
     if notebook is True:
-        return plot
+        # XXX: Include phase text input
+        return vform(*notebook_vform_elements, width=plot_width) 
     else:
         return bokeh.embed.components(bokeh_obj)
 

@@ -54,7 +54,16 @@
     </div>
 {% if plot_two_way_streets == 'True' %}
     <div class="row">
-        <div class="col-md-2" style="padding-top:80px;">
+        <div class="col-md-2">
+            <label class="control-label">Two-way streets tree #</label>
+        </div>
+        <div class="col-md-1">
+{{ div['prev_soliton_tree_button']|safe }}
+        </div>
+        <div class="col-md-1">
+            <p id="current_tree_idx">All</p>
+        </div>
+        <div class="col-md-1">
 {{ div['next_soliton_tree_button']|safe }}
         </div>
     </div>
@@ -63,6 +72,7 @@
         document.getElementById("phase").innerHTML = document.getElementById("initial_phase").innerHTML;
     </script>
 </div>
+<br/>
 {% if download == 'False' %}
 <div class="container">
     <div class="col-xs-8" style="border:1px solid Gray; border-radius: 10px;">
