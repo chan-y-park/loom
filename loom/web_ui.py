@@ -731,6 +731,14 @@ def download_plot():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
         saved_data = eval(flask.request.form['saved_data'])
+        plot_two_way_streets = eval(
+            flask.request.form['plot_two_way_streets']
+        )
+        search_radius_str = flask.request.form['search_radius']
+        if search_radius_str != '':
+            search_radius = eval(search_radius_str)
+        else:
+            search_radius = None
     else:
         raise RuntimeError
 
@@ -751,6 +759,8 @@ def download_plot():
                 process_uuid=process_uuid,
                 saved_data=saved_data,
                 download=True,
+                plot_two_way_streets=plot_two_way_streets,
+                search_radius=search_radius
             ),
         )
     plot_html_zip_fp.seek(0)
@@ -955,6 +965,7 @@ def render_plot_template(
         saved_data=saved_data,
         default_search_radius=loom_config['size_of_bp_neighborhood'],
         plot_two_way_streets=str(plot_two_way_streets),
+        search_radius=search_radius,
         show_sn_slider=str(show_sn_slider),
     )
 
