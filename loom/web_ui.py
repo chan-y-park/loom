@@ -597,6 +597,7 @@ def plot():
     rotate_back = None
     plot_two_way_streets = None
     saved_data = None
+    search_radius = None
 
     if flask.request.method == 'POST':
         try:
@@ -609,9 +610,7 @@ def plot():
                 flask.request.form['plot_two_way_streets']
             )
             search_radius_str = flask.request.form['search_radius']
-            if search_radius_str == '':
-                search_radius = None
-            else:
+            if search_radius_str != '':
                 search_radius = eval(search_radius_str)
         except KeyError:
             plot_two_way_streets = False
@@ -652,15 +651,19 @@ def plot():
     else:
         spectral_network_data.reset_z_rotation()
 
-    if plot_two_way_streets is True:
-        spectral_network_data.find_two_way_streets(
-            search_radius=search_radius
-        )
+#    if plot_two_way_streets is True:
+#        spectral_network_data.find_two_way_streets(
+#            search_radius=search_radius
+#        )
 
     return render_plot_template(
-        spectral_network_data, process_uuid=process_uuid,
-        progress_log=progress_log, n_processes=n_processes,
-        saved_data=saved_data, plot_two_way_streets=plot_two_way_streets,
+        spectral_network_data,
+        process_uuid=process_uuid,
+        progress_log=progress_log,
+        n_processes=n_processes,
+        saved_data=saved_data,
+        plot_two_way_streets=plot_two_way_streets,
+        search_radius=search_radius
     )
 
 
@@ -877,30 +880,40 @@ def render_plot_template(
     spectral_network_data, process_uuid=None,
     progress_log=None, n_processes=None,
     download=False, saved_data=False,
-    plot_two_way_streets=False,
+    plot_two_way_streets=False, search_radius=None,
 ):
     loom_config = spectral_network_data.config
     sw_data = spectral_network_data.sw_data
+    soliton_tree_data = None
+
+    if plot_two_way_streets is True:
+        soliton_tree_data = spectral_network_data.find_two_way_streets(
+            search_radius=search_radius,
+        )
 
     # Make a Bokeh plot
     bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=loom_config['plot_range'],
         plot_two_way_streets=plot_two_way_streets,
+        soliton_tree_data=soliton_tree_data,
         logger_name=get_logger_name(),
     )
 
-    if plot_two_way_streets is True:
-        for sn in spectral_network_data.spectral_networks:
-            if len(sn.streets) == 0:
-                continue
-            else:
-                initial_phase = '{:.3f}'.format(sn.phase / pi)
-                break
-    else:
-        initial_phase = '{:.3f}'.format(
-            spectral_network_data.spectral_networks[0].phase / pi
-        )
+#    if plot_two_way_streets is True:
+#        for sn in spectral_network_data.spectral_networks:
+#            if len(sn.streets) == 0:
+#                continue
+#            else:
+#                initial_phase = '{:.3f}'.format(sn.phase / pi)
+#                break
+#    else:
+#        initial_phase = '{:.3f}'.format(
+#            spectral_network_data.spectral_networks[0].phase / pi
+#        )
+    initial_phase = '{:.3f}'.format(
+        spectral_network_data.spectral_networks[0].phase / pi
+    )
 
     legend = get_legend(
         g_data=sw_data.g_data,
@@ -928,6 +941,7 @@ def render_plot_template(
         n_processes=n_processes,
         saved_data=saved_data,
         default_search_radius=loom_config['size_of_bp_neighborhood'],
+        plot_two_way_streets=str(plot_two_way_streets),
     )
 
 

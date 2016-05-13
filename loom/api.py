@@ -444,12 +444,16 @@ class SpectralNetworkData:
         return None
 
     def find_two_way_streets(self, search_radius=None,):
+        soliton_tree_data = []
         for sn in self.spectral_networks:
-            sn.find_two_way_streets(
-                config=self.config,
-                sw_data=self.sw_data,
-                search_radius=search_radius,
+            soliton_tree_data.append(
+                sn.find_two_way_streets(
+                    config=self.config,
+                    sw_data=self.sw_data,
+                    search_radius=search_radius,
+                )
             )
+        return soliton_tree_data
 
     def set_z_rotation(self, z_rotation):
         self.sw_data.set_z_rotation(z_rotation)
