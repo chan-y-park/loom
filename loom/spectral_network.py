@@ -20,6 +20,100 @@ from misc import (
 from intersection import (
     NoIntersection, find_intersection_of_segments,
 )
+from trivialization import BranchPoint
+
+
+class Street(SWall):
+    def __init__(
+        self,
+        s_wall=None,
+        end_z=None,
+        end_t=None,
+        parents=None,
+        json_data=None,
+        logger_name='loom',
+    ):
+        super(Street, self).__init__(logger_name=logger_name)
+        logger = logging.getLogger(self.logger_name)
+
+        if json_data is not None:
+            self.set_from_json_data(json_data)
+        else:
+            if end_t is None:
+                end_t = numpy.argmin(abs(s_wall.z - end_z))
+
+            if end_t == 0:
+                raise RuntimeError('Street.__init__(): end_t == 0')
+            # XXX: Because a joint is not back-inserted into S-walls,
+            # neither [:end_t] nor [:end_t+1] is always correct.
+            # However, inserting a joint is an expensive operation.
+            self.z = s_wall.z[:end_t]
+            self.x = s_wall.x[:end_t]
+            self.M = s_wall.M[:end_t]
+            self.parents = parents
+            self.parent_roots = s_wall.parent_roots
+            self.label = s_wall.label
+            self.cuts_intersections = [
+                [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
+                if t < end_t
+            ]
+            n_segs = len(self.cuts_intersections) + 1
+            self.local_roots = s_wall.local_roots[:n_segs]
+            if s_wall.multiple_local_roots is not None:
+                self.multiple_local_roots = (
+                    s_wall.multiple_local_roots[:n_segs]
+                )
+            self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
+
+
+class SolitonTree:
+    def __init__(
+        self,
+        root_s_wall=None,
+        root_s_wall_end_t=None,
+        root_branch_point=None,
+    ):
+        self.root_branch_point = root_branch_point
+        root_street = Street(
+            s_wall=root_s_wall,
+            end_t=root_s_wall_end_t,
+            parents=root_s_wall.parents,
+        )
+        self.streets = [root_street]
+        self.grow(root_street)
+
+    def grow(self, street=None):
+        for parent in street.parents:
+            if isinstance(parent, BranchPoint):
+                # Branch points are leaves of this tree.
+                continue
+            parent_street = Street(
+                s_wall=parent,
+                end_z=street.z[0],
+                parents=parent.parents,
+            )
+            self.streets.append(parent_street)
+            self.grow(parent_street)
+
+        return None
+
+    def draw(self, file_name='soliton_tree.pdf'):
+        # XXX: Move the following import to the beginning of this module
+        # if draw() becomes a permanent feature.
+        import pygraphviz as pgv
+        soliton_tree_graph = pgv.AGraph(directed=True)
+        soliton_tree_graph.add_edge(
+            self.streets[0].label,
+            'root: ' + self.root_branch_point.label,
+        )
+        for street in self.streets:
+            for parent in street.parents:
+                soliton_tree_graph.add_edge(
+                    street.label,
+                    parent.label,
+                )
+        soliton_tree_graph.layout(args='-Goverlap=false')
+        soliton_tree_graph.draw(file_name)
 
 
 class SpectralNetwork:
@@ -74,6 +168,9 @@ class SpectralNetwork:
         Load the spectral network data from a JSON-compatible file.
         """
         branch_loci = sw_data.branch_points + sw_data.irregular_singularities
+        obj_dict = {}
+        for p in branch_loci:
+            obj_dict[p.label] = p
 
         self.phase = json_data['phase']
         try:
@@ -87,12 +184,29 @@ class SpectralNetwork:
 
         for s_wall_data in json_data['s_walls']:
             an_s_wall = SWall(logger_name=self.logger_name,)
-            an_s_wall.set_from_json_data(s_wall_data, branch_loci)
+            an_s_wall.set_from_json_data(s_wall_data)
             self.s_walls.append(an_s_wall)
+            obj_dict[an_s_wall.label] = an_s_wall
+
+        # Substitute labels with objects
+        for s_wall in self.s_walls:
+            s_wall.parents = [
+                obj_dict[parent_label]
+                for parent_label in s_wall.parents
+            ]
+            s_wall.cuts_intersections = [
+                [obj_dict[br_loc_label], t, d]
+                for br_loc_label, t, d
+                in s_wall.cuts_intersections
+            ]
 
         for joint_data in json_data['joints']:
             a_joint = Joint()
             a_joint.set_from_json_data(joint_data)
+            a_joint.parents = [
+                obj_dict[parent_label]
+                for parent_label in a_joint.parents
+            ]
             self.joints.append(a_joint)
 
     def grow(
@@ -232,8 +346,7 @@ class SpectralNetwork:
                                     z_0=z_0,
                                     x_0=x_0,
                                     M_0=M_0,
-                                    # TODO: change this to take bp itself.
-                                    parents=[bp.label],
+                                    parents=bp,
                                     parent_roots=[root for root
                                                   in bp.positive_roots],
                                     label=label,
@@ -516,7 +629,7 @@ class SpectralNetwork:
 
             # 1. Check if the new S-wall is a descendant
             # of an existing S-wall.
-            if prev_s_wall.label in new_s_wall.parents:
+            if prev_s_wall in new_s_wall.parents:
                 continue
 
             # 2. Split the two S-walls into segments
@@ -591,6 +704,8 @@ class SpectralNetwork:
                     # Also discard any intersectins that occur near the
                     # beginning of an S-wall
                     if (
+                        # XXX: Do we need to check if the parent
+                        # is a branch point?
                         prev_s_wall.parents == new_s_wall.parents
                         and abs(ip_z - prev_s_wall.z[0]) < accuracy
                         and abs(ip_z - new_s_wall.z[0]) < accuracy
@@ -651,7 +766,7 @@ class SpectralNetwork:
                             joint_data_groups.append(([root], ode_xs))
 
                     joint_M = prev_s_wall.M[t_p] + new_s_wall.M[t_n]
-                    joint_parents = [prev_s_wall.label, new_s_wall.label]
+                    joint_parents = [prev_s_wall, new_s_wall]
                     for roots, ode_xs in joint_data_groups:
                         new_joints.append(
                             Joint(
@@ -675,6 +790,74 @@ class SpectralNetwork:
                 checked_new_joints.append(joint)
 
         return checked_new_joints
+
+    def find_two_way_streets(
+        self, config=None, sw_data=None,
+        search_radius=None,
+    ):
+        """
+        Find soliton trees that make up two-way streets
+        of the spectral network, set the streets attribute,
+        and return the soliton trees.
+        """
+        logger = logging.getLogger(self.logger_name)
+
+        if search_radius is None:
+            search_radius = config['size_of_bp_neighborhood']
+
+        soliton_trees = []
+        # Search for the root of a soliton tree.
+        for s_wall in self.s_walls:
+            for bp in sw_data.branch_points:
+                tree = None
+
+                if bp not in s_wall.parents:
+                    min_t = numpy.argmin(abs(s_wall.z - bp.z))
+                else:
+                    # Skip if the S-wall is a child of the branch point.
+                    # unless it forms a loop and comes back
+                    # to the branch point.
+                    tps = get_turning_points(s_wall.z)
+                    if len(tps) >= 3:
+                        min_t = (numpy.argmin(abs(s_wall.z[tps[2]:] - bp.z))
+                                 + tps[2])
+                    else:
+                        continue
+
+                if (abs(s_wall.z[min_t] - bp.z) < search_radius):
+                    bp_roots = (
+                        bp.positive_roots.tolist() +
+                        (-bp.positive_roots).tolist()
+                    )
+                    s_wall_roots = s_wall.get_roots_at_t(min_t)
+                    if(len(s_wall_roots) > 1):
+                        raise NotImplementedError
+                    s_wall_root = s_wall_roots[0].tolist()
+                    # XXX: If a branch cut goes through the z[min_t]
+                    # then the following criterion may not work.
+                    # Consider checking ODE x's?
+                    if s_wall_root in bp_roots:
+                        # Found a root of this S-wall tree.
+                        try:
+                            tree = SolitonTree(
+                                root_s_wall=s_wall,
+                                root_s_wall_end_t=min_t,
+                                root_branch_point=bp,
+                            )
+                        except RuntimeError as e:
+                            logger.warning(e)
+                            logger.warning(
+                                'Finding two-way streets '
+                                'for a spectral network at phase = {} '
+                                'using {} and {} failed.'
+                                .format(self.phase, s_wall.label, bp.label)
+                            )
+                            continue
+
+                if tree is not None:
+                    soliton_trees.append(tree)
+
+        return soliton_trees
 
 
 def get_ode(sw, phase, accuracy):

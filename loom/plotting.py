@@ -116,11 +116,6 @@ class SpectralNetworkPlotBase(NetworkPlotBase):
                               for root_str in map(str, s_wall.local_roots)]
                 labels['walls'].append(seg_labels)
 
-#        wall_colors = [
-#            [g_data.get_root_color(root) for root in seg_roots]
-#            for seg_roots in wall_roots
-#        ]
-    
         wall_colors = []
         for seg_roots in wall_roots:
             colors = []

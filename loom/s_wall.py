@@ -11,6 +11,8 @@ from sympy import oo
 from geometry import (
     find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
 )
+from trivialization import BranchPoint
+
 from misc import (
     cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root,
     get_descendant_roots, sort_roots, n_nearest
@@ -64,10 +66,8 @@ class Joint:
         json_data = {
             'z': ctor2(self.z),
             'M': ctor2(self.M),
-            'parents': [parent for parent in self.parents],
+            'parents': [parent.label for parent in self.parents],
             'label': self.label,
-            # XXX: Enable the following once self.root is deprecated.
-            # 'roots': [root.tolist() for root in self.roots],
             'ode_xs': [ctor2(x) for x in self.ode_xs],
         }
         if self.roots is not None:
@@ -79,7 +79,10 @@ class Joint:
     def set_from_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
         self.M = r2toc(json_data['M'])
-        self.parents = [parent for parent in json_data['parents']]
+        # NOTE: Joint.parents is loaded from JSON with labels of parents,
+        # but is replaced with parent objects
+        # in SpectralNetwork.set_from_json_data()
+        self.parents = json_data['parents']
         self.label = json_data['label']
         # TODO: remove Joint.root & the following exception handling.
         try:
@@ -192,28 +195,20 @@ class SWall(object):
             'x': numpy.rollaxis(
                 numpy.array([self.x.real, self.x.imag]), 0, 3
             ).tolist(),
-            'parents': [parent for parent in self.parents],
-            'parent_roots': [root.tolist() for root in self.parent_roots],
+            'parents': [parent.label for parent in self.parents],
             'label': self.label,
             'cuts_intersections': [
                 [br_loc.label, t, d]
                 for br_loc, t, d in self.cuts_intersections
             ],
             'local_roots': [root.tolist() for root in self.local_roots],
-            # TODO: Restore the following after multiple_local_roots
-            # becomes the default.
-            # 'multiple_local_roots': [
-            #     [root.tolist() for root in multiple_roots]
-            #     for multiple_roots in self.multiple_local_roots
-            # ],
             'local_weight_pairs': self.local_weight_pairs,
-#            'roots_basepoint': [
-#                self.roots_basepoint[0],
-#                ctor2(self.roots_basepoint[1]),
-#                [ctor2(x) for x in list(self.roots_basepoint[2])],
-#                list(self.roots_basepoint[3])
-#            ]
         }
+        if self.parent_roots is not None:
+            json_data['parent_roots'] = [
+                root.tolist() for root in self.parent_roots
+            ]
+
         if len(self.roots_basepoint) > 0:
             json_data['roots_basepoint'] = [
                 self.roots_basepoint[0],
@@ -221,8 +216,6 @@ class SWall(object):
                 [ctor2(x) for x in list(self.roots_basepoint[2])],
                 list(self.roots_basepoint[3])
             ]
-        # TODO: Remove the following after multiple_local_roots
-        # becomes the default.
         if self.multiple_local_roots is not None:
             json_data['multiple_local_roots'] = [
                 [root.tolist() for root in multiple_roots]
@@ -230,13 +223,16 @@ class SWall(object):
             ]
         return json_data
 
-    def set_from_json_data(self, json_data, branch_loci):
+    def set_from_json_data(self, json_data):
         self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
         self.M = numpy.array([r2toc(M_t) for M_t in json_data['M']])
         self.x = numpy.array(
             [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
         )
-        self.parents = [parent for parent in json_data['parents']]
+        # NOTE: SWall.parents is loaded from JSON with labels of parents,
+        # but is replaced with parent objects
+        # in SpectralNetwork.set_from_json_data()
+        self.parents = json_data['parents']
         try:
             self.parent_roots = [
                 numpy.array(root)
@@ -245,17 +241,15 @@ class SWall(object):
         except KeyError:
             pass
         self.label = json_data['label']
-        self.cuts_intersections = []
-        for br_loc_label, t, d in json_data['cuts_intersections']:
-            for br_loc in branch_loci:
-                if br_loc_label == br_loc.label:
-                    self.cuts_intersections.append([br_loc, t, d])
+        # NOTE: SWall.cuts_intersections is loaded from JSON
+        # with labels of branch points,
+        # but is replaced with branch point objects
+        # in SpectralNetwork.set_from_json_data()
+        self.cuts_intersections = json_data['cuts_intersections']
         self.local_roots = [
             numpy.array(root)
             for root in json_data['local_roots']
         ]
-        # TODO: Remove the following exception handling
-        # after multiple_local_roots becomes the default.
         try:
             self.multiple_local_roots = [
                 [numpy.array(root) for root in multiple_roots]
@@ -264,7 +258,7 @@ class SWall(object):
         except KeyError:
             pass
         self.local_weight_pairs = json_data['local_weight_pairs']
-        
+
         try:
             roots_basepoint_data = json_data['roots_basepoint']
             self.roots_basepoint = [
@@ -281,6 +275,7 @@ class SWall(object):
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
         if endpoints is True:
+            # Add values of t's of endpoints to the return value.
             return [0] + splits + [len(self.z) - 1]
         else:
             return splits
@@ -345,7 +340,7 @@ class SWall(object):
         it changes root-type 3 times.
         2- Then, pick a suitable point along the swall, away
         from branch points or singularities, and determine
-        the root there. 
+        the root there.
         3- Finally, extend the determination
         of the root type to other segments by following
         the wall across the various splits induced by cuts,
@@ -415,8 +410,8 @@ class SWall(object):
                 # if such intersections happens within a short
                 # distance from the starting point.
                 if (
-                    br_loc.__class__.__name__ == 'BranchPoint' and
-                    br_loc.label == self.parents[0] and
+                    isinstance(br_loc, BranchPoint) and
+                    br_loc == self.parents[0] and
                     (abs(br_loc.z - self.z[t]) < cutoff_radius)
                 ):
                     continue
@@ -625,7 +620,10 @@ class SWall(object):
             closed_splits = self.get_splits() + [len(self.z) - 1]
             for i, sp in enumerate(closed_splits):
                 if t <= sp:
-                    return self.multiple_local_roots[i]
+                    if self.multiple_local_roots is not None:
+                        return self.multiple_local_roots[i]
+                    else:
+                        return [self.local_roots[i]]
                     break
                 else:
                     pass

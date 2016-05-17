@@ -318,8 +318,8 @@ class GUILoom:
             target=load_spectral_network,
             kwargs=dict(
                 data_dir=data_dir,
-                logging_queue=self.logging_queue,
-                result_queue=result_queue,
+                #logging_queue=self.logging_queue,
+                #result_queue=result_queue,
                 logger_name=self.logger_name,
             )
         )

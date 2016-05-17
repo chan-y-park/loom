@@ -8,7 +8,7 @@ from sympy import oo
 from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
 from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
-                          ResetTool, PreviewSaveTool)
+                          ResetTool, PreviewSaveTool, TapTool,)
 from bokeh.models.widgets import Button
 # from bokeh.models.widgets import Toggle
 from bokeh.plotting import figure
@@ -19,6 +19,8 @@ from misc import get_splits_with_overlap
 def get_spectral_network_bokeh_plot(
     spectral_network_data, plot_range=None,
     plot_joints=False, plot_data_points=False, plot_on_cylinder=False,
+    plot_two_way_streets=False,
+    soliton_tree_data=None,
     plot_width=800, plot_height=800,
     notebook=False, logger_name=None,
     marked_points=[],
@@ -74,10 +76,9 @@ def get_spectral_network_bokeh_plot(
     )
 
     # Prepare a bokeh Figure.
-    plot_idx_ds = ColumnDataSource({'i': ['0']})
     bokeh_figure = figure(
         tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(),
-               PreviewSaveTool(), hover],
+               PreviewSaveTool(), TapTool(), hover],
         plot_width=plot_width,
         plot_height=plot_height,
         title=None,
@@ -165,92 +166,67 @@ def get_spectral_network_bokeh_plot(
     pds = ColumnDataSource({
         'phase': [],
     })
+    for sn in spectral_networks:
+        sn_phase = '{:.3f}'.format(sn.phase / pi)
+        pds.data['phase'].append(sn_phase)
 
     # Data source containing all the spectral networks
     snds = ColumnDataSource({
         'spectral_networks': [],
     })
 
-    for sn in spectral_networks:
-        skip_plotting = False
-        for error in sn.errors:
-            error_type, error_msg = error
-            if error_type == 'Unknown':
-                skip_plotting = True
-        if skip_plotting is True:
-            continue
-
-        sn_phase = '{:.3f}'.format(sn.phase / pi)
-        pds.data['phase'].append(sn_phase)
-
-        sn_data = {}
-        sn_data['xs'] = []
-        sn_data['ys'] = []
-        sn_data['ranges'] = []
-        sn_data['color'] = []
-        sn_data['arrow_x'] = []
-        sn_data['arrow_y'] = []
-        sn_data['arrow_angle'] = []
-        sn_data['label'] = []
-        sn_data['root'] = []
-
-        for s_wall in sn.s_walls:
-            z_segs = get_splits_with_overlap(s_wall.get_splits())
-            for start, stop in z_segs:
-                z_r = s_wall.z[start:stop].real
-                z_i = s_wall.z[start:stop].imag
-                a_i = int(numpy.floor(len(z_r) / 2.0))
-                # TODO: Check if the arrow is within the plot range.
-                a_angle = pi
-                a_angle = (
-                    phase((z_r[a_i] - z_r[a_i - 1]) +
-                          1j * (z_i[a_i] - z_i[a_i - 1]))
-                    - (pi / 2.0)
+    if plot_two_way_streets is True:
+        # snds['spectral_networks'] is a 2-dim array,
+        # where the first index chooses a spectral network
+        # and the second index chooses a soliton tree
+        # of the two-way streets of the spectral network.
+        for i, soliton_trees in enumerate(soliton_tree_data):
+            data_entry = []
+            if len(soliton_trees) == 0:
+                # Fill with empty data.
+                empty_data = get_s_wall_plot_data(
+                    [], sw_data, logger_name,
+                    spectral_networks[i].phase,
                 )
-                sn_data['xs'].append(z_r)
-                sn_data['ys'].append(z_i)
-                sn_data['ranges'].append(
-                    [z_r.min(), z_r.max(), z_i.min(), z_i.max()]
-                )
-                sn_data['arrow_x'].append(z_r[a_i])
-                sn_data['arrow_y'].append(z_i[a_i])
-                sn_data['arrow_angle'].append(a_angle)
-            # XXX: temporary routine to label multiple roots.
-            if s_wall.multiple_local_roots is not None:
-                for roots in s_wall.multiple_local_roots:
-                    sn_data['label'].append(str(s_wall.label))
-                    root_label = ''
-                    for root in roots:
-                        root_label += str(root.tolist()) + ', '
-                    sn_data['root'].append(root_label[:-2])
-                    color = sw_data.g_data.get_root_color(roots[0])
-                    if color is None:
-                        color = '#000000'
-                        logger.warning(
-                            'Unknown root color for {} '
-                            'of a spectral network with phase = {}.'
-                            .format(s_wall.label, sn.phase)
-                        )
-                    sn_data['color'].append(color)
+                data_entry.append(empty_data)
             else:
-                for root in s_wall.local_roots:
-                    sn_data['label'].append(str(s_wall.label))
-                    sn_data['root'].append(str(root.tolist()))
-                    color = sw_data.g_data.get_root_color(root)
-                    if color is None:
-                        color = '#000000'
-                        logger.warning(
-                            'Unknown root color for {} '
-                            'of a spectral network with phase = {}.'
-                            .format(s_wall.label, sn.phase)
-                        )
-                    sn_data['color'].append(color)
+                # The first data contains all the soliton trees
+                # of the two-way streets in a spectral network.
+                for tree in soliton_trees:
+                    tree_data = get_s_wall_plot_data(
+                        tree.streets, sw_data, logger_name,
+                        spectral_networks[i].phase,
+                    )
+                    if len(data_entry) > 0:
+                        for key in tree_data.keys():
+                            data_entry[0][key] += tree_data[key]
+                    data_entry.append(tree_data)
 
-        snds.data['spectral_networks'].append(sn_data)
+            snds.data['spectral_networks'].append(data_entry)
+
+        init_data = snds.data['spectral_networks'][0][0]
+    else:
+        # snds['spectral_networks'] is a 1-dim array,
+        # of spectral network data.
+        for sn in spectral_networks:
+            skip_plotting = False
+            for error in sn.errors:
+                error_type, error_msg = error
+                if error_type == 'Unknown':
+                    skip_plotting = True
+            if skip_plotting is True:
+                continue
+
+            sn_data = get_s_wall_plot_data(
+                sn.s_walls, sw_data, logger_name, sn.phase,
+            )
+            snds.data['spectral_networks'].append(sn_data)
+
+        init_data = snds.data['spectral_networks'][0]
 
     # Initialization of the current plot data source.
     for key in cds.data.keys():
-        cds.data[key] = snds.data['spectral_networks'][0][key]
+        cds.data[key] = init_data[key]
 
     bokeh_figure.scatter(x='x', y='y', alpha=0.5, source=dpds,)
 
@@ -263,15 +239,27 @@ def get_spectral_network_bokeh_plot(
         size=8, source=cds,
     )
 
+    bokeh_obj = {}
+    notebook_vform_elements = []
+
+    # XXX: Where is a good place to put the following?
+    custom_js_code = ''
+    if notebook is True:
+        with open('static/bokeh_callbacks.js', 'r') as fp:
+            custom_js_code += fp.read()
+            custom_js_code += '\n'
+
     # 'Redraw arrows' button.
     redraw_arrows_button = Button(
         label='Redraw arrows',
         callback=CustomJS(
             args={'cds': cds, 'x_range': bokeh_figure.x_range,
                   'y_range': bokeh_figure.y_range},
-            code='redraw_arrows(cds, x_range, y_range);',
+            code=(custom_js_code + 'redraw_arrows(cds, x_range, y_range);'),
         ),
     )
+    bokeh_obj['redraw_arrows_button'] = redraw_arrows_button
+    notebook_vform_elements.append(redraw_arrows_button)
 
     # 'Show data points' button
     show_data_points_button = Button(
@@ -279,8 +267,10 @@ def get_spectral_network_bokeh_plot(
     )
     show_data_points_button.callback = CustomJS(
         args={'cds': cds, 'dpds': dpds, 'hover': hover},
-        code="show_data_points(cds, dpds, hover);",
+        code=(custom_js_code + 'show_data_points(cds, dpds, hover);'),
     )
+    bokeh_obj['show_data_points_button'] = show_data_points_button
+    notebook_vform_elements.append(show_data_points_button)
 
     # 'Hide data points' button
     hide_data_points_button = Button(
@@ -288,40 +278,158 @@ def get_spectral_network_bokeh_plot(
     )
     hide_data_points_button.callback = CustomJS(
         args={'cds': cds, 'dpds': dpds, 'hover': hover},
-        code="hide_data_points(cds, dpds, hover);",
+        code=(custom_js_code + 'hide_data_points(cds, dpds, hover);'),
     )
-    bokeh_obj = {
-        'redraw_arrows_button': redraw_arrows_button,
-        'show_data_points_button': show_data_points_button,
-        'hide_data_points_button': hide_data_points_button,
-    }
+    bokeh_obj['hide_data_points_button'] = hide_data_points_button
+    notebook_vform_elements.append(hide_data_points_button)
 
-    if len(spectral_networks) > 1:
-        # Add a slider.
-        slider = Slider(start=0, end=len(spectral_networks) - 1,
-                        value=0, step=1, title="plot index")
+    # Prev/Next soliton tree button
+    tree_idx_ds = ColumnDataSource({'j': ['0']})
+    sn_idx_ds = ColumnDataSource({'i': ['0']})
+    plot_options_ds = ColumnDataSource(
+        {'notebook': [notebook], 'show_trees': [plot_two_way_streets]}
+    )
 
-        custom_js_args = {
-            'cds': cds, 'snds': snds, 'plot_idx_ds': plot_idx_ds,
-            'dpds': dpds, 'pds': pds, 'hover': hover
-        }
-        custom_js_code = ''
-        if notebook is True:
-            with open('static/bokeh_callbacks.js', 'r') as fp:
-                custom_js_code += fp.read()
-                custom_js_code += '\n'
-        custom_js_code += (
-            'slider(cb_obj, cds, snds, plot_idx_ds, dpds, pds, hover);'
+    if plot_two_way_streets is True:
+        prev_soliton_tree_button = Button(
+            label='<',
+        )
+        prev_soliton_tree_button.callback = CustomJS(
+            args={
+                'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
+                'tree_idx_ds': tree_idx_ds,
+                'plot_options_ds': plot_options_ds,
+            },
+            code=(
+                custom_js_code +
+                'show_prev_soliton_tree(cds, snds, sn_idx_ds, tree_idx_ds, '
+                'plot_options_ds);'
+            ),
+        )
+        bokeh_obj['prev_soliton_tree_button'] = prev_soliton_tree_button
+        notebook_vform_elements.append(prev_soliton_tree_button)
+
+        next_soliton_tree_button = Button(
+            label='>',
+        )
+        next_soliton_tree_button.callback = CustomJS(
+            args={
+                'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
+                'tree_idx_ds': tree_idx_ds,
+                'plot_options_ds': plot_options_ds,
+            },
+            code=(
+                custom_js_code +
+                'show_next_soliton_tree(cds, snds, sn_idx_ds, tree_idx_ds, '
+                'plot_options_ds);'
+            ),
+        )
+        bokeh_obj['next_soliton_tree_button'] = next_soliton_tree_button
+        notebook_vform_elements.append(next_soliton_tree_button)
+
+    # Slider
+    num_of_plots = len(snds.data['spectral_networks'])
+    if num_of_plots > 1:
+        sn_slider = Slider(
+            start=0, end=num_of_plots - 1,
+            value=0, step=1, title="spectral network #"
         )
 
-        slider.callback = CustomJS(args=custom_js_args, code=custom_js_code)
-        plot = vform(bokeh_figure, slider, width=plot_width,)
+        sn_slider.callback = CustomJS(
+            args={
+                'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
+                'dpds': dpds, 'pds': pds, 'hover': hover,
+                'plot_options': plot_options_ds, 'tree_idx_ds': tree_idx_ds
+            },
+            code=(
+                custom_js_code +
+                'sn_slider(cb_obj, cds, snds, sn_idx_ds, dpds, pds, hover, '
+                'plot_options, tree_idx_ds);'
+            ),
+        )
+        plot = vform(bokeh_figure, sn_slider, width=plot_width,)
+        notebook_vform_elements = (
+            [bokeh_figure, sn_slider] + notebook_vform_elements
+        )
     else:
         plot = bokeh_figure
+        notebook_vform_elements = (
+            [bokeh_figure] + notebook_vform_elements
+        )
 
     bokeh_obj['plot'] = plot
 
     if notebook is True:
-        return plot
+        # TODO: Include phase text input
+        return vform(*notebook_vform_elements, width=plot_width)
     else:
         return bokeh.embed.components(bokeh_obj)
+
+
+def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
+    logger = logging.getLogger(logger_name)
+
+    data_dict = {}
+    data_dict['xs'] = []
+    data_dict['ys'] = []
+    data_dict['ranges'] = []
+    data_dict['color'] = []
+    data_dict['arrow_x'] = []
+    data_dict['arrow_y'] = []
+    data_dict['arrow_angle'] = []
+    data_dict['label'] = []
+    data_dict['root'] = []
+
+    for s_wall in s_walls:
+        z_segs = get_splits_with_overlap(s_wall.get_splits())
+        for start, stop in z_segs:
+            z_r = s_wall.z[start:stop].real
+            z_i = s_wall.z[start:stop].imag
+            a_i = int(numpy.floor(len(z_r) / 2.0))
+            # TODO: Check if the arrow is within the plot range.
+            a_angle = pi
+            a_angle = (
+                phase((z_r[a_i] - z_r[a_i - 1]) +
+                      1j * (z_i[a_i] - z_i[a_i - 1]))
+                - (pi / 2.0)
+            )
+            data_dict['xs'].append(z_r)
+            data_dict['ys'].append(z_i)
+            data_dict['ranges'].append(
+                [z_r.min(), z_r.max(), z_i.min(), z_i.max()]
+            )
+            data_dict['arrow_x'].append(z_r[a_i])
+            data_dict['arrow_y'].append(z_i[a_i])
+            data_dict['arrow_angle'].append(a_angle)
+        # XXX: temporary routine to label multiple roots.
+        if s_wall.multiple_local_roots is not None:
+            for roots in s_wall.multiple_local_roots:
+                data_dict['label'].append(str(s_wall.label))
+                root_label = ''
+                for root in roots:
+                    root_label += str(root.tolist()) + ', '
+                data_dict['root'].append(root_label[:-2])
+                color = sw_data.g_data.get_root_color(roots[0])
+                if color is None:
+                    color = '#000000'
+                    logger.warning(
+                        'Unknown root color for {} '
+                        'of a spectral network with phase = {}.'
+                        .format(s_wall.label, sn_phase)
+                    )
+                data_dict['color'].append(color)
+        else:
+            for root in s_wall.local_roots:
+                data_dict['label'].append(str(s_wall.label))
+                data_dict['root'].append(str(root.tolist()))
+                color = sw_data.g_data.get_root_color(root)
+                if color is None:
+                    color = '#000000'
+                    logger.warning(
+                        'Unknown root color for {} '
+                        'of a spectral network with phase = {}.'
+                        .format(s_wall.label, sn_phase)
+                    )
+                data_dict['color'].append(color)
+
+    return data_dict
