@@ -13,7 +13,12 @@ import time
 import pdb
 
 argv = sys.argv[1:]
-print 'loom WSGI working directory: {}'.format(os.getcwd())
+print('__name__={}'.format(__name__))
+print('loom WSGI working directory: {}'.format(os.getcwd()))
+if '_mod_wsgi_' in __name__:
+    f = open(os.devnull, 'w')
+    sys.stdout = f
+    print('stdout redirecting failed if this message is shown.')
 
 from loom.api import get_loom_dir
 from loom.web_ui import get_application
@@ -21,8 +26,7 @@ from loom.web_ui import get_application
 default_config_file = os.path.join(get_loom_dir(), 'config/default.ini')
 application = get_application(
     default_config_file,
-#    logging_level=logging.INFO
-    logging_level=logging.ERROR
+    logging_level=logging.INFO
 )
 
 if __name__ == '__main__':
@@ -53,5 +57,3 @@ if __name__ == '__main__':
         )
     except (KeyboardInterrupt, SystemExit):
         raise
-else:
-    print __name__
