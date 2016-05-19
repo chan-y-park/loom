@@ -346,7 +346,7 @@ class SpectralNetwork:
                                     z_0=z_0,
                                     x_0=x_0,
                                     M_0=M_0,
-                                    parents=bp,
+                                    parents=[bp],
                                     parent_roots=[root for root
                                                   in bp.positive_roots],
                                     label=label,

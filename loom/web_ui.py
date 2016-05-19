@@ -84,8 +84,7 @@ class LoomDB(object):
         self.loom_processes = {}
         self.logging_level = logging_level
 
-        if __name__ == '__main__':
-            signal.signal(signal.SIGINT, self.loom_db_stop_signal_handler)
+        signal.signal(signal.SIGINT, self.loom_db_stop_signal_handler)
 
         self.db_manager = threading.Thread(
             target=self.db_manager,
