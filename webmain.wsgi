@@ -19,8 +19,11 @@ from loom.api import get_loom_dir
 from loom.web_ui import get_application
 
 default_config_file = os.path.join(get_loom_dir(), 'config/default.ini')
-application = get_application(default_config_file,
-                              logging_level=logging.INFO)
+application = get_application(
+    default_config_file,
+#    logging_level=logging.INFO
+    logging_level=logging.ERROR
+)
 
 if __name__ == '__main__':
     host = '0.0.0.0'
@@ -50,3 +53,5 @@ if __name__ == '__main__':
         )
     except (KeyboardInterrupt, SystemExit):
         raise
+else:
+    print __name__

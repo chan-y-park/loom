@@ -413,7 +413,7 @@ class WebLoomApplication(flask.Flask):
     """
     def __init__(self, config_file, logging_level):
         super(WebLoomApplication, self).__init__(WEB_APP_NAME)
-        # Set a logger for loom that has a rotating file handler.
+        # Set a logger for loom web frontend.
         set_logging(
             logger_name=WEB_APP_NAME,
             logging_level=logging_level,
