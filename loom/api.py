@@ -607,26 +607,32 @@ def get_logging_handler(level, handler_class, buffer_object):
     return h
 
 
+# XXX: save_config() will be deprecated.
+# Use LoomConfig.__init__().
 def load_config(file_path=None, logger_name='loom',):
-    logger = logging.getLogger(logger_name)
-    if file_path is None:
-        return None
-    config = LoomConfig(logger_name=logger_name)
-    logger.info('Loading configuration from {}...'.format(file_path))
-    with open(file_path, 'r') as fp:
-        config.read(fp)
-    logger.info('Finished loading configuration from {}.'.format(file_path))
+#    logger = logging.getLogger(logger_name)
+#    if file_path is None:
+#        return None
+#    config = LoomConfig(logger_name=logger_name)
+#    logger.info('Loading configuration from {}...'.format(file_path))
+#    with open(file_path, 'r') as fp:
+#        config.read(fp)
+#    logger.info('Finished loading configuration from {}.'.format(file_path))
+    config = LoomConfig(file_path=file_path, logger_name=logger_name)
 
     return config
 
 
+# XXX: save_config() will be deprecated.
+# Use LoomConfig.save().
 def save_config(config, file_path=None, logger_name='loom',):
-    logger = logging.getLogger(logger_name)
-    if file_path is None:
-        return None
-    logger.info('Saving configuration to {}.'.format(file_path))
+#    logger = logging.getLogger(logger_name)
+#    if file_path is None:
+#        return None
+#    logger.info('Saving configuration to {}.'.format(file_path))
+#    config.save(file_path)
+#    logger.info('Finished saving configuration to {}.'.format(file_path))
     config.save(file_path)
-    logger.info('Finished saving configuration to {}.'.format(file_path))
 
     return None
 

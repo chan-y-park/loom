@@ -490,6 +490,11 @@ def config(n_processes=None):
         except KeyError:
             uploaded_config_file = None
 
+        try:
+            data_name = flask.request.form['data_name']
+        except KeyError:
+            data_name = None
+
         if uploaded_config_file is not None:
             # Load configuration from the uploaded file.
             if uploaded_config_file.filename == '':
@@ -499,6 +504,17 @@ def config(n_processes=None):
             else:
                 loom_config = LoomConfig(logger_name=get_logger_name())
                 loom_config.read(uploaded_config_file)
+        elif data_name is not None:
+            config_file_path = os.path.join(
+                get_loom_dir(),
+                'data',
+                data_name,
+                'config.ini',
+            )
+            loom_config = LoomConfig(
+                file_path=config_file_path,
+                logger_name=get_logger_name(),
+            )
         else:
             # Generate/Extend spectral networks.
 
@@ -566,9 +582,35 @@ def config(n_processes=None):
     )
 
 
-# FIXME: consider separating progress from config
-def progress():
-    pass
+def load(n_processes=None):
+    # XXX: n_processes is a string.
+    loom_config = None
+    event_source_url = None
+    text_area_content = ''
+    process_uuid = None
+    #full_data_dir = None
+
+    if n_processes is None:
+        n_processes_val = DEFAULT_NUM_PROCESSES
+    else:
+        n_processes_val = eval(n_processes)
+
+    if flask.request.method == 'GET':
+        full_data_directories = glob.glob(
+            os.path.join(get_loom_dir(), 'data', "*",)
+        )
+        data_names = [
+            os.path.split(full_data_dir)[1]
+            for full_data_dir in full_data_directories
+        ]
+    elif flask.request.method == 'POST':
+        print('POST')
+
+    return flask.render_template(
+        'load.html',
+        data_names=data_names,
+        n_processes=n_processes_val,
+    )
 
 
 def logging_stream(process_uuid):
@@ -808,7 +850,10 @@ def get_application(config_file, logging_level):
         '/config', 'config', config, methods=['GET', 'POST'],
     )
     application.add_url_rule(
-        '/progress', 'progress', config, methods=['POST'],
+        '/load/<n_processes>', 'load', load, methods=['GET', 'POST'],
+    )
+    application.add_url_rule(
+        '/load', 'load', load, methods=['GET', 'POST'],
     )
     application.add_url_rule(
         '/save_config', 'save_config', save_config, methods=['POST'],

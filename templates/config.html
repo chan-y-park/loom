@@ -5,33 +5,7 @@
 <div class="container">
     {% if process_uuid %}
     <h2>Progress</h2>
-    <textarea id="logging_textarea" name="logging" rows=24 cols=80>
-{{ text_area_content }}
-    </textarea>
-    <br/>
-    <script>
-        var box = $("textarea[name=logging]");
-        
-        source.onmessage = function(e) {
-            var logs = box.val();
-            box.val(logs + '\n' + e.data);
-            logging_textarea = document.getElementById("logging_textarea");
-            logging_textarea.scrollTop = logging_textarea.scrollHeight;
-        }
-
-        source.addEventListener('finish', function(e) {
-            source.close();
-            document.getElementById("log_input").value = box.val();
-            document.getElementById("plot").submit();
-        }, false);
-    </script>
-    <br/>
-    <form id="plot" action="{{ url_for('plot') }}" method="post">
-        <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
-        <input type="hidden" name="n_processes" value="{{ n_processes }}">
-        <input type="hidden" name="saved_data" value="False">
-        <input id="log_input" type="hidden" name="progress_log" value="">
-    </form>
+    {% include "logging.html" %}
     {% endif %}
 {% if loom_config %}
     {% include "config_form.html" %}

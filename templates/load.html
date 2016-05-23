@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% block head %}
+{% endblock %}
+{% block body %}
+<div class="container">
+    <h2>Load data</h2>
+{% if process_uuid %}
+    {% include "logging.html" %}
+{% elif data_names %}
+    <form class="form-horizontal" method="post" enctype="multipart/form-data">
+    <select name="data_name">
+        {% for data_name in data_names %}
+            <option value="{{ data_name }}">{{ data_name }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" class="btn btn-default"
+     id="show_config_button"
+     formaction="{{ url_for('config') }}"
+     value="Show configuration">
+    <input type="submit" class="btn btn-default"
+     id="plot_data_button"
+     value="Plot data">
+    <input type="hidden" name="n_processes" value="{{ n_processes }}">
+    </form>
+{% endif %}
+</div>
+<br/>
+{% endblock %}

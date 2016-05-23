@@ -8,7 +8,8 @@ class LoomConfig:
     A container class of the configuration data.
     Saves the configuration data as a Python dictionary.
     """
-    def __init__(self, logger_name='loom'):
+    def __init__(self, file_path=None, logger_name='loom'):
+        logger = logging.getLogger(logger_name)
         self.logger_name = logger_name
         # The data dict has option values as Python objects,
         # some of them being strings.
@@ -55,6 +56,13 @@ class LoomConfig:
             'size_of_ramification_pt_cutoff': None,
             'n_processes': None,
         }
+
+        if file_path is not None:
+            logger.info('Loading configuration from {}...'.format(file_path))
+            with open(file_path, 'r') as fp:
+                self.read(fp)
+            logger.info('Finished loading configuration from {}.'
+                        .format(file_path))
 
     def __setitem__(self, option, value):
         try:
@@ -154,6 +162,11 @@ class LoomConfig:
                 self.parser.set(section, option, 'None')
                 self[option] = None
 
-    def save(self, file_path):
+    def save(self, file_path=None, logger_name=None,):
+        logger = logging.getLogger(logger_name)
+        if file_path is None:
+            return None
+        logger.info('Saving configuration to {}.'.format(file_path))
         with open(file_path, 'w') as fp:
             self.parser.write(fp)
+        logger.info('Finished saving configuration to {}.'.format(file_path))
