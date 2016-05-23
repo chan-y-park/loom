@@ -599,9 +599,10 @@ def load(n_processes=None):
         full_data_directories = glob.glob(
             os.path.join(get_loom_dir(), 'data', "*",)
         )
+        full_data_directories.sort()
         data_names = [
             os.path.split(full_data_dir)[1]
-            for full_data_dir in full_data_directories.sort()
+            for full_data_dir in full_data_directories
         ]
     elif flask.request.method == 'POST':
         print('POST')
