@@ -146,13 +146,25 @@ class LoomDB(object):
         loom_config=None,
         n_processes=None,
         full_data_dir=None,
+        task=None,
+        data_name=None,
+        saved_data=None,
         additional_n_steps=0, new_mass_limit=None,
         additional_iterations=0, additional_phases=None,
     ):
         logging_level = self.logging_level
-        cache_dir = get_cache_dir(process_uuid)
-        if os.path.exists(cache_dir) is False:
-            os.makedirs(cache_dir)
+        if task == 'generate' or task == 'extend':
+            # Prepare a cache directory for new data.
+            cache_dir = get_cache_dir(process_uuid)
+            if os.path.exists(cache_dir) is False:
+                os.makedirs(cache_dir)
+            logging_file_name=os.path.join(cache_dir, 'log'),
+        elif task == 'load':
+            # Do not create a logging file
+            # when loading a saved data.
+            logging_file_name=None
+        else:
+            raise RuntimeError('Unknown task for loom: {}'.format(task))
 
         if n_processes is None:
             n_processes = DEFAULT_NUM_PROCESSES
@@ -164,18 +176,32 @@ class LoomDB(object):
             logger_name=logger_name,
             logging_level=logging_level,
             logging_queue=logging_queue,
-            logging_file_name=os.path.join(cache_dir, 'log'),
+            logging_file_name=logging_file_name,
         )
 
         result_queue = multiprocessing.Queue()
         self.result_queues[process_uuid] = result_queue
 
-        if (
-            additional_n_steps == 0 and
-            additional_iterations == 0 and
-            new_mass_limit is None and
-            additional_phases is None
-        ):
+        if task == 'load':
+            spectral_network_data = SpectralNetworkData(
+                logger_name=logger_name,
+            )
+            loom_process = multiprocessing.Process(
+                target=spectral_network_data.load,
+                kwargs=dict(
+                    data_dir=get_full_data_dir(data_name, saved_data),
+                    result_queue=result_queue,
+                    logging_queue=logging_queue,
+                ),
+            )
+
+#        elif (
+#            additional_n_steps == 0 and
+#            additional_iterations == 0 and
+#            new_mass_limit is None and
+#            additional_phases is None
+#        ):
+        elif task == 'generate':
             spectral_network_data = SpectralNetworkData(
                 config=loom_config,
                 logger_name=logger_name,
@@ -198,7 +224,8 @@ class LoomDB(object):
                 ),
             )
 
-        else:
+        elif task == 'extend':
+            full_data_dir = get_full_data_dir(data_name, saved_data)
             spectral_network_data = SpectralNetworkData(
                 data_dir=full_data_dir,
                 logger_name=logger_name,
@@ -515,60 +542,60 @@ def config(n_processes=None):
                 file_path=config_file_path,
                 logger_name=get_logger_name(),
             )
-        else:
-            # Generate/Extend spectral networks.
-
-            additional_params = {
-                'additional_n_steps': 0,
-                'new_mass_limit': None,
-                'additional_iterations': 0,
-                'additional_phases': None
-            }
-
-            for key in additional_params.keys():
-                try:
-                    additional_params[key] = eval(
-                        flask.request.form[key]
-                    )
-                except (KeyError, SyntaxError):
-                    pass
-
-            logger_name = get_logger_name(process_uuid)
-
-            if (
-                additional_params['additional_n_steps'] == 0 and
-                additional_params['additional_iterations'] == 0 and
-                additional_params['new_mass_limit'] is None and
-                additional_params['additional_phases'] is None
-            ):
-                loom_config = get_loom_config(flask.request.form, logger_name)
-            else:
-                loom_config = None
-                try:
-                    process_uuid = flask.request.form['process_uuid']
-                    saved_data = eval(flask.request.form['saved_data'])
-                    full_data_dir = get_full_data_dir(process_uuid, saved_data)
-                except KeyError:
-                    raise RuntimeError(
-                        'Need data to extend spectral networks.'
-                    )
-
-            process_uuid = str(uuid.uuid4())
-
-            app = flask.current_app
-            app.loom_db.start_loom_process(
-                process_uuid=process_uuid,
-                loom_config=loom_config,
-                n_processes=n_processes_val,
-                full_data_dir=full_data_dir,
-                **additional_params
-            )
-            event_source_url = flask.url_for(
-                'logging_stream', process_uuid=process_uuid,
-            )
-            text_area_content = (
-                "Start loom, uuid = {}".format(process_uuid)
-            )
+#        else:
+#            # Generate/Extend spectral networks.
+#
+#            additional_params = {
+#                'additional_n_steps': 0,
+#                'new_mass_limit': None,
+#                'additional_iterations': 0,
+#                'additional_phases': None
+#            }
+#
+#            for key in additional_params.keys():
+#                try:
+#                    additional_params[key] = eval(
+#                        flask.request.form[key]
+#                    )
+#                except (KeyError, SyntaxError):
+#                    pass
+#
+#            logger_name = get_logger_name(process_uuid)
+#
+#            if (
+#                additional_params['additional_n_steps'] == 0 and
+#                additional_params['additional_iterations'] == 0 and
+#                additional_params['new_mass_limit'] is None and
+#                additional_params['additional_phases'] is None
+#            ):
+#                loom_config = get_loom_config(flask.request.form, logger_name)
+#            else:
+#                loom_config = None
+#                try:
+#                    process_uuid = flask.request.form['process_uuid']
+#                    saved_data = eval(flask.request.form['saved_data'])
+#                    full_data_dir = get_full_data_dir(process_uuid, saved_data)
+#                except KeyError:
+#                    raise RuntimeError(
+#                        'Need data to extend spectral networks.'
+#                    )
+#
+#            process_uuid = str(uuid.uuid4())
+#
+#            app = flask.current_app
+#            app.loom_db.start_loom_process(
+#                process_uuid=process_uuid,
+#                loom_config=loom_config,
+#                n_processes=n_processes_val,
+#                full_data_dir=full_data_dir,
+#                **additional_params
+#            )
+#            event_source_url = flask.url_for(
+#                'logging_stream', process_uuid=process_uuid,
+#            )
+#            text_area_content = (
+#                "Start loom, uuid = {}".format(process_uuid)
+#            )
 
     return flask.render_template(
         'config.html',
@@ -614,13 +641,100 @@ def load(n_processes=None):
     )
 
 
+def progress():
+    event_source_url = None
+    text_area_content = ''
+    process_uuid = None
+    saved_data = None
+    n_processes_val = eval(flask.request.form['n_processes'])
+
+    try:
+        data_name = flask.request.form['data_name']
+    except KeyError:
+        data_name = None
+
+    if data_name is not None:
+        # Load a saved data and plot it.
+        saved_data = True
+
+        try:
+            n_processes = flask.request.args['n_processes']
+        except KeyError:
+            n_processes = None
+
+        process_uuid = str(uuid.uuid4())
+    else:
+        additional_params = {
+            'additional_n_steps': 0,
+            'new_mass_limit': None,
+            'additional_iterations': 0,
+            'additional_phases': None
+        }
+
+        for key in additional_params.keys():
+            try:
+                additional_params[key] = eval(
+                    flask.request.form[key]
+                )
+            except (KeyError, SyntaxError):
+                pass
+
+        if (
+            additional_params['additional_n_steps'] == 0 and
+            additional_params['additional_iterations'] == 0 and
+            additional_params['new_mass_limit'] is None and
+            additional_params['additional_phases'] is None
+        ):
+            # Generate a new spectral network.
+            saved_data = False
+            process_uuid = str(uuid.uuid4())
+            logger_name = get_logger_name(process_uuid)
+            loom_config = get_loom_config(flask.request.form, logger_name)
+        else:
+            # Extend a spectral network.
+            loom_config = None
+            try:
+                process_uuid = flask.request.form['process_uuid']
+                saved_data = eval(flask.request.form['saved_data'])
+                full_data_dir = get_full_data_dir(process_uuid, saved_data)
+            except KeyError:
+                raise RuntimeError(
+                    'Need data to extend spectral networks.'
+                )
+            process_uuid = str(uuid.uuid4())
+
+    app = flask.current_app
+    app.loom_db.start_loom_process(
+        process_uuid=process_uuid,
+        loom_config=loom_config,
+        n_processes=n_processes_val,
+        full_data_dir=full_data_dir,
+        **additional_params
+    )
+
+    event_source_url = flask.url_for(
+        'logging_stream', process_uuid=process_uuid,
+    )
+    text_area_content = (
+        "Start loom, uuid = {}".format(process_uuid)
+    )
+
+    return flask.render_template(
+        'progress.html',
+        n_processes=n_processes_val,
+        process_uuid=process_uuid,
+        event_source_url=event_source_url,
+        text_area_content=text_area_content,
+    )
+
+
 def logging_stream(process_uuid):
-    if flask.request.headers.get('accept') == 'text/event-stream':
-        app = flask.current_app
-        return flask.Response(
-            app.loom_db.yield_log_message(process_uuid, logging.INFO),
-            mimetype='text/event-stream',
-        )
+if flask.request.headers.get('accept') == 'text/event-stream':
+    app = flask.current_app
+    return flask.Response(
+        app.loom_db.yield_log_message(process_uuid, logging.INFO),
+        mimetype='text/event-stream',
+    )
 
 
 def save_config():
@@ -664,15 +778,16 @@ def plot():
         n_processes = flask.request.form['n_processes']
         saved_data = eval(flask.request.form['saved_data'])
 
-        if rotate_back is True or plot_two_way_streets is True:
-            full_data_dir = get_full_data_dir(process_uuid, saved_data)
-
-            spectral_network_data = SpectralNetworkData(
-                data_dir=full_data_dir,
-            )
-        else:
-            # Finish loom_process
-            spectral_network_data = loom_db.get_result(process_uuid)
+#        if rotate_back is True or plot_two_way_streets is True:
+#            full_data_dir = get_full_data_dir(process_uuid, saved_data)
+#
+#            spectral_network_data = SpectralNetworkData(
+#                data_dir=full_data_dir,
+#            )
+#        else:
+#            # Finish loom_process
+#            spectral_network_data = loom_db.get_result(process_uuid)
+        spectral_network_data = loom_db.get_result(process_uuid)
 
     elif flask.request.method == 'GET':
         # Load saved data.
@@ -910,7 +1025,11 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
         get_loom_dir(),
         'config/default.ini',
     )
-    loom_config = load_config(default_config_file, logger_name=logger_name)
+#    loom_config = load_config(default_config_file, logger_name=logger_name)
+    loom_config = LoomConfig(
+        file_path=default_config_file,
+        logger_name=logger_name,
+    )
 
     if request_dict is not None:
         # Update config with form data.

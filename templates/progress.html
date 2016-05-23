@@ -28,7 +28,7 @@
     <form id="plot" action="{{ url_for('plot') }}" method="post">
         <input type="hidden" name="process_uuid" value="{{ process_uuid }}">
         <input type="hidden" name="n_processes" value="{{ n_processes }}">
-        <input type="hidden" name="saved_data" value="False">
+        <input type="hidden" name="saved_data" value="{{ saved_data }}">
         <input id="log_input" type="hidden" name="progress_log" value="">
     </form>
 {% endblock %}

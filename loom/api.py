@@ -45,14 +45,21 @@ class SpectralNetworkData:
         self.data_attributes = ['sw_data', 'spectral_networks']
 
         if config_file_path is not None:
-            self.config = load_config(
+#            self.config = load_config(
+#                file_path=config_file_path,
+#                logger_name=self.logger_name,
+#            )
+            self.config = LoomConfig(
                 file_path=config_file_path,
                 logger_name=self.logger_name,
             )
         elif data_dir is not None:
             self.load(data_dir=data_dir)
 
-    def load(self, data_dir=None, logger_name=None,):
+    def load(
+        self, data_dir=None, logger_name=None,
+        result_queue=None, logging_queue=None,
+    ):
         if data_dir is None:
             return None
 
@@ -101,6 +108,18 @@ class SpectralNetworkData:
         self.config = config
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
+
+        if logging_queue is not None:
+            # Put a mark that generating spectral networks is done.
+            try:
+                logging_queue.put_nowait(None)
+            except:
+                logger.warn(
+                    'Failed in putting a finish mark in the logging queue.'
+                )
+
+        if result_queue is not None:
+            result_queue.put(self)
 
     def save(
         self, data_dir=None, make_zipped_file=False,
