@@ -601,7 +601,7 @@ def load(n_processes=None):
         )
         data_names = [
             os.path.split(full_data_dir)[1]
-            for full_data_dir in full_data_directories
+            for full_data_dir in full_data_directories.sort()
         ]
     elif flask.request.method == 'POST':
         print('POST')
