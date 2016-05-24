@@ -8,7 +8,7 @@ import subprocess
 import matplotlib
 import mpldatacursor
 # import traceback
-# import pdb
+import pdb
 
 from logging.handlers import RotatingFileHandler
 from matplotlib import pyplot

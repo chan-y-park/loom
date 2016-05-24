@@ -4,7 +4,7 @@ import signal
 import multiprocessing
 import threading
 import time
-# import pdb
+import pdb
 import flask
 import sys
 import logging
@@ -147,8 +147,11 @@ class LoomDB(object):
         n_processes=None,
         full_data_dir=None,
         task=None,
-        data_name=None,
         saved_data=None,
+        data_name=None,
+        rotate_back=None,
+        plot_two_way_streets=None,
+        search_radius=None,
         additional_n_steps=0, new_mass_limit=None,
         additional_iterations=0, additional_phases=None,
     ):
@@ -158,10 +161,13 @@ class LoomDB(object):
             cache_dir = get_cache_dir(process_uuid)
             if os.path.exists(cache_dir) is False:
                 os.makedirs(cache_dir)
-            logging_file_name=os.path.join(cache_dir, 'log'),
-        elif task == 'load':
+            logging_file_name=os.path.join(cache_dir, 'log')
+        elif (
+            task == 'load' or
+            task == 'rotate_back' or
+            task == 'plot_two_way_streets'
+        ):
             # Do not create a logging file
-            # when loading a saved data.
             logging_file_name=None
         else:
             raise RuntimeError('Unknown task for loom: {}'.format(task))
@@ -178,18 +184,28 @@ class LoomDB(object):
             logging_queue=logging_queue,
             logging_file_name=logging_file_name,
         )
+        logger = logging.getLogger(logger_name)
 
         result_queue = multiprocessing.Queue()
         self.result_queues[process_uuid] = result_queue
 
-        if task == 'load':
+        if task == 'rotate_back':
+            logger.info('Loading spectral networks to rotate back...')
+        elif task == 'plot_two_way_streets':
+            logger.info('Loading spectral networks to find two-way streets...')
+
+        if (
+            task == 'load' or
+            task == 'rotate_back' or
+            task == 'plot_two_way_streets'
+        ):
             spectral_network_data = SpectralNetworkData(
                 logger_name=logger_name,
             )
             loom_process = multiprocessing.Process(
                 target=spectral_network_data.load,
                 kwargs=dict(
-                    data_dir=get_full_data_dir(data_name, saved_data),
+                    data_dir=full_data_dir,
                     result_queue=result_queue,
                     logging_queue=logging_queue,
                 ),
@@ -225,7 +241,6 @@ class LoomDB(object):
             )
 
         elif task == 'extend':
-            full_data_dir = get_full_data_dir(data_name, saved_data)
             spectral_network_data = SpectralNetworkData(
                 data_dir=full_data_dir,
                 logger_name=logger_name,
@@ -615,7 +630,6 @@ def load(n_processes=None):
     event_source_url = None
     text_area_content = ''
     process_uuid = None
-    #full_data_dir = None
 
     if n_processes is None:
         n_processes_val = DEFAULT_NUM_PROCESSES
@@ -642,99 +656,125 @@ def load(n_processes=None):
 
 
 def progress():
+    loom_config = None
+    full_data_dir = None
     event_source_url = None
     text_area_content = ''
-    process_uuid = None
-    saved_data = None
-    n_processes_val = eval(flask.request.form['n_processes'])
 
-    try:
-        data_name = flask.request.form['data_name']
-    except KeyError:
-        data_name = None
+    loom_process_kwargs = {
+        'n_processes': None,
+        'rotate_back': False,
+        'plot_two_way_streets': False,
+        'search_radius': None,
+        'saved_data': None,
+        'additional_n_steps': 0,
+        'new_mass_limit': None,
+        'additional_iterations': 0,
+        'additional_phases': None
+    }
 
-    if data_name is not None:
-        # Load a saved data and plot it.
-        saved_data = True
+    loom_process_kwargs_string_valued = {
+        'task': None,
+        'process_uuid': None,
+        'data_name': None,
+    }
 
+    for key in loom_process_kwargs.keys():
         try:
-            n_processes = flask.request.args['n_processes']
+            loom_process_kwargs[key] = eval(flask.request.form[key])
+        except (KeyError, SyntaxError):
+            pass
+
+    for key in loom_process_kwargs_string_valued.keys():
+        try:
+            value = flask.request.form[key]
+            if value != '':
+                loom_process_kwargs_string_valued[key] = value
         except KeyError:
-            n_processes = None
+            pass
 
-        process_uuid = str(uuid.uuid4())
+    loom_process_kwargs.update(loom_process_kwargs_string_valued)
+
+    task = loom_process_kwargs['task']
+    if task == 'generate':
+        # Generate a new spectral network.
+        loom_process_kwargs['process_uuid'] = str(uuid.uuid4())
+        logger_name = get_logger_name(loom_process_kwargs['process_uuid'])
+        loom_config = get_loom_config(flask.request.form, logger_name)
+        loom_process_kwargs['saved_data'] = False
     else:
-        additional_params = {
-            'additional_n_steps': 0,
-            'new_mass_limit': None,
-            'additional_iterations': 0,
-            'additional_phases': None
-        }
-
-        for key in additional_params.keys():
-            try:
-                additional_params[key] = eval(
-                    flask.request.form[key]
-                )
-            except (KeyError, SyntaxError):
-                pass
-
         if (
-            additional_params['additional_n_steps'] == 0 and
-            additional_params['additional_iterations'] == 0 and
-            additional_params['new_mass_limit'] is None and
-            additional_params['additional_phases'] is None
+            loom_process_kwargs['process_uuid'] is None and
+            loom_process_kwargs['data_name'] is None
         ):
-            # Generate a new spectral network.
-            saved_data = False
-            process_uuid = str(uuid.uuid4())
-            logger_name = get_logger_name(process_uuid)
-            loom_config = get_loom_config(flask.request.form, logger_name)
-        else:
+            raise RuntimeError(
+                'No data of spectral networks to load.'
+            )
+        full_data_dir = get_full_data_dir(
+            process_uuid=loom_process_kwargs['process_uuid'],
+            data_name=loom_process_kwargs['data_name'],
+            saved_data=loom_process_kwargs['saved_data'],
+        )
+        if task == 'extend':
             # Extend a spectral network.
-            loom_config = None
-            try:
-                process_uuid = flask.request.form['process_uuid']
-                saved_data = eval(flask.request.form['saved_data'])
-                full_data_dir = get_full_data_dir(process_uuid, saved_data)
-            except KeyError:
+            if (
+                loom_process_kwargs['additional_n_steps'] == 0 and
+                loom_process_kwargs['additional_iterations'] == 0 and
+                loom_process_kwargs['new_mass_limit'] is None and
+                loom_process_kwargs['additional_phases'] is None
+            ):
                 raise RuntimeError(
-                    'Need data to extend spectral networks.'
+                    'No additional parameter for '
+                    'the extension of spectral networks.'
                 )
-            process_uuid = str(uuid.uuid4())
+            # An extended spectral network is a new data.
+            loom_process_kwargs['saved_data'] = False
+        elif task == 'load':
+            # Load a saved data and plot it.
+            pass
+        elif task == 'rotate_back' or task == 'plot_two_way_streets':
+            pass
+        else:
+            raise RuntimeError('Unknown task for loom: {}'.format(task))
+
+        loom_process_kwargs['process_uuid'] = str(uuid.uuid4())
 
     app = flask.current_app
     app.loom_db.start_loom_process(
-        process_uuid=process_uuid,
         loom_config=loom_config,
-        n_processes=n_processes_val,
         full_data_dir=full_data_dir,
-        **additional_params
+        **loom_process_kwargs
     )
 
     event_source_url = flask.url_for(
-        'logging_stream', process_uuid=process_uuid,
+        'logging_stream', process_uuid=loom_process_kwargs['process_uuid'],
     )
     text_area_content = (
-        "Start loom, uuid = {}".format(process_uuid)
+        "Start loom, uuid = {}".format(loom_process_kwargs['process_uuid'])
     )
 
     return flask.render_template(
         'progress.html',
-        n_processes=n_processes_val,
-        process_uuid=process_uuid,
+        task=loom_process_kwargs['task'],
+        n_processes=loom_process_kwargs['n_processes'],
+        process_uuid=loom_process_kwargs['process_uuid'],
+        data_name=loom_process_kwargs['data_name'],
+        saved_data=loom_process_kwargs['saved_data'],
+        rotate_back=loom_process_kwargs['rotate_back'],
+        plot_two_way_streets=loom_process_kwargs['plot_two_way_streets'],
+        search_radius=loom_process_kwargs['search_radius'],
         event_source_url=event_source_url,
         text_area_content=text_area_content,
     )
 
 
 def logging_stream(process_uuid):
-if flask.request.headers.get('accept') == 'text/event-stream':
-    app = flask.current_app
-    return flask.Response(
-        app.loom_db.yield_log_message(process_uuid, logging.INFO),
-        mimetype='text/event-stream',
-    )
+    if flask.request.headers.get('accept') == 'text/event-stream':
+        app = flask.current_app
+        return flask.Response(
+            app.loom_db.yield_log_message(process_uuid, logging.INFO),
+            mimetype='text/event-stream',
+        )
 
 
 def save_config():
@@ -774,25 +814,16 @@ def plot():
             search_radius = None
 
         process_uuid = flask.request.form['process_uuid']
-        progress_log = flask.request.form['progress_log']
-        n_processes = flask.request.form['n_processes']
+        data_name = flask.request.form['data_name']
         saved_data = eval(flask.request.form['saved_data'])
-
-#        if rotate_back is True or plot_two_way_streets is True:
-#            full_data_dir = get_full_data_dir(process_uuid, saved_data)
-#
-#            spectral_network_data = SpectralNetworkData(
-#                data_dir=full_data_dir,
-#            )
-#        else:
-#            # Finish loom_process
-#            spectral_network_data = loom_db.get_result(process_uuid)
+        n_processes = flask.request.form['n_processes']
+        progress_log = flask.request.form['progress_log']
         spectral_network_data = loom_db.get_result(process_uuid)
 
     elif flask.request.method == 'GET':
         # Load saved data.
         saved_data = True
-        data_dir = flask.request.args['data']
+        data_name = flask.request.args['data']
         try:
             n_processes = flask.request.args['n_processes']
         except KeyError:
@@ -810,9 +841,11 @@ def plot():
         except KeyError:
             search_radius = None
 
-        process_uuid = data_dir
+        process_uuid = data_name
         progress_log = None
-        full_data_dir = get_full_data_dir(process_uuid, saved_data)
+        full_data_dir = get_full_data_dir(
+            data_name=data_name, saved_data=saved_data,
+        )
         spectral_network_data = SpectralNetworkData(
             data_dir=full_data_dir,
         )
@@ -825,19 +858,20 @@ def plot():
     return render_plot_template(
         spectral_network_data,
         process_uuid=process_uuid,
+        data_name=data_name,
+        saved_data=saved_data,
         progress_log=progress_log,
         n_processes=n_processes,
-        saved_data=saved_data,
         plot_two_way_streets=plot_two_way_streets,
-        search_radius=search_radius
+        search_radius=search_radius,
     )
 
 
 def save_data_to_server():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
-        saved_data = eval(flask.request.form['saved_data'])
         data_name = flask.request.form['data_name']
+        saved_data = eval(flask.request.form['saved_data'])
     else:
         raise RuntimeError
 
@@ -849,7 +883,10 @@ def save_data_to_server():
         )
     else:
         os.makedirs(data_dir_to_save)
-        full_data_dir = get_full_data_dir(process_uuid, saved_data)
+        full_data_dir = get_full_data_dir(
+            process_uuid=process_uuid,
+            saved_data=saved_data,
+        )
         files_to_copy = get_data_file_path_list(full_data_dir)
         for src in files_to_copy:
             shutil.copy(src, data_dir_to_save)
@@ -864,11 +901,16 @@ def save_data_to_server():
 def download_data():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
+        data_name = flask.request.form['data_name']
         saved_data = eval(flask.request.form['saved_data'])
     else:
         raise RuntimeError
 
-    full_data_dir = get_full_data_dir(process_uuid, saved_data)
+    full_data_dir = get_full_data_dir(
+        process_uuid=process_uuid,
+        data_name=data_name,
+        saved_data=saved_data,
+    )
     files_to_zip = get_data_file_path_list(full_data_dir)
 
     data_zip_fp = BytesIO()
@@ -888,6 +930,7 @@ def download_data():
 def download_plot():
     if flask.request.method == 'POST':
         process_uuid = flask.request.form['process_uuid']
+        data_name = flask.request.form['data_name']
         saved_data = eval(flask.request.form['saved_data'])
         plot_two_way_streets = eval(
             flask.request.form['plot_two_way_streets']
@@ -900,7 +943,11 @@ def download_plot():
     else:
         raise RuntimeError
 
-    full_data_dir = get_full_data_dir(process_uuid, saved_data)
+    full_data_dir = get_full_data_dir(
+        process_uuid=process_uuid,
+        data_name=data_name,
+        saved_data=saved_data,
+    )
     spectral_network_data = SpectralNetworkData(data_dir=full_data_dir)
     spectral_network_data.reset_z_rotation()
 
@@ -970,6 +1017,9 @@ def get_application(config_file, logging_level):
     )
     application.add_url_rule(
         '/load', 'load', load, methods=['GET', 'POST'],
+    )
+    application.add_url_rule(
+        '/progress', 'progress', progress, methods=['POST']
     )
     application.add_url_rule(
         '/save_config', 'save_config', save_config, methods=['POST'],
@@ -1060,10 +1110,15 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
 
 
 def render_plot_template(
-    spectral_network_data, process_uuid=None,
-    progress_log=None, n_processes=None,
-    download=False, saved_data=False,
-    plot_two_way_streets=False, search_radius=None,
+    spectral_network_data,
+    process_uuid=None,
+    data_name=None,
+    saved_data=False,
+    n_processes=None,
+    download=False,
+    progress_log=None,
+    plot_two_way_streets=False,
+    search_radius=None,
 ):
     loom_config = spectral_network_data.config
     sw_data = spectral_network_data.sw_data
@@ -1115,7 +1170,6 @@ def render_plot_template(
 
     return flask.render_template(
         'plot.html',
-        process_uuid=process_uuid,
         bokeh_plot_script=bokeh_plot_script,
         div=div,
         progress_log=progress_log,
@@ -1127,10 +1181,12 @@ def render_plot_template(
         advanced_config_options=advanced_config_options,
         initial_phase=initial_phase,
         n_processes=n_processes,
+        process_uuid=process_uuid,
+        data_name=data_name,
         saved_data=saved_data,
         default_search_radius=loom_config['size_of_bp_neighborhood'],
         plot_two_way_streets=str(plot_two_way_streets),
-        search_radius=search_radius,
+        #search_radius=search_radius,
         show_sn_slider=str(show_sn_slider),
     )
 
@@ -1153,13 +1209,32 @@ def get_cache_dir(process_uuid):
     return cache_dir
 
 
-def get_full_data_dir(process_uuid, saved_data):
+#def get_full_data_dir(process_uuid, saved_data):
+#    if saved_data is True:
+#        data_dir = process_uuid
+#        full_data_dir = os.path.join(
+#            get_loom_dir(), 'data', data_dir
+#        )
+#    else:
+#        full_data_dir = get_cache_dir(process_uuid)
+#
+#    return full_data_dir
+
+
+def get_full_data_dir(
+    process_uuid=None,
+    data_name=None,
+    saved_data=None,
+):
     if saved_data is True:
-        data_dir = process_uuid
+        if data_name is None:
+            raise RuntimeError
         full_data_dir = os.path.join(
-            get_loom_dir(), 'data', data_dir
+            get_loom_dir(), 'data', data_name
         )
     else:
+        if process_uuid is None:
+            raise RuntimeError
         full_data_dir = get_cache_dir(process_uuid)
 
     return full_data_dir

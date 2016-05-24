@@ -1,6 +1,7 @@
     <h2>Configuration</h2>
     <p>Please visit <a href="http://github.com/chan-y-park/loom/blob/master/README.md#configuration-page" target="_blank">the how-to page</a> for help.</p>
-    <form action="" class="form-horizontal" id="config_form" method="post">
+    <form action="{{ url_for('progress') }}" class="form-horizontal"
+     id="config_form" method="post">
         <div class="form-group">
             <div class="col-xs-2">
                 <label for="type_radio" class="control-label">
@@ -93,5 +94,6 @@
 {% endfor %}
         </div>
         <script>jQuery('#advanced_config_options').toggle('show');</script>
+        <input type="hidden" name="task" value="generate">
     </form>
 
