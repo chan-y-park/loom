@@ -845,7 +845,7 @@ class SpectralNetwork:
                                 root_branch_point=bp,
                             )
                         except RuntimeError as e:
-                            logger.warning(e)
+                            logger.warning(e.value)
                             logger.warning(
                                 'Finding two-way streets '
                                 'for a spectral network at phase = {} '
