@@ -663,8 +663,8 @@ def progress():
 
     loom_process_kwargs = {
         'n_processes': None,
-        'rotate_back': False,
-        'plot_two_way_streets': False,
+        #'rotate_back': False,
+        #'plot_two_way_streets': False,
         'search_radius': None,
         'saved_data': None,
         'additional_n_steps': 0,
@@ -760,8 +760,8 @@ def progress():
         process_uuid=loom_process_kwargs['process_uuid'],
         data_name=loom_process_kwargs['data_name'],
         saved_data=loom_process_kwargs['saved_data'],
-        rotate_back=loom_process_kwargs['rotate_back'],
-        plot_two_way_streets=loom_process_kwargs['plot_two_way_streets'],
+        #rotate_back=loom_process_kwargs['rotate_back'],
+        #plot_two_way_streets=loom_process_kwargs['plot_two_way_streets'],
         search_radius=loom_process_kwargs['search_radius'],
         event_source_url=event_source_url,
         text_area_content=text_area_content,
@@ -797,21 +797,29 @@ def plot():
     search_radius = None
 
     if flask.request.method == 'POST':
-        try:
-            rotate_back = eval(flask.request.form['rotate_back'])
-        except KeyError:
-            rotate_back = False
+#        try:
+#            rotate_back = eval(flask.request.form['rotate_back'])
+#        except KeyError:
+#            rotate_back = False
+#
+#        try:
+#            plot_two_way_streets = eval(
+#                flask.request.form['plot_two_way_streets']
+#            )
+#            search_radius_str = flask.request.form['search_radius']
+#            if search_radius_str != '':
+#                search_radius = eval(search_radius_str)
+#        except KeyError:
+#            plot_two_way_streets = False
+#            search_radius = None
 
-        try:
-            plot_two_way_streets = eval(
-                flask.request.form['plot_two_way_streets']
-            )
+        task = flask.request.form['task']
+        if task == 'plot_two_way_streets':
             search_radius_str = flask.request.form['search_radius']
             if search_radius_str != '':
                 search_radius = eval(search_radius_str)
-        except KeyError:
-            plot_two_way_streets = False
-            search_radius = None
+            else:
+                search_radius = None
 
         process_uuid = flask.request.form['process_uuid']
         data_name = flask.request.form['data_name']
@@ -829,11 +837,13 @@ def plot():
         except KeyError:
             n_processes = None
         try:
-            plot_two_way_streets = eval(
-                flask.request.args['plot_two_way_streets']
-            )
+#            plot_two_way_streets = eval(
+#                flask.request.args['plot_two_way_streets']
+#            )
+            task = flask.request.args['task']
         except KeyError:
-            plot_two_way_streets = False
+#            plot_two_way_streets = False
+            pass
         try:
             search_radius_str = flask.request.args['search_radius']
             if search_radius_str != '':
@@ -850,10 +860,16 @@ def plot():
             data_dir=full_data_dir,
         )
 
-    if rotate_back is True:
+    if task == 'rotate_back':
         spectral_network_data.rotate_back()
     else:
         spectral_network_data.reset_z_rotation()
+
+    if task == 'plot_two_way_streets':
+        plot_two_way_streets = True
+    else:
+        plot_two_way_streets = False 
+        
 
     return render_plot_template(
         spectral_network_data,
@@ -1138,6 +1154,7 @@ def render_plot_template(
         logger_name=get_logger_name(),
     )
 
+# XXX: Uncomment the following to remove plots with no street.
 #    if plot_two_way_streets is True:
 #        for sn in spectral_network_data.spectral_networks:
 #            if len(sn.streets) == 0:
