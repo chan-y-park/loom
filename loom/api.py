@@ -8,7 +8,7 @@ import subprocess
 import matplotlib
 import mpldatacursor
 # import traceback
-import pdb
+# import pdb
 
 from logging.handlers import RotatingFileHandler
 from matplotlib import pyplot
@@ -45,10 +45,6 @@ class SpectralNetworkData:
         self.data_attributes = ['sw_data', 'spectral_networks']
 
         if config_file_path is not None:
-#            self.config = load_config(
-#                file_path=config_file_path,
-#                logger_name=self.logger_name,
-#            )
             self.config = LoomConfig(
                 file_path=config_file_path,
                 logger_name=self.logger_name,
@@ -629,14 +625,6 @@ def get_logging_handler(level, handler_class, buffer_object):
 # XXX: save_config() will be deprecated.
 # Use LoomConfig.__init__().
 def load_config(file_path=None, logger_name='loom',):
-#    logger = logging.getLogger(logger_name)
-#    if file_path is None:
-#        return None
-#    config = LoomConfig(logger_name=logger_name)
-#    logger.info('Loading configuration from {}...'.format(file_path))
-#    with open(file_path, 'r') as fp:
-#        config.read(fp)
-#    logger.info('Finished loading configuration from {}.'.format(file_path))
     config = LoomConfig(file_path=file_path, logger_name=logger_name)
 
     return config
@@ -645,12 +633,6 @@ def load_config(file_path=None, logger_name='loom',):
 # XXX: save_config() will be deprecated.
 # Use LoomConfig.save().
 def save_config(config, file_path=None, logger_name='loom',):
-#    logger = logging.getLogger(logger_name)
-#    if file_path is None:
-#        return None
-#    logger.info('Saving configuration to {}.'.format(file_path))
-#    config.save(file_path)
-#    logger.info('Finished saving configuration to {}.'.format(file_path))
     config.save(file_path)
 
     return None

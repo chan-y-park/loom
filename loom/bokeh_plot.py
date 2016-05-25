@@ -26,7 +26,7 @@ def get_spectral_network_bokeh_plot(
     marked_points=[],
     without_errors=False,
 ):
-    logger = logging.getLogger(logger_name)
+    # logger = logging.getLogger(logger_name)
 
     if without_errors is True:
         spectral_networks = [

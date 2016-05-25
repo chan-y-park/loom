@@ -4,7 +4,6 @@ import signal
 import multiprocessing
 import threading
 import time
-import pdb
 import flask
 import sys
 import logging
@@ -12,6 +11,7 @@ import uuid
 import zipfile
 import glob
 import shutil
+# import pdb
 
 from cStringIO import StringIO
 from io import BytesIO
@@ -22,7 +22,6 @@ from api import (
     get_loom_dir,
     get_logging_handler,
     set_logging,
-    load_config,
 )
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
@@ -161,14 +160,14 @@ class LoomDB(object):
             cache_dir = get_cache_dir(process_uuid)
             if os.path.exists(cache_dir) is False:
                 os.makedirs(cache_dir)
-            logging_file_name=os.path.join(cache_dir, 'log')
+            logging_file_name = os.path.join(cache_dir, 'log')
         elif (
             task == 'load' or
             task == 'rotate_back' or
             task == 'plot_two_way_streets'
         ):
             # Do not create a logging file
-            logging_file_name=None
+            logging_file_name = None
         else:
             raise RuntimeError('Unknown task for loom: {}'.format(task))
 
@@ -511,7 +510,6 @@ def config(n_processes=None):
     event_source_url = None
     text_area_content = ''
     process_uuid = None
-    full_data_dir = None
 
     if flask.request.method == 'GET':
         # Load the default configuration.
@@ -557,60 +555,6 @@ def config(n_processes=None):
                 file_path=config_file_path,
                 logger_name=get_logger_name(),
             )
-#        else:
-#            # Generate/Extend spectral networks.
-#
-#            additional_params = {
-#                'additional_n_steps': 0,
-#                'new_mass_limit': None,
-#                'additional_iterations': 0,
-#                'additional_phases': None
-#            }
-#
-#            for key in additional_params.keys():
-#                try:
-#                    additional_params[key] = eval(
-#                        flask.request.form[key]
-#                    )
-#                except (KeyError, SyntaxError):
-#                    pass
-#
-#            logger_name = get_logger_name(process_uuid)
-#
-#            if (
-#                additional_params['additional_n_steps'] == 0 and
-#                additional_params['additional_iterations'] == 0 and
-#                additional_params['new_mass_limit'] is None and
-#                additional_params['additional_phases'] is None
-#            ):
-#                loom_config = get_loom_config(flask.request.form, logger_name)
-#            else:
-#                loom_config = None
-#                try:
-#                    process_uuid = flask.request.form['process_uuid']
-#                    saved_data = eval(flask.request.form['saved_data'])
-#                    full_data_dir = get_full_data_dir(process_uuid, saved_data)
-#                except KeyError:
-#                    raise RuntimeError(
-#                        'Need data to extend spectral networks.'
-#                    )
-#
-#            process_uuid = str(uuid.uuid4())
-#
-#            app = flask.current_app
-#            app.loom_db.start_loom_process(
-#                process_uuid=process_uuid,
-#                loom_config=loom_config,
-#                n_processes=n_processes_val,
-#                full_data_dir=full_data_dir,
-#                **additional_params
-#            )
-#            event_source_url = flask.url_for(
-#                'logging_stream', process_uuid=process_uuid,
-#            )
-#            text_area_content = (
-#                "Start loom, uuid = {}".format(process_uuid)
-#            )
 
     return flask.render_template(
         'config.html',
@@ -626,11 +570,6 @@ def config(n_processes=None):
 
 def load(n_processes=None):
     # XXX: n_processes is a string.
-    loom_config = None
-    event_source_url = None
-    text_area_content = ''
-    process_uuid = None
-
     if n_processes is None:
         n_processes_val = DEFAULT_NUM_PROCESSES
     else:
@@ -663,8 +602,6 @@ def progress():
 
     loom_process_kwargs = {
         'n_processes': None,
-        #'rotate_back': False,
-        #'plot_two_way_streets': False,
         'search_radius': None,
         'saved_data': None,
         'additional_n_steps': 0,
@@ -760,8 +697,6 @@ def progress():
         process_uuid=loom_process_kwargs['process_uuid'],
         data_name=loom_process_kwargs['data_name'],
         saved_data=loom_process_kwargs['saved_data'],
-        #rotate_back=loom_process_kwargs['rotate_back'],
-        #plot_two_way_streets=loom_process_kwargs['plot_two_way_streets'],
         search_radius=loom_process_kwargs['search_radius'],
         event_source_url=event_source_url,
         text_area_content=text_area_content,
@@ -791,28 +726,11 @@ def save_config():
 
 def plot():
     loom_db = flask.current_app.loom_db
-    rotate_back = None
     plot_two_way_streets = None
     saved_data = None
     search_radius = None
 
     if flask.request.method == 'POST':
-#        try:
-#            rotate_back = eval(flask.request.form['rotate_back'])
-#        except KeyError:
-#            rotate_back = False
-#
-#        try:
-#            plot_two_way_streets = eval(
-#                flask.request.form['plot_two_way_streets']
-#            )
-#            search_radius_str = flask.request.form['search_radius']
-#            if search_radius_str != '':
-#                search_radius = eval(search_radius_str)
-#        except KeyError:
-#            plot_two_way_streets = False
-#            search_radius = None
-
         task = flask.request.form['task']
         if task == 'plot_two_way_streets':
             search_radius_str = flask.request.form['search_radius']
@@ -837,12 +755,8 @@ def plot():
         except KeyError:
             n_processes = None
         try:
-#            plot_two_way_streets = eval(
-#                flask.request.args['plot_two_way_streets']
-#            )
             task = flask.request.args['task']
         except KeyError:
-#            plot_two_way_streets = False
             pass
         try:
             search_radius_str = flask.request.args['search_radius']
@@ -868,9 +782,8 @@ def plot():
     if task == 'plot_two_way_streets':
         plot_two_way_streets = True
     else:
-        plot_two_way_streets = False 
+        plot_two_way_streets = False
         
-
     return render_plot_template(
         spectral_network_data,
         process_uuid=process_uuid,
@@ -1091,7 +1004,6 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
         get_loom_dir(),
         'config/default.ini',
     )
-#    loom_config = load_config(default_config_file, logger_name=logger_name)
     loom_config = LoomConfig(
         file_path=default_config_file,
         logger_name=logger_name,
@@ -1203,7 +1115,6 @@ def render_plot_template(
         saved_data=saved_data,
         default_search_radius=loom_config['size_of_bp_neighborhood'],
         plot_two_way_streets=str(plot_two_way_streets),
-        #search_radius=search_radius,
         show_sn_slider=str(show_sn_slider),
     )
 
@@ -1224,18 +1135,6 @@ def get_cache_dir(process_uuid):
         process_uuid,
     )
     return cache_dir
-
-
-#def get_full_data_dir(process_uuid, saved_data):
-#    if saved_data is True:
-#        data_dir = process_uuid
-#        full_data_dir = os.path.join(
-#            get_loom_dir(), 'data', data_dir
-#        )
-#    else:
-#        full_data_dir = get_cache_dir(process_uuid)
-#
-#    return full_data_dir
 
 
 def get_full_data_dir(

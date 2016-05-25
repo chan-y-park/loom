@@ -4,9 +4,9 @@ import numpy
 import sympy
 import ctypes
 import logging
-import pdb
 import itertools
 import json
+# import pdb
 
 from cmath import exp
 from scipy import integrate
@@ -34,7 +34,7 @@ class Street(SWall):
         logger_name='loom',
     ):
         super(Street, self).__init__(logger_name=logger_name)
-        logger = logging.getLogger(self.logger_name)
+        # logger = logging.getLogger(self.logger_name)
 
         if json_data is not None:
             self.set_from_json_data(json_data)
