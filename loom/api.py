@@ -145,9 +145,7 @@ class SpectralNetworkData:
         version_file_path = os.path.join(data_dir, 'version')
         save_version(version_file_path)
 
-        TODO: correct the following routine. 
-        The attribute self.config is not loaded
-        Save configuration to a file.
+        # Save configuration to a file.
         config_file_path = os.path.join(data_dir, 'config.ini')
         save_config(
             self.config, file_path=config_file_path,
