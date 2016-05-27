@@ -1115,6 +1115,7 @@ def render_plot_template(
         saved_data=saved_data,
         default_search_radius=loom_config['size_of_bp_neighborhood'],
         plot_two_way_streets=str(plot_two_way_streets),
+        search_radius=search_radius,
         show_sn_slider=str(show_sn_slider),
     )
 
