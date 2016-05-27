@@ -39,9 +39,10 @@ PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
 STAT_LOGGER_NAME = 'stat_of_' + WEB_APP_NAME
 DEFAULT_NUM_PROCESSES = 4
-DB_CLEANUP_CYCLE_SECS = 3600
+DB_CLEANUP_CYCLE_SECS = (24 * 3600)
 LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
 LOOM_CACHE_DIR = 'cache'
+RESULT_QUEUES_MAXSIZE = 10
 
 # Array of config options.
 # Entries that will be placed in the same row
@@ -72,6 +73,19 @@ advanced_config_options = [
 ]
 
 
+class LoomDBQueue(multiprocessing.Queue):
+    def __init__(self):
+        super(LoomDBQueue, self).__init__()
+        self.timestamp = None
+
+    def put(self, obj, block=True, timeout=None):
+        super(LoomDBQueue, self).put(obj, block, timeout)
+        self.timestamp = time.time()
+
+    def put_nowait(self, obj):
+        self.put(obj, block=False)
+
+
 # TODO: kill an orphaned process gracefully.
 class LoomDB(object):
     """
@@ -81,6 +95,8 @@ class LoomDB(object):
         self.logging_queues = {}
         self.result_queues = {}
         self.loom_processes = {}
+        self.timestamps = {}
+        self.result_queues_maxsize = RESULT_QUEUES_MAXSIZE
         self.logging_level = logging_level
 
         signal.signal(signal.SIGINT, self.loom_db_stop_signal_handler)
@@ -116,6 +132,8 @@ class LoomDB(object):
         # When self.db_manager_stop event is set,
         # break the while-loop and finish all the processes.
         while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
+            # TODO: check the timestamp of each result queue,
+            # and remove old queues.
             pass
 
         # Received a stop event; finish all the processes.
@@ -139,12 +157,49 @@ class LoomDB(object):
                 pass
         logger.info('LoomDB manager thread is finished.')
 
+    def get_result_queue(self, process_uuid):
+        result_queues = self.result_queues
+        # NOTE: To keep the size of result_queues precisely,
+        # need to wrap the following with a lock.
+        # Here we don't use a lock because result_queues_maxsize
+        # is just a guideline.
+        try:
+            # Try recycling the previous result queue.
+            result_queue = result_queues[process_uuid]
+        except KeyError:
+            # If there are more queues than the maximum size,
+            # remove the oldest queue.
+            if len(result_queues) > self.result_queues_maxsize:
+                oldest_process_uuid = min(
+                    result_queues.keys(), key=result_queues.get
+                )
+                try:
+                    # Flush the old result queue.
+                    old_result_queue = result_queues[oldest_process_uuid]
+                    while old_result_queue.empty() is False:
+                        old_result_queue.get_nowait()
+                    # Remove the old result queue
+                    del result_queues[oldest_process_uuid]
+                except KeyError:
+                    logger.warning(
+                        "Removing result queue {} failed: "
+                        "no such a queue exists."
+                        .format(oldest_process_uuid)
+                    ) 
+                    pass
+            # Create a new result queue.
+            result_queue = LoomDBQueue()
+            result_queues[process_uuid] = result_queue
+
+        return result_queue
+
     def start_loom_process(
         self,
-        process_uuid=None,
         loom_config=None,
-        n_processes=None,
+        spectral_network_data=None,
         full_data_dir=None,
+        process_uuid=None,
+        n_processes=None,
         task=None,
         saved_data=None,
         data_name=None,
@@ -185,8 +240,8 @@ class LoomDB(object):
         )
         logger = logging.getLogger(logger_name)
 
-        result_queue = multiprocessing.Queue()
-        self.result_queues[process_uuid] = result_queue
+        #result_queue = multiprocessing.Queue()
+        #self.result_queues[process_uuid] = result_queue
 
         if task == 'rotate_back':
             logger.info('Loading spectral networks to rotate back...')
@@ -210,12 +265,6 @@ class LoomDB(object):
                 ),
             )
 
-#        elif (
-#            additional_n_steps == 0 and
-#            additional_iterations == 0 and
-#            new_mass_limit is None and
-#            additional_phases is None
-#        ):
         elif task == 'generate':
             spectral_network_data = SpectralNetworkData(
                 config=loom_config,
@@ -240,10 +289,11 @@ class LoomDB(object):
             )
 
         elif task == 'extend':
-            spectral_network_data = SpectralNetworkData(
-                data_dir=full_data_dir,
-                logger_name=logger_name,
-            )
+            if spectral_network_data is None:
+                spectral_network_data = SpectralNetworkData(
+                    data_dir=full_data_dir,
+                    logger_name=logger_name,
+                )
             loom_process = multiprocessing.Process(
                 target=spectral_network_data.extend,
                 kwargs=dict(
@@ -370,7 +420,8 @@ class LoomDB(object):
 
     def finish_loom_process(
         self, process_uuid,
-        join_timeout=LOOM_PROCESS_JOIN_TIMEOUT_SECS
+        #join_timeout=LOOM_PROCESS_JOIN_TIMEOUT_SECS
+        join_timeout=0,
     ):
         logger_name = get_logger_name(process_uuid)
         logger = logging.getLogger(logger_name)
@@ -430,22 +481,22 @@ class LoomDB(object):
             )
             pass
 
-        try:
-            # Flush the result queue.
-            result_queue = self.result_queues[process_uuid]
-            while result_queue.empty() is True:
-                try:
-                    result_queue.get_nowait()
-                except QueueEmpty:
-                    break
-            # Remove the result queue.
-            del self.result_queues[process_uuid]
-        except KeyError:
-            web_loom_logger.warning(
-                "Removing result queue {} failed: no such a queue exists."
-                .format(process_uuid)
-            )
-            pass
+#        try:
+#            # Flush the result queue.
+#            result_queue = self.result_queues[process_uuid]
+#            while result_queue.empty() is True:
+#                try:
+#                    result_queue.get_nowait()
+#                except QueueEmpty:
+#                    break
+#            # Remove the result queue.
+#            del self.result_queues[process_uuid]
+#        except KeyError:
+#            web_loom_logger.warning(
+#                "Removing result queue {} failed: no such a queue exists."
+#                .format(process_uuid)
+#            )
+#            pass
 
 
 class WebLoomApplication(flask.Flask):
@@ -595,7 +646,11 @@ def load(n_processes=None):
 
 
 def progress():
+    loom_db = flask.current_app.loom_db
+
     loom_config = None
+    process_uuid = None
+    spectral_network_data = None
     full_data_dir = None
     event_source_url = None
     text_area_content = ''
@@ -640,18 +695,24 @@ def progress():
         loom_config = get_loom_config(flask.request.form, logger_name)
         loom_process_kwargs['saved_data'] = False
     else:
-        if (
-            loom_process_kwargs['process_uuid'] is None and
-            loom_process_kwargs['data_name'] is None
-        ):
+        process_uuid = loom_process_kwargs['process_uuid']
+        if process_uuid is not None:
+            try:
+                result_queue = result_queues[process_uuid]
+                spectral_network_data = result_queue.get()
+            except KeyError:
+                pass
+        elif loom_process_kwargs['data_name'] is None:
             raise RuntimeError(
                 'No data of spectral networks to load.'
             )
-        full_data_dir = get_full_data_dir(
-            process_uuid=loom_process_kwargs['process_uuid'],
-            data_name=loom_process_kwargs['data_name'],
-            saved_data=loom_process_kwargs['saved_data'],
-        )
+        else:
+            full_data_dir = get_full_data_dir(
+                process_uuid=loom_process_kwargs['process_uuid'],
+                data_name=loom_process_kwargs['data_name'],
+                saved_data=loom_process_kwargs['saved_data'],
+            )
+
         if task == 'extend':
             # Extend a spectral network.
             if (
@@ -670,15 +731,28 @@ def progress():
             # Load a saved data and plot it.
             pass
         elif task == 'rotate_back' or task == 'plot_two_way_streets':
-            pass
+            if spectral_network_data is not None:
+                # No need to load the data from files.
+                # Put back the data in the queue
+                # and go directly to the plot page.
+                if process_uuid is None:
+                    raise RuntimeError
+                loom_db.result_queues[process_uuid].put(spectral_network_data)
+                flask.redirect(
+                    flask.url_for(
+                        'plot',
+                        **loom_process_kwargs,
+                    )
+                )
         else:
             raise RuntimeError('Unknown task for loom: {}'.format(task))
 
+        # Create a new process UUID for the given task.
         loom_process_kwargs['process_uuid'] = str(uuid.uuid4())
 
-    app = flask.current_app
-    app.loom_db.start_loom_process(
+    loom_db.start_loom_process(
         loom_config=loom_config,
+        spectral_network_data=spectral_network_data,
         full_data_dir=full_data_dir,
         **loom_process_kwargs
     )
@@ -748,16 +822,22 @@ def plot():
 
     elif flask.request.method == 'GET':
         # Load saved data.
-        saved_data = True
-        data_name = flask.request.args['data']
+        try:
+            saved_data = flask.request.args['saved_data']
+        except KeyError:
+            saved_data = True
+
+
         try:
             n_processes = flask.request.args['n_processes']
         except KeyError:
             n_processes = None
+
         try:
             task = flask.request.args['task']
         except KeyError:
             pass
+
         try:
             search_radius_str = flask.request.args['search_radius']
             if search_radius_str != '':
@@ -765,14 +845,24 @@ def plot():
         except KeyError:
             search_radius = None
 
-        process_uuid = data_name
+        try:
+            process_uuid = flask.request.args['process_uuid']
+            result_queue = loom_db.result_queues[process_uuid]
+            spectral_network_data = result_queue.get()
+        except KeyError:
+            try:
+                data_name = flask.request.args['data']
+            except KeyError:
+                raise RuntimeError('No data to plot.')
+            process_uuid = str(uuid.uuid4())
+            full_data_dir = get_full_data_dir(
+                data_name=data_name, saved_data=saved_data,
+            )
+            spectral_network_data = SpectralNetworkData(
+                data_dir=full_data_dir,
+            )
+
         progress_log = None
-        full_data_dir = get_full_data_dir(
-            data_name=data_name, saved_data=saved_data,
-        )
-        spectral_network_data = SpectralNetworkData(
-            data_dir=full_data_dir,
-        )
 
     if task == 'rotate_back':
         spectral_network_data.rotate_back()
@@ -783,6 +873,9 @@ def plot():
         plot_two_way_streets = True
     else:
         plot_two_way_streets = False
+
+    # Put back the data in the queue for a future use.
+    loom_db.result_queues[process_uuid].put(spectral_network_data)
         
     return render_plot_template(
         spectral_network_data,
