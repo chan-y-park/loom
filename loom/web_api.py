@@ -96,10 +96,12 @@ class LoomDB(object):
         # Wait for DB_CLEANUP_CYCLE_SECS and do clean-ups.
         # When self.db_manager_stop event is set,
         # break the while-loop and finish all the processes.
+        result_queues = self.result_queues
         while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
-            # TODO: check the timestamp of each result queue,
-            # and remove old queues.
-            pass
+            for process_uuid, result_queue in result_queues.iteritems():
+                age = time.time() - result_queue.timestamp
+                if age > RESULT_QUEUE_LIFETIME_SECS:
+                    self.delete_queue(result_queues, process_uuid)
 
         # Received a stop event; finish all the processes.
         process_uuids = self.loom_processes.keys()
@@ -207,7 +209,7 @@ class LoomDB(object):
 
         #result_queue = multiprocessing.Queue()
         #self.result_queues[process_uuid] = result_queue
-        result_queue = self.get_result_queue(process_uuid)
+        result_queue = self.get_result_queue(process_uuid, create=True)
 
         if task == 'rotate_back':
             logger.info('Loading spectral networks to rotate back...')

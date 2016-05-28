@@ -417,7 +417,10 @@ def plot():
                 process_uuid, create=False,
             )
             if result_queue is None:
-                raise RuntimeError
+                raise RuntimeError(
+                    'There is no result queue for process {}.'
+                    .format(process_uuid)
+                )
             spectral_network_data = result_queue.get()
         else:
             kwargs['process_uuid'] = str(uuid.uuid4())
@@ -440,7 +443,13 @@ def plot():
         plot_two_way_streets = False
 
     # Put back the data in the queue for a future use.
-    loom_db.result_queues[process_uuid].put(spectral_network_data)
+    result_queue = loom_db.get_result_queue(process_uuid, create=False)
+    if result_queue is None:
+        raise RuntimeError(
+            'There is no result queue for process {}.'
+            .format(process_uuid)
+        )
+    result_queue.put(spectral_network_data)
 
     return render_plot_template(
         spectral_network_data,
