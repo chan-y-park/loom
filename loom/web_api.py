@@ -110,10 +110,20 @@ class LoomDB(object):
         # break the while-loop and finish all the processes.
         result_queues = self.result_queues
         while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
+            print "db_manager()"
+            to_delete = []
             for process_uuid, result_queue in result_queues.iteritems():
                 age = time.time() - result_queue.timestamp
+                print process_uuid, age 
                 if age > RESULT_QUEUE_LIFETIME_SECS:
-                    self.delete_queue(result_queues, process_uuid)
+                    #logger.info(
+                    print(
+                        'Deleting an old queue {}...'
+                        .format(process_uuid)
+                    )
+                    to_delete.append(process_uuid)
+            for process_uuid in to_delete:
+                self.delete_queue(result_queues, process_uuid)
 
         # Received a stop event; finish all the processes.
         process_uuids = self.loom_processes.keys()
@@ -143,8 +153,8 @@ class LoomDB(object):
             )
 
     def get_result_queue(self, process_uuid, create=True):
-        # logger_name = get_logger_name()
-        # logger = logging.getLogger(logger_name)
+        logger_name = get_logger_name()
+        logger = logging.getLogger(logger_name)
         result_queues = self.result_queues
 
         # NOTE: To keep the size of result_queues precisely,
@@ -164,6 +174,10 @@ class LoomDB(object):
             if (maxsize > 0 and len(result_queues) >= maxsize):
                 oldest_process_uuid = min(
                     result_queues.keys(), key=result_queues.get
+                )
+                logger.info(
+                    'Deleting the oldest result_queue {}...'
+                    .format(oldest_process_uuid)
                 )
                 self.delete_queue(self.result_queues, oldest_process_uuid)
 
