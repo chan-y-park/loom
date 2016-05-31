@@ -190,14 +190,16 @@ def get_spectral_network_bokeh_plot(
                 )
                 data_entry.append(empty_data)
             else:
-                # The first data contains all the soliton trees
-                # of the two-way streets in a spectral network.
                 for tree in soliton_trees:
                     tree_data = get_s_wall_plot_data(
                         tree.streets, sw_data, logger_name,
                         spectral_networks[i].phase,
                     )
-                    if len(data_entry) > 0:
+                    # The first data contains all the soliton trees
+                    # of the two-way streets in a spectral network.
+                    if len(data_entry) == 0:
+                        data_entry.append(tree_data)
+                    else:
                         for key in tree_data.keys():
                             data_entry[0][key] += tree_data[key]
                     data_entry.append(tree_data)
