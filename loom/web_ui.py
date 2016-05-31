@@ -7,7 +7,7 @@ import uuid
 import zipfile
 import glob
 import shutil
-# import pdb
+import pdb
 
 from io import BytesIO
 from cmath import pi
@@ -242,8 +242,8 @@ def progress():
 
     # Save the previous process_uuid to load the data.
     prev_process_uuid = kwargs['process_uuid']
-    data_name = kwargs['data_name'],
-    saved_data = kwargs['saved_data'],
+    data_name = kwargs['data_name']
+    saved_data = kwargs['saved_data']
     task = kwargs['task']
 
     # Create a new process UUID for the given task.
@@ -263,7 +263,7 @@ def progress():
                 if task == 'rotate_back' or task == 'plot_two_way_streets':
                     # No need to load the data from files.
                     # Go directly to the plot page.
-                    flask.redirect(
+                    return flask.redirect(
                         flask.url_for(
                             'plot',
                             **kwargs
@@ -378,6 +378,7 @@ def plot():
         set_kwargs_from_request(
             kwargs, kwargs_string_valued, flask.request.form,
         )
+        process_uuid = kwargs['process_uuid']
         task = flask.request.form['task']
 #        if task == 'plot_two_way_streets':
 #            search_radius_str = flask.request.form['search_radius']
@@ -412,7 +413,7 @@ def plot():
             pass
 
         process_uuid = kwargs['process_uuid']
-        if legacy is False and process_uuid is not None
+        if legacy is False and process_uuid is not None:
             result_queue = loom_db.get_result_queue(
                 process_uuid, create=False,
             )

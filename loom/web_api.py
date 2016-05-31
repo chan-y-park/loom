@@ -6,6 +6,7 @@ import time
 import os
 import sys
 import glob
+import pdb
 
 import flask
 
@@ -38,17 +39,26 @@ RESULT_QUEUE_LIFETIME_SECS = (24 * 3600)
 RESULT_QUEUES_MAXSIZE = 10
 
 
-class LoomDBQueue(multiprocessing.Queue):
+class LoomDBQueue(object):
     def __init__(self):
-        super(LoomDBQueue, self).__init__()
+        self.queue = multiprocessing.Queue()
         self.timestamp = None
 
     def put(self, obj, block=True, timeout=None):
-        super(LoomDBQueue, self).put(obj, block, timeout)
+        self.queue.put(obj, block, timeout)
         self.timestamp = time.time()
 
     def put_nowait(self, obj):
-        self.put(obj, block=False)
+        self.queue.put(obj, block=False)
+
+    def get(self):
+        return self.queue.get()
+
+    def get_nowait(self):
+        return self.queue.get_nowait()
+
+    def empty(self):
+        return self.queue.empty()
 
 
 # TODO: kill an orphaned process gracefully.
@@ -262,6 +272,10 @@ class LoomDB(object):
                     data_dir=full_data_dir,
                     logger_name=logger_name,
                 )
+            else:
+                spectral_network_data.logger_name = logger_name
+                for sn in spectral_network_data.spectral_networks:
+                    sn.logger_name = logger_name
             loom_process = multiprocessing.Process(
                 target=spectral_network_data.extend,
                 kwargs=dict(
