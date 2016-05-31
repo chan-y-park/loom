@@ -412,8 +412,28 @@ def plot():
         except KeyError:
             pass
 
-        process_uuid = kwargs['process_uuid']
-        if legacy is False and process_uuid is not None:
+        try:
+            process_uuid = kwargs['process_uuid']
+        except KeyError:
+            pass
+
+        if legacy is True:
+            kwargs['process_uuid'] = str(uuid.uuid4())
+            process_uuid = kwargs['process_uuid']
+            result_queue = loom_db.get_result_queue(process_uuid, create=True)
+            full_data_dir = get_full_data_dir(
+                data_name=kwargs['data_name'],
+                saved_data=kwargs['saved_data'],
+            )
+            spectral_network_data = SpectralNetworkData(
+                data_dir=full_data_dir,
+            )
+
+        else:
+            if process_uuid is None:
+                raise RuntimeError(
+                    'Need process_uuid to get the data to plot.'
+                )
             result_queue = loom_db.get_result_queue(
                 process_uuid, create=False,
             )
@@ -423,15 +443,6 @@ def plot():
                     .format(process_uuid)
                 )
             spectral_network_data = result_queue.get()
-        else:
-            kwargs['process_uuid'] = str(uuid.uuid4())
-            full_data_dir = get_full_data_dir(
-                data_name=kwargs['data_name'],
-                saved_data=kwargs['saved_data'],
-            )
-            spectral_network_data = SpectralNetworkData(
-                data_dir=full_data_dir,
-            )
 
     if task == 'rotate_back':
         spectral_network_data.rotate_back()

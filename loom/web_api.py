@@ -6,7 +6,7 @@ import time
 import os
 import sys
 import glob
-import pdb
+# import pdb
 
 import flask
 
@@ -36,7 +36,9 @@ DEFAULT_NUM_PROCESSES = 4
 LOOM_CACHE_DIR = 'cache'
 DB_CLEANUP_CYCLE_SECS = 3600
 RESULT_QUEUE_LIFETIME_SECS = (24 * 3600)
-RESULT_QUEUES_MAXSIZE = 10
+# Set RESULT_QUEUES_MAXSIZE > 0 to set the maximum number of queues.
+RESULT_QUEUES_MAXSIZE = 0
+#RESULT_QUEUES_MAXSIZE = 10
 
 
 class LoomDBQueue(object):
@@ -158,7 +160,8 @@ class LoomDB(object):
 
             # If there are more queues than the maximum size,
             # remove the oldest queue.
-            if len(result_queues) > self.result_queues_maxsize:
+            maxsize = self.result_queues_maxsize
+            if (maxsize > 0 and len(result_queues) >= maxsize):
                 oldest_process_uuid = min(
                     result_queues.keys(), key=result_queues.get
                 )
@@ -217,8 +220,6 @@ class LoomDB(object):
         )
         logger = logging.getLogger(logger_name)
 
-        #result_queue = multiprocessing.Queue()
-        #self.result_queues[process_uuid] = result_queue
         result_queue = self.get_result_queue(process_uuid, create=True)
 
         if task == 'rotate_back':
