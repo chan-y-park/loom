@@ -380,18 +380,6 @@ def plot():
         )
         process_uuid = kwargs['process_uuid']
         task = flask.request.form['task']
-#        if task == 'plot_two_way_streets':
-#            search_radius_str = flask.request.form['search_radius']
-#            if search_radius_str != '':
-#                search_radius = eval(search_radius_str)
-#            else:
-#                search_radius = None
-
-#        process_uuid = flask.request.form['process_uuid']
-#        data_name = flask.request.form['data_name']
-#        saved_data = eval(flask.request.form['saved_data'])
-#        n_processes = flask.request.form['n_processes']
-#        progress_log = flask.request.form['progress_log']
         spectral_network_data = loom_db.get_result(process_uuid)
 
     elif flask.request.method == 'GET':
@@ -537,27 +525,52 @@ def download_data():
 
 
 def download_plot():
+    loom_db = flask.current_app.loom_db
+
     if flask.request.method == 'POST':
-        process_uuid = flask.request.form['process_uuid']
-        data_name = flask.request.form['data_name']
-        saved_data = eval(flask.request.form['saved_data'])
-        plot_two_way_streets = eval(
-            flask.request.form['plot_two_way_streets']
+        kwargs = {
+            'saved_data': None,
+            'n_processes': None,
+            'search_radius': None,
+            'plot_two_way_streets': None
+        }
+        kwargs_string_valued = {
+            'process_uuid': None,
+            'data_name': None,
+            'progress_log': None
+        }
+        set_kwargs_from_request(
+            kwargs, kwargs_string_valued, flask.request.form,
         )
-        search_radius_str = flask.request.form['search_radius']
-        if search_radius_str != '':
-            search_radius = eval(search_radius_str)
-        else:
-            search_radius = None
+        #process_uuid = flask.request.form['process_uuid']
+        #data_name = flask.request.form['data_name']
+        #saved_data = eval(flask.request.form['saved_data'])
+#        plot_two_way_streets = eval(
+#            flask.request.form['plot_two_way_streets']
+#        )
+#        search_radius_str = flask.request.form['search_radius']
+#        if search_radius_str != '':
+#            search_radius = eval(search_radius_str)
+#        else:
+#            search_radius = None
     else:
         raise RuntimeError
 
-    full_data_dir = get_full_data_dir(
-        process_uuid=process_uuid,
-        data_name=data_name,
-        saved_data=saved_data,
+    process_uuid = kwargs['process_uuid']
+    data_name = kwargs['data_name']
+    saved_data = kwargs['saved_data']
+    result_queue = loom_db.get_result_queue(
+        process_uuid, create=False,
     )
-    spectral_network_data = SpectralNetworkData(data_dir=full_data_dir)
+    if result_queue is not None:
+        spectral_network_data = result_queue.get()
+    else:
+        full_data_dir = get_full_data_dir(
+            process_uuid=process_uuid,
+            data_name=data_name,
+            saved_data=saved_data,
+        )
+        spectral_network_data = SpectralNetworkData(data_dir=full_data_dir)
     spectral_network_data.reset_z_rotation()
 
     plot_html_zip_fp = BytesIO()
@@ -570,11 +583,12 @@ def download_plot():
             zip_info,
             render_plot_template(
                 spectral_network_data,
-                process_uuid=process_uuid,
-                saved_data=saved_data,
+                #process_uuid=process_uuid,
+                #saved_data=saved_data,
                 download=True,
-                plot_two_way_streets=plot_two_way_streets,
-                search_radius=search_radius
+                **kwargs
+                #plot_two_way_streets=plot_two_way_streets,
+                #search_radius=search_radius
             ),
         )
     plot_html_zip_fp.seek(0)
