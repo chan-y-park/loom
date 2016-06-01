@@ -12,12 +12,14 @@ import mpldatacursor
 
 from logging.handlers import RotatingFileHandler
 from matplotlib import pyplot
+from sympy import oo
 
 from logutils_queue import QueueHandler
 from config import LoomConfig
 from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
+# TODO: plotting.py will be deprecated; use plot_ui.py
 from plotting import NetworkPlot, NetworkPlotTk
 from misc import get_phases_from_dict
 from misc import get_phase_dict
@@ -483,7 +485,13 @@ class SpectralNetworkData:
         bc_r = self.sw_data.branch_cut_rotation
         self.set_z_rotation(1/bc_r)
 
-    def plot_s_walls(self, walls, plot_range=None, plot_data_points=False,):
+    def plot_s_walls(
+        self,
+        walls,
+        plot_range=None,
+        plot_data_points=False,
+        file_path=None,
+    ):
         """
         Plot walls on a complex plane for debugging purpose.
         """
@@ -493,6 +501,8 @@ class SpectralNetworkData:
         sw_data = self.sw_data
 
         for pp in (sw_data.regular_punctures + sw_data.irregular_punctures):
+            if pp.z == oo:
+                continue
             pyplot.plot(
                 pp.z.real, pp.z.imag, 'o',
                 markeredgewidth=2, markersize=8,
@@ -516,18 +526,22 @@ class SpectralNetworkData:
                 pyplot.plot(xs, ys, 'o', color='k', markersize=4)
 
         if plot_range is None:
-            pyplot.autoscale(enable=True, axis='both', tight=None)
+            pyplot.autoscale(enable=True, axis='both', tight=True)
+            pyplot.margins(0.1)
         else:
             [[x_min, x_max], [y_min, y_max]] = plot_range
             pyplot.xlim(x_min, x_max)
             pyplot.ylim(y_min, y_max)
 
-        mpldatacursor.datacursor(
-            formatter='{label}'.format,
-            hover=True,
-        )
+        if file_path is not None:
+            pyplot.savefig(file_path)
+        else:
+            mpldatacursor.datacursor(
+                formatter='{label}'.format,
+                hover=True,
+            )
 
-        pyplot.show()
+            pyplot.show()
 
 
 class LoomLoggingFormatter(logging.Formatter):
@@ -767,6 +781,8 @@ def make_spectral_network_plot(
     for spectral_network in spectral_networks:
         logger.info('Generating the plot of a spectral network '
                     '@ theta = {}...'.format(spectral_network.phase))
+        # TODO: When using plot_ui.py, remove the following
+        # and uncomment the next following lines.
         plot_legend = spectral_network_plot.draw(
             spectral_network,
             sw_data.branch_points,
@@ -778,6 +794,14 @@ def make_spectral_network_plot(
             logger_name=logger_name,
             **kwargs
         )
+        # XXX: Use the following with plot_ui.py
+#        spectral_network_plot.draw(
+#            sw_data=sw_data,
+#            spectral_network=spectral_network,
+#            logger_name=logger_name,
+#            **kwargs
+#        )
+#        plot_legend = spectral_network_plot.get_legend()
         logger.info(plot_legend)
 
     if show_plot is True:

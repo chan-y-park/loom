@@ -32,7 +32,8 @@ from web_api import(
 )
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
-from plotting import get_legend
+#from plotting import get_legend
+from plot_api import get_sw_data_legend
 
 # Flask configuration
 DEBUG = True
@@ -729,12 +730,13 @@ def render_plot_template(
         spectral_network_data.spectral_networks[0].phase / pi
     )
 
-    legend = get_legend(
-        g_data=sw_data.g_data,
-        regular_punctures=sw_data.regular_punctures,
-        branch_points=sw_data.branch_points,
-        irregular_singularities=sw_data.irregular_singularities,
-    )
+    legend = get_sw_data_legend(sw_data)
+#    legend = get_legend(
+#        g_data=sw_data.g_data,
+#        regular_punctures=sw_data.regular_punctures,
+#        branch_points=sw_data.branch_points,
+#        irregular_singularities=sw_data.irregular_singularities,
+#    )
 
     with open('static/bokeh_callbacks.js', 'r') as fp:
         bokeh_custom_script = fp.read()

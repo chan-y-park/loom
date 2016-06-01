@@ -14,10 +14,19 @@ class NetworkPlotBase(object):
             self.figure.clf()
 
     def draw(
-        self, phase=None, branch_points=None, joints=None, punctures=None,
-        irregular_singularities=None, walls=None, wall_segments=None,
-        wall_colors=None, labels=None, plot_joints=False,
-        plot_data_points=False, branch_cut_rotation=1,
+        self,
+        phase=None,
+        branch_points=None,
+        joints=None,
+        punctures=None,
+        irregular_singularities=None,
+        walls=None,
+        wall_segments=None,
+        wall_colors=None,
+        labels=None,
+        plot_joints=False,
+        plot_data_points=False,
+        branch_cut_rotation=1,
     ):
         """
         branch_points = [[bpx, bpy], ...]
