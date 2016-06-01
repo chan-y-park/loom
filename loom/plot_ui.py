@@ -1,6 +1,18 @@
+import os
+import Tkinter as tk
 # import pdb
+import matplotlib
+
+from matplotlib.backends.backend_tkagg import (
+    FigureCanvasTkAgg as FigureCanvas,
+    NavigationToolbar2TkAgg as NavigationToolbar,
+)
+from matplotlib.widgets import Button
+from matplotlib import pyplot
+
 import mpldatacursor
 
+from plot_api import SpectralNetworkPlot
 
 class SpectralNetworkPlotUIBase(SpectralNetworkPlot):
     def __init__(self, matplotlib_figure=None, plot_range=None,):
@@ -159,7 +171,7 @@ class SpectralNetworkPlotUI(SpectralNetworkPlotUIBase):
         self.figure.show()
 
 
-class SpectralSpectralNetworkPlotTk(SpectralNetworkPlotUIBase):
+class SpectralNetworkPlotTk(SpectralNetworkPlotUIBase):
     """
     This class implements UIs using Tkinter.
 

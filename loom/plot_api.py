@@ -1,5 +1,14 @@
+import numpy
+import logging
 # import pdb
 
+import matplotlib
+
+from math import pi
+
+from sympy import oo
+
+from misc import put_on_cylinder, get_splits_with_overlap
 
 class NetworkPlot(object):
     def __init__(self, matplotlib_figure=None, plot_range=None,):
@@ -243,7 +252,7 @@ class SpectralNetworkPlot(NetworkPlot):
                 colors.append(color)
             wall_colors.append(colors)
 
-        super(SpectralNetworkPlotBase, self).draw(
+        super(SpectralNetworkPlot, self).draw(
             axes=axes,
             phase=spectral_network.phase,
             branch_points=branch_points_z,
@@ -264,7 +273,7 @@ class SpectralNetworkPlot(NetworkPlot):
         sw_data=None,
         spectral_network=None,
     ):
-        legend = (
+        plot_legend = (
             '\n'
             '------------------------\n'
             'phase : {}\n'.format(spectral_network.phase) +
@@ -272,6 +281,19 @@ class SpectralNetworkPlot(NetworkPlot):
         )
         plot_legend += get_sw_data_legend(sw_data)
         return plot_legend
+
+
+def SolitonTreePlot(SpectralNetworkPlot):
+    def __init__(self, plot_range=None,):
+        super(SolitonTreePlot, self).__init__(
+            matplotlib_figure=matplotlib.figure.Figure(),
+            plot_range=plot_range,
+        )
+
+    def show(self):
+        self.figure.show()
+
+
 
 
 def get_label(value, dictionary):
@@ -306,7 +328,7 @@ def make_weight_dictionary(g_data):
 
 def get_sw_data_legend(sw_data):
     branch_points = sw_data.branch_points
-    punctures = sw_data.regular_punctures + sw_data.irregular_punctures
+    regular_punctures = sw_data.regular_punctures
     irregular_singularities = sw_data.irregular_singularities
     g_data = sw_data.g_data,
 
