@@ -4,6 +4,7 @@ import bokeh
 # import pdb
 
 from cmath import phase, pi
+from copy import deepcopy
 from sympy import oo
 from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
@@ -198,7 +199,7 @@ def get_spectral_network_bokeh_plot(
                     # The first data contains all the soliton trees
                     # of the two-way streets in a spectral network.
                     if len(data_entry) == 0:
-                        data_entry.append(tree_data)
+                        data_entry.append(deepcopy(tree_data))
                     else:
                         for key in tree_data.keys():
                             data_entry[0][key] += tree_data[key]

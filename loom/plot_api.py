@@ -7,6 +7,8 @@ import matplotlib
 from math import pi
 
 from sympy import oo
+from matplotlib import pyplot
+from matplotlib.backends.backend_agg import FigureCanvas
 
 from misc import put_on_cylinder, get_splits_with_overlap
 
@@ -20,7 +22,7 @@ class NetworkPlot(object):
     def draw(
         self,
         axes=None,
-        phase=None,
+        #phase=None,
         branch_points=None,
         joints=None,
         punctures=None,
@@ -32,6 +34,8 @@ class NetworkPlot(object):
         plot_joints=False,
         plot_data_points=False,
         branch_cut_rotation=1,
+        markersize=2,
+        markeredgewidth=1,
     ):
         """
         branch_points = [[bpx, bpy], ...]
@@ -70,45 +74,61 @@ class NetworkPlot(object):
         # Plot branch points.
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot(bpx, bpy, 'x', markeredgewidth=2, markersize=8,
-                      color='k',
-                      label=labels['branch_points'][i],)
+            axes.plot(
+                bpx, bpy, 'x',
+                color='k',
+                #markeredgewidth=2, markersize=8,
+                label=labels['branch_points'][i],
+            )
 
         # Plot irregular singularities
         for i, irr_sing in enumerate(irregular_singularities):
             isx, isy = irr_sing
-            axes.plot(isx, isy, 'o', markeredgewidth=2, markersize=8,
-                      color='k', markerfacecolor='none',
-                      label=labels['irregular_singularities'][i],)
+            axes.plot(
+                isx, isy, 'o',
+                #markeredgewidth=2, markersize=8,
+                color='k', markerfacecolor='none',
+                label=labels['irregular_singularities'][i],
+            )
 
         # Plot branch cuts according to the z-plane rotation.
         y_r = complex((2j * axes.get_ylim()[1]) * branch_cut_rotation)
 
         for i, bp in enumerate(branch_points):
             bpx, bpy = bp
-            axes.plot([bpx, bpx + y_r.real], [bpy, bpy + y_r.imag],
-                      ':', color='k',
-                      label='Cut of ' + labels['branch_points'][i],)
+            axes.plot(
+                [bpx, bpx + y_r.real], [bpy, bpy + y_r.imag],
+                ':', color='k',
+                label='Cut of ' + labels['branch_points'][i],
+            )
 
         for i, irr_sing in enumerate(irregular_singularities):
             isx, isy = irr_sing
-            axes.plot([isx, isx + y_r.real], [isy, isy + y_r.imag],
-                      ':', color='k',
-                      label='Cut of ' + labels['irregular_singularities'][i],)
+            axes.plot([
+                isx, isx + y_r.real], [isy, isy + y_r.imag],
+                ':', color='k',
+                label='Cut of ' + labels['irregular_singularities'][i],
+            )
 
         # Plot joints.
         if plot_joints is True:
             for i, jp in enumerate(joints):
                 jpx, jpy = jp
-                axes.plot(jpx, jpy, '+', markeredgewidth=2,
-                          markersize=8, color='k', label=labels['joints'][i],)
+                axes.plot(
+                    jpx, jpy, '+',
+                    #markeredgewidth=2, markersize=8,
+                    color='k', label=labels['joints'][i],
+                )
 
         # Plot puncturess.
         for i, p in enumerate(punctures):
             px, py = p
-            axes.plot(px, py, 'o', markeredgewidth=2, markersize=8,
-                      color='k', markerfacecolor='none',
-                      label=labels['punctures'][i],)
+            axes.plot(
+                px, py, 'o',
+                #markeredgewidth=2, markersize=8,
+                color='k', markerfacecolor='none',
+                label=labels['punctures'][i],
+            )
 
 #    def autoscale(self):
 #        min_x_min = None
@@ -140,6 +160,7 @@ class SpectralNetworkPlot(NetworkPlot):
         axes=None,
         sw_data=None,
         spectral_network=None,
+        soliton_tree=None,
         logger_name='loom',
         plot_joints=False,
         plot_data_points=False,
@@ -154,7 +175,7 @@ class SpectralNetworkPlot(NetworkPlot):
         branch_points = sw_data.branch_points
         punctures = sw_data.regular_punctures + sw_data.irregular_punctures
         irregular_singularities = sw_data.irregular_singularities
-        g_data = sw_data.g_data,
+        g_data = sw_data.g_data
         branch_cut_rotation = sw_data.branch_cut_rotation
 
         if self.plot_range is None:
@@ -171,13 +192,14 @@ class SpectralNetworkPlot(NetworkPlot):
             labels['branch_points'].append(bp.label)
 
         joints_z = []
-        for i, jp in enumerate(spectral_network.joints):
-            if plot_on_cylinder is True:
-                jp_z = put_on_cylinder(jp.z, C)
-            else:
-                jp_z = jp.z
-            joints_z.append([jp_z.real, jp_z.imag])
-            labels['joints'].append(jp.label)
+        if plot_joints is True:
+            for i, jp in enumerate(spectral_network.joints):
+                if plot_on_cylinder is True:
+                    jp_z = put_on_cylinder(jp.z, C)
+                else:
+                    jp_z = jp.z
+                joints_z.append([jp_z.real, jp_z.imag])
+                labels['joints'].append(jp.label)
 
         punctures_z = []
         for i, p in enumerate(punctures):
@@ -205,7 +227,12 @@ class SpectralNetworkPlot(NetworkPlot):
         wall_segments = []
         wall_roots = []
 
-        for i, s_wall in enumerate(spectral_network.s_walls):
+        if soliton_tree is not None:
+            s_walls = soliton_tree.streets
+        else:
+            spectral_network.s_walls
+
+        for i, s_wall in enumerate(s_walls):
             seg_labels = []
 
             if plot_on_cylinder is True:
@@ -254,7 +281,7 @@ class SpectralNetworkPlot(NetworkPlot):
 
         super(SpectralNetworkPlot, self).draw(
             axes=axes,
-            phase=spectral_network.phase,
+            #phase=spectral_network.phase,
             branch_points=branch_points_z,
             joints=joints_z,
             punctures=punctures_z,
@@ -283,17 +310,36 @@ class SpectralNetworkPlot(NetworkPlot):
         return plot_legend
 
 
-def SolitonTreePlot(SpectralNetworkPlot):
-    def __init__(self, plot_range=None,):
+class SolitonTreePlot(SpectralNetworkPlot):
+    def __init__(self, plot_range=None):
         super(SolitonTreePlot, self).__init__(
-            matplotlib_figure=matplotlib.figure.Figure(),
+            #matplotlib_figure=matplotlib.figure.Figure(),
+            matplotlib_figure=pyplot.figure(),
             plot_range=plot_range,
+        )
+        self.canvas = FigureCanvas(
+            self.figure
         )
 
     def show(self):
         self.figure.show()
 
+    def draw(
+        self,
+        **kwargs
+    ):
+        rect = [.1, 0.15, .8, .8]
 
+        axes = self.figure.add_axes(
+            rect,
+            #label="Network #{}".format(len(self.plots)),
+            aspect='equal',
+        )
+
+        super(SolitonTreePlot, self).draw(
+            axes=axes,
+            **kwargs
+        )
 
 
 def get_label(value, dictionary):
@@ -330,7 +376,7 @@ def get_sw_data_legend(sw_data):
     branch_points = sw_data.branch_points
     regular_punctures = sw_data.regular_punctures
     irregular_singularities = sw_data.irregular_singularities
-    g_data = sw_data.g_data,
+    g_data = sw_data.g_data
 
     root_dictionary = make_root_dictionary(g_data)
     weight_dictionary = make_weight_dictionary(g_data)

@@ -97,7 +97,7 @@ class SolitonTree:
 
         return None
 
-    def draw(self, file_name='soliton_tree.pdf'):
+    def draw_graph(self, file_name='soliton_tree.pdf'):
         # XXX: Move the following import to the beginning of this module
         # if draw() becomes a permanent feature.
         import pygraphviz as pgv
