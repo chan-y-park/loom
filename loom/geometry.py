@@ -1639,6 +1639,8 @@ def get_ramification_points_from_branch_points(
     g_data=None,
     logger_name='loom',
 ):
+    logger = logging.getLogger(logger_name)
+
     sols = []
     f = curve.sym_eq
     subs_dict = copy.deepcopy(diff_params)
@@ -1660,12 +1662,16 @@ def get_ramification_points_from_branch_points(
         )
         gathered_f_x_roots = gather(f_x_roots, is_same_x)
         for x_j, xs in gathered_f_x_roots.iteritems():
+            no_ramification = True
             # m_x is the multiplicity of x_j.
             m_x = len(xs)
             if m_x == 1:
                 continue
             else:
+                no_ramification = False
                 sols.append([complex(z_i), (complex(x_j), m_x)])
+            if no_ramification is True:
+                logger.warning('No ramification @ z = {}.'.format(z_i))
     return sols
 
 

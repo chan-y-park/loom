@@ -106,7 +106,7 @@ function show_prev_soliton_tree(
 ) {
     change_soliton_tree(
         cds, snds, sn_idx_ds, tree_idx_ds, plot_options_ds, -1
-    )    
+    );
 }
 
 function show_next_soliton_tree(
@@ -114,7 +114,7 @@ function show_next_soliton_tree(
 ) {
     change_soliton_tree(
         cds, snds, sn_idx_ds, tree_idx_ds, plot_options_ds, 1
-    )    
+    );   
 }
 
 function redraw_arrows(cds, x_range, y_range) {
