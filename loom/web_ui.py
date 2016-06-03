@@ -33,7 +33,7 @@ from web_api import(
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
 #from plotting import get_legend
-from plot_api import get_sw_data_legend
+from plot_api import get_sw_data_legend, SolitonTreePlot
 
 # Flask configuration
 DEBUG = True
@@ -302,9 +302,11 @@ def progress():
                 )
             # An extended spectral network is a new data.
             kwargs['saved_data'] = False
-        elif task == 'load':
-            pass
-        elif task == 'rotate_back' or task == 'plot_two_way_streets':
+        elif (
+            task == 'load'
+            or task == 'rotate_back'
+            or task == 'plot_two_way_streets'
+        ):
             pass
         else:
             raise RuntimeError('Unknown task for loom: {}'.format(task))
@@ -330,12 +332,6 @@ def progress():
         event_source_url=event_source_url,
         text_area_content=text_area_content,
         **kwargs
-#        task=kwargs['task'],
-#        n_processes=kwargs['n_processes'],
-#        process_uuid=kwargs['process_uuid'],
-#        data_name=kwargs['data_name'],
-#        saved_data=kwargs['saved_data'],
-#        search_radius=kwargs['search_radius'],
     )
 
 
@@ -456,12 +452,6 @@ def plot():
         spectral_network_data,
         plot_two_way_streets=plot_two_way_streets,
         **kwargs
-#        process_uuid=process_uuid,
-#        data_name=data_name,
-#        saved_data=saved_data,
-#        progress_log=progress_log,
-#        n_processes=n_processes,
-#        search_radius=search_radius,
     )
 
 
@@ -525,7 +515,7 @@ def download_data():
     )
 
 
-def download_plot():
+def download_plot(two_way_streets=False):
     loom_db = flask.current_app.loom_db
 
     if flask.request.method == 'POST':
@@ -543,17 +533,6 @@ def download_plot():
         set_kwargs_from_request(
             kwargs, kwargs_string_valued, flask.request.form,
         )
-        #process_uuid = flask.request.form['process_uuid']
-        #data_name = flask.request.form['data_name']
-        #saved_data = eval(flask.request.form['saved_data'])
-#        plot_two_way_streets = eval(
-#            flask.request.form['plot_two_way_streets']
-#        )
-#        search_radius_str = flask.request.form['search_radius']
-#        if search_radius_str != '':
-#            search_radius = eval(search_radius_str)
-#        else:
-#            search_radius = None
     else:
         raise RuntimeError
 
@@ -574,31 +553,81 @@ def download_plot():
         spectral_network_data = SpectralNetworkData(data_dir=full_data_dir)
     spectral_network_data.reset_z_rotation()
 
-    plot_html_zip_fp = BytesIO()
-    with zipfile.ZipFile(plot_html_zip_fp, 'w') as zfp:
-        zip_info = zipfile.ZipInfo('loom_plot_{}.html'.format(process_uuid))
-        zip_info.date_time = time.localtime(time.time())[:6]
-        zip_info.compress_type = zipfile.ZIP_DEFLATED
-        zip_info.external_attr = 040664 << 16L
-        zfp.writestr(
-            zip_info,
-            render_plot_template(
-                spectral_network_data,
-                #process_uuid=process_uuid,
-                #saved_data=saved_data,
-                download=True,
-                **kwargs
-                #plot_two_way_streets=plot_two_way_streets,
-                #search_radius=search_radius
-            ),
+#    plot_html_zip_fp = BytesIO()
+#    with zipfile.ZipFile(plot_html_zip_fp, 'w') as zfp:
+#        zip_info = zipfile.ZipInfo(
+#            'loom_plot_{}.html'.format(process_uuid)
+#        )
+#        zip_info.date_time = time.localtime(time.time())[:6]
+#        zip_info.compress_type = zipfile.ZIP_DEFLATED
+#        zip_info.external_attr = 040664 << 16L
+#        zfp.writestr(
+#            zip_info,
+#            render_plot_template(
+#                spectral_network_data,
+#                download=True,
+#                **kwargs
+#            ),
+#        )
+#    plot_html_zip_fp.seek(0)
+#
+#    return flask.send_file(
+#        plot_html_zip_fp,
+#        attachment_filename='loom_plot_{}.html.zip'.format(process_uuid),
+#        as_attachment=True,
+#    )
+
+    data = {}
+    if two_way_streets is False:
+        plot_file_name = 'loom_plot_{}.html'.format(process_uuid)
+        zip_file_prefix = plot_file_name
+        data[plot_file_name] = render_plot_template(
+            spectral_network_data,
+            download=True,
+            **kwargs
         )
-    plot_html_zip_fp.seek(0)
+
+    else:
+        zip_file_prefix = 'loom_streets_{}'.format(process_uuid)
+        soliton_tree_data = spectral_network_data.find_two_way_streets()
+        fp = BytesIO()
+        for i, trees in enumerate(soliton_tree_data):
+            for j, tree in enumerate(trees):
+                fp.seek(0)
+                soliton_tree_plot = SolitonTreePlot(
+                    plot_range=None,
+                )
+                soliton_tree_plot.draw(
+                    sw_data=spectral_network_data.sw_data,
+                    soliton_tree=soliton_tree_data[i][j],
+                )
+                soliton_tree_plot.figure.savefig(fp, format='pdf')
+                fp.seek(0)
+                file_name = '{}_{}.pdf'.format(i, j + 1)
+                data[file_name] = fp.read()
+
+    zip_fp = BytesIO()
+    with zipfile.ZipFile(zip_fp, 'w') as zfp:
+        for file_name, data_str in data.iteritems():
+            zip_info = zipfile.ZipInfo(file_name)
+            zip_info.date_time = time.localtime(time.time())[:6]
+            zip_info.compress_type = zipfile.ZIP_DEFLATED
+            zip_info.external_attr = 040664 << 16L
+            zfp.writestr(zip_info, data_str)
+    zip_fp.seek(0)
+
+    if result_queue is not None:
+        # Put back the data in the queue for a future use.
+        result_queue.put(spectral_network_data)
 
     return flask.send_file(
-        plot_html_zip_fp,
-        attachment_filename='loom_plot_{}.html.zip'.format(process_uuid),
+        zip_fp,
+        attachment_filename='{}.zip'.format(zip_file_prefix),
         as_attachment=True,
     )
+
+def download_two_way_streets():
+    return download_plot(two_way_streets=True)
 
 
 def download_E6_E7_data():
@@ -663,6 +692,11 @@ def get_application(config_file, logging_level):
     )
     application.add_url_rule(
         '/download_plot', 'download_plot', download_plot,
+        methods=['POST'],
+    )
+    application.add_url_rule(
+        '/download_two_way_streets', 'download_two_way_streets',
+        download_two_way_streets,
         methods=['POST'],
     )
     application.add_url_rule(
@@ -731,12 +765,6 @@ def render_plot_template(
     )
 
     legend = get_sw_data_legend(sw_data)
-#    legend = get_legend(
-#        g_data=sw_data.g_data,
-#        regular_punctures=sw_data.regular_punctures,
-#        branch_points=sw_data.branch_points,
-#        irregular_singularities=sw_data.irregular_singularities,
-#    )
 
     with open('static/bokeh_callbacks.js', 'r') as fp:
         bokeh_custom_script = fp.read()

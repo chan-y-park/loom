@@ -208,8 +208,7 @@
 <div class="container">
     <div class="col-xs-8" style="border:1px solid Gray; border-radius: 10px;">
         <h4>Find two-way streets</h4>
-        <form class="form-horizontal" action="{{ url_for('progress') }}"
-         method="post">
+        <form class="form-horizontal" method="post">
             <div class="form-group">
                 <div class="col-xs-3">
                     <label for="search_radius_text" class="control-label">
@@ -221,9 +220,15 @@
                      name="search_radius" id="search_radius_text"
                      value="{{ default_search_radius }}">
                 </div>
-                <div class="col-xs-2">
+                <div class="col-xs-1">
                     <input type="submit" class="btn btn-default"
-                     value="Plot two-way streets">
+                     formaction="{{ url_for('progress') }}"
+                     value="Plot">
+                </div>
+                <div class="col-xs-1">
+                    <input type="submit" class="btn btn-default"
+                     formaction="{{ url_for('download_two_way_streets') }}"
+                     value="Download">
                 </div>
             </div>
             <input type="hidden" name="process_uuid" 
