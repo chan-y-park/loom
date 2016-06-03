@@ -6,7 +6,7 @@ import ctypes
 import logging
 import itertools
 import json
-# import pdb
+import pdb
 
 from cmath import exp
 from scipy import integrate
@@ -30,11 +30,16 @@ class Street(SWall):
         end_z=None,
         end_t=None,
         parents=None,
+        phase=None,
         json_data=None,
         logger_name='loom',
     ):
         super(Street, self).__init__(logger_name=logger_name)
+        self.phase = phase
         # logger = logging.getLogger(self.logger_name)
+        # Z is the central charge, i.e. integration of the SW diff
+        # along the street.
+        self.Z = None
 
         if json_data is not None:
             self.set_from_json_data(json_data)
@@ -65,6 +70,7 @@ class Street(SWall):
                 )
             self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
+        self.Z = self.M[-1] * exp(self.phase * 1j)
 
 class SolitonTree:
     def __init__(
@@ -72,15 +78,26 @@ class SolitonTree:
         root_s_wall=None,
         root_s_wall_end_t=None,
         root_branch_point=None,
+        phase=None,
     ):
+        self.phase = phase
+        # Z is the central charge, i.e. integration of the SW diff
+        # along the tree.
+        self.Z = None
         self.root_branch_point = root_branch_point
         root_street = Street(
             s_wall=root_s_wall,
             end_t=root_s_wall_end_t,
             parents=root_s_wall.parents,
+            phase=self.phase,
         )
         self.streets = [root_street]
         self.grow(root_street)
+
+        # Set the value of Z from those of its streets.
+        self.Z = 0
+        for street in self.streets:
+            self.Z += street.Z
 
     def grow(self, street=None):
         for parent in street.parents:
@@ -91,6 +108,7 @@ class SolitonTree:
                 s_wall=parent,
                 end_z=street.z[0],
                 parents=parent.parents,
+                phase=self.phase,
             )
             self.streets.append(parent_street)
             self.grow(parent_street)
@@ -843,6 +861,7 @@ class SpectralNetwork:
                                 root_s_wall=s_wall,
                                 root_s_wall_end_t=min_t,
                                 root_branch_point=bp,
+                                phase=self.phase,
                             )
                         except RuntimeError as e:
                             logger.warning(str(e))

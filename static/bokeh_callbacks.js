@@ -92,7 +92,7 @@ function change_soliton_tree(
         if (tree_j == 0) {
             tree_idx_label.innerHTML = 'All';
         } else {
-            tree_idx_label.innerHTML = tree_j;
+            tree_idx_label.innerHTML = tree_j - 1;
         }
     }
     

@@ -326,15 +326,18 @@ class SolitonTreePlot(SpectralNetworkPlot):
 
     def draw(
         self,
+        title=None,
         **kwargs
     ):
-        rect = [.1, 0.15, .8, .8]
+        #rect = [.1, 0.15, .8, .8]
+        rect = [0, 0, 1, 1]
 
         axes = self.figure.add_axes(
             rect,
             #label="Network #{}".format(len(self.plots)),
             aspect='equal',
         )
+        axes.set_title(title)
 
         super(SolitonTreePlot, self).draw(
             axes=axes,

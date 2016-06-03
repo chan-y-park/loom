@@ -597,13 +597,24 @@ def download_plot(two_way_streets=False):
                 soliton_tree_plot = SolitonTreePlot(
                     plot_range=None,
                 )
+                # Make a plot title.
+                Z = tree.Z
+                title = (
+                    'SN #{}, tree #{}, '.format(i, j)
+                    #+ r'$Z = $'
+                    + 'Z = '
+                    + '({:.6}) + ({:.6})'.format(Z.real, Z.imag)
+                    #+ r'$i$'
+                    + 'i'
+                )
                 soliton_tree_plot.draw(
+                    title=title,
                     sw_data=spectral_network_data.sw_data,
                     soliton_tree=soliton_tree_data[i][j],
                 )
                 soliton_tree_plot.figure.savefig(fp, format='pdf')
                 fp.seek(0)
-                file_name = '{}_{}.pdf'.format(i, j + 1)
+                file_name = '{}_{}.pdf'.format(i, j)
                 data[file_name] = fp.read()
 
     zip_fp = BytesIO()
