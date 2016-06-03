@@ -12,6 +12,8 @@ import pdb
 from io import BytesIO
 from cmath import pi
 
+from numpy import inf
+
 from api import (
     SpectralNetworkData,
     get_loom_dir,
@@ -553,30 +555,6 @@ def download_plot(two_way_streets=False):
         spectral_network_data = SpectralNetworkData(data_dir=full_data_dir)
     spectral_network_data.reset_z_rotation()
 
-#    plot_html_zip_fp = BytesIO()
-#    with zipfile.ZipFile(plot_html_zip_fp, 'w') as zfp:
-#        zip_info = zipfile.ZipInfo(
-#            'loom_plot_{}.html'.format(process_uuid)
-#        )
-#        zip_info.date_time = time.localtime(time.time())[:6]
-#        zip_info.compress_type = zipfile.ZIP_DEFLATED
-#        zip_info.external_attr = 040664 << 16L
-#        zfp.writestr(
-#            zip_info,
-#            render_plot_template(
-#                spectral_network_data,
-#                download=True,
-#                **kwargs
-#            ),
-#        )
-#    plot_html_zip_fp.seek(0)
-#
-#    return flask.send_file(
-#        plot_html_zip_fp,
-#        attachment_filename='loom_plot_{}.html.zip'.format(process_uuid),
-#        as_attachment=True,
-#    )
-
     data = {}
     if two_way_streets is False:
         plot_file_name = 'loom_plot_{}.html'.format(process_uuid)
@@ -588,6 +566,7 @@ def download_plot(two_way_streets=False):
         )
 
     else:
+        plot_range = eval(flask.request.form['plot_range'])
         zip_file_prefix = 'loom_streets_{}'.format(process_uuid)
         soliton_tree_data = spectral_network_data.find_two_way_streets()
         fp = BytesIO()
@@ -595,7 +574,7 @@ def download_plot(two_way_streets=False):
             for j, tree in enumerate(trees):
                 fp.seek(0)
                 soliton_tree_plot = SolitonTreePlot(
-                    plot_range=None,
+                    plot_range=plot_range,
                 )
                 # Make a plot title.
                 Z = tree.Z
@@ -751,9 +730,37 @@ def render_plot_template(
         )
 
     # Make a Bokeh plot
+    plot_range=loom_config['plot_range']
+    if plot_range is None:
+        x_min = inf
+        x_max = -inf
+        y_min = inf
+        y_max = -inf
+        for sn in spectral_networks:
+            for s_wall in sn.s_walls:
+                x = s_wall.z.real
+                y = s_wall.z.imag
+                new_x_min = x.min()
+                new_x_max = x.max()
+                new_y_min = y.min()
+                new_y_max = y.max()
+                if new_x_min < x_min:
+                    x_min = new_x_min
+                if new_x_max > x_max:
+                    x_max = new_x_max
+                if new_y_min < y_min:
+                    y_min = new_y_min
+                if new_y_max > y_max:
+                    y_max = new_y_max
+        # Need to maintain the aspect ratio.
+        range_min = min(x_min, y_min)
+        range_max = max(x_max, y_max)
+        plot_x_range = plot_y_range = [range_min, range_max]
+        plot_range = [plot_x_range, plot_y_range]
+    
     bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
-        plot_range=loom_config['plot_range'],
+        plot_range=plot_range,
         plot_two_way_streets=plot_two_way_streets,
         soliton_tree_data=soliton_tree_data,
         logger_name=get_logger_name(),
@@ -805,6 +812,7 @@ def render_plot_template(
         plot_two_way_streets=str(plot_two_way_streets),
         search_radius=search_radius,
         show_sn_slider=str(show_sn_slider),
+        plot_range=plot_range,
     )
 
 

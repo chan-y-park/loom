@@ -313,8 +313,8 @@ class SpectralNetworkPlot(NetworkPlot):
 class SolitonTreePlot(SpectralNetworkPlot):
     def __init__(self, plot_range=None):
         super(SolitonTreePlot, self).__init__(
-            #matplotlib_figure=matplotlib.figure.Figure(),
-            matplotlib_figure=pyplot.figure(),
+            matplotlib_figure=matplotlib.figure.Figure(),
+            #matplotlib_figure=pyplot.figure(),
             plot_range=plot_range,
         )
         self.canvas = FigureCanvas(

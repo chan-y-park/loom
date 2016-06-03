@@ -45,28 +45,27 @@ def get_spectral_network_bokeh_plot(
 
     sw_data = spectral_network_data.sw_data
 
-    plot_width = plot_width
-    plot_height = plot_height
-
-    x_min = min([min([min([z.real for z in s_wall.z])
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    x_max = max([max([max([z.real for z in s_wall.z])
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    y_min = min([min([min([z.imag for z in s_wall.z])
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    y_max = max([max([max([z.imag for z in s_wall.z])
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    if plot_range is None:
-        # Need to maintain the aspect ratio.
-        range_min = min(x_min, y_min)
-        range_max = max(x_max, y_max)
-        plot_x_range = plot_y_range = (range_min, range_max)
-    else:
-        plot_x_range, plot_y_range = plot_range
+#    x_min = min([min([min([z.real for z in s_wall.z])
+#                      for s_wall in sn.s_walls])
+#                 for sn in spectral_networks])
+#    x_max = max([max([max([z.real for z in s_wall.z])
+#                      for s_wall in sn.s_walls])
+#                 for sn in spectral_networks])
+#    y_min = min([min([min([z.imag for z in s_wall.z])
+#                      for s_wall in sn.s_walls])
+#                 for sn in spectral_networks])
+#    y_max = max([max([max([z.imag for z in s_wall.z])
+#                      for s_wall in sn.s_walls])
+#                 for sn in spectral_networks])
+#    if plot_range is None:
+#        # Need to maintain the aspect ratio.
+#        range_min = min(x_min, y_min)
+#        range_max = max(x_max, y_max)
+#        plot_x_range = plot_y_range = (range_min, range_max)
+#    else:
+#        plot_x_range, plot_y_range = plot_range
+    plot_x_range, plot_y_range = plot_range
+    y_min, y_max = plot_y_range
 
     # Setup tools.
     hover = HoverTool(
@@ -252,12 +251,26 @@ def get_spectral_network_bokeh_plot(
             custom_js_code += fp.read()
             custom_js_code += '\n'
 
+    # Data source for plot ranges
+    range_callback = CustomJS(
+        args={
+            'x_range': bokeh_figure.x_range,
+            'y_range': bokeh_figure.y_range
+        },
+        code=(custom_js_code + 'update_plot_range(x_range, y_range);'),
+    )
+    bokeh_figure.x_range.callback = range_callback
+    bokeh_figure.y_range.callback = range_callback
+
     # 'Redraw arrows' button.
     redraw_arrows_button = Button(
         label='Redraw arrows',
         callback=CustomJS(
-            args={'cds': cds, 'x_range': bokeh_figure.x_range,
-                  'y_range': bokeh_figure.y_range},
+            args={
+                'cds': cds,
+                'x_range': bokeh_figure.x_range,
+                'y_range': bokeh_figure.y_range
+            },
             code=(custom_js_code + 'redraw_arrows(cds, x_range, y_range);'),
         ),
     )
