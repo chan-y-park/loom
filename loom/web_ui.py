@@ -569,10 +569,10 @@ def download_plot(two_way_streets=False):
         plot_range = eval(flask.request.form['plot_range'])
         zip_file_prefix = 'loom_streets_{}'.format(process_uuid)
         soliton_tree_data = spectral_network_data.find_two_way_streets()
-        fp = BytesIO()
+        #fp = BytesIO()
         for i, trees in enumerate(soliton_tree_data):
             for j, tree in enumerate(trees):
-                fp.seek(0)
+                #fp.seek(0)
                 soliton_tree_plot = SolitonTreePlot(
                     plot_range=plot_range,
                 )
@@ -591,9 +591,15 @@ def download_plot(two_way_streets=False):
                     sw_data=spectral_network_data.sw_data,
                     soliton_tree=soliton_tree_data[i][j],
                 )
+                fp = BytesIO()
                 soliton_tree_plot.figure.savefig(fp, format='pdf')
                 fp.seek(0)
                 file_name = '{}_{}.pdf'.format(i, j)
+                # XXX
+                #soliton_tree_plot.figure.savefig(
+                #    'trees/' + file_name,
+                #    format='pdf',
+                #)
                 data[file_name] = fp.read()
 
     zip_fp = BytesIO()
@@ -764,6 +770,7 @@ def render_plot_template(
         plot_two_way_streets=plot_two_way_streets,
         soliton_tree_data=soliton_tree_data,
         logger_name=get_logger_name(),
+        download=download,
     )
 
 # XXX: Uncomment the following to remove plots with no street.

@@ -130,28 +130,7 @@ class NetworkPlot(object):
                 label=labels['punctures'][i],
             )
 
-#    def autoscale(self):
-#        min_x_min = None
-#        max_x_max = None
-#        min_y_min = None
-#        max_y_max = None
-#
-#        for axes in self.plots:
-#            x_min, x_max = axes.get_xlim()
-#            if min_x_min is None or min_x_min > x_min:
-#                min_x_min = x_min
-#            if max_x_max is None or max_x_max < x_max:
-#                max_x_max = x_max
-#
-#            y_min, y_max = axes.get_ylim()
-#            if min_y_min is None or min_y_min > y_min:
-#                min_y_min = y_min
-#            if max_y_max is None or max_y_max < y_max:
-#                max_y_max = y_max
-#
-#        for axes in self.plots:
-#            axes.set_xlim(min_x_min, max_x_max)
-#            axes.set_ylim(min_y_min, max_y_max)
+        self.figure.tight_layout()
 
 
 class SpectralNetworkPlot(NetworkPlot):
@@ -330,13 +309,13 @@ class SolitonTreePlot(SpectralNetworkPlot):
         **kwargs
     ):
         #rect = [.1, 0.15, .8, .8]
-        rect = [0, 0, 1, 1]
+        #rect = [0, 0, 1, 1]
 
-        axes = self.figure.add_axes(
-            rect,
-            #label="Network #{}".format(len(self.plots)),
-            aspect='equal',
-        )
+        #axes = self.figure.add_axes(
+        #    rect,
+        #    aspect='equal',
+        #)
+        axes = self.figure.add_subplot(1, 1, 1, aspect='equal')
         axes.set_title(title)
 
         super(SolitonTreePlot, self).draw(

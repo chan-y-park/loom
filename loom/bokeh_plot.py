@@ -26,6 +26,7 @@ def get_spectral_network_bokeh_plot(
     notebook=False, logger_name=None,
     marked_points=[],
     without_errors=False,
+    download=False,
 ):
     # logger = logging.getLogger(logger_name)
 
@@ -252,15 +253,16 @@ def get_spectral_network_bokeh_plot(
             custom_js_code += '\n'
 
     # Data source for plot ranges
-    range_callback = CustomJS(
-        args={
-            'x_range': bokeh_figure.x_range,
-            'y_range': bokeh_figure.y_range
-        },
-        code=(custom_js_code + 'update_plot_range(x_range, y_range);'),
-    )
-    bokeh_figure.x_range.callback = range_callback
-    bokeh_figure.y_range.callback = range_callback
+    if download is False and notebook is False:
+        range_callback = CustomJS(
+            args={
+                'x_range': bokeh_figure.x_range,
+                'y_range': bokeh_figure.y_range
+            },
+            code=(custom_js_code + 'update_plot_range(x_range, y_range);'),
+        )
+        bokeh_figure.x_range.callback = range_callback
+        bokeh_figure.y_range.callback = range_callback
 
     # 'Redraw arrows' button.
     redraw_arrows_button = Button(
