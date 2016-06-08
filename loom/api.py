@@ -228,14 +228,20 @@ class SpectralNetworkData:
                         'stop extending the spectral networks.'
                     )
 
+            if type(phases) == dict:
+                ph_from_dict = get_phases_from_dict(phases, accuracy)
+                phases = ph_from_dict
+
             if len(phases) == 0:
                 logger.warning('No phase to generate.')
                 spectral_networks = []
 
             elif(len(phases) == 1):
                 phase = phases[0]
-                logger.info('Generate a single spectral network at theta = {}.'
-                            .format(phase))
+                logger.info(
+                    'Generate a single spectral network at theta = {}.'
+                    .format(phase)
+                )
                 spectral_network = SpectralNetwork(
                     phase=phase,
                     logger_name=self.logger_name,

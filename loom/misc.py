@@ -476,8 +476,14 @@ def get_phases_from_dict(phase_dict, accuracy):
      'range': [[theta_i, theta_f, theta_n], ...]}
     removing any duplicate entry according to the given accuracy.
     """
-    phase_singles = phase_dict['single']
-    phase_ranges = phase_dict['range']
+    if 'single' in phase_dict.keys():
+        phase_singles = phase_dict['single']
+    else:
+        phase_singles = []
+    if 'range' in phase_dict.keys():
+        phase_ranges = phase_dict['range']
+    else:
+        phase_ranges = []
     phase_list = []
 
     for a_phase in phase_singles:
