@@ -422,7 +422,7 @@ def spread_of_branch_points(z_s, min_spread=None):
     from each other.
     """
     if len(z_s) == 0:
-        raise Exception('No branch points found.')
+        raise Exception('Cannot compute spread of branch points.')
     elif len(z_s) == 1 and min_spread is not None:
         return 10 * min_spread
     elif len(z_s) == 1 and min_spread is None:

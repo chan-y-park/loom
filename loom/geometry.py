@@ -555,17 +555,17 @@ class SWDataBase(object):
         else:
             mt_params = None
 
-        if config['ramification_points'] is not None:
-            ramification_points = sympy.sympify(config['ramification_points'])
-            config['ramification_point_finding_method'] = 'manual'
-        else:
-            ramification_points = None
-
         if config['branch_points'] is not None:
             branch_points = sympy.sympify(config['branch_points'])
             config['ramification_point_finding_method'] = 'from_branch_points'
         else:
             branch_points = None
+
+        if config['ramification_points'] is not None:
+            ramification_points = sympy.sympify(config['ramification_points'])
+            config['ramification_point_finding_method'] = 'manual'
+        else:
+            ramification_points = None
 
         casimir_differentials = {}
         for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
