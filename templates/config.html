@@ -19,7 +19,7 @@
                 <input type="file" 
                  name="config_file" id="config_file">
             </div>
-            <div class="col-xs-4">
+            <div class="col-xs-6">
                 <input type="submit" class="btn btn-default"
                  id="load_config_button"
                  formaction="" value="Load configuration">
@@ -27,17 +27,20 @@
                  id="save_config_button"
                  form="config_form" formaction="{{ url_for('save_config') }}"
                  value="Save configuration">
+                <input type="submit" class="btn btn-default" form="config_form" 
+                 value="Generate spectral networks">
             </div>
         </div>
         <input type="hidden" name="n_processes" value="{{ n_processes }}">
     </form>
-
+<!--
     <form class="form-horizontal">
         <div class="col-xs-2">
             <input type="submit" class="btn btn-default" form="config_form" 
              value="Generate spectral networks">
         </div>
     </form>
+-->
     <br/>
 {% endif %}
 </div>

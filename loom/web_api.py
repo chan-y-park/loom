@@ -112,7 +112,10 @@ class LoomDB(object):
         while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
             to_delete = []
             for process_uuid, result_queue in result_queues.iteritems():
-                age = time.time() - result_queue.timestamp
+                timestamp = result_queue.timestamp
+                if timestamp is None:
+                    continue
+                age = time.time() - timestamp
                 if age > RESULT_QUEUE_LIFETIME_SECS:
                     logger.info(
                         'Deleting an old queue {}...'

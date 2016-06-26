@@ -3,7 +3,7 @@ import numpy
 import logging
 import copy
 import json
-# import pdb
+import pdb
 import sympy.mpmath as mpmath
 
 from sympy import oo, I
@@ -1672,6 +1672,9 @@ def get_ramification_points_from_branch_points(
                 sols.append([complex(z_i), (complex(x_j), m_x)])
             if no_ramification is True:
                 logger.warning('No ramification @ z = {}.'.format(z_i))
+                logger.warning(
+                    'f_x_roots = {}.'.format([complex(x) for x in f_x_roots])
+                )
     return sols
 
 

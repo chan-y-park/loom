@@ -23,7 +23,9 @@ def get_spectral_network_bokeh_plot(
     plot_two_way_streets=False,
     soliton_tree_data=None,
     plot_width=800, plot_height=800,
-    notebook=False, logger_name=None,
+    notebook=False,
+    slide=False,
+    logger_name=None,
     marked_points=[],
     without_errors=False,
     download=False,
@@ -247,13 +249,13 @@ def get_spectral_network_bokeh_plot(
 
     # XXX: Where is a good place to put the following?
     custom_js_code = ''
-    if notebook is True:
+    if notebook is True or slide is True:
         with open('static/bokeh_callbacks.js', 'r') as fp:
             custom_js_code += fp.read()
             custom_js_code += '\n'
 
     # Data source for plot ranges
-    if download is False and notebook is False:
+    if download is False and notebook is False and slide is False:
         range_callback = CustomJS(
             args={
                 'x_range': bokeh_figure.x_range,
@@ -380,6 +382,8 @@ def get_spectral_network_bokeh_plot(
     if notebook is True:
         # TODO: Include phase text input
         return vform(*notebook_vform_elements, width=plot_width)
+    elif slide is True:
+        return plot
     else:
         return bokeh.embed.components(bokeh_obj)
 
