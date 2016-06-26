@@ -224,7 +224,7 @@ def delete_duplicates(l, key=None, accuracy=False):
     return uniq
 
 
-def parse_sym_dict_str(string):
+def parse_sym_dict_str(string, multi_parameter=False):
     """
     Get a string of the form
         {k_str: v_str, ...}
@@ -232,18 +232,39 @@ def parse_sym_dict_str(string):
         {k_str = v_str, ...}
     and return a list of
         [(k_str, v_str), ...]
+    
+    If multi_parameter is True, instead get a sting of the form
+        {k_str: [v_str_1, v_str_2, ...]}
+    or 
+        {k_str: [v_str_i, v_str_2, v_str_steps]}  
+    and return a list of
+        [k_str, [v_str_i, v_str_2, v_str_steps]]
     """
     result = []
-    for k_v_str in string.lstrip('{').rstrip('}').split(','):
-        if not k_v_str.strip():
-            continue
+    if multi_parameter is False:
+        for k_v_str in string.lstrip('{').rstrip('}').split(','):
+            if not k_v_str.strip():
+                continue
+            item = k_v_str.split(':')
+            if len(item) != 2:
+                item = k_v_str.split('=')
+            if len(item) != 2:
+                raise SyntaxError('Require {var = val,} or {var : val,}.')
+            k_str, v_str = item
+            result.append((k_str.strip(), v_str.strip()))
+    else:
+        k_v_str = string.lstrip('{').rstrip('}')
         item = k_v_str.split(':')
         if len(item) != 2:
             item = k_v_str.split('=')
         if len(item) != 2:
-            raise SyntaxError('Require {var = val,} or {var : val,}.')
-        k_str, v_str = item
-        result.append((k_str.strip(), v_str.strip()))
+            raise SyntaxError(
+                'Require {var = [a, b, ..]} or {var : [a, b, ..]}.'
+            )
+        k_str = item[0]
+        v_str = item[1]
+        result = [k_str.strip(), v_str.strip()]
+
     return result
 
 

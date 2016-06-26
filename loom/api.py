@@ -2,13 +2,14 @@ import time
 import os
 import json
 import glob
+import sympy
 import zipfile
 import logging
 import subprocess
 import matplotlib
 import mpldatacursor
 # import traceback
-# import pdb
+# import pdb 
 
 from logging.handlers import RotatingFileHandler
 from matplotlib import pyplot
@@ -21,6 +22,7 @@ from parallel import parallel_get_spectral_network
 from plotting import NetworkPlot, NetworkPlotTk
 from misc import get_phases_from_dict
 from misc import get_phase_dict
+from misc import parse_sym_dict_str
 
 
 class SpectralNetworkData:
@@ -196,128 +198,146 @@ class SpectralNetworkData:
         accuracy = self.config['accuracy']
         data_file_prefix = None
 
-        try:
-            if extend is False:
-                data_file_prefix = 'data'
-                start_time = time.time()
-                logger.info(
-                    'Started @ {}'.format(get_date_time_str(start_time))
-                )
-                self.sw_data = SWDataWithTrivialization(
-                    self.config, logger_name=self.logger_name
-                )
-                if cache_dir is not None:
-                    sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
-                    self.sw_data.save(sw_data_file_path)
-
-                if phases is None:
-                    self.config['phase'] = get_phase_dict(
-                        self.config['phase']
+        if self.config.data['parameter_sequence'] is None:
+            try:
+                if extend is False:
+                    data_file_prefix = 'data'
+                    start_time = time.time()
+                    logger.info(
+                        'Started @ {}'.format(get_date_time_str(start_time))
                     )
-                    phases = get_phases_from_dict(
-                        self.config['phase'], accuracy
+                    self.sw_data = SWDataWithTrivialization(
+                        self.config, logger_name=self.logger_name
                     )
+                    if cache_dir is not None:
+                        sw_data_file_path = os.path.join(
+                            cache_dir, 'sw_data.json'
+                        )
+                        self.sw_data.save(sw_data_file_path)
 
-            else:
-                data_file_prefix = 'data_'
-                # Extend spectral networks with additional phases.
-                if phases is None:
-                    # No additional phase to add.
-                    logger.warning(
-                        'No additional phase given, '
-                        'stop extending the spectral networks.'
-                    )
+                    if phases is None:
+                        self.config['phase'] = get_phase_dict(
+                            self.config['phase']
+                        )
+                        phases = get_phases_from_dict(
+                            self.config['phase'], accuracy
+                        )
 
-            if type(phases) == dict:
-                ph_from_dict = get_phases_from_dict(phases, accuracy)
-                phases = ph_from_dict
-
-            if len(phases) == 0:
-                logger.warning('No phase to generate.')
-                spectral_networks = []
-
-            elif(len(phases) == 1):
-                phase = phases[0]
-                logger.info(
-                    'Generate a single spectral network at theta = {}.'
-                    .format(phase)
-                )
-                spectral_network = SpectralNetwork(
-                    phase=phase,
-                    logger_name=self.logger_name,
-                )
-
-                if cache_dir is not None:
-                    cache_file_path = os.path.join(
-                        cache_dir,
-                        '{}_0.json'.format(data_file_prefix),
-                    )
                 else:
-                    cache_file_path = None
-                spectral_network.grow(
-                    config=self.config, sw_data=self.sw_data,
-                    cache_file_path=cache_file_path,
-                )
+                    data_file_prefix = 'data_'
+                    # Extend spectral networks with additional phases.
+                    if phases is None:
+                        # No additional phase to add.
+                        logger.warning(
+                            'No additional phase given, '
+                            'stop extending the spectral networks.'
+                        )
 
-                spectral_networks = [spectral_network]
+                if type(phases) == dict:
+                    ph_from_dict = get_phases_from_dict(phases, accuracy)
+                    phases = ph_from_dict
 
-            else:
-                logger.info('Generate multiple spectral networks.')
-                logger.info('Number of phases: {}'.format(len(phases)))
-                seed_spectral_networks = [
-                    SpectralNetwork(
-                        phase=a_phase,
+                if len(phases) == 0:
+                    logger.warning('No phase to generate.')
+                    spectral_networks = []
+
+                elif(len(phases) == 1):
+                    phase = phases[0]
+                    logger.info(
+                        'Generate a single spectral network at theta = {}.'
+                        .format(phase)
+                    )
+                    spectral_network = SpectralNetwork(
+                        phase=phase,
                         logger_name=self.logger_name,
                     )
-                    for a_phase in phases
-                ]
-                spectral_networks = parallel_get_spectral_network(
-                    config=self.config,
-                    sw_data=self.sw_data,
-                    spectral_networks=seed_spectral_networks,
-                    n_processes=n_processes,
-                    logger_name=self.logger_name,
-                    cache_dir=cache_dir,
-                    data_file_prefix=data_file_prefix,
+
+                    if cache_dir is not None:
+                        cache_file_path = os.path.join(
+                            cache_dir,
+                            '{}_0.json'.format(data_file_prefix),
+                        )
+                    else:
+                        cache_file_path = None
+                    spectral_network.grow(
+                        config=self.config, sw_data=self.sw_data,
+                        cache_file_path=cache_file_path,
+                    )
+
+                    spectral_networks = [spectral_network]
+
+                else:
+                    logger.info('Generate multiple spectral networks.')
+                    logger.info('Number of phases: {}'.format(len(phases)))
+                    seed_spectral_networks = [
+                        SpectralNetwork(
+                            phase=a_phase,
+                            logger_name=self.logger_name,
+                        )
+                        for a_phase in phases
+                    ]
+                    spectral_networks = parallel_get_spectral_network(
+                        config=self.config,
+                        sw_data=self.sw_data,
+                        spectral_networks=seed_spectral_networks,
+                        n_processes=n_processes,
+                        logger_name=self.logger_name,
+                        cache_dir=cache_dir,
+                        data_file_prefix=data_file_prefix,
+                    )
+
+            except (KeyboardInterrupt, SystemExit) as e:
+                logger.warning(
+                    'SpectralNetworkData.generate() '
+                    'caught {} while generating spectral networks.'
+                    .format(type(e))
                 )
 
-        except (KeyboardInterrupt, SystemExit) as e:
-            logger.warning(
-                'SpectralNetworkData.generate() '
-                'caught {} while generating spectral networks.'
-                .format(type(e))
-            )
+            # TODO: handle and print all the other exceptions
+            # to web UI.
+            if extend is True:
+                self.spectral_networks += spectral_networks
+                self.spectral_networks.sort(key=lambda sn: sn.phase)
+            else:
+                self.spectral_networks = spectral_networks
+                end_time = time.time()
+                logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
+                logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
-        # TODO: handle and print all the other exceptions
-        # to web UI.
-        if extend is True:
-            self.spectral_networks += spectral_networks
-            self.spectral_networks.sort(key=lambda sn: sn.phase)
+            if logging_queue is not None:
+                # Put a mark that generating spectral networks is done.
+                try:
+                    logging_queue.put_nowait(None)
+                except:
+                    logger.warn(
+                        'Failed in putting a finish mark in the logging queue.'
+                    )
+
+            if result_queue is not None:
+                result_queue.put(self)
+
+            if cache_dir is not None and extend is False:
+                version_file_path = os.path.join(cache_dir, 'version')
+                save_version(version_file_path)
+                # NOTE: The following should be placed
+                # at the last stage of spectral network generation.
+                config_file_path = os.path.join(cache_dir, 'config.ini')
+                self.config.save(config_file_path)
+
         else:
-            self.spectral_networks = spectral_networks
-            end_time = time.time()
-            logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
-            logger.info('elapsed cpu time: %.3f', end_time - start_time)
+            parameter_sequence = {}
+            print parse_sym_dict_str(
+                self.config['parameter_sequence'],
+                multi_parameter=True
+            )
+            var, val = parse_sym_dict_str(
+                self.config['parameter_sequence'],
+                multi_parameter=True
+            )
+            print 'the parameter sequence var is {}'.format(var)
+            print 'the parameter sequence val is {}'.format(val)
 
-        if logging_queue is not None:
-            # Put a mark that generating spectral networks is done.
-            try:
-                logging_queue.put_nowait(None)
-            except:
-                logger.warn(
-                    'Failed in putting a finish mark in the logging queue.'
-                )
 
-        if result_queue is not None:
-            result_queue.put(self)
-
-        if cache_dir is not None and extend is False:
-            version_file_path = os.path.join(cache_dir, 'version')
-            save_version(version_file_path)
-            # NOTE: The following should be placed
-            # at the last stage of spectral network generation.
-            config_file_path = os.path.join(cache_dir, 'config.ini')
-            self.config.save(config_file_path)
 
     def extend(
         self,

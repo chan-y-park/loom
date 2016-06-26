@@ -572,8 +572,11 @@ class SWDataBase(object):
             casimir_differentials[eval(k)] = phi_k
 
         diff_params = {}
-        for var, val in parse_sym_dict_str(config['differential_parameters']):
-            diff_params[var] = sympy.sympify(val)
+        if config['differential_parameters'] is not None:
+            for var, val in parse_sym_dict_str(
+                config['differential_parameters']
+            ):
+                diff_params[var] = sympy.sympify(val)
 
         if json_data is None:
             self.g_data = GData(root_system=config['root_system'],
