@@ -325,17 +325,108 @@ class SpectralNetworkData:
                 self.config.save(config_file_path)
 
         else:
+            phase = 1.57
+            logger.info(
+                'Study multiple parameters at fixed phase {}'
+                .format(phase)
+            )
+
+            original_parameters = self.config['differential_parameters']
+            spectral_networks = []
+            sw_data = []
             parameter_sequence = {}
-            print parse_sym_dict_str(
+            var_str, val_str = parse_sym_dict_str(
                 self.config['parameter_sequence'],
                 multi_parameter=True
             )
-            var, val = parse_sym_dict_str(
-                self.config['parameter_sequence'],
-                multi_parameter=True
-            )
-            print 'the parameter sequence var is {}'.format(var)
-            print 'the parameter sequence val is {}'.format(val)
+
+            if extend is True:
+                raise NotImplementedError
+
+            val = sympy.sympify(val_str)
+            val_i = val[0]
+            val_f = val[1]
+            n_steps = val[2]
+            step = (val_f - val_i) / (n_steps - 1)
+            val_list = [val_i + j * step for j in range(n_steps)]
+
+            for i, val_i in enumerate(val_list):
+                logger.info(
+                    'Producing Spectral Network for {} = {}'
+                    .format(var_str, val)
+                )
+                diff_params = parse_sym_dict_str(
+                    original_parameters
+                )
+                diff_param_str = '{ '
+                for pair in diff_params:
+                    diff_param_str = (
+                        diff_param_str + pair[0]+' : '+pair[1] +', '
+                    )
+                diff_param_str = (
+                    diff_param_str + var_str +' : ' + str(val_i) + ' }'
+                )
+                self.config['differential_parameters'] = diff_param_str
+
+                data_file_prefix = 'multi_data_'+str(i)+'_'
+                start_time = time.time()
+                logger.info(
+                    'Started @ {}'.format(get_date_time_str(start_time))
+                )
+                self.sw_data = SWDataWithTrivialization(
+                    self.config, logger_name=self.logger_name
+                )
+                if cache_dir is not None:
+                    sw_data_file_path = os.path.join(
+                        cache_dir, 'sw_data' + str(i) + '.json'
+                    )
+                    self.sw_data.save(sw_data_file_path)
+                
+                
+
+                spectral_network = SpectralNetwork(
+                    phase=phase,
+                    logger_name=self.logger_name,
+                )
+
+                if cache_dir is not None:
+                    cache_file_path = os.path.join(
+                        cache_dir,
+                        '{}_0.json'.format(data_file_prefix),
+                    )
+                else:
+                    cache_file_path = None
+                spectral_network.grow(
+                    config=self.config, sw_data=self.sw_data,
+                    cache_file_path=cache_file_path,
+                )
+
+                spectral_networks.append(spectral_network)
+                
+            self.spectral_networks = spectral_networks
+            end_time = time.time()
+            logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
+            logger.info('elapsed cpu time: %.3f', end_time - start_time)
+
+            if logging_queue is not None:
+                # Put a mark that generating spectral networks is done.
+                try:
+                    logging_queue.put_nowait(None)
+                except:
+                    logger.warn(
+                        'Failed in putting a finish mark in the logging queue.'
+                    )
+
+            if result_queue is not None:
+                result_queue.put(self)
+
+            if cache_dir is not None and extend is False:
+                version_file_path = os.path.join(cache_dir, 'version')
+                save_version(version_file_path)
+                # NOTE: The following should be placed
+                # at the last stage of spectral network generation.
+                config_file_path = os.path.join(cache_dir, 'config.ini')
+                self.config.save(config_file_path)
 
 
 
