@@ -333,7 +333,7 @@ class SpectralNetworkData:
 
             original_parameters = self.config['differential_parameters']
             spectral_networks = []
-            sw_data = []
+            sw_data_sequence = []
             parameter_sequence = {}
             var_str, val_str = parse_sym_dict_str(
                 self.config['parameter_sequence'],
@@ -376,13 +376,13 @@ class SpectralNetworkData:
                 self.sw_data = SWDataWithTrivialization(
                     self.config, logger_name=self.logger_name
                 )
+                sw_data_sequence.append(self.sw_data)
+
                 if cache_dir is not None:
                     sw_data_file_path = os.path.join(
                         cache_dir, 'sw_data' + str(i) + '.json'
                     )
                     self.sw_data.save(sw_data_file_path)
-                
-                
 
                 spectral_network = SpectralNetwork(
                     phase=phase,
@@ -404,6 +404,7 @@ class SpectralNetworkData:
                 spectral_networks.append(spectral_network)
                 
             self.spectral_networks = spectral_networks
+            self.sw_data = sw_data_sequence
             end_time = time.time()
             logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
             logger.info('elapsed cpu time: %.3f', end_time - start_time)
@@ -864,45 +865,85 @@ def make_spectral_network_plot(
     **kwargs
 ):
     logger = logging.getLogger(logger_name)
-    sw_data = spectral_network_data.sw_data
-    spectral_networks = spectral_network_data.spectral_networks
-    spectral_network_plot_title = 'Spectral Network'
+    if type(spectral_network_data.sw_data) != list:
+        sw_data = spectral_network_data.sw_data
+        spectral_networks = spectral_network_data.spectral_networks
+        spectral_network_plot_title = 'Spectral Network'
 
-    if matplotlib.rcParams['backend'] == 'TkAgg':
-        spectral_network_plot = NetworkPlotTk(
-            master=master,
-            title=spectral_network_plot_title,
-            plot_range=plot_range,
-        )
+        if matplotlib.rcParams['backend'] == 'TkAgg':
+            spectral_network_plot = NetworkPlotTk(
+                master=master,
+                title=spectral_network_plot_title,
+                plot_range=plot_range,
+            )
+        else:
+            spectral_network_plot = NetworkPlot(
+                title=spectral_network_plot_title,
+                plot_range=plot_range,
+            )
+
+        # Rotate the z-plane into the location defined by the curve.
+        spectral_network_data.reset_z_rotation()
+
+        for spectral_network in spectral_networks:
+            logger.info('Generating the plot of a spectral network '
+                        '@ theta = {}...'.format(spectral_network.phase))
+            plot_legend = spectral_network_plot.draw(
+                spectral_network,
+                sw_data.branch_points,
+                punctures=(sw_data.regular_punctures +
+                           sw_data.irregular_punctures),
+                irregular_singularities=sw_data.irregular_singularities,
+                g_data=sw_data.g_data,
+                branch_cut_rotation=sw_data.branch_cut_rotation,
+                logger_name=logger_name,
+                **kwargs
+            )
+            logger.info(plot_legend)
+
+        if show_plot is True:
+            spectral_network_plot.show()
     else:
-        spectral_network_plot = NetworkPlot(
-            title=spectral_network_plot_title,
-            plot_range=plot_range,
-        )
+        # This case is assumed to correspond to having a parameter sequence
+        plot_sequence = []
+        for i, sw_data in enumerate(spectral_network_data.sw_data):
+            spectral_networks = [spectral_network_data.spectral_networks[i]]
+            spectral_network_plot_title = 'Spectral Network '+str(i)
 
-    # Rotate the z-plane into the location defined by the curve.
-    spectral_network_data.reset_z_rotation()
+            if matplotlib.rcParams['backend'] == 'TkAgg':
+                spectral_network_plot = NetworkPlotTk(
+                    master=master,
+                    title=spectral_network_plot_title,
+                    plot_range=plot_range,
+                )
+            else:
+                spectral_network_plot = NetworkPlot(
+                    title=spectral_network_plot_title,
+                    plot_range=plot_range,
+                )
+            plot_sequence.append(spectral_network_plot)
 
-    for spectral_network in spectral_networks:
-        logger.info('Generating the plot of a spectral network '
-                    '@ theta = {}...'.format(spectral_network.phase))
-        plot_legend = spectral_network_plot.draw(
-            spectral_network,
-            sw_data.branch_points,
-            punctures=(sw_data.regular_punctures +
-                       sw_data.irregular_punctures),
-            irregular_singularities=sw_data.irregular_singularities,
-            g_data=sw_data.g_data,
-            branch_cut_rotation=sw_data.branch_cut_rotation,
-            logger_name=logger_name,
-            **kwargs
-        )
-        logger.info(plot_legend)
+            # Rotate the z-plane into the location defined by the curve.
+            z_r = sw_data.z_plane_rotation
+            sw_data.set_z_rotation(z_r)
+            for sn in spectral_networks:
+                sn.set_z_rotation(z_r)
 
-    if show_plot is True:
-        spectral_network_plot.show()
+            for spectral_network in spectral_networks:
+                plot_legend = spectral_network_plot.draw(
+                    spectral_network,
+                    sw_data.branch_points,
+                    punctures=(sw_data.regular_punctures +
+                               sw_data.irregular_punctures),
+                    irregular_singularities=sw_data.irregular_singularities,
+                    g_data=sw_data.g_data,
+                    branch_cut_rotation=sw_data.branch_cut_rotation,
+                    logger_name=logger_name,
+                    **kwargs
+                )
+                logger.info(plot_legend)
 
-    return spectral_network_plot
+    return plot_sequence
 
 
 def get_date_time_str(a_time):
