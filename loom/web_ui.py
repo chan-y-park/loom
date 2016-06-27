@@ -69,6 +69,8 @@ advanced_config_options = [
     ['size_of_bp_neighborhood'],
     ['size_of_puncture_cutoff'],
     ['accuracy'],
+    ['parameter_sequence'],
+    ['branch_points_sequence'],
 ]
 
 
