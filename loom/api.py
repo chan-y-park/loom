@@ -83,25 +83,60 @@ class SpectralNetworkData:
             logger.debug('The version of the data is different '
                          'from the current version of loom.')
 
-        sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
-        with open(sw_data_file_path, 'r') as fp:
-            json_data = json.load(fp)
-            sw_data = SWDataWithTrivialization(
-                config, logger_name=logger_name,
-                json_data=json_data,
-            )
-
         spectral_networks = []
 
-        data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
-        for data_file in data_file_list:
-            logger.info('Loading {}...'.format(data_file))
-            spectral_network = SpectralNetwork(logger_name=logger_name)
-            spectral_network.load(data_file, sw_data)
-            spectral_networks.append(spectral_network)
-        spectral_networks.sort(key=lambda sn: sn.phase)
+        if config['parameter_sequence'] is None:
+            # This is a standard family of networks
+            # with different phases.
+            sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
+            with open(sw_data_file_path, 'r') as fp:
+                json_data = json.load(fp)
+                sw_data = SWDataWithTrivialization(
+                    config, logger_name=logger_name,
+                    json_data=json_data,
+                )
 
-        logger.info('Finished loading data from {}.'.format(data_dir))
+            data_file_list = glob.glob(os.path.join(data_dir, 'data_*.json'))
+            for data_file in data_file_list:
+                logger.info('Loading {}...'.format(data_file))
+                spectral_network = SpectralNetwork(logger_name=logger_name)
+                spectral_network.load(data_file, sw_data)
+                spectral_networks.append(spectral_network)
+            spectral_networks.sort(key=lambda sn: sn.phase)
+
+            logger.info('Finished loading data from {}.'.format(data_dir))
+
+        else:
+            # This is a family of networks with different parameters.
+            var_str, val_str = parse_sym_dict_str(
+                config['parameter_sequence'],
+                multi_parameter=True
+            )
+            n_steps = sympy.sympify(val_str)[2]
+            sw_data = []
+            for i in range(n_steps):
+                sw_data_file_path = os.path.join(
+                    data_dir, 'sw_data_'+str(i)+'.json'
+                )
+                with open(sw_data_file_path, 'r') as fp:
+                    json_data = json.load(fp)
+                    sw_data_i = SWDataWithTrivialization(
+                        config, logger_name=logger_name,
+                        json_data=json_data,
+                    )
+                sw_data.append(sw_data_i)
+
+                # Now load the spectral network for the i-th value of the 
+                # parameter
+                data_file_i = os.path.join(
+                    data_dir, 'data_' + str(i) + '.json'
+                )
+                logger.info('Loading {}...'.format(data_file_i))
+                spectral_network = SpectralNetwork(logger_name=logger_name)
+                spectral_network.load(data_file_i, sw_data_i)
+                spectral_networks.append(spectral_network)
+
+                logger.info('Finished loading data from {}.'.format(data_dir))
 
         self.config = config
         self.sw_data = sw_data
@@ -155,20 +190,40 @@ class SpectralNetworkData:
         )
 
         # Save geometric & trivialization data.
-        sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
-        logger.info('Saving data to {}.'.format(sw_data_file_path))
-        sw_data.save(sw_data_file_path)
+        if self.config.data['parameter_sequence'] is None:
+            sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
+            logger.info('Saving data to {}.'.format(sw_data_file_path))
+            sw_data.save(sw_data_file_path)
+        else:
+            for i, sw_data_i in enumerate(sw_data):
+                sw_data_file_path = os.path.join(
+                    data_dir, 'sw_data_'+str(i)+'.json'
+                )
+                logger.info('Saving data to {}.'.format(sw_data_file_path))
+                sw_data_i.save(sw_data_file_path)
 
         # Save spectral network data.
-        for i, spectral_network in enumerate(spectral_networks):
-            data_file_path = os.path.join(
-                data_dir,
-                'data_{}.json'.format(
-                    str(i).zfill(len(str(len(spectral_networks) - 1)))
+        if self.config.data['parameter_sequence'] is None:
+            for i, spectral_network in enumerate(spectral_networks):
+                data_file_path = os.path.join(
+                    data_dir,
+                    'data_{}.json'.format(
+                        str(i).zfill(len(str(len(spectral_networks) - 1)))
+                    )
                 )
-            )
-            logger.info('Saving data to {}.'.format(data_file_path))
-            spectral_network.save(data_file_path)
+                logger.info('Saving data to {}.'.format(data_file_path))
+                spectral_network.save(data_file_path)
+        else:
+            for i, spectral_network in enumerate(spectral_networks):
+                data_file_path = os.path.join(
+                    data_dir,
+                    'data_{}.json'.format(
+                        str(i).zfill(len(str(len(spectral_networks) - 1)))
+                    )
+                )
+                logger.info('Saving data to {}.'.format(data_file_path))
+                spectral_network.save(data_file_path)
+
 
         if make_zipped_file is True:
             # Make a compressed data file.
@@ -362,7 +417,7 @@ class SpectralNetworkData:
             for i, val_i in enumerate(val_list):
                 logger.info(
                     'Producing Spectral Network for {} = {}'
-                    .format(var_str, val)
+                    .format(var_str, val_i)
                 )
                 # First insert the parameter value from the 
                 # parameter sequence
@@ -923,6 +978,9 @@ def make_spectral_network_plot(
 
         if show_plot is True:
             spectral_network_plot.show()
+        
+        return spectral_network_plot
+
     else:
         # This case is assumed to correspond to having a parameter sequence
         plot_sequence = []
@@ -963,7 +1021,7 @@ def make_spectral_network_plot(
                 )
                 logger.info(plot_legend)
 
-    return plot_sequence
+        return plot_sequence
 
 
 def get_date_time_str(a_time):

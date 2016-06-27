@@ -579,6 +579,7 @@ class SWDataBase(object):
                 diff_params[var] = sympy.sympify(val)
 
         if json_data is None:
+            # Work out the SW geometry data
             self.g_data = GData(root_system=config['root_system'],
                                 representation_str=config['representation'],
                                 logger_name=self.logger_name,)
@@ -591,6 +592,7 @@ class SWDataBase(object):
                 branch_points=branch_points,
             )
         else:
+            # Set the SW geometry data from a saved file
             self.set_from_json_data(json_data)
             self.ffr_curve = SWCurve(
                 casimir_differentials=casimir_differentials,
