@@ -29,6 +29,7 @@ class LoomConfig:
                 'irregular_punctures': 'Irregular punctures',
                 'ramification_points': 'Ramification points',
                 'branch_points': 'Branch points',
+                'branch_points_sequence': 'Branch points sequence',
                 'mt_params': 'Mobius transformation',
                 'ramification_point_finding_method':
                     'Ramification point finding method',

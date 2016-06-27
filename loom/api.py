@@ -325,7 +325,7 @@ class SpectralNetworkData:
                 self.config.save(config_file_path)
 
         else:
-            phase = 1.57
+            phase = 1.570795
             logger.info(
                 'Study multiple parameters at fixed phase {}'
                 .format(phase)
@@ -339,6 +339,15 @@ class SpectralNetworkData:
                 self.config['parameter_sequence'],
                 multi_parameter=True
             )
+
+            if (
+                self.config['ramification_point_finding_method']
+                =='from_branch_points'
+            ):
+                branch_points_sequence = sympy.sympify(
+                self.config['branch_points_sequence']
+            )
+                branch_points_sequence_str = map(str, branch_points_sequence)
 
             if extend is True:
                 raise NotImplementedError
@@ -355,6 +364,8 @@ class SpectralNetworkData:
                     'Producing Spectral Network for {} = {}'
                     .format(var_str, val)
                 )
+                # First insert the parameter value from the 
+                # parameter sequence
                 diff_params = parse_sym_dict_str(
                     original_parameters
                 )
@@ -367,6 +378,15 @@ class SpectralNetworkData:
                     diff_param_str + var_str +' : ' + str(val_i) + ' }'
                 )
                 self.config['differential_parameters'] = diff_param_str
+                # Then, if branch points are given, also insert the 
+                # branch point
+                if (
+                    self.config['ramification_point_finding_method']
+                    =='from_branch_points'
+                ):
+                    self.config['branch_points'] = (
+                        branch_points_sequence_str[i]
+                    )
 
                 data_file_prefix = 'multi_data_'+str(i)+'_'
                 start_time = time.time()
