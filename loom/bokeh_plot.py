@@ -181,7 +181,9 @@ def get_spectral_network_bokeh_plot(
                 bcds_i.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
             bcds.append(bcds_i)
 
-        #### TODO: add plotting of branch points and cuts
+        # In this case the branch points and cuts will be 
+        # drawn differently for each spectral network. 
+        # Each call of the slider will deal with them.
 
     # Data source for the current plot
     cds = ColumnDataSource({
@@ -370,27 +372,58 @@ def get_spectral_network_bokeh_plot(
     # Slider
     num_of_plots = len(snds.data['spectral_networks'])
     if num_of_plots > 1:
-        sn_slider = Slider(
-            start=0, end=num_of_plots - 1,
-            value=0, step=1, title="spectral network #"
-        )
+        if multi_parameter is False:
+            sn_slider = Slider(
+                start=0, end=num_of_plots - 1,
+                value=0, step=1, title="spectral network #"
+            )
 
-        sn_slider.callback = CustomJS(
-            args={
-                'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
-                'dpds': dpds, 'pds': pds, 'hover': hover,
-                'plot_options': plot_options_ds, 'tree_idx_ds': tree_idx_ds
-            },
-            code=(
-                custom_js_code +
-                'sn_slider(cb_obj, cds, snds, sn_idx_ds, dpds, pds, hover, '
-                'plot_options, tree_idx_ds);'
-            ),
-        )
-        plot = vform(bokeh_figure, sn_slider, width=plot_width,)
-        notebook_vform_elements = (
-            [bokeh_figure, sn_slider] + notebook_vform_elements
-        )
+            sn_slider.callback = CustomJS(
+                args={
+                    'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
+                    'dpds': dpds, 'pds': pds, 'hover': hover,
+                    'plot_options': plot_options_ds, 
+                    'tree_idx_ds': tree_idx_ds
+                },
+                code=(
+                    custom_js_code +
+                    'sn_slider(cb_obj, cds, snds, sn_idx_ds, dpds, pds, '
+                    'hover, plot_options, tree_idx_ds);'
+                ),
+            )
+            plot = vform(bokeh_figure, sn_slider, width=plot_width,)
+            notebook_vform_elements = (
+                [bokeh_figure, sn_slider] + notebook_vform_elements
+            )
+        
+        else:
+            # TODO: implement new js routine for sn_slider when
+            # there are multiple parameters.
+            # Need to draw branch points and cuts for each value of the 
+            # parameters.
+            sn_slider = Slider(
+                start=0, end=num_of_plots - 1,
+                value=0, step=1, title="spectral network #"
+            )
+
+            sn_slider.callback = CustomJS(
+                args={
+                    'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
+                    'dpds': dpds, 'pds': pds, 'hover': hover,
+                    'plot_options': plot_options_ds, 
+                    'tree_idx_ds': tree_idx_ds
+                },
+                code=(
+                    custom_js_code +
+                    'sn_slider(cb_obj, cds, snds, sn_idx_ds, dpds, pds, '
+                    'hover, plot_options, tree_idx_ds);'
+                ),
+            )
+            plot = vform(bokeh_figure, sn_slider, width=plot_width,)
+            notebook_vform_elements = (
+                [bokeh_figure, sn_slider] + notebook_vform_elements
+            )
+
     else:
         plot = bokeh_figure
         notebook_vform_elements = (
