@@ -1035,7 +1035,6 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
                         .format(option)
                     )
                     pass
-
     return loom_config
 
 
@@ -1084,12 +1083,27 @@ def render_plot_template(
         spectral_network_data.spectral_networks[0].phase / pi
     )
 
-    legend = get_legend(
-        g_data=sw_data.g_data,
-        regular_punctures=sw_data.regular_punctures,
-        branch_points=sw_data.branch_points,
-        irregular_singularities=sw_data.irregular_singularities,
-    )
+    if type(sw_data) is list:
+        legend = (
+            '\n'+
+            '------------------------\n'+
+            'Multi-Parameter Plot\n'+
+            '------------------------\n'
+        )
+        for swd in sw_data:
+            legend += get_legend(
+                g_data=swd.g_data,
+                regular_punctures=swd.regular_punctures,
+                branch_points=swd.branch_points,
+                irregular_singularities=swd.irregular_singularities,
+            )
+    else:
+        legend = get_legend(
+            g_data=sw_data.g_data,
+            regular_punctures=sw_data.regular_punctures,
+            branch_points=sw_data.branch_points,
+            irregular_singularities=sw_data.irregular_singularities,
+        )
 
     with open('static/bokeh_callbacks.js', 'r') as fp:
         bokeh_custom_script = fp.read()

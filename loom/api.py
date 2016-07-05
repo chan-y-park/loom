@@ -414,6 +414,10 @@ class SpectralNetworkData:
             step = (val_f - val_i) / (n_steps - 1)
             val_list = [val_i + j * step for j in range(n_steps)]
 
+            logger.info(
+                'will use these parameter values {}'.format(val_list)
+            )
+
             for i, val_i in enumerate(val_list):
                 logger.info(
                     'Producing Spectral Network for {} = {}'
@@ -669,12 +673,24 @@ class SpectralNetworkData:
             sn.set_z_rotation(z_rotation)
 
     def reset_z_rotation(self):
-        z_r = self.sw_data.z_plane_rotation
-        self.set_z_rotation(z_r)
+        # TODO: handle z-rotation for multi-parameter case
+        # note that each parameter choice may have its own
+        # different z_r
+        if type(self.sw_data) is list:
+            pass
+        else:
+            z_r = self.sw_data.z_plane_rotation
+            self.set_z_rotation(z_r)
 
     def rotate_back(self):
-        bc_r = self.sw_data.branch_cut_rotation
-        self.set_z_rotation(1/bc_r)
+        # TODO: handle z-rotation for multi-parameter case
+        # note that each parameter choice may have its own
+        # different z_r
+        if type(self.sw_data) is list:
+            pass
+        else:
+            bc_r = self.sw_data.branch_cut_rotation
+            self.set_z_rotation(1/bc_r)
 
     def plot_s_walls(self, walls, plot_range=None, plot_data_points=False,):
         """
