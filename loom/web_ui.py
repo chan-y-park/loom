@@ -7,7 +7,7 @@ import uuid
 import zipfile
 import glob
 import shutil
-import pdb
+# import pdb
 
 from io import BytesIO
 from cmath import pi
@@ -728,6 +728,7 @@ def render_plot_template(
 ):
     loom_config = spectral_network_data.config
     sw_data = spectral_network_data.sw_data
+    spectral_networks = spectral_network_data.spectral_networks
     soliton_tree_data = None
 
     if plot_two_way_streets is True:

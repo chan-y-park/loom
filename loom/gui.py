@@ -10,7 +10,7 @@ from Queue import Empty as QueueEmpty
 
 from api import (set_logging, get_logging_handler,
                  generate_spectral_network, load_config, load_spectral_network,
-                 save_config, save_spectral_network,
+                 save_config,
                  make_spectral_network_plot, SpectralNetworkData,)
 
 GUI_LOOP_DELAY = 100    # in millisec

@@ -766,7 +766,7 @@ def generate_spectral_network(
     and return a list of data obtained from SpectralNetwork.get_data()
     """
 
-    logger = logging.getLogger(logger_name)
+    # logger = logging.getLogger(logger_name)
 
     spectral_network_data = SpectralNetworkData(
         config=config,

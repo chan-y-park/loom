@@ -7,7 +7,6 @@ import matplotlib
 from math import pi
 
 from sympy import oo
-from matplotlib import pyplot
 from matplotlib.backends.backend_agg import FigureCanvas
 
 from misc import put_on_cylinder, get_splits_with_overlap
@@ -293,7 +292,6 @@ class SolitonTreePlot(SpectralNetworkPlot):
     def __init__(self, plot_range=None):
         super(SolitonTreePlot, self).__init__(
             matplotlib_figure=matplotlib.figure.Figure(),
-            #matplotlib_figure=pyplot.figure(),
             plot_range=plot_range,
         )
         self.canvas = FigureCanvas(
