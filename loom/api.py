@@ -149,8 +149,8 @@ class SpectralNetworkData:
 
         # Save configuration to a file.
         config_file_path = os.path.join(data_dir, 'config.ini')
-        save_config(
-            self.config, file_path=config_file_path,
+        self.config.save(
+            file_path=config_file_path,
             logger_name=logger_name
         )
 
@@ -647,7 +647,7 @@ def load_config(file_path=None, logger_name='loom',):
 # XXX: save_config() will be deprecated.
 # Use LoomConfig.save().
 def save_config(config, file_path=None, logger_name='loom',):
-    config.save(file_path)
+    config.save(file_path=file_path, logger_name=logger_name)
 
     return None
 
@@ -656,13 +656,17 @@ def save_config(config, file_path=None, logger_name='loom',):
 # Use SpectralNetworkData.load().
 def load_spectral_network(
     data_dir=None,
+    result_queue=None,
     logger_name='loom',
 ):
     data = SpectralNetworkData(
         data_dir=data_dir,
         logger_name=logger_name,
     )
-    return (data.config, data)
+    if result_queue is not None:
+        result_queue.put(data)
+    else:
+        return (data.config, data)
 
 
 # XXX: save_spectral_network() will be deprecated.
@@ -683,10 +687,77 @@ def save_spectral_network(
 
 # XXX: generate_spectral_network() will be deprecated.
 # Use SpectralNetworkData.generate().
+#def generate_spectral_network(
+#    config,
+#    phase=None,
+#    n_processes=0,
+#    logger_name='loom',
+#):
+#    """
+#    Generate one or more spectral networks according to
+#    the command-line options and the configuration file
+#    and return a list of data obtained from SpectralNetwork.get_data()
+#    """
+#
+#    logger = logging.getLogger(logger_name)
+#
+#    if phase is None:
+#        phase = config['phase']
+#    else:
+#        config['phase'] = phase
+#
+#    start_time = time.time()
+#    logger.info('Started @ {}'.format(get_date_time_str(start_time)))
+#
+#    try:
+#        sw_data = SWDataWithTrivialization(config, logger_name=logger_name)
+#
+#        if(isinstance(phase, float)):
+#            logger.info('Generate a single spectral network at theta = {}.'
+#                        .format(phase))
+#            spectral_network = SpectralNetwork(
+#                phase=phase,
+#                logger_name=logger_name,
+#            )
+#
+#            spectral_network.grow(config, sw_data)
+#
+#            spectral_networks = [spectral_network]
+#
+#        elif(isinstance(phase, list)):
+#            logger.info('Generate multiple spectral networks.')
+#            logger.info('phases = {}.'.format(phase))
+#            spectral_networks = parallel_get_spectral_network(
+#                config=config,
+#                sw_data=sw_data,
+#                n_processes=n_processes,
+#                logger_name=logger_name,
+#            )
+#
+#    except (KeyboardInterrupt, SystemExit) as e:
+#        logger.warning(
+#            'loom.api.generate_spectral_network() '
+#            'caught {} while generating spectral networks.'
+#            .format(type(e))
+#        )
+#        sw_data = None
+#        spectral_networks = None
+#
+#    end_time = time.time()
+#    logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
+#    logger.info('elapsed cpu time: %.3f', end_time - start_time)
+#
+#    spectral_network_data = SpectralNetworkData(
+#        sw_data=sw_data, spectral_networks=spectral_networks,
+#    )
+#
+#    return spectral_network_data
+
+
 def generate_spectral_network(
     config,
-    phase=None,
     n_processes=0,
+    result_queue=None,
     logger_name='loom',
 ):
     """
@@ -697,54 +768,14 @@ def generate_spectral_network(
 
     logger = logging.getLogger(logger_name)
 
-    if phase is None:
-        phase = config['phase']
-    else:
-        config['phase'] = phase
-
-    start_time = time.time()
-    logger.info('Started @ {}'.format(get_date_time_str(start_time)))
-
-    try:
-        sw_data = SWDataWithTrivialization(config, logger_name=logger_name)
-
-        if(isinstance(phase, float)):
-            logger.info('Generate a single spectral network at theta = {}.'
-                        .format(phase))
-            spectral_network = SpectralNetwork(
-                phase=phase,
-                logger_name=logger_name,
-            )
-
-            spectral_network.grow(config, sw_data)
-
-            spectral_networks = [spectral_network]
-
-        elif(isinstance(phase, list)):
-            logger.info('Generate multiple spectral networks.')
-            logger.info('phases = {}.'.format(phase))
-            spectral_networks = parallel_get_spectral_network(
-                config=config,
-                sw_data=sw_data,
-                n_processes=n_processes,
-                logger_name=logger_name,
-            )
-
-    except (KeyboardInterrupt, SystemExit) as e:
-        logger.warning(
-            'loom.api.generate_spectral_network() '
-            'caught {} while generating spectral networks.'
-            .format(type(e))
-        )
-        sw_data = None
-        spectral_networks = None
-
-    end_time = time.time()
-    logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
-    logger.info('elapsed cpu time: %.3f', end_time - start_time)
-
     spectral_network_data = SpectralNetworkData(
-        sw_data=sw_data, spectral_networks=spectral_networks,
+        config=config,
+        logger_name=logger_name,
+    )
+
+    spectral_network_data.generate(
+        n_processes=n_processes,
+        result_queue=result_queue,
     )
 
     return spectral_network_data

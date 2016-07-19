@@ -72,8 +72,10 @@ class GUILoom:
             ['differential_parameters'],
             ['regular_punctures'],
             ['irregular_punctures'],
-            ['mt_params'],
+            ['branch_points'],
+            ['ramification_points'],
             ['ramification_point_finding_method'],
+            ['mt_params'],
             ['plot_range'],
             ['num_of_steps'],
             ['num_of_iterations'],
@@ -134,6 +136,10 @@ class GUILoom:
                     'description',
                     'casimir_differentials',
                     'differential_parameters',
+                    'regular_punctures',
+                    'irregular_punctures',
+                    'branch_points',
+                    'ramification_points',
                 ]:
                     self.entry[config_option].grid(
                         row=grid_row, column=grid_col, columnspan=3,
@@ -209,6 +215,7 @@ class GUILoom:
             # spacing1=2,
             spacing2=2,
             spacing3=2,
+            height=12,
         )
         self.log_text.grid(
             row=grid_row, column=grid_col, columnspan=4, sticky=tk.EW
@@ -318,8 +325,7 @@ class GUILoom:
             target=load_spectral_network,
             kwargs=dict(
                 data_dir=data_dir,
-                # logging_queue=self.logging_queue,
-                # result_queue=result_queue,
+                result_queue=result_queue,
                 logger_name=self.logger_name,
             )
         )
@@ -348,13 +354,15 @@ class GUILoom:
                 self.change_gui_state('on')
                 return None
 
-        config, spectral_network_data = result_queue.get()
+        spectral_network_data = result_queue.get()
         load_data_process.join()
-        if config is None:
+
+        self.config = spectral_network_data.config
+        if self.config is None:
             logger.warning('Data contains no configuration.')
             self.change_gui_state('on')
             return None
-        self.config = config
+
         self.update_entries_from_config()
         self.spectral_networks = spectral_network_data.spectral_networks
         self.sw_data = spectral_network_data.sw_data
@@ -377,15 +385,16 @@ class GUILoom:
             return None
 
         self.update_config_from_entries()
+        data = SpectralNetworkData(
+            sw_data=self.sw_data,
+            spectral_networks=self.spectral_networks,
+            config=self.config,
+            logger_name=self.logger_name,
+        )
         save_data_process = multiprocessing.Process(
-            target=save_spectral_network,
-            args=(
-                self.config,
-                SpectralNetworkData(self.sw_data, self.spectral_networks,),
-            ),
+            target=data.save,
             kwargs=dict(
                 data_dir=data_dir,
-                logger_name=self.logger_name,
                 make_zipped_file=False,
             )
         )
@@ -451,7 +460,7 @@ class GUILoom:
                 )
                 self.change_gui_state('on')
                 return None
-        config, spectral_network_data = result_queue.get()
+        spectral_network_data = result_queue.get()
         generate_process.join()
         self.sw_data = spectral_network_data.sw_data
         self.spectral_networks = spectral_network_data.spectral_networks
