@@ -35,7 +35,7 @@ DEFAULT_LARGE_STEP_SIZE = 0.01
 
 MIN_SPREAD = 0.1
 
-X_ROOTS_ACCURACY_FACTOR = 1e-3
+X_ROOTS_ACCURACY_FACTOR = 1e-4
 
 
 class GData:
@@ -555,27 +555,31 @@ class SWDataBase(object):
         else:
             mt_params = None
 
-        if config['ramification_points'] is not None:
-            ramification_points = sympy.sympify(config['ramification_points'])
-            config['ramification_point_finding_method'] = 'manual'
-        else:
-            ramification_points = None
-
         if config['branch_points'] is not None:
             branch_points = sympy.sympify(config['branch_points'])
             config['ramification_point_finding_method'] = 'from_branch_points'
         else:
             branch_points = None
 
+        if config['ramification_points'] is not None:
+            ramification_points = sympy.sympify(config['ramification_points'])
+            config['ramification_point_finding_method'] = 'manual'
+        else:
+            ramification_points = None
+
         casimir_differentials = {}
         for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
             casimir_differentials[eval(k)] = phi_k
 
         diff_params = {}
-        for var, val in parse_sym_dict_str(config['differential_parameters']):
-            diff_params[var] = sympy.sympify(val)
+        if config['differential_parameters'] is not None:
+            for var, val in parse_sym_dict_str(
+                config['differential_parameters']
+            ):
+                diff_params[var] = sympy.sympify(val)
 
         if json_data is None:
+            # Work out the SW geometry data
             self.g_data = GData(root_system=config['root_system'],
                                 representation_str=config['representation'],
                                 logger_name=self.logger_name,)
@@ -588,6 +592,7 @@ class SWDataBase(object):
                 branch_points=branch_points,
             )
         else:
+            # Set the SW geometry data from a saved file
             self.set_from_json_data(json_data)
             self.ffr_curve = SWCurve(
                 casimir_differentials=casimir_differentials,

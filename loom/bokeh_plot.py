@@ -32,6 +32,13 @@ def get_spectral_network_bokeh_plot(
 ):
     # logger = logging.getLogger(logger_name)
 
+    # Determine if the data set corresponds to a multi-parameter 
+    # configuration
+    if type(spectral_network_data.sw_data) is list:
+        multi_parameter = True
+    else:
+        multi_parameter = False
+
     if without_errors is True:
         spectral_networks = [
             sn for sn in spectral_network_data.spectral_networks
@@ -106,8 +113,12 @@ def get_spectral_network_bokeh_plot(
     )
 
     # Data source for punctures.
+    if multi_parameter is False:
+        puncts = sw_data.regular_punctures + sw_data.irregular_punctures
+    else:
+        puncts = sw_data[0].regular_punctures + sw_data[0].irregular_punctures
     ppds = ColumnDataSource({'x': [], 'y': [], 'label': [], 'root': []})
-    for pp in (sw_data.regular_punctures + sw_data.irregular_punctures):
+    for pp in puncts:
         if pp.z == oo:
             continue
         ppds.data['x'].append(pp.z.real)
@@ -120,31 +131,62 @@ def get_spectral_network_bokeh_plot(
     )
 
     # Data source for branch points & cuts.
-    bpds = ColumnDataSource({'x': [], 'y': [], 'label': [], 'root': []})
-    for bp in sw_data.branch_points:
-        if bp.z == oo:
-            continue
-        bpds.data['x'].append(bp.z.real)
-        bpds.data['y'].append(bp.z.imag)
-        bpds.data['label'].append(str(bp.label))
-        root_label = ''
-        for root in bp.positive_roots:
-            root_label += str(root.tolist()) + ', '
-        bpds.data['root'].append(root_label[:-2])
+    if multi_parameter is False:
+        bpds = ColumnDataSource({'x': [], 'y': [], 'label': [], 'root': []})
+        for bp in sw_data.branch_points:
+            if bp.z == oo:
+                continue
+            bpds.data['x'].append(bp.z.real)
+            bpds.data['y'].append(bp.z.imag)
+            bpds.data['label'].append(str(bp.label))
+            root_label = ''
+            for root in bp.positive_roots:
+                root_label += str(root.tolist()) + ', '
+            bpds.data['root'].append(root_label[:-2])
 
-    bcds = ColumnDataSource({'xs': [], 'ys': []})
-    for bl in sw_data.branch_points + sw_data.irregular_singularities:
-        y_r = (2j * y_max) * complex(sw_data.branch_cut_rotation)
-        bcds.data['xs'].append([bl.z.real, bl.z.real + y_r.real])
-        bcds.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
+        bcds = ColumnDataSource({'xs': [], 'ys': []})
+        for bl in sw_data.branch_points + sw_data.irregular_singularities:
+            y_r = (2j * y_max) * complex(sw_data.branch_cut_rotation)
+            bcds.data['xs'].append([bl.z.real, bl.z.real + y_r.real])
+            bcds.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
 
-    bokeh_figure.x(
-        'x', 'y', size=10, color="#e6550D", line_width=3, source=bpds,
-    )
-    bokeh_figure.multi_line(
-        xs='xs', ys='ys', line_width=2, color='gray', line_dash='dashed',
-        source=bcds,
-    )
+        bokeh_figure.x(
+            'x', 'y', size=10, color="#e6550D", line_width=3, source=bpds,
+        )
+        bokeh_figure.multi_line(
+            xs='xs', ys='ys', line_width=2, color='gray', line_dash='dashed',
+            source=bcds,
+        )
+
+    else:
+        bpds = []
+        bcds = []
+        for swd in sw_data:
+            bpds_i = ColumnDataSource(
+                {'x': [], 'y': [], 'label': [], 'root': []}
+            )
+            for bp in swd.branch_points:
+                if bp.z == oo:
+                    continue
+                bpds_i.data['x'].append(bp.z.real)
+                bpds_i.data['y'].append(bp.z.imag)
+                bpds_i.data['label'].append(str(bp.label))
+                root_label = ''
+                for root in bp.positive_roots:
+                    root_label += str(root.tolist()) + ', '
+                bpds_i.data['root'].append(root_label[:-2])
+            bpds.append(bpds_i)
+            
+            bcds_i = ColumnDataSource({'xs': [], 'ys': []})
+            for bl in swd.branch_points + swd.irregular_singularities:
+                y_r = (2j * y_max) * complex(swd.branch_cut_rotation)
+                bcds_i.data['xs'].append([bl.z.real, bl.z.real + y_r.real])
+                bcds_i.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
+            bcds.append(bcds_i)
+
+        # In this case the branch points and cuts will be 
+        # drawn differently for each spectral network. 
+        # Each call of the slider will deal with them.
 
     # Data source for the current plot
     cds = ColumnDataSource({
@@ -350,27 +392,58 @@ def get_spectral_network_bokeh_plot(
     # Slider
     num_of_plots = len(snds.data['spectral_networks'])
     if num_of_plots > 1:
-        sn_slider = Slider(
-            start=0, end=num_of_plots - 1,
-            value=0, step=1, title="spectral network #"
-        )
+        if multi_parameter is False:
+            sn_slider = Slider(
+                start=0, end=num_of_plots - 1,
+                value=0, step=1, title="spectral network #"
+            )
 
-        sn_slider.callback = CustomJS(
-            args={
-                'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
-                'dpds': dpds, 'pds': pds, 'hover': hover,
-                'plot_options': plot_options_ds, 'tree_idx_ds': tree_idx_ds
-            },
-            code=(
-                custom_js_code +
-                'sn_slider(cb_obj, cds, snds, sn_idx_ds, dpds, pds, hover, '
-                'plot_options, tree_idx_ds);'
-            ),
-        )
-        plot = vform(bokeh_figure, sn_slider, width=plot_width,)
-        notebook_vform_elements = (
-            [bokeh_figure, sn_slider] + notebook_vform_elements
-        )
+            sn_slider.callback = CustomJS(
+                args={
+                    'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
+                    'dpds': dpds, 'pds': pds, 'hover': hover,
+                    'plot_options': plot_options_ds, 
+                    'tree_idx_ds': tree_idx_ds
+                },
+                code=(
+                    custom_js_code +
+                    'sn_slider(cb_obj, cds, snds, sn_idx_ds, dpds, pds, '
+                    'hover, plot_options, tree_idx_ds);'
+                ),
+            )
+            plot = vform(bokeh_figure, sn_slider, width=plot_width,)
+            notebook_vform_elements = (
+                [bokeh_figure, sn_slider] + notebook_vform_elements
+            )
+        
+        else:
+            # TODO: implement new js routine for sn_slider when
+            # there are multiple parameters.
+            # Need to draw branch points and cuts for each value of the 
+            # parameters.
+            sn_slider = Slider(
+                start=0, end=num_of_plots - 1,
+                value=0, step=1, title="spectral network #"
+            )
+
+            sn_slider.callback = CustomJS(
+                args={
+                    'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
+                    'dpds': dpds, 'pds': pds, 'hover': hover,
+                    'plot_options': plot_options_ds, 
+                    'tree_idx_ds': tree_idx_ds
+                },
+                code=(
+                    custom_js_code +
+                    'sn_slider(cb_obj, cds, snds, sn_idx_ds, dpds, pds, '
+                    'hover, plot_options, tree_idx_ds);'
+                ),
+            )
+            plot = vform(bokeh_figure, sn_slider, width=plot_width,)
+            notebook_vform_elements = (
+                [bokeh_figure, sn_slider] + notebook_vform_elements
+            )
+
     else:
         plot = bokeh_figure
         notebook_vform_elements = (
@@ -402,6 +475,11 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
     data_dict['label'] = []
     data_dict['root'] = []
 
+    if type(sw_data) is list:
+        g_data = sw_data[0].g_data
+    else:
+        g_data = sw_data.g_data
+
     for s_wall in s_walls:
         z_segs = get_splits_with_overlap(s_wall.get_splits())
         for start, stop in z_segs:
@@ -431,7 +509,7 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
                 for root in roots:
                     root_label += str(root.tolist()) + ', '
                 data_dict['root'].append(root_label[:-2])
-                color = sw_data.g_data.get_root_color(roots[0])
+                color = g_data.get_root_color(roots[0])
                 if color is None:
                     color = '#000000'
                     logger.warning(
@@ -444,7 +522,7 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
             for root in s_wall.local_roots:
                 data_dict['label'].append(str(s_wall.label))
                 data_dict['root'].append(str(root.tolist()))
-                color = sw_data.g_data.get_root_color(root)
+                color = g_data.get_root_color(root)
                 if color is None:
                     color = '#000000'
                     logger.warning(

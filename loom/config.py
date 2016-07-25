@@ -24,10 +24,12 @@ class LoomConfig:
                 'representation': 'Representation',
                 'casimir_differentials': 'Casimir differentials',
                 'differential_parameters': 'Parameters of differentials',
+                'parameter_sequence': 'A sequence of values for a parameter',
                 'regular_punctures': 'Regular punctures',
                 'irregular_punctures': 'Irregular punctures',
                 'ramification_points': 'Ramification points',
                 'branch_points': 'Branch points',
+                'branch_points_sequence': 'Branch points sequence',
                 'mt_params': 'Mobius transformation',
                 'ramification_point_finding_method':
                     'Ramification point finding method',

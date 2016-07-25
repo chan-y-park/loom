@@ -17,7 +17,6 @@ from numpy import inf
 from api import (
     SpectralNetworkData,
     get_loom_dir,
-#    get_logging_handler,
     set_logging,
 )
 from web_api import(
@@ -34,7 +33,6 @@ from web_api import(
 )
 from config import LoomConfig
 from bokeh_plot import get_spectral_network_bokeh_plot
-#from plotting import get_legend
 from plot_api import get_sw_data_legend, SolitonTreePlot
 
 # Flask configuration
@@ -67,6 +65,8 @@ advanced_config_options = [
     ['size_of_bp_neighborhood'],
     ['size_of_puncture_cutoff'],
     ['accuracy'],
+    ['parameter_sequence'],
+    ['branch_points_sequence'],
 ]
 
 
@@ -569,10 +569,8 @@ def download_plot(two_way_streets=False):
         plot_range = eval(flask.request.form['plot_range'])
         zip_file_prefix = 'loom_streets_{}'.format(process_uuid)
         soliton_tree_data = spectral_network_data.find_two_way_streets()
-        #fp = BytesIO()
         for i, trees in enumerate(soliton_tree_data):
             for j, tree in enumerate(trees):
-                #fp.seek(0)
                 soliton_tree_plot = SolitonTreePlot(
                     plot_range=plot_range,
                 )
@@ -580,10 +578,8 @@ def download_plot(two_way_streets=False):
                 Z = tree.Z
                 title = (
                     'SN #{}, tree #{}, '.format(i, j)
-                    #+ r'$Z = $'
                     + 'Z = '
                     + '({:.6}) + ({:.6})'.format(Z.real, Z.imag)
-                    #+ r'$i$'
                     + 'i'
                 )
                 soliton_tree_plot.draw(
@@ -595,11 +591,6 @@ def download_plot(two_way_streets=False):
                 soliton_tree_plot.figure.savefig(fp, format='pdf')
                 fp.seek(0)
                 file_name = '{}_{}.pdf'.format(i, j)
-                # XXX
-                #soliton_tree_plot.figure.savefig(
-                #    'trees/' + file_name,
-                #    format='pdf',
-                #)
                 data[file_name] = fp.read()
 
     zip_fp = BytesIO()
