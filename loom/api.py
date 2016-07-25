@@ -357,29 +357,31 @@ class SpectralNetworkData:
                 self.spectral_networks.sort(key=lambda sn: sn.phase)
             else:
                 self.spectral_networks = spectral_networks
-                end_time = time.time()
-                logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
-                logger.info('elapsed cpu time: %.3f', end_time - start_time)
+#                end_time = time.time()
+#                logger.info(
+#                    'Finished @ {}'.format(get_date_time_str(end_time))
+#                )
+#                logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
-            if logging_queue is not None:
-                # Put a mark that generating spectral networks is done.
-                try:
-                    logging_queue.put_nowait(None)
-                except:
-                    logger.warn(
-                        'Failed in putting a finish mark in the logging queue.'
-                    )
-
-            if result_queue is not None:
-                result_queue.put(self)
-
-            if cache_dir is not None and extend is False:
-                version_file_path = os.path.join(cache_dir, 'version')
-                save_version(version_file_path)
-                # NOTE: The following should be placed
-                # at the last stage of spectral network generation.
-                config_file_path = os.path.join(cache_dir, 'config.ini')
-                self.config.save(config_file_path)
+#            if logging_queue is not None:
+#                # Put a mark that generating spectral networks is done.
+#                try:
+#                    logging_queue.put_nowait(None)
+#                except:
+#                    logger.warn(
+#                        'Failed in putting a finish mark in the logging queue.'
+#                    )
+#
+#            if result_queue is not None:
+#                result_queue.put(self)
+#
+#            if cache_dir is not None and extend is False:
+#                version_file_path = os.path.join(cache_dir, 'version')
+#                save_version(version_file_path)
+#                # NOTE: The following should be placed
+#                # at the last stage of spectral network generation.
+#                config_file_path = os.path.join(cache_dir, 'config.ini')
+#                self.config.save(config_file_path)
 
         else:
             phase = 1.570795
@@ -486,29 +488,31 @@ class SpectralNetworkData:
                 
             self.spectral_networks = spectral_networks
             self.sw_data = sw_data_sequence
+
+        if extend is False:
             end_time = time.time()
             logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
             logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
-            if logging_queue is not None:
-                # Put a mark that generating spectral networks is done.
-                try:
-                    logging_queue.put_nowait(None)
-                except:
-                    logger.warn(
-                        'Failed in putting a finish mark in the logging queue.'
-                    )
+        if logging_queue is not None:
+            # Put a mark that generating spectral networks is done.
+            try:
+                logging_queue.put_nowait(None)
+            except:
+                logger.warn(
+                    'Failed in putting a finish mark in the logging queue.'
+                )
 
-            if result_queue is not None:
-                result_queue.put(self)
+        if result_queue is not None:
+            result_queue.put(self)
 
-            if cache_dir is not None and extend is False:
-                version_file_path = os.path.join(cache_dir, 'version')
-                save_version(version_file_path)
-                # NOTE: The following should be placed
-                # at the last stage of spectral network generation.
-                config_file_path = os.path.join(cache_dir, 'config.ini')
-                self.config.save(config_file_path)
+        if cache_dir is not None and extend is False:
+            version_file_path = os.path.join(cache_dir, 'version')
+            save_version(version_file_path)
+            # NOTE: The following should be placed
+            # at the last stage of spectral network generation.
+            config_file_path = os.path.join(cache_dir, 'config.ini')
+            self.config.save(config_file_path)
 
 
 
