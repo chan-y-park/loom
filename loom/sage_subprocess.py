@@ -2,7 +2,6 @@
 from __future__ import division
 from sympy import sympify, poly
 from sympy.mpmath import mp, mpc
-# from sympy.parsing.sympy_parser import parse_expr
 import logging
 import os
 import subprocess
@@ -10,6 +9,7 @@ import subprocess
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 sage_script_dir = base_dir + '/sage_scripts/'
+sage_bin_path = 'sage'
 
 
 def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
@@ -27,7 +27,7 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
     )
     try:
         rv_str = subprocess.check_output(
-            ['sage', sage_script_dir + 'solve_system_of_eqs.sage'] +
+            [sage_bin_path, sage_script_dir + 'solve_system_of_eqs.sage'] +
             [str(precision)] +
             [str(eq) for eq in eqs]
         )
@@ -40,7 +40,6 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
     for msg in messages:
         logger.warning(msg)
 
-    # sols_str_list = eval(sols_str_list_str)
     for sols_str in sols_str_list:
         (z_re, z_im), (x_re, x_im) = sols_str
         sols.append(
@@ -68,7 +67,7 @@ def solve_single_eq_single_var(
     else:
         try:
             rv_str = subprocess.check_output(
-                ['sage', sage_script_dir + 'solve_single_eq_single_var.sage'] +
+                [sage_bin_path, sage_script_dir + 'solve_single_eq_single_var.sage'] +
                 [str(precision), str(eq), var]
             )
         except (KeyboardInterrupt, SystemExit):
@@ -93,7 +92,7 @@ def solve_single_eq_single_var(
 def get_g_data(root_system, highest_weight):
     try:
         g_data_str = subprocess.check_output(
-            ['sage', sage_script_dir + 'get_g_data.sage', root_system,
+            [sage_bin_path, sage_script_dir + 'get_g_data.sage', root_system,
              str(highest_weight)]
         )
     except (KeyboardInterrupt, SystemExit):
@@ -112,7 +111,7 @@ def compute_discriminant(f):
     """
     try:
         disc_str = subprocess.check_output(
-            ['sage', sage_script_dir + 'compute_discriminant.sage'] +
+            [sage_bin_path, sage_script_dir + 'compute_discriminant.sage'] +
             [str(f)]
         )
     except (KeyboardInterrupt, SystemExit):
