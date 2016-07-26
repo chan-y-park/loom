@@ -10,7 +10,11 @@ import scipy
 import flask
 import time
 
-import pdb
+# import pdb
+
+# directory of sage on het-math2  
+os.environ['PATH'] += '/usr/local/bin'
+
 
 argv = sys.argv[1:]
 print('__name__={}'.format(__name__))
