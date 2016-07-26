@@ -30,7 +30,8 @@ from misc import parse_sym_dict_str
 # contains a list of sw_data in self.sw_data, which conflicts
 # the assumption that SpectralNetworkData contains spectral networks
 # from a single SW geometry. 
-# Requires a system-wide refactoring, visit all XXX marked codes.
+# Requires a system-wide refactoring, visit all XXX marked codes 
+# for the refactoring & for removing copied-and-pasted codes.
 class SpectralNetworkData:
     """
     A container class of information relevant to
@@ -459,7 +460,7 @@ class SpectralNetworkData:
                         branch_points_sequence_str[i]
                     )
 
-                data_file_prefix = 'multi_data_'+str(i)+'_'
+                data_file_prefix = 'data_' + str(i)
                 start_time = time.time()
                 logger.info(
                     'Started @ {}'.format(get_date_time_str(start_time))
@@ -471,7 +472,7 @@ class SpectralNetworkData:
 
                 if cache_dir is not None:
                     sw_data_file_path = os.path.join(
-                        cache_dir, 'sw_data' + str(i) + '.json'
+                        cache_dir, 'sw_data_' + str(i) + '.json'
                     )
                     self.sw_data.save(sw_data_file_path)
 
@@ -483,7 +484,7 @@ class SpectralNetworkData:
                 if cache_dir is not None:
                     cache_file_path = os.path.join(
                         cache_dir,
-                        '{}_0.json'.format(data_file_prefix),
+                        '{}.json'.format(data_file_prefix),
                     )
                 else:
                     cache_file_path = None
