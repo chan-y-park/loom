@@ -781,7 +781,11 @@ def render_plot_template(
         spectral_network_data.spectral_networks[0].phase / pi
     )
 
-    legend = get_sw_data_legend(sw_data)
+    # XXX
+    if loom_config['parameter_sequence'] is None:
+        legend = get_sw_data_legend(sw_data)
+    else:
+        legend = ''
 
     with open('static/bokeh_callbacks.js', 'r') as fp:
         bokeh_custom_script = fp.read()

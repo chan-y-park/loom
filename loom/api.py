@@ -26,7 +26,11 @@ from misc import get_phases_from_dict
 from misc import get_phase_dict
 from misc import parse_sym_dict_str
 
-
+# TODO: when parameter_sequence is not None, this class
+# contains a list of sw_data in self.sw_data, which conflicts
+# the assumption that SpectralNetworkData contains spectral networks
+# from a single SW geometry. 
+# Requires a system-wide refactoring, visit all XXX marked codes.
 class SpectralNetworkData:
     """
     A container class of information relevant to
@@ -86,7 +90,7 @@ class SpectralNetworkData:
                          'from the current version of loom.')
 
         spectral_networks = []
-
+        # XXX
         if config['parameter_sequence'] is None:
             # This is a standard family of networks
             # with different phases.
@@ -192,6 +196,7 @@ class SpectralNetworkData:
         )
 
         # Save geometric & trivialization data.
+        # XXX
         if self.config.data['parameter_sequence'] is None:
             sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
             logger.info('Saving data to {}.'.format(sw_data_file_path))
@@ -205,6 +210,7 @@ class SpectralNetworkData:
                 sw_data_i.save(sw_data_file_path)
 
         # Save spectral network data.
+        # XXX
         if self.config.data['parameter_sequence'] is None:
             for i, spectral_network in enumerate(spectral_networks):
                 data_file_path = os.path.join(
@@ -255,6 +261,7 @@ class SpectralNetworkData:
         accuracy = self.config['accuracy']
         data_file_prefix = None
 
+        # XXX
         if self.config.data['parameter_sequence'] is None:
             try:
                 if extend is False:
@@ -393,6 +400,7 @@ class SpectralNetworkData:
             original_parameters = self.config['differential_parameters']
             spectral_networks = []
             sw_data_sequence = []
+            # XXX
             parameter_sequence = {}
             var_str, val_str = parse_sym_dict_str(
                 self.config['parameter_sequence'],
