@@ -810,7 +810,7 @@ def render_plot_template(
         n_processes=n_processes,
         process_uuid=process_uuid,
         data_name=data_name,
-        saved_data=saved_data,
+        saved_data=str(saved_data),
         default_search_radius=loom_config['size_of_bp_neighborhood'],
         plot_two_way_streets=str(plot_two_way_streets),
         search_radius=search_radius,
