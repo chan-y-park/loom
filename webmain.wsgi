@@ -12,10 +12,6 @@ import time
 
 # import pdb
 
-# directory of sage on het-math2  
-os.environ['PATH'] += '/usr/local/bin'
-
-
 argv = sys.argv[1:]
 print('__name__={}'.format(__name__))
 print('loom WSGI working directory: {}'.format(os.getcwd()))
