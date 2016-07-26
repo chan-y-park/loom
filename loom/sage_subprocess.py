@@ -9,10 +9,7 @@ import subprocess
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 sage_script_dir = base_dir + '/sage_scripts/'
-try:
-    sage_bin_path = os.environ['SAGE_BIN_PATH']
-except KeyError:
-    sage_bin_path = 'sage'
+sage_bin_path = 'sage'
 
 
 def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
