@@ -945,6 +945,7 @@ def make_spectral_network_plot(
     **kwargs
 ):
     logger = logging.getLogger(logger_name)
+    # XXX
     if type(spectral_network_data.sw_data) != list:
         sw_data = spectral_network_data.sw_data
         spectral_networks = spectral_network_data.spectral_networks
@@ -996,6 +997,7 @@ def make_spectral_network_plot(
         
         return spectral_network_plot
 
+    # XXX
     else:
         # This case is assumed to correspond to having a parameter sequence
         plot_sequence = []

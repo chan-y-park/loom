@@ -46,6 +46,12 @@ class NetworkPlot(object):
                   'joints': [jp1_label, ...],
                   'walls': [[wall_i_seg_j_label], ...]}
         """
+        if axes is None:
+            if self.figure is None:
+                raise RuntimeError
+            else:
+                axes = self.figure.add_subplot(111)
+
         if self.plot_range is not None:
             [[x_min, x_max], [y_min, y_max]] = self.plot_range
             axes.set_xlim(x_min, x_max)
@@ -208,7 +214,7 @@ class SpectralNetworkPlot(NetworkPlot):
         if soliton_tree is not None:
             s_walls = soliton_tree.streets
         else:
-            spectral_network.s_walls
+            s_walls = spectral_network.s_walls
 
         for i, s_wall in enumerate(s_walls):
             seg_labels = []
