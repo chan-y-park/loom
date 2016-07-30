@@ -380,7 +380,8 @@ class SpectralNetworkData:
                 self.config.save(config_file_path)
 
         else:
-            phase = 1.570795
+            # phase = 1.570795
+            phase = 0.0
             logger.info(
                 'Study multiple parameters at fixed phase {}'
                 .format(phase)
