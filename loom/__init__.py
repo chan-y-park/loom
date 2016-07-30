@@ -24,6 +24,7 @@ matplotlib.rcParams['figure.figsize'] = [8.0, 8.0]
 matplotlib.rcParams['savefig.format'] = 'pdf'
 matplotlib.rcParams['savefig.bbox'] = 'tight'
 matplotlib.rcParams['savefig.pad_inches'] = 0.0
+# matplotlib.rcParams['text.usetex'] = True
 
 from api import get_loom_dir
 from api import set_logging

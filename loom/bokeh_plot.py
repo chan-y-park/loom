@@ -4,6 +4,7 @@ import bokeh
 # import pdb
 
 from cmath import phase, pi
+from copy import deepcopy
 from sympy import oo
 from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
@@ -22,9 +23,12 @@ def get_spectral_network_bokeh_plot(
     plot_two_way_streets=False,
     soliton_tree_data=None,
     plot_width=800, plot_height=800,
-    notebook=False, logger_name=None,
+    notebook=False,
+    slide=False,
+    logger_name=None,
     marked_points=[],
     without_errors=False,
+    download=False,
 ):
     # logger = logging.getLogger(logger_name)
 
@@ -51,28 +55,27 @@ def get_spectral_network_bokeh_plot(
 
     sw_data = spectral_network_data.sw_data
 
-    plot_width = plot_width
-    plot_height = plot_height
-
-    x_min = min([min([min([z.real for z in s_wall.z])
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    x_max = max([max([max([z.real for z in s_wall.z])
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    y_min = min([min([min([z.imag for z in s_wall.z])
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    y_max = max([max([max([z.imag for z in s_wall.z])
-                      for s_wall in sn.s_walls])
-                 for sn in spectral_networks])
-    if plot_range is None:
-        # Need to maintain the aspect ratio.
-        range_min = min(x_min, y_min)
-        range_max = max(x_max, y_max)
-        plot_x_range = plot_y_range = (range_min, range_max)
-    else:
-        plot_x_range, plot_y_range = plot_range
+#    x_min = min([min([min([z.real for z in s_wall.z])
+#                      for s_wall in sn.s_walls])
+#                 for sn in spectral_networks])
+#    x_max = max([max([max([z.real for z in s_wall.z])
+#                      for s_wall in sn.s_walls])
+#                 for sn in spectral_networks])
+#    y_min = min([min([min([z.imag for z in s_wall.z])
+#                      for s_wall in sn.s_walls])
+#                 for sn in spectral_networks])
+#    y_max = max([max([max([z.imag for z in s_wall.z])
+#                      for s_wall in sn.s_walls])
+#                 for sn in spectral_networks])
+#    if plot_range is None:
+#        # Need to maintain the aspect ratio.
+#        range_min = min(x_min, y_min)
+#        range_max = max(x_max, y_max)
+#        plot_x_range = plot_y_range = (range_min, range_max)
+#    else:
+#        plot_x_range, plot_y_range = plot_range
+    plot_x_range, plot_y_range = plot_range
+    y_min, y_max = plot_y_range
 
     # Setup tools.
     hover = HoverTool(
@@ -232,14 +235,16 @@ def get_spectral_network_bokeh_plot(
                 )
                 data_entry.append(empty_data)
             else:
-                # The first data contains all the soliton trees
-                # of the two-way streets in a spectral network.
                 for tree in soliton_trees:
                     tree_data = get_s_wall_plot_data(
                         tree.streets, sw_data, logger_name,
                         spectral_networks[i].phase,
                     )
-                    if len(data_entry) > 0:
+                    # The first data contains all the soliton trees
+                    # of the two-way streets in a spectral network.
+                    if len(data_entry) == 0:
+                        data_entry.append(deepcopy(tree_data))
+                    else:
                         for key in tree_data.keys():
                             data_entry[0][key] += tree_data[key]
                     data_entry.append(tree_data)
@@ -286,17 +291,32 @@ def get_spectral_network_bokeh_plot(
 
     # XXX: Where is a good place to put the following?
     custom_js_code = ''
-    if notebook is True:
+    if notebook is True or slide is True:
         with open('static/bokeh_callbacks.js', 'r') as fp:
             custom_js_code += fp.read()
             custom_js_code += '\n'
+
+    # Data source for plot ranges
+    if download is False and notebook is False and slide is False:
+        range_callback = CustomJS(
+            args={
+                'x_range': bokeh_figure.x_range,
+                'y_range': bokeh_figure.y_range
+            },
+            code=(custom_js_code + 'update_plot_range(x_range, y_range);'),
+        )
+        bokeh_figure.x_range.callback = range_callback
+        bokeh_figure.y_range.callback = range_callback
 
     # 'Redraw arrows' button.
     redraw_arrows_button = Button(
         label='Redraw arrows',
         callback=CustomJS(
-            args={'cds': cds, 'x_range': bokeh_figure.x_range,
-                  'y_range': bokeh_figure.y_range},
+            args={
+                'cds': cds,
+                'x_range': bokeh_figure.x_range,
+                'y_range': bokeh_figure.y_range
+            },
             code=(custom_js_code + 'redraw_arrows(cds, x_range, y_range);'),
         ),
     )
@@ -435,6 +455,8 @@ def get_spectral_network_bokeh_plot(
     if notebook is True:
         # TODO: Include phase text input
         return vform(*notebook_vform_elements, width=plot_width)
+    elif slide is True:
+        return plot
     else:
         return bokeh.embed.components(bokeh_obj)
 

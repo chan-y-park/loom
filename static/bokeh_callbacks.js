@@ -92,7 +92,7 @@ function change_soliton_tree(
         if (tree_j == 0) {
             tree_idx_label.innerHTML = 'All';
         } else {
-            tree_idx_label.innerHTML = tree_j;
+            tree_idx_label.innerHTML = tree_j - 1;
         }
     }
     
@@ -106,7 +106,7 @@ function show_prev_soliton_tree(
 ) {
     change_soliton_tree(
         cds, snds, sn_idx_ds, tree_idx_ds, plot_options_ds, -1
-    )    
+    );
 }
 
 function show_next_soliton_tree(
@@ -114,7 +114,7 @@ function show_next_soliton_tree(
 ) {
     change_soliton_tree(
         cds, snds, sn_idx_ds, tree_idx_ds, plot_options_ds, 1
-    )    
+    );   
 }
 
 function redraw_arrows(cds, x_range, y_range) {
@@ -167,4 +167,15 @@ function redraw_arrows(cds, x_range, y_range) {
         cd['arrow_angle'][i] = Math.atan2(Dy, Dx) - (Math.PI / 2);
     }
     cds.trigger('change');
+}
+
+function update_plot_range(x_range, y_range) {
+    var x_s = x_range.get('start');
+    var x_e = x_range.get('end');
+    var y_s = y_range.get('start');
+    var y_e = y_range.get('end');
+
+    var plot_range_input = document.getElementById("plot_range_input");
+    plot_range_input.value =
+        "[[" + x_s + "," + x_e + "],[" + y_s + "," + y_e + "]]";
 }
