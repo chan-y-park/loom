@@ -964,34 +964,34 @@ def make_spectral_network_plot(
                 plot_range=plot_range,
             )
 
-    # Rotate the z-plane into the location defined by the curve.
-    spectral_network_data.reset_z_rotation()
+        # Rotate the z-plane into the location defined by the curve.
+        spectral_network_data.reset_z_rotation()
 
-    for spectral_network in spectral_networks:
-        logger.info('Generating the plot of a spectral network '
-                    '@ theta = {}...'.format(spectral_network.phase))
-        # TODO: When using plot_ui.py, remove the following
-        # and uncomment the next following lines.
-        plot_legend = spectral_network_plot.draw(
-            spectral_network,
-            sw_data.branch_points,
-            punctures=(sw_data.regular_punctures +
-                       sw_data.irregular_punctures),
-            irregular_singularities=sw_data.irregular_singularities,
-            g_data=sw_data.g_data,
-            branch_cut_rotation=sw_data.branch_cut_rotation,
-            logger_name=logger_name,
-            **kwargs
-        )
-        # XXX: Use the following with plot_ui.py
-#        spectral_network_plot.draw(
-#            sw_data=sw_data,
-#            spectral_network=spectral_network,
-#            logger_name=logger_name,
-#            **kwargs
-#        )
-#        plot_legend = spectral_network_plot.get_legend()
-        logger.info(plot_legend)
+        for spectral_network in spectral_networks:
+            logger.info('Generating the plot of a spectral network '
+                        '@ theta = {}...'.format(spectral_network.phase))
+            # TODO: When using plot_ui.py, remove the following
+            # and uncomment the next following lines.
+            plot_legend = spectral_network_plot.draw(
+                spectral_network,
+                sw_data.branch_points,
+                punctures=(sw_data.regular_punctures +
+                           sw_data.irregular_punctures),
+                irregular_singularities=sw_data.irregular_singularities,
+                g_data=sw_data.g_data,
+                branch_cut_rotation=sw_data.branch_cut_rotation,
+                logger_name=logger_name,
+                **kwargs
+            )
+            # XXX: Use the following with plot_ui.py
+    #        spectral_network_plot.draw(
+    #            sw_data=sw_data,
+    #            spectral_network=spectral_network,
+    #            logger_name=logger_name,
+    #            **kwargs
+    #        )
+    #        plot_legend = spectral_network_plot.get_legend()
+            logger.info(plot_legend)
 
         if show_plot is True:
             spectral_network_plot.show()
