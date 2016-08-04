@@ -8,8 +8,9 @@ from copy import deepcopy
 from sympy import oo
 from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
-from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
-                          ResetTool, PreviewSaveTool, TapTool,)
+#from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
+#                          ResetTool, PreviewSaveTool, TapTool,)
+from bokeh.models import HoverTool
 from bokeh.models.widgets import Button
 # from bokeh.models.widgets import Toggle
 from bokeh.plotting import figure
@@ -87,14 +88,16 @@ def get_spectral_network_bokeh_plot(
 
     # Prepare a bokeh Figure.
     bokeh_figure = figure(
-        tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(),
-               PreviewSaveTool(), TapTool(), hover],
+        #tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(),
+        #       PreviewSaveTool(), TapTool(), hover],
+        tools = 'reset,box_zoom,pan,wheel_zoom,save,tap',
         plot_width=plot_width,
         plot_height=plot_height,
         title=None,
         x_range=plot_x_range,
         y_range=plot_y_range,
     )
+    bokeh_figure.add_tools(hover)
     bokeh_figure.grid.grid_line_color = None
 
     # Data source for marked points, which are drawn for an illustration.

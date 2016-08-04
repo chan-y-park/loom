@@ -1,7 +1,7 @@
 # Force integer division to give a float, i.e. 1/2 = 0.5.
 from __future__ import division
 from sympy import sympify, poly
-from sympy.mpmath import mp, mpc
+import mpmath
 import logging
 import os
 import subprocess
@@ -19,7 +19,7 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
     logger = logging.getLogger(logger_name)
     sols = []
     if precision is not None:
-        mp.dps = precision
+        mpmath.mp.dps = precision
     else:
         precision = 15
     logger.info(
@@ -43,7 +43,7 @@ def solve_system_of_eqs(eqs, precision=None, logger_name='loom',):
     for sols_str in sols_str_list:
         (z_re, z_im), (x_re, x_im) = sols_str
         sols.append(
-            (mpc(z_re, z_im), mpc(x_re, x_im))
+            (mpmath.mpc(z_re, z_im), mpmath.mpc(x_re, x_im))
         )
 
     return sols
@@ -58,7 +58,7 @@ def solve_single_eq_single_var(
     logger = logging.getLogger(logger_name)
     sols = []
     if precision is not None:
-        mp.dps = precision
+        mpmath.mp.dps = precision
     else:
         precision = 15
 
@@ -67,7 +67,8 @@ def solve_single_eq_single_var(
     else:
         try:
             rv_str = subprocess.check_output(
-                [sage_bin_path, sage_script_dir + 'solve_single_eq_single_var.sage'] +
+                [sage_bin_path,
+                 sage_script_dir + 'solve_single_eq_single_var.sage'] +
                 [str(precision), str(eq), var]
             )
         except (KeyboardInterrupt, SystemExit):
@@ -83,7 +84,7 @@ def solve_single_eq_single_var(
         (z_re, z_im) = sols_str
         for j in range(mult_str_list[i]):
             sols.append(
-                mpc(z_re, z_im)
+                mpmath.mpc(z_re, z_im)
             )
 
     return sols
