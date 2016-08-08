@@ -543,10 +543,15 @@ class SWall(object):
                 self.local_weight_pairs.insert(0, new_weight_pairs)
 
         # check that the roots obtained through comparison with the 
-        # trivialization coincides with the roots of the joint
-        # sourcing the S-wall, it it is sourced at a joint
+        # trivialization coincides with the roots of the joint 
+        # or branch point sourcing the S-wall.
         if self.parent_roots is not None:
-            if not (self.local_roots[0] in self.parent_roots):
+            if not (
+                any(
+                    (self.local_roots[0] == x).all() 
+                    for x in self.parent_roots
+                )
+            ):
                 logger.info(
                     'WARNING: the root type of the S-wall is incompatible '
                     'with the sum of roots of its parents!'
