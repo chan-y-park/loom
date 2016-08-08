@@ -542,6 +542,18 @@ class SWall(object):
                 self.local_roots.insert(0, new_root)
                 self.local_weight_pairs.insert(0, new_weight_pairs)
 
+        # check that the roots obtained through comparison with the 
+        # trivialization coincides with the roots of the joint
+        # sourcing the S-wall, it it is sourced at a joint
+        if self.parent_roots is not None:
+            if not (self.local_roots[0] in self.parent_roots):
+                logger.info(
+                    'WARNING: the root type of the S-wall is incompatible '
+                    'with the sum of roots of its parents!'
+                )
+
+        # Finished handling the single 'base' root of the S-wall.
+        # Now handle the multiple local roots instead.
         root_0 = self.local_roots[0]
         if len(self.cuts_intersections) > 0:
             t_0 = floor(self.cuts_intersections[0][1] / 2)

@@ -489,7 +489,6 @@ class SpectralNetwork:
 
             # Find joints between the new S-wall and the previous S-walls,
             # and among the new S-walls.
-
             new_joints = []     # New joints found in each iteration.
             if iteration < num_of_iterations:
                 # S-walls that are already searched for joints.
@@ -517,15 +516,16 @@ class SpectralNetwork:
                         )
                     finished_s_walls.append(unfinished_s_wall)
 
-                if (
-                    (additional_n_steps > 0 or new_mass_limit is not None)
-                    and iteration == 1
-                ):
-                    self.n_finished_s_walls = len(self.s_walls)
-                else:
-                    self.n_finished_s_walls += len(unfinished_s_walls)
+                # if (
+                #     (additional_n_steps > 0 or new_mass_limit is not None)
+                #     and iteration == 1
+                # ):
+                #     self.n_finished_s_walls = len(self.s_walls)
+                # else:
+                #     self.n_finished_s_walls += len(unfinished_s_walls)
+                self.n_finished_s_walls += len(finished_s_walls)
 
-            # Add the new S-wall to the spectral network
+            # Add the new S-walls to the spectral network
             if (
                 (additional_n_steps > 0 or new_mass_limit is not None)
                 and iteration == 1
@@ -540,7 +540,7 @@ class SpectralNetwork:
                         psw = prev_s_walls[nsw.label]
                     except KeyError:
                         raise RuntimeError(
-                            'S-wall exntesion mismatch: '
+                            'S-wall extension mismatch: '
                             'cannot attach a new {}.'
                             .format(nsw.label)
                         )
