@@ -502,22 +502,7 @@ class SpectralNetwork:
                 for unfinished_s_wall in unfinished_s_walls:
                     try:
                         new_joints += self.get_new_joints(
-                            unfinished_s_wall, finished_s_walls,
-                            config, sw_data, get_intersections, use_cgal,
-                        )
-                    except RuntimeError as e:
-                        error_msg = (
-                            'Error while finding joints from {}: {}\n'
-                            'Stop finding joints from this S-wall.'
-                            .format(unfinished_s_wall, e)
-                        )
-                        logger.error(error_msg)
-                        self.errors.append(
-                            ('RuntimeError', error_msg)
-                        )
-                    try:
-                        new_joints += self.get_new_joints(
-                            unfinished_s_wall, unfinished_s_walls,
+                            unfinished_s_wall, self.s_walls,
                             config, sw_data, get_intersections, use_cgal,
                         )
                     except RuntimeError as e:
