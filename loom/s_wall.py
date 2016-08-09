@@ -548,7 +548,10 @@ class SWall(object):
         if self.parent_roots is not None:
             if not (
                 any(
-                    (self.local_roots[0] == x).all() 
+                    (
+                        (self.local_roots[0] == x).all() or
+                        (self.local_roots[0] == -x).all() 
+                    )
                     for x in self.parent_roots
                 )
             ):
