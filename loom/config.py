@@ -165,6 +165,10 @@ class LoomConfig:
                 self.parser.set(section, option, 'None')
                 self[option] = None
 
+            # default integration is ode_int
+            if self.data['integration_method'] is None:
+                self.data['integration_method'] = 'ode_int'
+
     def save(self, file_path=None, logger_name=None,):
         logger = logging.getLogger(logger_name)
         if file_path is None:

@@ -454,6 +454,12 @@ class SpectralNetwork:
                     elif integration_method == 'manual':
                         s_i.grow_manually(m_derivatives, bpzs, ppzs, config,)
 
+                    else:
+                        raise Exception(
+                            'Unknown integration method {}'
+                            .format(integration_method)
+                        )
+
                     if len(s_i.z) < MIN_NUM_OF_DATA_PTS:
                         logger.warning(
                             '{} has only {} data point(s); remove this S-wall.'
