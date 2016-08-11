@@ -72,6 +72,7 @@ class Street(SWall):
 
         self.Z = self.M[-1] * exp(self.phase * 1j)
 
+
 class SolitonTree:
     def __init__(
         self,
@@ -491,33 +492,12 @@ class SpectralNetwork:
             # and among the new S-walls.
             new_joints = []     # New joints found in each iteration.
             if iteration < num_of_iterations:
-                print "ITERATION {}".format(iteration)
                 # S-walls that are already searched for joints.
                 finished_s_walls = self.s_walls[:self.n_finished_s_walls]
-                print "finished swalls = {}".format(len(finished_s_walls))
                 # S-walls that are not searched for joints.
                 unfinished_s_walls = (
                     self.s_walls[self.n_finished_s_walls:] + new_s_walls
                 )
-                print "unfinished swalls = {}".format(len(unfinished_s_walls))
-
-                # for unfinished_s_wall in unfinished_s_walls:
-                #     try:
-                #         new_joints += self.get_new_joints(
-                #             unfinished_s_wall, self.s_walls,
-                #             config, sw_data, get_intersections, use_cgal,
-                #         )
-                #     except RuntimeError as e:
-                #         error_msg = (
-                #             'Error while finding joints from {}: {}\n'
-                #             'Stop finding joints from this S-wall.'
-                #             .format(unfinished_s_wall, e)
-                #         )
-                #         logger.error(error_msg)
-                #         self.errors.append(
-                #             ('RuntimeError', error_msg)
-                #         )
-                #     finished_s_walls.append(unfinished_s_wall)
 
                 all_s_walls = unfinished_s_walls + finished_s_walls
                 # Now for each of the new (unfinished) walls, we check its
@@ -543,14 +523,13 @@ class SpectralNetwork:
                         )
                     finished_s_walls.append(unfinished_s_wall)
 
-                # if (
-                #     (additional_n_steps > 0 or new_mass_limit is not None)
-                #     and iteration == 1
-                # ):
-                #     self.n_finished_s_walls = len(self.s_walls)
-                # else:
-                #     self.n_finished_s_walls += len(unfinished_s_walls)
-                self.n_finished_s_walls += len(finished_s_walls)
+                if (
+                    (additional_n_steps > 0 or new_mass_limit is not None)
+                    and iteration == 1
+                ):
+                    self.n_finished_s_walls = len(self.s_walls)
+                else:
+                    self.n_finished_s_walls += len(unfinished_s_walls)
 
             # Add the new S-walls to the spectral network
             if (
@@ -660,9 +639,6 @@ class SpectralNetwork:
         accuracy = config['accuracy']
         new_joints = []
 
-        print "study new joints of wall {}".format(new_s_wall.label)
-        print "the previous S-walls are {}".format([s.label for s in prev_s_walls])
-
         if (config['root_system'] in ['A1', ]):
             logger.info(
                 'There is no joint for the given root system {}.'
@@ -671,9 +647,6 @@ class SpectralNetwork:
             return []
 
         for prev_s_wall in prev_s_walls:
-
-            print "checking intersections of {} with {}".format(new_s_wall.label, prev_s_wall.label)
-
             # First check if the two S-walls are compatible
             # for forming a joint.
 
@@ -705,19 +678,10 @@ class SpectralNetwork:
                      new_s_wall.multiple_local_roots[n_z_seg_i]),
                     sw_data.g_data,
                 )
-
-                print "roots {} and {} could form {}".format(
-                    prev_s_wall.multiple_local_roots[p_z_seg_i],
-                    new_s_wall.multiple_local_roots[n_z_seg_i],
-                    descendant_roots
-                )
-
                 if len(descendant_roots) == 0:
                     # The two segments are not compatible for
                     # forming a joint.
                     continue
-                else:
-                    print "THESE SWALLS COULD FORM A JOINT"
 
                 # Find an intersection of the two segments on the z-plane.
                 if use_cgal is True:
