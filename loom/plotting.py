@@ -179,7 +179,7 @@ class NetworkPlot(SpectralNetworkPlotBase):
     def __init__(
         self,
         title=None,
-        plot_range=None,
+        plot_range=[[-4, 4], [-4, 4]],
     ):
         super(NetworkPlot, self).__init__(
             matplotlib_figure=pyplot.figure(title),
