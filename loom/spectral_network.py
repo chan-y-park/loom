@@ -234,6 +234,7 @@ class SpectralNetwork:
         additional_n_steps=0,
         new_mass_limit=None,
         cache_file_path=None,
+        integration_method='ode_int',
     ):
         """
         Grow the spectral network by seeding SWall's
@@ -309,6 +310,10 @@ class SpectralNetwork:
         # ODE solver setup
         logger.debug('Setup the ODE integrator...')
         ode = get_ode(sw_data, self.phase, accuracy)
+
+        # manual integration setup
+        m_derivatives = ode_derivatives(sw_data, self.phase, accuracy)
+
 
         # Gather singularities of the ODE.
         punctures = sw_data.regular_punctures + sw_data.irregular_punctures
@@ -439,7 +444,10 @@ class SpectralNetwork:
                 s_i = new_s_walls[i]
                 logger.info('Growing {}...'.format(s_i.label))
                 try:
-                    s_i.grow(ode, bpzs, ppzs, config,)
+                    if integration_method == 'ode_int'
+                        s_i.grow(ode, bpzs, ppzs, config,)
+                    elif integration_method == 'manual':
+                        s_i.grow_manually(m_derivatives, bpzs, ppzs, config,)
 
                     if len(s_i.z) < MIN_NUM_OF_DATA_PTS:
                         logger.warning(
@@ -842,8 +850,10 @@ class SpectralNetwork:
                     # to the branch point.
                     tps = get_turning_points(s_wall.z)
                     if len(tps) >= 3:
-                        min_t = (numpy.argmin(abs(s_wall.z[tps[2]:] - bp.z))
-                                 + tps[2])
+                        min_t = (
+                            (numpy.argmin(abs(s_wall.z[tps[2]:] - bp.z)) + 
+                                tps[2])
+                        )
                     else:
                         continue
 
@@ -916,6 +926,33 @@ def get_ode(sw, phase, accuracy):
     )
 
     return ode
+
+
+def ode_derivatives(sw, phase, accuracy):
+    x, z = sympy.symbols('x z')
+    ode_absolute_tolerance = accuracy
+
+    # Even for higher-reps, we always use the
+    # first fundamental representation curve
+    # for evolving the network
+    f = sw.ffr_curve.num_eq
+    df_dz = f.diff(z)
+    df_dx = f.diff(x)
+    # F = -(\partial f / \partial z) / (\partial f / \partial x).
+    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
+    v = sympy.lambdify((z, x), sw.diff.num_v)
+
+    def ode_f(z_x1_x2_M):
+        z_i = z_x1_x2_M[0]
+        x1_i = z_x1_x2_M[1]
+        x2_i = z_x1_x2_M[2]
+        dz_i_dt = exp(phase * 1j) / (v(z_i, x1_i) - v(z_i, x2_i))
+        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+        dM_dt = 1
+        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+
+    return ode_f
 
 
 def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
