@@ -455,7 +455,7 @@ class SpectralNetwork:
                         s_i.grow_manually(
                             m_derivatives, sw_data,
                             bpzs, ppzs, config,
-                            )
+                        )
 
                     else:
                         raise Exception(
@@ -485,7 +485,7 @@ class SpectralNetwork:
                 logger.info('Determining the root type of {}...'
                             .format(s_i.label))
                 try:
-                    s_i.determine_root_types(
+                    root_types = s_i.determine_root_types(
                         sw_data, cutoff_radius=config['size_of_small_step'],
                     )
                 except RuntimeError as e:
@@ -501,6 +501,46 @@ class SpectralNetwork:
                     # Remove the S-wall.
                     new_s_walls.pop(i)
                     continue
+
+                if (
+                    root_types == 'Rebuild S-wall' and 
+                    integration_method == 'ode_int'
+                ):
+                    logger.info(
+                        'Grow again this S-wall, using manual integration.'
+                    )
+                    s_i.grow_manually(
+                        m_derivatives, sw_data,
+                        bpzs, ppzs, config,
+                    )
+                    # Cut the grown S-walls at the intersetions with branch 
+                    # cuts and decorate each segment with its root data.
+                    logger.info('Determining the root type of {}...'
+                                .format(s_i.label))
+                    try:
+                        root_types = s_i.determine_root_types(
+                            sw_data, 
+                            cutoff_radius=config['size_of_small_step'],
+                        )
+                    except RuntimeError as e:
+                        error_msg = (
+                            'Error while determining root types of {}: {}\n'
+                            'Remove this S-wall.'
+                            .format(s_i.label, e)
+                        )
+                        logger.error(error_msg)
+                        self.errors.append(
+                            ('RuntimeError', error_msg)
+                        )
+                        # Remove the S-wall.
+                        new_s_walls.pop(i)
+                        continue
+                    if root_types == 'Rebuild S-wall':
+                        logger.info(
+                            'Warning: could not determine the root '
+                            'types of this wall even manually. Likely '
+                            'numerical failure.'
+                        )
 
                 # End of growing the i-th new S-wall.
                 i += 1

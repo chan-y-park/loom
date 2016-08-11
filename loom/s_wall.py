@@ -629,6 +629,7 @@ class SWall(object):
                     'WARNING: the root type of the S-wall is incompatible '
                     'with the sum of roots of its parents!'
                 )
+                return 'Rebuild S-wall'
 
         # Finished handling the single 'base' root of the S-wall.
         # Now handle the multiple local roots instead.
