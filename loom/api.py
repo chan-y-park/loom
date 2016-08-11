@@ -950,7 +950,7 @@ def make_spectral_network_plot(
     spectral_network_data,
     master=None,
     show_plot=True,
-    plot_range=None,
+    plot_range=[[-4, 4], [-4, 4]],
     logger_name='loom',
     **kwargs
 ):
@@ -961,17 +961,21 @@ def make_spectral_network_plot(
         spectral_networks = spectral_network_data.spectral_networks
         spectral_network_plot_title = 'Spectral Network'
 
-        if matplotlib.rcParams['backend'] == 'TkAgg':
-            spectral_network_plot = NetworkPlotTk(
-                master=master,
-                title=spectral_network_plot_title,
-                plot_range=plot_range,
-            )
-        else:
-            spectral_network_plot = NetworkPlot(
-                title=spectral_network_plot_title,
-                plot_range=plot_range,
-            )
+        # if matplotlib.rcParams['backend'] == 'TkAgg':
+        #     spectral_network_plot = NetworkPlotTk(
+        #         master=master,
+        #         title=spectral_network_plot_title,
+        #         plot_range=plot_range,
+        #     )
+        # else:
+        #     spectral_network_plot = NetworkPlot(
+        #         title=spectral_network_plot_title,
+        #         plot_range=plot_range,
+        #     )
+        spectral_network_plot = NetworkPlot(
+            title=spectral_network_plot_title,
+            plot_range=plot_range,
+        )
 
         # Rotate the z-plane into the location defined by the curve.
         spectral_network_data.reset_z_rotation()
