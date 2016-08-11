@@ -340,6 +340,7 @@ class SWall(object):
     def grow_manually(
         self,
         ode_derivatives,
+        sw_data,
         branch_point_zs,
         puncture_point_zs,
         config,
@@ -392,8 +393,9 @@ class SWall(object):
             new_z = y_i[0] + dt * derivatives[0]
             # new_x_0 = y_i[1] + dt * derivatives[1]
             # new_x_1 = y_i[2] + dt * derivatives[2]
-            new_x_0 = 0
-            new_x_1 = 0
+            xs_at_new_z = sw_data.ffr_curve.get_xs(new_z)
+            new_x_0 = n_nearest(xs_at_new_z, y_i[1], 1)[0]
+            new_x_1 = n_nearest(xs_at_new_z, y_i[2], 1)[0]
             new_M = y_i[3] + dt * derivatives[3]
             new_y_i = [new_z, new_x_0, new_x_1, new_M]
             y_i = new_y_i

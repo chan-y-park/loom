@@ -452,7 +452,10 @@ class SpectralNetwork:
                         s_i.grow(ode, bpzs, ppzs, config,)
 
                     elif integration_method == 'manual':
-                        s_i.grow_manually(m_derivatives, bpzs, ppzs, config,)
+                        s_i.grow_manually(
+                            m_derivatives, sw_data,
+                            bpzs, ppzs, config,
+                            )
 
                     else:
                         raise Exception(
