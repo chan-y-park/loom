@@ -205,7 +205,7 @@ class SpectralNetworkData:
         else:
             for i, sw_data_i in enumerate(sw_data):
                 sw_data_file_path = os.path.join(
-                    data_dir, 'sw_data_'+str(i)+'.json'
+                    data_dir, 'sw_data_' + str(i) + '.json'
                 )
                 logger.info('Saving data to {}.'.format(sw_data_file_path))
                 sw_data_i.save(sw_data_file_path)
@@ -327,6 +327,9 @@ class SpectralNetworkData:
                     spectral_network.grow(
                         config=self.config, sw_data=self.sw_data,
                         cache_file_path=cache_file_path,
+                        integration_method=(
+                            self.config.data['integration_method']
+                        ),
                     )
 
                     spectral_networks = [spectral_network]
@@ -492,6 +495,9 @@ class SpectralNetworkData:
                 spectral_network.grow(
                     config=self.config, sw_data=self.sw_data,
                     cache_file_path=cache_file_path,
+                    integration_method=(
+                            self.config.data['integration_method']
+                        ),
                 )
 
                 spectral_networks.append(spectral_network)
@@ -574,6 +580,9 @@ class SpectralNetworkData:
                         additional_iterations=additional_iterations,
                         additional_n_steps=additional_n_steps,
                         new_mass_limit=new_mass_limit,
+                        integration_method=(
+                            self.config.data['integration_method']
+                        ),
                     )
                     if cache_dir is not None:
                         sn_data_file_path = os.path.join(

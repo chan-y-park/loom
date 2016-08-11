@@ -246,6 +246,10 @@ class SpectralNetwork:
         if the depth of the joint is too deep.
         """
         logger = logging.getLogger(self.logger_name)
+        logger.info(
+            'The integration method for growing S-walls is: {}'
+            .format(integration_method)
+        )
 
         accuracy = config['accuracy']
 
@@ -444,8 +448,9 @@ class SpectralNetwork:
                 s_i = new_s_walls[i]
                 logger.info('Growing {}...'.format(s_i.label))
                 try:
-                    if integration_method == 'ode_int'
+                    if integration_method == 'ode_int':
                         s_i.grow(ode, bpzs, ppzs, config,)
+
                     elif integration_method == 'manual':
                         s_i.grow_manually(m_derivatives, bpzs, ppzs, config,)
 

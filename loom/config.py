@@ -33,6 +33,7 @@ class LoomConfig:
                 'mt_params': 'Mobius transformation',
                 'ramification_point_finding_method':
                     'Ramification point finding method',
+                'integration_method': 'Integration Method',
             },
             'numerical parameters': {
                 'accuracy': 'Accuracy',
