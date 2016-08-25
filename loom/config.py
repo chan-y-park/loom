@@ -15,38 +15,89 @@ class LoomConfig:
         # some of them being strings.
         self.data = {}
         self.parser = ConfigParser.SafeConfigParser()
+#        # attribute options has the following structure:
+#        # options['section']['option'] = 'label'
+#        self.options = {
+#            'Seiberg-Witten data': {
+#                'description': 'Description',
+#                'root_system': 'Root system',
+#                'representation': 'Representation',
+#                'casimir_differentials': 'Casimir differentials',
+#                'differential_parameters': 'Parameters of differentials',
+#                'parameter_sequence': 'A sequence of values for a parameter',
+#                'regular_punctures': 'Regular punctures',
+#                'irregular_punctures': 'Irregular punctures',
+#                'ramification_points': 'Ramification points',
+#                'branch_points': 'Branch points',
+#                'branch_points_sequence': 'Branch points sequence',
+#                'mt_params': 'Mobius transformation',
+#                'ramification_point_finding_method':
+#                    'Ramification point finding method',
+##                'integration_method': 'Integration Method',
+#            },
+#            'numerical parameters': {
+#                'accuracy': 'Accuracy',
+#                'plot_range': 'Plot range',
+#                'num_of_steps': 'Number of steps',
+#                'num_of_iterations': 'Number of iterations',
+#                'size_of_small_step': 'Size of a small step',
+#                'size_of_large_step': 'Size of a large step',
+#                'size_of_bp_neighborhood':
+#                    'Size of a branch point neighborhood',
+#                'size_of_puncture_cutoff': 'Size of a puncture cutoff',
+#                'mass_limit': 'Mass limit',
+#                'phase': 'Phase (single value or range)',
+#            },
+#            'settings': {
+#                'trivialize': 'Trivialize the cover',
+#                'use_scipy_ode': 'Use SciPy ODE solver',
+#            },
+#        }
+#
+#        # {deprecated option: option,}
+#        self.deprecated_options = {
+#            'phase_range': 'phase',
+#            'punctures': 'irregular_punctures',
+#            'size_of_neighborhood': 'size_of_bp_neighborhood',
+#            'size_of_bin': None,
+#            'size_of_ramification_pt_cutoff': None,
+#            'n_processes': None,
+#        }
+
         # attribute options has the following structure:
-        # options['section']['option'] = 'label'
+        # options['section']['option'] = (default value) 
         self.options = {
             'Seiberg-Witten data': {
-                'description': 'Description',
-                'root_system': 'Root system',
-                'representation': 'Representation',
-                'casimir_differentials': 'Casimir differentials',
-                'differential_parameters': 'Parameters of differentials',
-                'parameter_sequence': 'A sequence of values for a parameter',
-                'regular_punctures': 'Regular punctures',
-                'irregular_punctures': 'Irregular punctures',
-                'ramification_points': 'Ramification points',
-                'branch_points': 'Branch points',
-                'branch_points_sequence': 'Branch points sequence',
-                'mt_params': 'Mobius transformation',
-                'ramification_point_finding_method':
-                    'Ramification point finding method',
-                'integration_method': 'Integration Method',
+                'description': None,
+                'root_system': None,
+                'representation': None,
+                'casimir_differentials': None,
+                'differential_parameters': None,
+                'parameter_sequence': None,
+                'regular_punctures': None,
+                'irregular_punctures': None,
+                'ramification_points': None,
+                'branch_points': None,
+                'branch_points_sequence': None,
+                'mt_params': None,
+                'ramification_point_finding_method': None,
+#                'integration_method': None,
             },
             'numerical parameters': {
-                'accuracy': 'Accuracy',
-                'plot_range': 'Plot range',
-                'num_of_steps': 'Number of steps',
-                'num_of_iterations': 'Number of iterations',
-                'size_of_small_step': 'Size of a small step',
-                'size_of_large_step': 'Size of a large step',
-                'size_of_bp_neighborhood':
-                    'Size of a branch point neighborhood',
-                'size_of_puncture_cutoff': 'Size of a puncture cutoff',
-                'mass_limit': 'Mass limit',
-                'phase': 'Phase (single value or range)',
+                'accuracy': None,
+                'plot_range': None,
+                'num_of_steps': None,
+                'num_of_iterations': None,
+                'size_of_small_step': None,
+                'size_of_large_step': None,
+                'size_of_bp_neighborhood': None,
+                'size_of_puncture_cutoff': None,
+                'mass_limit': None,
+                'phase': None,
+            },
+            'settings': {
+                'trivialize': True,
+                'use_scipy_ode': True,
             },
         }
 
@@ -66,6 +117,18 @@ class LoomConfig:
                 self.read(fp)
             logger.info('Finished loading configuration from {}.'
                         .format(file_path))
+
+        # Default settings.
+        if self.parser.has_section('settings') is False:
+            self.parser.add_section('settings')
+        for option, default in self.options['settings'].iteritems():
+            try:
+                if self[option] is not None:
+                    continue
+            except KeyError:
+                pass
+            self[option] = default
+
 
     def __setitem__(self, option, value):
         try:
@@ -146,7 +209,8 @@ class LoomConfig:
                     value = eval(parser_value)
                 elif (section == 'Seiberg-Witten data'):
                     value = parser_value
-                elif (section == 'numerical parameters'):
+                elif (section == 'numerical parameters'
+                      or section == 'settings'):
                     value = eval(parser_value)
                 else:
                     raise ValueError(
@@ -165,9 +229,9 @@ class LoomConfig:
                 self.parser.set(section, option, 'None')
                 self[option] = None
 
-            # default integration is ode_int
-            if self.data['integration_method'] is None:
-                self.data['integration_method'] = 'ode_int'
+#            # default integration is ode_int
+#            if self.data['integration_method'] is None:
+#                self.data['integration_method'] = 'ode_int'
 
     def save(self, file_path=None, logger_name=None,):
         logger = logging.getLogger(logger_name)

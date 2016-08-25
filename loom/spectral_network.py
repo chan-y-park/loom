@@ -234,7 +234,7 @@ class SpectralNetwork:
         additional_n_steps=0,
         new_mass_limit=None,
         cache_file_path=None,
-        integration_method='ode_int',
+#        integration_method='ode_int',
     ):
         """
         Grow the spectral network by seeding SWall's
@@ -246,10 +246,10 @@ class SpectralNetwork:
         if the depth of the joint is too deep.
         """
         logger = logging.getLogger(self.logger_name)
-        logger.info(
-            'The integration method for growing S-walls is: {}'
-            .format(integration_method)
-        )
+#        logger.info(
+#            'The integration method for growing S-walls is: {}'
+#            .format(integration_method)
+#        )
 
         accuracy = config['accuracy']
 
@@ -312,18 +312,28 @@ class SpectralNetwork:
             use_cgal = False
 
         # ODE solver setup
-        logger.debug('Setup the ODE integrator...')
-        ode = get_ode(sw_data, self.phase, accuracy)
+        if config['use_scipy_ode'] is True:
+            logger.debug('Setup the ODE integrator...')
+            ode = get_ode(sw_data, self.phase, accuracy)
 
-        # manual integration setup
-        m_derivatives = ode_derivatives(sw_data, self.phase, accuracy)
+#        # manual integration setup
+#        m_derivatives = ode_derivatives(sw_data, self.phase, accuracy)
 
-
-        # Gather singularities of the ODE.
-        punctures = sw_data.regular_punctures + sw_data.irregular_punctures
-        ppzs = [p.z for p in punctures]
-        bpzs = [bp.z for bp in sw_data.branch_points +
-                sw_data.irregular_singularities]
+        # Gather z-coordinates of punctures and branch points.
+#        punctures = sw_data.regular_punctures + sw_data.irregular_punctures
+#        ppzs = [p.z for p in punctures]
+#        bpzs = [bp.z for bp in sw_data.branch_points +
+#                sw_data.irregular_singularities]
+        ppzs = [
+            p.z for p in
+            sw_data.regular_punctures + sw_data.irregular_punctures
+            if p.z != oo
+        ]
+        bpzs = [
+            p.z for p in
+            sw_data.ffr_ramification_points + sw_data.irregular_punctures
+            if p.z != oo
+        ]
 
         num_of_iterations = config['num_of_iterations']
         n_steps = config['num_of_steps']
@@ -448,20 +458,33 @@ class SpectralNetwork:
                 s_i = new_s_walls[i]
                 logger.info('Growing {}...'.format(s_i.label))
                 try:
-                    if integration_method == 'ode_int':
-                        s_i.grow(ode, bpzs, ppzs, config,)
-
-                    elif integration_method == 'manual':
-                        s_i.grow_manually(
-                            m_derivatives, sw_data,
-                            bpzs, ppzs, config,
-                        )
-
-                    else:
-                        raise Exception(
-                            'Unknown integration method {}'
-                            .format(integration_method)
-                        )
+#                    if integration_method == 'ode_int':
+#                        s_i.grow(ode, bpzs, ppzs, config,)
+#
+#                    elif integration_method == 'manual':
+#                        s_i.grow_manually(
+#                            m_derivatives, sw_data,
+#                            bpzs, ppzs, config,
+#                        )
+#
+#                    else:
+#                        raise Exception(
+#                            'Unknown integration method {}'
+#                            .format(integration_method)
+#                        )
+                    
+#                    import pickle
+#                    with open('s_wall_with_ode.pkl', 'w') as fp:
+#                        pickle.dump(s_i, fp)
+#                    import pdb
+#                    pdb.set_trace()
+                    s_i.grow(
+                        branch_point_zs=bpzs,
+                        puncture_point_zs=ppzs,
+                        config=config,
+                        func=ode,
+                        method='scipy_ode',
+                    )
 
                     if len(s_i.z) < MIN_NUM_OF_DATA_PTS:
                         logger.warning(
@@ -480,48 +503,45 @@ class SpectralNetwork:
                     logger.error(error_msg)
                     self.errors.append(('RuntimeError', error_msg))
 
-                # Cut the grown S-walls at the intersetions with branch cuts
-                # and decorate each segment with its root data.
-                logger.info('Determining the root type of {}...'
-                            .format(s_i.label))
-                try:
-                    root_types = s_i.determine_root_types(
-                        sw_data, cutoff_radius=config['size_of_small_step'],
-                    )
-                except RuntimeError as e:
-                    error_msg = (
-                        'Error while determining root types of {}: {}\n'
-                        'Remove this S-wall.'
-                        .format(s_i.label, e)
-                    )
-                    logger.error(error_msg)
-                    self.errors.append(
-                        ('RuntimeError', error_msg)
-                    )
-                    # Remove the S-wall.
-                    new_s_walls.pop(i)
-                    continue
-
-                if (
-                    root_types == 'Rebuild S-wall' and 
-                    integration_method == 'ode_int'
-                ):
-                    logger.info(
-                        'Grow again this S-wall, using manual integration.'
-                    )
-                    s_i.grow_manually(
-                        m_derivatives, sw_data,
-                        bpzs, ppzs, config,
-                    )
-                    # Cut the grown S-walls at the intersetions with branch 
-                    # cuts and decorate each segment with its root data.
+                
+                if config['trivialize'] is True:
+                    # Cut the grown S-walls
+                    # at the intersetions with branch cuts
+                    # and decorate each segment with its root data.
                     logger.info('Determining the root type of {}...'
                                 .format(s_i.label))
                     try:
                         root_types = s_i.determine_root_types(
-                            sw_data, 
+                            sw_data,
                             cutoff_radius=config['size_of_small_step'],
                         )
+                        if (
+                            root_types == 'Rebuild S-wall'
+                            #XXX
+                            #and integration_method == 'ode_int'
+                        ):
+                            logger.info(
+                                'Grow this S-wall again, '
+                                'using manual integration.'
+                            )
+                            s_i.grow(
+                                branch_point_zs=bpzs,
+                                puncture_point_zs=ppzs,
+                                config=config,
+                                func=(m_derivatives, sw_data.ffr_curve.get_xs),
+                                method='manual_ode',
+                            )
+                            root_types = s_i.determine_root_types(
+                                sw_data,
+                                cutoff_radius=config['size_of_small_step'],
+                            )
+                            if root_types == 'Rebuild S-wall':
+                                logger.warning(
+                                    'Could not determine the root '
+                                    'types of this wall even manually. Likely '
+                                    'numerical failure.'
+                                )
+                            raise RuntimeError
                     except RuntimeError as e:
                         error_msg = (
                             'Error while determining root types of {}: {}\n'
@@ -535,12 +555,6 @@ class SpectralNetwork:
                         # Remove the S-wall.
                         new_s_walls.pop(i)
                         continue
-                    if root_types == 'Rebuild S-wall':
-                        logger.info(
-                            'Warning: could not determine the root '
-                            'types of this wall even manually. Likely '
-                            'numerical failure.'
-                        )
 
                 # End of growing the i-th new S-wall.
                 i += 1
@@ -618,15 +632,17 @@ class SpectralNetwork:
                     psw.x = numpy.concatenate((psw.x, nsw.x[1:]))
                     psw.M = numpy.concatenate((psw.M, nsw.M[1:]))
 
-                    psw.local_roots += nsw.local_roots[1:]
-                    psw.multiple_local_roots += nsw.multiple_local_roots[1:]
-                    psw.local_weight_pairs += nsw.local_weight_pairs[1:]
+                    if config['trivialize'] is True:
+                        psw.local_roots += nsw.local_roots[1:]
+                        psw.multiple_local_roots += nsw.multiple_local_roots[1:]
+                        psw.local_weight_pairs += nsw.local_weight_pairs[1:]
 
-                    for ci in nsw.cuts_intersections:
-                        bp, t, d = ci
-                        psw.cuts_intersections.append(
-                            [bp, psw_n_t + t, d]
-                        )
+                        for ci in nsw.cuts_intersections:
+                            bp, t, d = ci
+                            psw.cuts_intersections.append(
+                                [bp, psw_n_t + t, d]
+                            )
+
                     logger.info(
                         'Extended {} by {} steps.'
                         .format(nsw.label, len(nsw.z))
@@ -875,6 +891,13 @@ class SpectralNetwork:
                 checked_new_joints.append(joint)
 
         return checked_new_joints
+
+    def trivialize(self, config, sw_data,):
+        pass
+        # check the trivialized sw data.
+        # set the parent roots of S-walls.
+        # determine the root type of each S-wall.
+        # determine the root type of each joint.
 
     def find_two_way_streets(
         self, config=None, sw_data=None,

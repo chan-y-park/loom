@@ -1,6 +1,3 @@
-# import pdb
-
-
 def get_A_D_curve_string(casimir_differentials, N):
     # g_type == 'A' or g_type == 'D':
     curve_str = 'x^{} '.format(N)

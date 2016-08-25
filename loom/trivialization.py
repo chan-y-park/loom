@@ -44,193 +44,193 @@ BP_PROXIMITY_THRESHOLD = 0.05
 SINGLE_BRANCH_LOCUS_MAX_DISTANCE = 3.0
 
 
-class BranchPoint:
-    """
-    The BranchPoint class.
-
-    This class is strictly related to the
-    cover corresponding to the first fundamental
-    representation.
-
-    Attributes
-    ----------
-
-    z :
-        The position of the branch point on the z-plane
-
-    trivialization :
-        The trivialization of the cover to which the
-        branch point is associated.
-
-    groups :
-        A list of groups of sheets which collide together
-        at the branch point.
-
-    singles :
-        The list of sheets which do not collide with any
-        other sheet.
-
-    enum_sh :
-        The enumerated sheets at the branch point.
-        A list of pairs [i, x] where i is the sheet
-        identifier referring to the reference sheets
-        of the trivialization class; x is the corresponding
-        coordinate in the fiber above the branch point.
-
-    path_to_bp - UNAVAILABLE :
-        A path running from the basepoint of the trivialization
-        to the branch point without crossing any branch cut.
-
-    sheet_tracks_to_bp - UNAVAILABLE :
-        A list of sheet tracks, i.e. the x-values of each
-        sheet as it is tracked along a path that runs to
-        the branch point, to determine collision structure
-        of the various sheets.
-
-    positive_roots :
-        A minimal list of positive roots characterizing the
-        groups of colliding sheets at the branch point.
-
-    path_around_bp - UNAVAILABLE :
-        A path encircling the branch point and no one else,
-        used to compute the monodromy.
-
-    sheet_tracks_around_bp - UNAVAILABLE :
-        A list of sheet tracks, i.e. the x-values of each
-        sheet as it is tracked along a path that runs around
-        the branch point, to determine the monodromy.
-
-    monodromy :
-        The monodromy matrix acting on the column vector
-        of sheets (hence, acting FROM the left).
-        Sheets are ordered according to the reference
-        sheets of the trivialization.
-
-    order :
-        At a branch point, the dual of the higgs field
-        lies on the boundary of a Weyl chamber.
-        In general, it will li at the intersection of
-        k of the walls delimiting the chamber.
-        The order of the branch point is then k + 1.
-
-    ffr_ramification_points :
-        A list of all ramification point objects, which
-        lie in the fiber above the branch point.
-
-    """
-    def __init__(
-        self, z=None, json_data=None, ffr_ramification_points=None,
-        logger_name='loom',
-    ):
-        self.logger_name = logger_name
-        if json_data is None:
-            self.z = z
-            self.label = None
-            self.monodromy = None
-
-            self.groups = None
-            self.positive_roots = None
-            self.order = None
-
-            self.ffr_ramification_points = None
-            self.seeds = []
-        else:
-            self.set_from_json_data(json_data, ffr_ramification_points,)
-
-        self.data_attributes = [
-            'z', 'label', 'monodromy', 'groups', 'positive_roots',
-            'order', 'ffr_ramification_points'
-        ]
-
-    def set_z_rotation(self, z_rotation):
-        if self.z != oo:
-            self.z *= complex(z_rotation)
-
-    def get_json_data(self):
-        json_data = {
-            'z': ctor2(self.z),
-            'label': self.label,
-            'monodromy': self.monodromy.tolist(),
-            'groups': self.groups,
-            'positive_roots': self.positive_roots.tolist(),
-            'order': self.order,
-            'ffr_ramification_points': [
-                rp.label for rp in self.ffr_ramification_points
-            ],
-        }
-        return json_data
-
-    def set_from_json_data(self, json_data, ffr_ramification_points,):
-        self.z = r2toc(json_data['z'])
-        self.label = json_data['label']
-        self.monodromy = numpy.array(json_data['monodromy'])
-        self.groups = json_data['groups']
-        self.positive_roots = numpy.array(json_data['positive_roots'])
-        self.order = json_data['order']
-        self.ffr_ramification_points = []
-        for rp_label in json_data['ffr_ramification_points']:
-            for rp in ffr_ramification_points:
-                if rp_label == rp.label:
-                    self.ffr_ramification_points.append(rp)
-
-    def print_info(self):
-        logger = logging.getLogger(self.logger_name)
-        logger.info(
-            "---------------------------------------------------------\n"
-            "Branch Point at z = {}\n"
-            "---------------------------------------------------------"
-            .format(self.z)
-        )
-        for key, value in vars(self).iteritems():
-            logger.info("{}:".format(key))
-            pprint(value)
-
-
-class IrregularSingularity:
-    """
-    The IrregularSingularity class.
-    Just a container of information.
-    Strictly related to the first fundamental representation cover.
-    """
-    def __init__(
-        self, z=None, label=None, json_data=None,
-        logger_name='loom',
-    ):
-        self.logger_name = logger_name
-        if json_data is None:
-            self.z = z
-            self.label = label
-            self.monodromy = None
-        else:
-            self.z = r2toc(json_data['z'])
-            self.label = json_data['label']
-            self.monodromy = numpy.array(json_data['monodromy'])
-
-        self.data_attributes = ['z', 'label', 'monodromy']
-
-    def set_z_rotation(self, z_rotation):
-        if self.z != oo:
-            self.z *= complex(z_rotation)
-
-    def get_json_data(self):
-        json_data = {
-            'z': ctor2(self.z),
-            'label': self.label,
-            'monodromy': self.monodromy.tolist(),
-        }
-        return json_data
-
-    def print_info(self):
-        logger = logging.getLogger(self.logger_name)
-        logger.info(
-            "---------------------------------------------------------\n"
-            "Irregular singularity at z = {}\n"
-            "---------------------------------------------------------"
-            .format(self.z)
-        )
-        for key, value in vars(self).iteritems():
-            logger.info("{}:".format(key))
-            pprint(value)
+#class BranchPoint:
+#    """
+#    The BranchPoint class.
+#
+#    This class is strictly related to the
+#    cover corresponding to the first fundamental
+#    representation.
+#
+#    Attributes
+#    ----------
+#
+#    z :
+#        The position of the branch point on the z-plane
+#
+#    trivialization :
+#        The trivialization of the cover to which the
+#        branch point is associated.
+#
+#    groups :
+#        A list of groups of sheets which collide together
+#        at the branch point.
+#
+#    singles :
+#        The list of sheets which do not collide with any
+#        other sheet.
+#
+#    enum_sh :
+#        The enumerated sheets at the branch point.
+#        A list of pairs [i, x] where i is the sheet
+#        identifier referring to the reference sheets
+#        of the trivialization class; x is the corresponding
+#        coordinate in the fiber above the branch point.
+#
+#    path_to_bp - UNAVAILABLE :
+#        A path running from the basepoint of the trivialization
+#        to the branch point without crossing any branch cut.
+#
+#    sheet_tracks_to_bp - UNAVAILABLE :
+#        A list of sheet tracks, i.e. the x-values of each
+#        sheet as it is tracked along a path that runs to
+#        the branch point, to determine collision structure
+#        of the various sheets.
+#
+#    positive_roots :
+#        A minimal list of positive roots characterizing the
+#        groups of colliding sheets at the branch point.
+#
+#    path_around_bp - UNAVAILABLE :
+#        A path encircling the branch point and no one else,
+#        used to compute the monodromy.
+#
+#    sheet_tracks_around_bp - UNAVAILABLE :
+#        A list of sheet tracks, i.e. the x-values of each
+#        sheet as it is tracked along a path that runs around
+#        the branch point, to determine the monodromy.
+#
+#    monodromy :
+#        The monodromy matrix acting on the column vector
+#        of sheets (hence, acting FROM the left).
+#        Sheets are ordered according to the reference
+#        sheets of the trivialization.
+#
+#    order :
+#        At a branch point, the dual of the higgs field
+#        lies on the boundary of a Weyl chamber.
+#        In general, it will li at the intersection of
+#        k of the walls delimiting the chamber.
+#        The order of the branch point is then k + 1.
+#
+#    ffr_ramification_points :
+#        A list of all ramification point objects, which
+#        lie in the fiber above the branch point.
+#
+#    """
+#    def __init__(
+#        self, z=None, json_data=None, ffr_ramification_points=None,
+#        logger_name='loom',
+#    ):
+#        self.logger_name = logger_name
+#        if json_data is None:
+#            self.z = z
+#            self.label = None
+#            self.monodromy = None
+#
+#            self.groups = None
+#            self.positive_roots = None
+#            self.order = None
+#
+#            self.ffr_ramification_points = None
+#            self.seeds = []
+#        else:
+#            self.set_from_json_data(json_data, ffr_ramification_points,)
+#
+#        self.data_attributes = [
+#            'z', 'label', 'monodromy', 'groups', 'positive_roots',
+#            'order', 'ffr_ramification_points'
+#        ]
+#
+#    def set_z_rotation(self, z_rotation):
+#        if self.z != oo:
+#            self.z *= complex(z_rotation)
+#
+#    def get_json_data(self):
+#        json_data = {
+#            'z': ctor2(self.z),
+#            'label': self.label,
+#            'monodromy': self.monodromy.tolist(),
+#            'groups': self.groups,
+#            'positive_roots': self.positive_roots.tolist(),
+#            'order': self.order,
+#            'ffr_ramification_points': [
+#                rp.label for rp in self.ffr_ramification_points
+#            ],
+#        }
+#        return json_data
+#
+#    def set_from_json_data(self, json_data, ffr_ramification_points,):
+#        self.z = r2toc(json_data['z'])
+#        self.label = json_data['label']
+#        self.monodromy = numpy.array(json_data['monodromy'])
+#        self.groups = json_data['groups']
+#        self.positive_roots = numpy.array(json_data['positive_roots'])
+#        self.order = json_data['order']
+#        self.ffr_ramification_points = []
+#        for rp_label in json_data['ffr_ramification_points']:
+#            for rp in ffr_ramification_points:
+#                if rp_label == rp.label:
+#                    self.ffr_ramification_points.append(rp)
+#
+#    def print_info(self):
+#        logger = logging.getLogger(self.logger_name)
+#        logger.info(
+#            "---------------------------------------------------------\n"
+#            "Branch Point at z = {}\n"
+#            "---------------------------------------------------------"
+#            .format(self.z)
+#        )
+#        for key, value in vars(self).iteritems():
+#            logger.info("{}:".format(key))
+#            pprint(value)
+#
+#
+#class IrregularSingularity:
+#    """
+#    The IrregularSingularity class.
+#    Just a container of information.
+#    Strictly related to the first fundamental representation cover.
+#    """
+#    def __init__(
+#        self, z=None, label=None, json_data=None,
+#        logger_name='loom',
+#    ):
+#        self.logger_name = logger_name
+#        if json_data is None:
+#            self.z = z
+#            self.label = label
+#            self.monodromy = None
+#        else:
+#            self.z = r2toc(json_data['z'])
+#            self.label = json_data['label']
+#            self.monodromy = numpy.array(json_data['monodromy'])
+#
+#        self.data_attributes = ['z', 'label', 'monodromy']
+#
+#    def set_z_rotation(self, z_rotation):
+#        if self.z != oo:
+#            self.z *= complex(z_rotation)
+#
+#    def get_json_data(self):
+#        json_data = {
+#            'z': ctor2(self.z),
+#            'label': self.label,
+#            'monodromy': self.monodromy.tolist(),
+#        }
+#        return json_data
+#
+#    def print_info(self):
+#        logger = logging.getLogger(self.logger_name)
+#        logger.info(
+#            "---------------------------------------------------------\n"
+#            "Irregular singularity at z = {}\n"
+#            "---------------------------------------------------------"
+#            .format(self.z)
+#        )
+#        for key, value in vars(self).iteritems():
+#            logger.info("{}:".format(key))
+#            pprint(value)
 
 
 # TODO: Use g_data.weights at the base point as labels of sheets,
@@ -278,17 +278,17 @@ class SWDataWithTrivialization(SWDataBase):
         The output looks like this
         {0 : x_0, ... , i : x_i, ...}
     """
-    # NOTE: I am assuming that branch points NOR irregular singularities
-    # overlap vertically.
-    # This should be guaranteed by the automatic rotation of
-    # the z-plane which is performed before calling this class.
     def __init__(self, config, logger_name='loom', json_data=None,):
         super(SWDataWithTrivialization, self).__init__(
             config, logger_name=logger_name, json_data=json_data,
         )
 
-        self.branch_points = []
-        self.irregular_singularities = []
+        # Check if there are branch points aligned vertically,
+        # and rotate the z-plane until there is none.
+        self.init_z_rotation()
+
+#        self.branch_points = []
+#        self.irregular_singularities = []
 
         self.reference_ffr_xs = None
         self.reference_xs = None
@@ -306,11 +306,154 @@ class SWDataWithTrivialization(SWDataBase):
             self.set_trivialization_from_json_data(json_data)
 
         self.data_attributes += [
-            'branch_points', 'irregular_singularities',
+#            'branch_points', 'irregular_singularities',
             'min_distance', 'min_horizontal_distance',
             'farthest_branching_locus', 'base_point',
             'reference_ffr_xs', 'reference_xs', 'branch_cut_rotation',
         ]
+
+    def init_z_rotation(self):   
+#        bpzs = n_remove_duplicate(
+#            [r.z for r in ffr_ramification_points if r.z != oo],
+#            self.accuracy,
+#        )
+        bpzs = [bp.z for bp in self.branch_points]
+        # TODO: instead of just printing a warning, increase the accuracy
+        # or other relevant parameters to overcome this issue.
+        spread = spread_of_branch_points(bpzs, min_spread=MIN_SPREAD)
+        if spread > MIN_SPREAD:
+            pass
+        else:
+            logger.warning(
+                'Branch points may be too close to each other '
+                'for numerical trivialization. Spread is {}.\n'
+                'Branch points are:\n{}'
+                .format(
+                    spread,
+                    [ffr_rp.z for ffr_rp in ffr_ramification_points]
+                )
+            )
+
+#        logger.debug('These are the punctures:')
+#        for pct in punctures:
+#            logger.debug('{} at z={}'.format(pct.label, pct.z))
+
+        for pi_div in range(max_pi_div + 1):
+            if pi_div == 0:
+                # we study the case of no rotations at all.
+                z_r = sympy.sympify('1')
+                n_r = -1
+                logger.info('The z-plane has not been rotated.')
+            elif pi_div == 1:
+                # there are no nontrivial rotations when this is 1.
+                continue
+            else:
+                z_r = sympy.sympify('exp(pi* I / {})'.format(pi_div))
+                n_r = 1
+                logger.info(
+                    'Will try rotating z-plane in increments'
+                    ' of pi/{}'.format(pi_div)
+                )
+
+            z_plane_rotation = z_r
+
+            while (rotate_z_plane is True) and n_r < pi_div:
+                if pi_div != 0:
+                    logger.info(
+                        'The z-plane has been rotated {} times.\n'
+                        'Current rotation of the z-plane: {}\n'
+                        .format(n_r, z_plane_rotation)
+                    )
+
+                # Now check if the z-plane needs to be rotated
+                # NOTE: if we substitute z' = c z in F(x,z)=0,
+                # where c is a phase, the position of punctures
+                # and branch points will rotate contravariantly
+                # z_pt -> c^{-1} z_pt
+
+                # z-coords of branch points.
+                bpzs = n_remove_duplicate(
+                    [r.z / complex(z_plane_rotation)
+                     for r in ffr_ramification_points if r.z != oo],
+                    self.accuracy,
+                )
+                # z-coords of punctures.
+                pctzs = n_remove_duplicate(
+                    [p.z / complex(z_plane_rotation)
+                     for p in punctures if p.z != oo],
+                    self.accuracy,
+                )
+                z_list = bpzs + pctzs
+                z_r_list = [z.real for z in z_list]
+                if len(z_r_list) > 1:
+                    min_x_distance = min([
+                        abs(x - y) for i, x in enumerate(z_r_list)
+                        for y in z_r_list[i + 1:]
+                    ])
+                    min_abs_distance = min([
+                        abs(x - y) for i, x in enumerate(z_list)
+                        for y in z_list[i + 1:]
+                    ])
+
+                elif len(z_r_list) == 1:
+                    # No need for the rotation.
+                    rotate_z_plane = False
+                    break
+
+                elif len(z_r_list) == 0:
+                    raise RuntimeError(
+                        'SWDataBase.set_from_config(): '
+                        'Could not find any punctures '
+                        'or branch points'
+                    )
+
+                if min_x_distance > min_abs_distance / len(z_list):
+                    logger.info(
+                        'All branch points and punctures '
+                        'are sufficiently separated horizontally.\n'
+                        'Will not rotate z-plane any more.\n'
+                    )
+                    rotate_z_plane = False
+                    break
+
+                else:
+                    logger.info(
+                        'Some branch points or punctures '
+                        'are vertically aligned.\n'
+                        'Need to rotate the z-plane.\n'
+                    )
+                    n_r += 1
+                    z_plane_rotation *= z_r
+
+            if rotate_z_plane is False:
+                break
+
+        if n_r == pi_div == max_pi_div:
+            raise RuntimeError(
+                'Could not find a suitable rotation for the z-plane.'
+            )
+
+        # Apply the z-rotation to numerical attributes.
+        self.z_plane_rotation = z_plane_rotation
+        self.ffr_curve = ffr_curve.set_z_rotation(z_plane_rotation)
+        self.diff = SWDiff(
+            'x',
+            g_data=self.g_data,
+            diff_params=diff_params,
+            mt_params=mt_params,
+            z_rotation=self.z_plane_rotation,
+        )
+
+        for p in punctures + ffr_ramification_points:
+            p.set_z_rotation(1/z_plane_rotation)
+        self.regular_punctures = regular_punctures
+        self.irregular_punctures = irregular_punctures
+
+        self.ffr_ramification_points = ffr_ramification_points 
+
+        for p in self.branch_points + self.irregular_singularities:
+            p.set_z_rotation(1/z_plane_rotation)
+
 
     def set_z_rotation(self, z_rotation):
         super(SWDataWithTrivialization, self).set_z_rotation(z_rotation)
@@ -390,34 +533,29 @@ class SWDataWithTrivialization(SWDataBase):
     def set_trivialization(self):
         logger = logging.getLogger(self.logger_name)
 
-        # z-coords of branch points.
-        bpzs = n_remove_duplicate(
-            [r.z for r in self.ffr_ramification_points if r.z != oo],
-            self.accuracy,
-        )
-
-        logger.info(
-            'Ramification points arrange into {} branch points '
-            'at positions {}'.format(
-                len(bpzs), bpzs
-            )
-        )
-
-        # z-coords of punctures.
         rpzs = n_remove_duplicate(
             [p.z for p in self.regular_punctures
              if p.z != oo],
             self.accuracy,
         )
-        ipzs = n_remove_duplicate(
-            [p.z for p in self.irregular_punctures
-             if p.z != oo],
-            self.accuracy,
-        )
+#        bpzs = n_remove_duplicate(
+#            [r.z for r in self.ffr_ramification_points if r.z != oo],
+#            self.accuracy,
+#        )
+#        ipzs = n_remove_duplicate(
+#            [p.z for p in self.irregular_punctures
+#             if p.z != oo],
+#            self.accuracy,
+#        )
+        bpzs = [
+            p.z for p in
+            self.branch_points + self.irregular_singularities
+        ]
 
         # Automatically choose a basepoint, based on the positions of
         # both branch points and irregular singularities
-        all_points_z = bpzs + rpzs + ipzs
+#        all_points_z = bpzs + rpzs + ipzs
+        all_points_z = bpzs + rpzs
         n_critical_loci = len(all_points_z)
         if n_critical_loci > 1:
             all_distances = [
@@ -473,13 +611,25 @@ class SWDataWithTrivialization(SWDataBase):
             self.base_point,
         )
 
-        # Construct the list of branch points.
-        # Also assign them the respective ramification points
-        # and analyze them
-        for i, z_bp in enumerate(bpzs):
-            bp = BranchPoint(z=z_bp)
-            bp.label = 'branch point #{}'.format(i)
+#        # Construct the list of branch points.
+#        # Also assign them the respective ramification points
+#        # and analyze them
+#        for i, z_bp in enumerate(bpzs):
+#            bp = BranchPoint(z=z_bp)
+#            bp.label = 'branch point #{}'.format(i)
+#
+#            self.analyze_branch_point(bp)
+#            if bp.order > 1:
+#                # only add if there are any positive roots associated
+#                # otherwise may be an accidental BP
+#                # FIXME: Must handle also accidental BP; for example
+#                # a point like F~ z + x^2(1+x^2) can happen in D-type
+#                # and will have no obvious monodromy. Need to deal with it.
+#                self.branch_points.append(bp)
 
+        # Analyze each branch points and assign ramification points to it.
+        bps = []
+        for bp in self.branch_points:
             self.analyze_branch_point(bp)
             if bp.order > 1:
                 # only add if there are any positive roots associated
@@ -487,15 +637,21 @@ class SWDataWithTrivialization(SWDataBase):
                 # FIXME: Must handle also accidental BP; for example
                 # a point like F~ z + x^2(1+x^2) can happen in D-type
                 # and will have no obvious monodromy. Need to deal with it.
-                self.branch_points.append(bp)
+                bps.append(bp)
+        self.branch_points = bps
 
-        # Construct the list of irregular singularities
-        for j, z_irr_sing in enumerate(ipzs):
-            irr_sing = IrregularSingularity(
-                z=z_irr_sing, label='irregular singularity #{}'.format(j)
-            )
-            self.analyze_irregular_singularity(irr_sing)
-            self.irregular_singularities.append(irr_sing)
+#        # Construct the list of irregular singularities
+#        for j, z_irr_sing in enumerate(ipzs):
+#            irr_sing = IrregularSingularity(
+#                z=z_irr_sing, label='irregular singularity #{}'.format(j)
+#            )
+#            self.analyze_irregular_singularity(irr_sing)
+#            self.irregular_singularities.append(irr_sing)
+        
+        # Analyze irregular singularities.
+        irrs = []
+        for irr in self.irregular_singularities:
+            self.analyze_irregular_singularity(irr)
 
         # perform extensive global checks on monodromies
         logger.info('Doing global checks on monodromies...')
@@ -1699,3 +1855,30 @@ def build_monodromy_matrix(initial_sheets, sorted_sheets, logger_name='loom'):
     perm_matrix = numpy.array(perm_list)
     logger.debug('Permutation matrix {}'.format(perm_matrix))
     return perm_matrix
+
+
+def spread_of_branch_points(z_s, min_spread=None):
+    """
+    Give a measure of how much branch points are separated
+    from each other.
+    """
+    if len(z_s) == 0:
+        raise Exception('Cannot compute spread of branch points.')
+    elif len(z_s) == 1 and min_spread is not None:
+        return 10 * min_spread
+    elif len(z_s) == 1 and min_spread is None:
+        raise RuntimeError(
+            'spread_of_branch_points: '
+            'Cannot evaluate spread with just one branch point.'
+        )
+    else:
+        # TODO: think about more accurate ways to estimate the spread.
+        max_d = max(
+            [abs(z_i - z_j) for z_i in z_s for z_j in z_s if z_i != z_j]
+        )
+        min_d = min(
+            [abs(z_i - z_j) for z_i in z_s for z_j in z_s if z_i != z_j]
+        )
+        return min_d / (max_d / len(z_s))
+
+

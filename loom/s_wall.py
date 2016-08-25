@@ -282,69 +282,11 @@ class SWall(object):
 
     def grow(
         self,
-        ode,
-        branch_point_zs,
-        puncture_point_zs,
-        config,
-    ):
-        bpzs = branch_point_zs
-        #ppzs = puncture_point_zs
-        ppzs = [ppz for ppz in puncture_point_zs if ppz != oo]
-        size_of_small_step = config['size_of_small_step']
-        size_of_large_step = config['size_of_large_step']
-        size_of_bp_neighborhood = config['size_of_bp_neighborhood']
-        size_of_puncture_cutoff = config['size_of_puncture_cutoff']
-        mass_limit = config['mass_limit']
-
-        step = 0
-        z_i = self.z[0]
-        M_i = self.M[0]
-        # Prepare a 1-dim array for ode
-        # Note: the meaning of the following command is established by the
-        # self.__getitem__ method defined above.
-        # it is a numpy array containing
-        # array([z[t], x[t][0], x[t][1], M[t]])
-        y_i = self[0]
-        ode.set_initial_value(y_i)
-
-        array_size = len(self.z)
-
-        while ode.successful() and step < (array_size - 1):
-            step += 1
-            if step > MIN_NUM_OF_DATA_PTS:
-                # Stop if z is inside a cutoff of a puncture.
-                if len(ppzs) > 0:
-                    min_d = min([abs(z_i - ppz) for ppz in ppzs])
-                    if min_d < size_of_puncture_cutoff:
-                        self.resize(step)
-                        break
-
-                # Stop if M exceeds mass limit.
-                if mass_limit is not None:
-                    if M_i > mass_limit:
-                        self.resize(step)
-                        break
-
-            # Adjust the step size if z is near a branch point.
-            if (len(bpzs) > 0 and
-                (min([abs(z_i - bpz) for bpz in bpzs]) < 
-                    size_of_bp_neighborhood)):
-                dt = size_of_small_step * min([1.0, abs(y_i[1] - y_i[2])])
-            else:
-                dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
-
-            y_i = ode.integrate(ode.t + dt)
-            z_i = y_i[0]
-            M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
-            self[step] = y_i
-
-    def grow_manually(
-        self,
-        ode_derivatives,
-        sw_data,
-        branch_point_zs,
-        puncture_point_zs,
-        config,
+        branch_point_zs=[],
+        puncture_point_zs=[],
+        config=[],
+        func=None,
+        method='scipy_ode',
     ):
         bpzs = branch_point_zs
         ppzs = puncture_point_zs
@@ -355,6 +297,7 @@ class SWall(object):
         mass_limit = config['mass_limit']
 
         step = 0
+        array_size = len(self.z)
         z_i = self.z[0]
         M_i = self.M[0]
         # Prepare a 1-dim array for ode
@@ -364,45 +307,148 @@ class SWall(object):
         # array([z[t], x[t][0], x[t][1], M[t]])
         y_i = self[0]
 
-        array_size = len(self.z)
 
-        while step < (array_size - 1):
-            step += 1
-            if step > MIN_NUM_OF_DATA_PTS:
-                # Stop if z is inside a cutoff of a puncture.
-                if len(ppzs) > 0:
-                    min_d = min([abs(z_i - ppz) for ppz in ppzs])
-                    if min_d < size_of_puncture_cutoff:
-                        self.resize(step)
-                        break
+        if method == 'scipy_ode':
+            ode = func
 
-                # Stop if M exceeds mass limit.
-                if mass_limit is not None:
-                    if M_i > mass_limit:
-                        self.resize(step)
-                        break
+            ode.set_initial_value(y_i)
 
-            # Adjust the step size if z is near a branch point.
-            if (len(bpzs) > 0 and
-                (min([abs(z_i - bpz) for bpz in bpzs]) < 
-                    size_of_bp_neighborhood)):
-                dt = size_of_small_step * min([1.0, abs(y_i[1] - y_i[2])])
-            else:
-                dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
 
-            derivatives = ode_derivatives(y_i)
-            new_z = y_i[0] + dt * derivatives[0]
-            # new_x_0 = y_i[1] + dt * derivatives[1]
-            # new_x_1 = y_i[2] + dt * derivatives[2]
-            xs_at_new_z = sw_data.ffr_curve.get_xs(new_z)
-            new_x_0 = n_nearest(xs_at_new_z, y_i[1], 1)[0]
-            new_x_1 = n_nearest(xs_at_new_z, y_i[2], 1)[0]
-            new_M = y_i[3] + dt * derivatives[3]
-            new_y_i = [new_z, new_x_0, new_x_1, new_M]
-            y_i = new_y_i
-            z_i = y_i[0]
-            M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
-            self[step] = y_i
+            while ode.successful() and step < (array_size - 1):
+                step += 1
+                if step > MIN_NUM_OF_DATA_PTS:
+                    # Stop if z is inside a cutoff of a puncture.
+                    if len(ppzs) > 0:
+                        min_d = min([abs(z_i - ppz) for ppz in ppzs])
+                        if min_d < size_of_puncture_cutoff:
+                            self.resize(step)
+                            break
+
+                    # Stop if M exceeds mass limit.
+                    if mass_limit is not None:
+                        if M_i > mass_limit:
+                            self.resize(step)
+                            break
+
+                # Adjust the step size if z is near a branch point.
+                if (len(bpzs) > 0 and
+                    (min([abs(z_i - bpz) for bpz in bpzs]) < 
+                        size_of_bp_neighborhood)):
+                    dt = size_of_small_step * min([1.0, abs(y_i[1] - y_i[2])])
+                else:
+                    dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
+
+                y_i = ode.integrate(ode.t + dt)
+                z_i = y_i[0]
+                M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
+                self[step] = y_i
+
+        elif method == 'manual_ode':
+            ode_derivatives, get_xs = func 
+
+            while step < (array_size - 1):
+                step += 1
+                if step > MIN_NUM_OF_DATA_PTS:
+                    # Stop if z is inside a cutoff of a puncture.
+                    if len(ppzs) > 0:
+                        min_d = min([abs(z_i - ppz) for ppz in ppzs])
+                        if min_d < size_of_puncture_cutoff:
+                            self.resize(step)
+                            break
+
+                    # Stop if M exceeds mass limit.
+                    if mass_limit is not None:
+                        if M_i > mass_limit:
+                            self.resize(step)
+                            break
+
+                # Adjust the step size if z is near a branch point.
+                if (len(bpzs) > 0 and
+                    (min([abs(z_i - bpz) for bpz in bpzs]) < 
+                        size_of_bp_neighborhood)):
+                    dt = size_of_small_step * min([1.0, abs(y_i[1] - y_i[2])])
+                else:
+                    dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
+
+                derivatives = ode_derivatives(y_i)
+                new_z = y_i[0] + dt * derivatives[0]
+                # new_x_0 = y_i[1] + dt * derivatives[1]
+                # new_x_1 = y_i[2] + dt * derivatives[2]
+                xs_at_new_z = get_xs(new_z)
+                new_x_0 = n_nearest(xs_at_new_z, y_i[1], 1)[0]
+                new_x_1 = n_nearest(xs_at_new_z, y_i[2], 1)[0]
+                new_M = y_i[3] + dt * derivatives[3]
+                new_y_i = [new_z, new_x_0, new_x_1, new_M]
+                y_i = new_y_i
+                z_i = y_i[0]
+                M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
+                self[step] = y_i
+
+#    def grow_manually(
+#        self,
+#        ode_derivatives,
+#        sw_data,
+#        branch_point_zs,
+#        puncture_point_zs,
+#        config,
+#    ):
+#        bpzs = branch_point_zs
+#        ppzs = puncture_point_zs
+#        size_of_small_step = config['size_of_small_step']
+#        size_of_large_step = config['size_of_large_step']
+#        size_of_bp_neighborhood = config['size_of_bp_neighborhood']
+#        size_of_puncture_cutoff = config['size_of_puncture_cutoff']
+#        mass_limit = config['mass_limit']
+#
+#        step = 0
+#        z_i = self.z[0]
+#        M_i = self.M[0]
+#        # Prepare a 1-dim array for ode
+#        # Note: the meaning of the following command is established by the
+#        # self.__getitem__ method defined above.
+#        # it is a numpy array containing
+#        # array([z[t], x[t][0], x[t][1], M[t]])
+#        y_i = self[0]
+#
+#        array_size = len(self.z)
+#
+#        while step < (array_size - 1):
+#            step += 1
+#            if step > MIN_NUM_OF_DATA_PTS:
+#                # Stop if z is inside a cutoff of a puncture.
+#                if len(ppzs) > 0:
+#                    min_d = min([abs(z_i - ppz) for ppz in ppzs])
+#                    if min_d < size_of_puncture_cutoff:
+#                        self.resize(step)
+#                        break
+#
+#                # Stop if M exceeds mass limit.
+#                if mass_limit is not None:
+#                    if M_i > mass_limit:
+#                        self.resize(step)
+#                        break
+#
+#            # Adjust the step size if z is near a branch point.
+#            if (len(bpzs) > 0 and
+#                (min([abs(z_i - bpz) for bpz in bpzs]) < 
+#                    size_of_bp_neighborhood)):
+#                dt = size_of_small_step * min([1.0, abs(y_i[1] - y_i[2])])
+#            else:
+#                dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
+#
+#            derivatives = ode_derivatives(y_i)
+#            new_z = y_i[0] + dt * derivatives[0]
+#            # new_x_0 = y_i[1] + dt * derivatives[1]
+#            # new_x_1 = y_i[2] + dt * derivatives[2]
+#            xs_at_new_z = sw_data.ffr_curve.get_xs(new_z)
+#            new_x_0 = n_nearest(xs_at_new_z, y_i[1], 1)[0]
+#            new_x_1 = n_nearest(xs_at_new_z, y_i[2], 1)[0]
+#            new_M = y_i[3] + dt * derivatives[3]
+#            new_y_i = [new_z, new_x_0, new_x_1, new_M]
+#            y_i = new_y_i
+#            z_i = y_i[0]
+#            M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
+#            self[step] = y_i
 
     def determine_root_types(self, sw_data, cutoff_radius=0,):
         """

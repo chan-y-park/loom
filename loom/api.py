@@ -73,9 +73,11 @@ class SpectralNetworkData:
         logger = logging.getLogger(logger_name)
         logger.info('Opening data directory "{}"...'.format(data_dir))
 
-        config = LoomConfig(logger_name=logger_name)
-        with open(os.path.join(data_dir, 'config.ini')) as fp:
-            config.read(fp)
+        config_file_path = os.path.join(data_dir, 'config.ini')
+        config = LoomConfig(
+            file_path=config_file_path,
+            logger_name=logger_name,
+        )
 
         # Check the version of the saved data.
         try:
@@ -98,7 +100,7 @@ class SpectralNetworkData:
             sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
             with open(sw_data_file_path, 'r') as fp:
                 json_data = json.load(fp)
-                sw_data = SWDataWithTrivialization(
+                sw_data = get_sw_data(
                     config, logger_name=logger_name,
                     json_data=json_data,
                 )
@@ -127,7 +129,7 @@ class SpectralNetworkData:
                 )
                 with open(sw_data_file_path, 'r') as fp:
                     json_data = json.load(fp)
-                    sw_data_i = SWDataWithTrivialization(
+                    sw_data_i = get_sw_data(
                         config, logger_name=logger_name,
                         json_data=json_data,
                     )
@@ -198,7 +200,7 @@ class SpectralNetworkData:
 
         # Save geometric & trivialization data.
         # XXX
-        if self.config.data['parameter_sequence'] is None:
+        if self.config['parameter_sequence'] is None:
             sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
             logger.info('Saving data to {}.'.format(sw_data_file_path))
             sw_data.save(sw_data_file_path)
@@ -212,7 +214,7 @@ class SpectralNetworkData:
 
         # Save spectral network data.
         # XXX
-        if self.config.data['parameter_sequence'] is None:
+        if self.config['parameter_sequence'] is None:
             for i, spectral_network in enumerate(spectral_networks):
                 data_file_path = os.path.join(
                     data_dir,
@@ -263,7 +265,7 @@ class SpectralNetworkData:
         data_file_prefix = None
 
         # XXX
-        if self.config.data['parameter_sequence'] is None:
+        if self.config['parameter_sequence'] is None:
             try:
                 if extend is False:
                     data_file_prefix = 'data'
@@ -271,7 +273,7 @@ class SpectralNetworkData:
                     logger.info(
                         'Started @ {}'.format(get_date_time_str(start_time))
                     )
-                    self.sw_data = SWDataWithTrivialization(
+                    self.sw_data = get_sw_data(
                         self.config, logger_name=self.logger_name
                     )
                     if cache_dir is not None:
@@ -327,9 +329,9 @@ class SpectralNetworkData:
                     spectral_network.grow(
                         config=self.config, sw_data=self.sw_data,
                         cache_file_path=cache_file_path,
-                        integration_method=(
-                            self.config.data['integration_method']
-                        ),
+#                        integration_method=(
+#                            self.config['integration_method']
+#                        ),
                     )
 
                     spectral_networks = [spectral_network]
@@ -469,7 +471,7 @@ class SpectralNetworkData:
                 logger.info(
                     'Started @ {}'.format(get_date_time_str(start_time))
                 )
-                self.sw_data = SWDataWithTrivialization(
+                self.sw_data = get_sw_data(
                     self.config, logger_name=self.logger_name
                 )
                 sw_data_sequence.append(self.sw_data)
@@ -495,9 +497,9 @@ class SpectralNetworkData:
                 spectral_network.grow(
                     config=self.config, sw_data=self.sw_data,
                     cache_file_path=cache_file_path,
-                    integration_method=(
-                            self.config.data['integration_method']
-                        ),
+#                    integration_method=(
+#                            self.config['integration_method']
+#                        ),
                 )
 
                 spectral_networks.append(spectral_network)
@@ -529,8 +531,6 @@ class SpectralNetworkData:
             # at the last stage of spectral network generation.
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
-
-
 
     def extend(
         self,
@@ -580,9 +580,9 @@ class SpectralNetworkData:
                         additional_iterations=additional_iterations,
                         additional_n_steps=additional_n_steps,
                         new_mass_limit=new_mass_limit,
-                        integration_method=(
-                            self.config.data['integration_method']
-                        ),
+#                        integration_method=(
+#                            self.config['integration_method']
+#                        ),
                     )
                     if cache_dir is not None:
                         sn_data_file_path = os.path.join(
@@ -675,6 +675,11 @@ class SpectralNetworkData:
             # at the last stage of spectral network generation.
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
+
+    def trivialize(self):
+        pass
+        # Get the trivialized SW data.
+        # call SpectralNetwork.trivialize() for each spectral network.
 
     def plot(self, plot_range=None):
         # TODO: Implement if needed.
@@ -808,6 +813,13 @@ class LoomLoggingFormatter(logging.Formatter):
         return result
 
 
+def get_sw_data(config, logger_name, json_data=None):
+    if config['trivialize'] is True:
+        return SWDataWithTrivialization(config, logger_name, json_data)
+    else:
+        return SWDataBase(config, logger_name, json_data)
+
+
 def set_logging(
     logger_name='loom',
     logging_level=None,
@@ -866,84 +878,6 @@ def get_logging_handler(level, handler_class, buffer_object):
     f = LoomLoggingFormatter()
     h.setFormatter(f)
     return h
-
-
-# XXX: save_config() will be deprecated.
-# Use LoomConfig.__init__().
-def load_config(file_path=None, logger_name='loom',):
-    config = LoomConfig(file_path=file_path, logger_name=logger_name)
-
-    return config
-
-
-# XXX: save_config() will be deprecated.
-# Use LoomConfig.save().
-def save_config(config, file_path=None, logger_name='loom',):
-    config.save(file_path=file_path, logger_name=logger_name)
-
-    return None
-
-
-# XXX: load_spectral_network() will be deprecated.
-# Use SpectralNetworkData.load().
-def load_spectral_network(
-    data_dir=None,
-    result_queue=None,
-    logger_name='loom',
-):
-    data = SpectralNetworkData(
-        data_dir=data_dir,
-        logger_name=logger_name,
-    )
-    if result_queue is not None:
-        result_queue.put(data)
-    else:
-        return (data.config, data)
-
-
-# XXX: save_spectral_network() will be deprecated.
-# Use SpectralNetworkData.save().
-def save_spectral_network(
-    config,
-    spectral_network_data,
-    data_dir=None,
-    make_zipped_file=False,
-    logger_name='loom',
-):
-    spectral_network_data.save(
-        data_dir=data_dir,
-        make_zipped_file=make_zipped_file,
-        logger_name=logger_name,
-    )
-
-
-# XXX: generate_spectral_network() will be deprecated.
-# Use SpectralNetworkData.generate().
-# PL: not clear what the new workflow will be after these deprecations,
-# please give some directions
-def generate_spectral_network(
-    config,
-    n_processes=0,
-    result_queue=None,
-    logger_name='loom',
-):
-    """
-    Generate one or more spectral networks according to
-    the command-line options and the configuration file
-    and return a list of data obtained from SpectralNetwork.get_data()
-    """
-
-    spectral_network_data = SpectralNetworkData(
-        config=config,
-        logger_name=logger_name,
-    )
-
-    spectral_network_data.generate(
-        n_processes=n_processes,
-        result_queue=result_queue,
-    )
-
-    return spectral_network_data
 
 
 def make_spectral_network_plot(
@@ -1097,3 +1031,83 @@ def add_config_phase(config, phase_dict):
     config_phase['range'] += phase_dict['range']
 
     config['phase'] = config_phase
+
+
+# XXX: save_config() will be deprecated.
+# Use LoomConfig.__init__().
+def load_config(file_path=None, logger_name='loom',):
+    config = LoomConfig(file_path=file_path, logger_name=logger_name)
+
+    return config
+
+
+# XXX: save_config() will be deprecated.
+# Use LoomConfig.save().
+def save_config(config, file_path=None, logger_name='loom',):
+    config.save(file_path=file_path, logger_name=logger_name)
+
+    return None
+
+
+# XXX: load_spectral_network() will be deprecated.
+# Use SpectralNetworkData.load().
+def load_spectral_network(
+    data_dir=None,
+    result_queue=None,
+    logger_name='loom',
+):
+    data = SpectralNetworkData(
+        data_dir=data_dir,
+        logger_name=logger_name,
+    )
+    if result_queue is not None:
+        result_queue.put(data)
+    else:
+        return (data.config, data)
+
+
+# XXX: save_spectral_network() will be deprecated.
+# Use SpectralNetworkData.save().
+def save_spectral_network(
+    config,
+    spectral_network_data,
+    data_dir=None,
+    make_zipped_file=False,
+    logger_name='loom',
+):
+    spectral_network_data.save(
+        data_dir=data_dir,
+        make_zipped_file=make_zipped_file,
+        logger_name=logger_name,
+    )
+
+
+# XXX: generate_spectral_network() will be deprecated.
+# Use SpectralNetworkData.generate().
+# PL: not clear what the new workflow will be after these deprecations,
+# please give some directions
+def generate_spectral_network(
+    config,
+    n_processes=0,
+    result_queue=None,
+    logger_name='loom',
+):
+    """
+    Generate one or more spectral networks according to
+    the command-line options and the configuration file
+    and return a list of data obtained from SpectralNetwork.get_data()
+    """
+
+    spectral_network_data = SpectralNetworkData(
+        config=config,
+        logger_name=logger_name,
+    )
+
+    spectral_network_data.generate(
+        n_processes=n_processes,
+        result_queue=result_queue,
+    )
+
+    return spectral_network_data
+
+
