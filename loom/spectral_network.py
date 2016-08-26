@@ -15,12 +15,13 @@ from s_wall import (
 )
 from misc import (
     n_nearest_indices, get_turning_points, get_splits_with_overlap,
-    get_descendant_roots, sort_roots,
+    get_descendant_roots, sort_roots, get_delta,
 )
 from intersection import (
     NoIntersection, find_intersection_of_segments,
 )
-from trivialization import BranchPoint
+#from trivialization import BranchPoint
+from geometry import BranchPoint
 
 
 class Street(SWall):
@@ -715,7 +716,6 @@ class SpectralNetwork:
 
         logger = logging.getLogger(self.logger_name)
         accuracy = config['accuracy']
-        new_joints = []
 
         if (config['root_system'] in ['A1', ]):
             logger.info(
@@ -724,6 +724,7 @@ class SpectralNetwork:
             )
             return []
 
+        new_joints = []
         for prev_s_wall in prev_s_walls:
             # First check if the two S-walls are compatible
             # for forming a joint.
@@ -739,9 +740,11 @@ class SpectralNetwork:
             # check the compatibility of a pair
             # of segments.
             n_z_splits = new_s_wall.get_splits(endpoints=True)
-            num_n_z_segs = len(new_s_wall.local_roots)
+#            num_n_z_segs = len(new_s_wall.local_roots)
+            num_n_z_segs = len(n_z_splits) - 1
             p_z_splits = prev_s_wall.get_splits(endpoints=True)
-            num_p_z_segs = len(prev_s_wall.local_roots)
+#            num_p_z_segs = len(prev_s_wall.local_roots)
+            num_p_z_segs = len(p_z_splits) - 1
 
             for n_z_seg_i, p_z_seg_i in itertools.product(
                 range(num_n_z_segs), range(num_p_z_segs)
@@ -751,15 +754,16 @@ class SpectralNetwork:
                 p_z_i = p_z_splits[p_z_seg_i]
                 p_z_f = p_z_splits[p_z_seg_i + 1]
 
-                descendant_roots = get_descendant_roots(
-                    (prev_s_wall.multiple_local_roots[p_z_seg_i] +
-                     new_s_wall.multiple_local_roots[n_z_seg_i]),
-                    sw_data.g_data,
-                )
-                if len(descendant_roots) == 0:
-                    # The two segments are not compatible for
-                    # forming a joint.
-                    continue
+                if config['trivialize'] is True:
+                    descendant_roots = get_descendant_roots(
+                        (prev_s_wall.multiple_local_roots[p_z_seg_i] +
+                         new_s_wall.multiple_local_roots[n_z_seg_i]),
+                        sw_data.g_data,
+                    )
+                    if len(descendant_roots) == 0:
+                        # The two segments are not compatible for
+                        # forming a joint.
+                        continue
 
                 # Find an intersection of the two segments on the z-plane.
                 if use_cgal is True:
@@ -835,62 +839,111 @@ class SpectralNetwork:
 
                     logger.debug('Intersection at z = {}'.format(ip_z))
 
-                    # TODO: check if the following descendant-roots
-                    # finding is necessary, note that we calculate
-                    # descendant roots above.
-                    descendant_roots = get_descendant_roots(
-                        (prev_s_wall.get_roots_at_t(t_p) +
-                         new_s_wall.get_roots_at_t(t_n)),
-                        sw_data.g_data,
-                    )
+#                    # TODO: check if the following descendant-roots
+#                    # finding is necessary, note that we calculate
+#                    # descendant roots above.
+#                    descendant_roots = get_descendant_roots(
+#                        (prev_s_wall.get_roots_at_t(t_p) +
+#                         new_s_wall.get_roots_at_t(t_n)),
+#                        sw_data.g_data,
+#                    )
+#
+#                    joint_data = get_joint_data(
+#                        descendant_roots, ip_z, sw_data
+#                    )
+#                    # The following assumes that \lambda = x dz.
+#                    # Group joint data according to x_1 - x_2,
+#                    # which determines the trajectory of an S-wall.
+#
+#                    # joint_data_groups = [(roots, ode_xs), ...]
+#                    joint_data_groups = []
+#                    for root, ode_xs in joint_data:
+#                        new_joint_data_group = True
+#                        Dx = ode_xs[0] - ode_xs[1]
+#                        for joint_data_group in joint_data_groups:
+#                            group_roots, group_ode_xs = joint_data_group
+#                            group_Dx = group_ode_xs[0] - group_ode_xs[1]
+#                            if abs(Dx - group_Dx) < accuracy:
+#                                new_joint_data_group = False
+#                                group_roots.append(root)
+#                                break
+#                        if new_joint_data_group is True:
+#                            joint_data_groups.append(([root], ode_xs))
+#
+#                    joint_M = prev_s_wall.M[t_p] + new_s_wall.M[t_n]
+#                    joint_parents = [prev_s_wall, new_s_wall]
+#                    for roots, ode_xs in joint_data_groups:
+#                        new_joints.append(
+#                            Joint(
+#                                z=ip_z,
+#                                M=joint_M,
+#                                ode_xs=ode_xs,
+#                                parents=joint_parents,
+#                                roots=sort_roots(roots, sw_data.g_data),
+#                            )
+#                        )
 
-                    joint_data = get_joint_data(
-                        descendant_roots, ip_z, sw_data
-                    )
-                    # The following assumes that \lambda = x dz.
-                    # Group joint data according to x_1 - x_2,
-                    # which determines the trajectory of an S-wall.
-
-                    # joint_data_groups = [(roots, ode_xs), ...]
-                    joint_data_groups = []
-                    for root, ode_xs in joint_data:
-                        new_joint_data_group = True
-                        Dx = ode_xs[0] - ode_xs[1]
-                        for joint_data_group in joint_data_groups:
-                            group_roots, group_ode_xs = joint_data_group
-                            group_Dx = group_ode_xs[0] - group_ode_xs[1]
-                            if abs(Dx - group_Dx) < accuracy:
-                                new_joint_data_group = False
-                                group_roots.append(root)
-                                break
-                        if new_joint_data_group is True:
-                            joint_data_groups.append(([root], ode_xs))
+                    if config['trivialize'] is True:
+                        # TODO: check if the following descendant-roots
+                        # finding is necessary, note that we calculate
+                        # descendant roots above.
+                        descendant_roots = get_descendant_roots(
+                            (prev_s_wall.get_roots_at_t(t_p) +
+                             new_s_wall.get_roots_at_t(t_n)),
+                             sw_data.g_data,
+                        )
+                        joint_data_groups = get_joint_data_groups_by_roots(
+                            descendant_roots, ip_z, sw_data,
+                        )
+                    else:
+                        dxs = (get_delta(new_s_wall.x, t_n).tolist()
+                               + get_delta(prev_s_wall.x, t_p).tolist())
+                        joint_data_groups = get_joint_data_groups_from_xs(
+                            new_s_wall.x[t_n], 
+                            prev_s_wall.x[t_p],
+                            sw_data.g_data.type,
+                            accuracy,
+                            dxs,
+                        )
 
                     joint_M = prev_s_wall.M[t_p] + new_s_wall.M[t_n]
                     joint_parents = [prev_s_wall, new_s_wall]
+
                     for roots, ode_xs in joint_data_groups:
-                        new_joints.append(
-                            Joint(
-                                z=ip_z,
-                                M=joint_M,
-                                ode_xs=ode_xs,
-                                parents=joint_parents,
-                                roots=sort_roots(roots, sw_data.g_data),
-                            )
+                        if len(roots) > 0:
+                            joint_roots = sort_roots(roots, sw_data.g_data)
+                        else:
+                            joint_roots = []
+
+                        a_joint = Joint(
+                            z=ip_z,
+                            M=joint_M,
+                            ode_xs=ode_xs,
+                            parents=joint_parents,
+                            roots=joint_roots,
                         )
+                        joint_is_new = True
+                        for old_joint in self.joints:
+                            if a_joint.is_equal_to(old_joint, max(dxs)):
+                                joint_is_new = False
+                                break
+                        if joint_is_new:
+                            new_joints.append(a_joint)
 
-        checked_new_joints = []
-        for joint in new_joints:
-            joint_is_new = True
-            # check if this is not in the previous joint list
-            for old_joint in self.joints:
-                if joint.is_equal_to(old_joint, accuracy):
-                    joint_is_new = False
-                    break
-            if joint_is_new:
-                checked_new_joints.append(joint)
+#        checked_new_joints = []
+#        for joint in new_joints:
+#            joint_is_new = True
+#            # check if this is not in the previous joint list
+#            for old_joint in self.joints:
+#                if joint.is_equal_to(old_joint, accuracy):
+#                    joint_is_new = False
+#                    break
+#            if joint_is_new:
+#                checked_new_joints.append(joint)
+#
+#        return checked_new_joints
 
-        return checked_new_joints
+        return new_joints
 
     def trivialize(self, config, sw_data,):
         pass
@@ -1155,14 +1208,50 @@ def find_intersections_of_curves(a_zs, b_zs, accuracy):
     return intersections
 
 
-def get_joint_data(descendant_roots, z, sw_data):
-    """
-    From a set of descendant roots find a set of joint data,
-        [(root, ode_xs), ...].
-    """
+def get_joint_data_groups_from_xs(
+    new_s_wall_xs, prev_s_wall_xs, g_type, x_accuracy, dxs=None, 
+):
+    # dxs = (delta(n_x1), delta(n_x2), delta(p_x1), delta(p_x2)),
+    # which shows the change of xi's near the intersection along the s-walls.
+    if dxs is None:
+        dnx1, dnx2, dpx1, dpx2 = (x_accuracy,) * 4
+    else:
+        dnx1, dnx2, dpx1, dpx2 = map(abs, dxs)
+
+    nx1, nx2 = new_s_wall_xs
+    px1, px2 = prev_s_wall_xs
+
+    if(
+        (abs(nx1 - px2) < max(dnx1, dpx2))
+        and (abs(px1 - nx2) < max(dpx1, dnx2))
+    ):
+        # anti-parallel S-walls, do not form a joint.
+        return [] 
+
+    if(
+        (abs(nx2 - px1) < max(dnx2, dpx1))
+        and (
+            (g_type != 'D') and (abs(nx1 - (-px2)) < max(dnx1, dpx2))
+        )
+    ):
+        ode_xs = nx1, px2
+    elif(
+        (abs(px2 - nx1) < max(dpx2, dnx1))
+        and (
+            (g_type != 'D') and (abs(px1 - (-nx2)) < max(dpx1, dnx2))
+        )
+    ):
+        ode_xs = px1, nx2
+
+    return [([], ode_xs)]
+
+
+def get_joint_data_groups_by_roots(descendant_roots, z, sw_data):
+    # From a set of descendant roots find a set of joint data,
+    #    [(root, ode_xs), ...].
     joint_data = []
     for root in descendant_roots:
-        # FIXME: The following, including self.ode_xs, can be removed
+        # TODO: The following, including self.ode_xs, can be removed
         # once the seeding of an S-wall is done by using a root.
         ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
         ffr_new_wall_weight_pairs = (
@@ -1174,4 +1263,45 @@ def get_joint_data(descendant_roots, z, sw_data):
         ode_xs = [ode_x1, ode_x2]
         joint_data.append((root, ode_xs))
 
-    return joint_data
+    # The following assumes that \lambda = x dz.
+    # Group joint data according to x_1 - x_2,
+    # which determines the trajectory of an S-wall.
+
+    # joint_data_groups = [(roots, ode_xs), ...]
+    joint_data_groups = []
+    for root, ode_xs in joint_data:
+        new_joint_data_group = True
+        Dx = ode_xs[0] - ode_xs[1]
+        for joint_data_group in joint_data_groups:
+            group_roots, group_ode_xs = joint_data_group
+            group_Dx = group_ode_xs[0] - group_ode_xs[1]
+            if abs(Dx - group_Dx) < accuracy:
+                new_joint_data_group = False
+                group_roots.append(root)
+                break
+        if new_joint_data_group is True:
+            joint_data_groups.append(([root], ode_xs))
+
+    return joint_data_groups
+
+
+#def get_joint_data(descendant_roots, z, sw_data):
+#    """
+#    From a set of descendant roots find a set of joint data,
+#        [(root, ode_xs), ...].
+#    """
+#    joint_data = []
+#    for root in descendant_roots:
+#        # FIXME: The following, including self.ode_xs, can be removed
+#        # once the seeding of an S-wall is done by using a root.
+#        ffr_xs_at_z = sw_data.get_sheets_at_z(z, ffr=True).values()
+#        ffr_new_wall_weight_pairs = (
+#            sw_data.g_data.ordered_weight_pairs(root, ffr=True)
+#        )
+#        ffr_w_p_0 = ffr_new_wall_weight_pairs[0]
+#        ode_x1 = ffr_xs_at_z[ffr_w_p_0[0]]
+#        ode_x2 = ffr_xs_at_z[ffr_w_p_0[1]]
+#        ode_xs = [ode_x1, ode_x2]
+#        joint_data.append((root, ode_xs))
+#
+#    return joint_data

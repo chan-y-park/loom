@@ -43,6 +43,7 @@ BP_PROXIMITY_THRESHOLD = 0.05
 # Used in set_trivialization()
 SINGLE_BRANCH_LOCUS_MAX_DISTANCE = 3.0
 
+MIN_SPREAD = 0.1
 
 #class BranchPoint:
 #    """
@@ -282,11 +283,6 @@ class SWDataWithTrivialization(SWDataBase):
         super(SWDataWithTrivialization, self).__init__(
             config, logger_name=logger_name, json_data=json_data,
         )
-
-        # Check if there are branch points aligned vertically,
-        # and rotate the z-plane until there is none.
-        self.init_z_rotation()
-
 #        self.branch_points = []
 #        self.irregular_singularities = []
 
@@ -301,6 +297,9 @@ class SWDataWithTrivialization(SWDataBase):
         self.base_point = None
 
         if json_data is None:
+            # Check if there are branch points aligned vertically,
+            # and rotate the z-plane until there is none.
+            self.init_z_rotation()
             self.set_trivialization()
         else:
             self.set_trivialization_from_json_data(json_data)
@@ -467,14 +466,14 @@ class SWDataWithTrivialization(SWDataBase):
 
     def get_json_data(self):
         json_data = super(SWDataWithTrivialization, self).get_json_data()
-        json_data['branch_points'] = [
-            bp.get_json_data()
-            for bp in self.branch_points
-        ]
-        json_data['irregular_singularities'] = [
-            irs.get_json_data()
-            for irs in self.irregular_singularities
-        ]
+#        json_data['branch_points'] = [
+#            bp.get_json_data()
+#            for bp in self.branch_points
+#        ]
+#        json_data['irregular_singularities'] = [
+#            irs.get_json_data()
+#            for irs in self.irregular_singularities
+#        ]
         json_data['reference_ffr_xs'] = [
             ctor2(x) for x in self.reference_ffr_xs
         ]
@@ -496,15 +495,15 @@ class SWDataWithTrivialization(SWDataBase):
     def set_trivialization_from_json_data(self, json_data,):
         logger = logging.getLogger(self.logger_name)
 
-        self.branch_points = [
-            BranchPoint(json_data=data,
-                        ffr_ramification_points=self.ffr_ramification_points,)
-            for data in json_data['branch_points']
-        ]
-        self.irregular_singularities = [
-            IrregularSingularity(json_data=data)
-            for data in json_data['irregular_singularities']
-        ]
+#        self.branch_points = [
+#            BranchPoint(json_data=data,
+#                        ffr_ramification_points=self.ffr_ramification_points,)
+#            for data in json_data['branch_points']
+#        ]
+#        self.irregular_singularities = [
+#            IrregularSingularity(json_data=data)
+#            for data in json_data['irregular_singularities']
+#        ]
         self.reference_ffr_xs = [
             r2toc(x) for x in json_data['reference_ffr_xs']
         ]

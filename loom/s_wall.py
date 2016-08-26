@@ -11,7 +11,8 @@ from sympy import oo
 from geometry import (
     find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
 )
-from trivialization import BranchPoint
+#from trivialization import BranchPoint
+from geometry import BranchPoint
 
 from misc import (
     cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root,
@@ -91,7 +92,7 @@ class Joint:
             self.root = numpy.array(json_data['root'])
         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
 
-    def is_equal_to(self, other, accuracy):
+    def is_equal_to(self, other, x_accuracy):
         if(abs(self.z - other.z) > accuracy):
             return False
 
@@ -109,7 +110,7 @@ class Joint:
         # after comparing the roots of two S-walls.
         # Decide whether to do the comparison or not.
         for i in range(NUM_ODE_XS_OVER_Z):
-            if abs(self.ode_xs[i] - other.ode_xs[i]) > accuracy:
+            if abs(self.ode_xs[i] - other.ode_xs[i]) > x_accuracy:
                 return False
 
         return True

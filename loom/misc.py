@@ -464,7 +464,6 @@ def get_phases_from_range(phase_range):
     ]
     return phases
 
-
 def get_phases_from_dict(phase_dict, accuracy):
     """
     get a list of phases from a Python dict of form
@@ -499,3 +498,19 @@ def get_phases_from_dict(phase_dict, accuracy):
             phases.append(entry)
 
     return phases
+
+
+def get_delta(a, i):
+    """
+    Return \Delta(a) gracefully.
+    """
+    l = len(a)
+    if l < 2:
+        raise RuntimeError
+    elif i >= l:
+        raise RuntimeError
+
+    if i > 0:
+        return a[i] - a[i - 1]
+    else:
+        return a[1] - a[0]

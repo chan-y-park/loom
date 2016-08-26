@@ -33,7 +33,7 @@ mpmath.mp.dps = ROOT_FINDING_PRECISION
 
 DEFAULT_LARGE_STEP_SIZE = 0.01
 
-MIN_SPREAD = 0.1
+#MIN_SPREAD = 0.1
 
 X_ROOTS_ACCURACY_FACTOR = 1e-4
 
@@ -1032,6 +1032,14 @@ class SWDataBase(object):
             'z_plane_rotation': str(self.z_plane_rotation),
             'accuracy': self.accuracy,
         }
+        json_data['branch_points'] = [
+            bp.get_json_data()
+            for bp in self.branch_points
+        ]
+        json_data['irregular_singularities'] = [
+            irs.get_json_data()
+            for irs in self.irregular_singularities
+        ]
 
         return json_data
 
@@ -1070,6 +1078,15 @@ class SWDataBase(object):
         self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
         self.accuracy = json_data['accuracy']
 
+        self.branch_points = [
+            BranchPoint(json_data=data,
+                        ffr_ramification_points=self.ffr_ramification_points,)
+            for data in json_data['branch_points']
+        ]
+        self.irregular_singularities = [
+            IrregularSingularity(json_data=data)
+            for data in json_data['irregular_singularities']
+        ]
     def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
         """
         Returns (aligned_ffr_xs, aligned_xs), where each element is
