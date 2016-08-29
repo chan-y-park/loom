@@ -92,7 +92,7 @@ class Joint:
             self.root = numpy.array(json_data['root'])
         self.ode_xs = [r2toc(x) for x in json_data['ode_xs']]
 
-    def is_equal_to(self, other, x_accuracy):
+    def is_equal_to(self, other, accuracy, x_accuracy=None):
         if(abs(self.z - other.z) > accuracy):
             return False
 
@@ -109,6 +109,8 @@ class Joint:
         # FIXME: Probably the following comparison is not needed
         # after comparing the roots of two S-walls.
         # Decide whether to do the comparison or not.
+        if x_accuracy is None:
+            x_accuracy = accuracy
         for i in range(NUM_ODE_XS_OVER_Z):
             if abs(self.ode_xs[i] - other.ode_xs[i]) > x_accuracy:
                 return False

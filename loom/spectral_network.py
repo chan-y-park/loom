@@ -926,7 +926,11 @@ class SpectralNetwork:
                         )
                         joint_is_new = True
                         for old_joint in self.joints:
-                            if a_joint.is_equal_to(old_joint, max(dxs)):
+                            if a_joint.is_equal_to(
+                                old_joint,
+                                accuracy,
+                                max([abs(dx) for dx in dxs]),
+                            ):
                                 joint_is_new = False
                                 break
                         if joint_is_new:
