@@ -288,7 +288,7 @@ class SWDataWithTrivialization(SWDataBase):
 
         self.reference_ffr_xs = None
         self.reference_xs = None
-        self.branch_cut_rotation = 1
+        self.branch_cut_rotation = None
 
         # The following attributes are not used outside this module,
         self.min_distance = None
@@ -312,6 +312,16 @@ class SWDataWithTrivialization(SWDataBase):
         ]
 
     def init_z_rotation(self):   
+        # Introduce a clockwise rotation of the z-plane,
+        # after the PSL2C transformation, by the following phase.
+        # Try rotating by different increments, up to pi/max_pi_div
+
+        logger = logging.getLogger(self.logger_name)
+
+        max_pi_div = 10
+        rotate_z_plane = True
+        pi_div = 0
+
 #        bpzs = n_remove_duplicate(
 #            [r.z for r in ffr_ramification_points if r.z != oo],
 #            self.accuracy,
@@ -433,36 +443,36 @@ class SWDataWithTrivialization(SWDataBase):
             )
 
         # Apply the z-rotation to numerical attributes.
-        self.z_plane_rotation = z_plane_rotation
-        self.ffr_curve = ffr_curve.set_z_rotation(z_plane_rotation)
-        self.diff = SWDiff(
-            'x',
-            g_data=self.g_data,
-            diff_params=diff_params,
-            mt_params=mt_params,
-            z_rotation=self.z_plane_rotation,
-        )
+#        self.z_plane_rotation = z_plane_rotation
+#        self.ffr_curve.set_z_rotation(z_plane_rotation)
+#        self.diff.set_z_rotation(z_plane_rotation)
+#
+#        for p in punctures + ffr_ramification_points:
+#            p.set_z_rotation(1/z_plane_rotation)
+#        self.regular_punctures = regular_punctures
+#        self.irregular_punctures = irregular_punctures
+#
+#        self.ffr_ramification_points = ffr_ramification_points 
+#
+#        for p in self.branch_points + self.irregular_singularities:
+#            p.set_z_rotation(1/z_plane_rotation)
 
-        for p in punctures + ffr_ramification_points:
-            p.set_z_rotation(1/z_plane_rotation)
-        self.regular_punctures = regular_punctures
-        self.irregular_punctures = irregular_punctures
-
-        self.ffr_ramification_points = ffr_ramification_points 
-
-        for p in self.branch_points + self.irregular_singularities:
-            p.set_z_rotation(1/z_plane_rotation)
+        self.set_z_rotation(1/z_plane_rotation)
+        # Now all the branch cuts run vertically.
+        self.branch_cut_rotation = 1
 
 
     def set_z_rotation(self, z_rotation):
         super(SWDataWithTrivialization, self).set_z_rotation(z_rotation)
 
-        for p in (self.branch_points + self.irregular_singularities):
-            p.set_z_rotation(z_rotation)
+#        for p in (self.branch_points + self.irregular_singularities):
+#            p.set_z_rotation(z_rotation)
 
-        self.base_point *= complex(z_rotation)
+        if self.base_point is not None:
+            self.base_point *= complex(z_rotation)
 
-        self.branch_cut_rotation *= z_rotation
+        if self.branch_cut_rotation is not None:
+            self.branch_cut_rotation *= z_rotation
 
     def get_json_data(self):
         json_data = super(SWDataWithTrivialization, self).get_json_data()
@@ -1314,10 +1324,10 @@ class SWDataWithTrivialization(SWDataBase):
         )
         bp.order = len(bp.positive_roots) + 1
 
-        bp.ffr_ramification_points = [
-            rp for rp in self.ffr_ramification_points
-            if abs(rp.z - bp.z) < self.accuracy
-        ]
+#        bp.ffr_ramification_points = [
+#            rp for rp in self.ffr_ramification_points
+#            if abs(rp.z - bp.z) < self.accuracy
+#        ]
 
         ramification_types = ([
             rp.ramification_type for rp in bp.ffr_ramification_points

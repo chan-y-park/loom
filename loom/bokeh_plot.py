@@ -15,7 +15,7 @@ from bokeh.models.widgets import Button
 # from bokeh.models.widgets import Toggle
 from bokeh.plotting import figure
 
-from misc import get_splits_with_overlap
+#from misc import get_splits_with_overlap
 
 
 def get_spectral_network_bokeh_plot(
@@ -484,7 +484,8 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
         g_data = sw_data.g_data
 
     for s_wall in s_walls:
-        z_segs = get_splits_with_overlap(s_wall.get_splits())
+#        z_segs = get_splits_with_overlap(s_wall.get_splits())
+        z_segs = s_wall.get_segments()
         for start, stop in z_segs:
             z_r = s_wall.z[start:stop].real
             z_i = s_wall.z[start:stop].imag

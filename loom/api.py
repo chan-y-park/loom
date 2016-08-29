@@ -17,11 +17,13 @@ from sympy import oo
 
 from logutils_queue import QueueHandler
 from config import LoomConfig
+from geometry import SWDataBase
 from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from parallel import parallel_get_spectral_network
 # TODO: plotting.py will be deprecated; use plot_ui.py
 from plotting import NetworkPlot, NetworkPlotTk
+from plot_ui import SpectralNetworkPlotUI, SpectralNetworkPlotTk
 from misc import get_phases_from_dict
 from misc import get_phase_dict
 from misc import parse_sym_dict_str
@@ -681,9 +683,57 @@ class SpectralNetworkData:
         # Get the trivialized SW data.
         # call SpectralNetwork.trivialize() for each spectral network.
 
-    def plot(self, plot_range=None):
-        # TODO: Implement if needed.
-        return None
+    def plot(
+        self,
+        master=None,
+        show_plot=True,
+        plot_range=[[-4, 4], [-4, 4]],
+        logger_name='loom',
+        **kwargs
+    ):
+        logger = logging.getLogger(logger_name)
+
+        sw_data = self.sw_data
+        spectral_networks = self.spectral_networks
+        spectral_network_plot_title = 'Spectral Network'
+
+        if matplotlib.rcParams['backend'] == 'TkAgg':
+            spectral_network_plot = SpectralNetworkPlotTk(
+                master=master,
+                title=spectral_network_plot_title,
+                plot_range=plot_range,
+            )
+        else:
+            spectral_network_plot = SpectralNetworkPlotUI(
+                title=spectral_network_plot_title,
+                plot_range=plot_range,
+            )
+
+        # Rotate the z-plane into the location defined by the curve.
+        self.reset_z_rotation()
+
+        for spectral_network in spectral_networks:
+            logger.info('Generating the plot of a spectral network '
+                        '@ theta = {}...'.format(spectral_network.phase))
+
+            # XXX: Use the following with plot_ui.py
+            spectral_network_plot.draw(
+                sw_data=sw_data,
+                spectral_network=spectral_network,
+                logger_name=logger_name,
+                trivialized=self.config['trivialize'],
+                **kwargs
+            )
+            plot_legend = spectral_network_plot.get_legend(
+                sw_data=sw_data,
+                spectral_network=spectral_network,
+            )
+            logger.info(plot_legend)
+
+        if show_plot is True:
+            spectral_network_plot.show()
+        
+        return spectral_network_plot
 
     def find_two_way_streets(self, search_radius=None,):
         soliton_tree_data = []
@@ -889,61 +939,61 @@ def make_spectral_network_plot(
     **kwargs
 ):
     logger = logging.getLogger(logger_name)
-    # XXX
     if type(spectral_network_data.sw_data) != list:
-        sw_data = spectral_network_data.sw_data
-        spectral_networks = spectral_network_data.spectral_networks
-        spectral_network_plot_title = 'Spectral Network'
-
-        # if matplotlib.rcParams['backend'] == 'TkAgg':
-        #     spectral_network_plot = NetworkPlotTk(
-        #         master=master,
-        #         title=spectral_network_plot_title,
-        #         plot_range=plot_range,
-        #     )
-        # else:
-        #     spectral_network_plot = NetworkPlot(
-        #         title=spectral_network_plot_title,
-        #         plot_range=plot_range,
-        #     )
-        spectral_network_plot = NetworkPlot(
-            title=spectral_network_plot_title,
-            plot_range=plot_range,
-        )
-
-        # Rotate the z-plane into the location defined by the curve.
-        spectral_network_data.reset_z_rotation()
-
-        for spectral_network in spectral_networks:
-            logger.info('Generating the plot of a spectral network '
-                        '@ theta = {}...'.format(spectral_network.phase))
-            # TODO: When using plot_ui.py, remove the following
-            # and uncomment the next following lines.
-            plot_legend = spectral_network_plot.draw(
-                spectral_network,
-                sw_data.branch_points,
-                punctures=(sw_data.regular_punctures +
-                           sw_data.irregular_punctures),
-                irregular_singularities=sw_data.irregular_singularities,
-                g_data=sw_data.g_data,
-                branch_cut_rotation=sw_data.branch_cut_rotation,
-                logger_name=logger_name,
-                **kwargs
-            )
-            # XXX: Use the following with plot_ui.py
-    #        spectral_network_plot.draw(
-    #            sw_data=sw_data,
-    #            spectral_network=spectral_network,
-    #            logger_name=logger_name,
-    #            **kwargs
-    #        )
-    #        plot_legend = spectral_network_plot.get_legend()
-            logger.info(plot_legend)
-
-        if show_plot is True:
-            spectral_network_plot.show()
-        
-        return spectral_network_plot
+        pass
+#        sw_data = spectral_network_data.sw_data
+#        spectral_networks = spectral_network_data.spectral_networks
+#        spectral_network_plot_title = 'Spectral Network'
+#
+#        if matplotlib.rcParams['backend'] == 'TkAgg':
+#            spectral_network_plot = SpectralNetworkPlotTk(
+#                master=master,
+#                title=spectral_network_plot_title,
+#                plot_range=plot_range,
+#            )
+#        else:
+#            spectral_network_plot = SpectralNetworkPlotUI(
+#                title=spectral_network_plot_title,
+#                plot_range=plot_range,
+#            )
+##        spectral_network_plot = NetworkPlot(
+##            title=spectral_network_plot_title,
+##            plot_range=plot_range,
+##        )
+#
+#        # Rotate the z-plane into the location defined by the curve.
+#        spectral_network_data.reset_z_rotation()
+#
+#        for spectral_network in spectral_networks:
+#            logger.info('Generating the plot of a spectral network '
+#                        '@ theta = {}...'.format(spectral_network.phase))
+#            # TODO: When using plot_ui.py, remove the following
+#            # and uncomment the next following lines.
+#            plot_legend = spectral_network_plot.draw(
+#                spectral_network,
+#                sw_data.branch_points,
+#                punctures=(sw_data.regular_punctures +
+#                           sw_data.irregular_punctures),
+#                irregular_singularities=sw_data.irregular_singularities,
+#                g_data=sw_data.g_data,
+#                branch_cut_rotation=sw_data.branch_cut_rotation,
+#                logger_name=logger_name,
+#                **kwargs
+#            )
+#            # XXX: Use the following with plot_ui.py
+#    #        spectral_network_plot.draw(
+#    #            sw_data=sw_data,
+#    #            spectral_network=spectral_network,
+#    #            logger_name=logger_name,
+#    #            **kwargs
+#    #        )
+#    #        plot_legend = spectral_network_plot.get_legend()
+#            logger.info(plot_legend)
+#
+#        if show_plot is True:
+#            spectral_network_plot.show()
+#        
+#        return spectral_network_plot
 
     # XXX
     else:

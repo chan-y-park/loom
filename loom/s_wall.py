@@ -281,6 +281,13 @@ class SWall(object):
         else:
             return splits
 
+    def get_segments(self):
+        splits = self.get_splits(endpoints=True)
+        segments = []
+        for i in range(len(splits) - 1):
+            segments.append([splits[i], splits[i + 1]])
+        return segments
+
     def grow(
         self,
         branch_point_zs=[],

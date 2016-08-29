@@ -733,10 +733,9 @@ class SWDataBase(object):
         self.irregular_singularities = []
         self.ffr_ramification_points = None
         # This rotation is applied when getting the trivialization.
-        # TODO: When rotating the z-plane back to the original place,
-        # set this to zero and introduce a new attribute to save
-        # the angle of the branch cuts.
-        self.z_plane_rotation = None
+#        self.z_plane_rotation = None
+        self.z_plane_rotation = sympy.sympify('1')
+        self.branch_cut_rotation = None
         self.accuracy = config['accuracy']
 
         self.ffr_curve = None
@@ -847,16 +846,9 @@ class SWDataBase(object):
         Set attributes by calculating the corresponding
         values using the configuration.
         """
-        # Introduce a clockwise rotation of the z-plane,
-        # after the PSL2C transformation, by the following phase.
-        # Try rotating by different increments, up to pi/max_pi_div
-
         logger = logging.getLogger(self.logger_name)
 
-        min_abs_distance = None
-        max_pi_div = 10
-        rotate_z_plane = True
-        pi_div = 0
+#        min_abs_distance = None
 
         method = config['ramification_point_finding_method']
         logger.info('Ramification point finding method: {}'.format(method))
@@ -885,21 +877,28 @@ class SWDataBase(object):
                 get_ramification_points_using_system_of_eqs
             )
 
-        regular_punctures = get_punctures_from_config(
+        self.regular_punctures = get_punctures_from_config(
             config['regular_punctures'], 'regular puncture',
             diff_params, mt_params,
         )
-        irregular_punctures = get_punctures_from_config(
+        self.irregular_punctures = get_punctures_from_config(
             config['irregular_punctures'], 'irregular puncture',
             diff_params, mt_params,
         )
 
-        ffr_curve = SWCurve(
+        self.ffr_curve = SWCurve(
             casimir_differentials=casimir_differentials,
             g_data=self.g_data,
             diff_params=diff_params,
             mt_params=mt_params,
             ffr=True,
+        )
+
+        self.diff = SWDiff(
+            'x',
+            g_data=self.g_data,
+            diff_params=diff_params,
+            mt_params=mt_params,
         )
 
         logger.info(
@@ -908,10 +907,10 @@ class SWDataBase(object):
             'in the first fundamental rep.'
         )
 
-        punctures = regular_punctures + irregular_punctures
+        punctures = self.regular_punctures + self.irregular_punctures
 
         sols = get_ramification_points(
-            curve=ffr_curve,
+            curve=self.ffr_curve,
             diff_params=diff_params,
             mt_params=mt_params,
             accuracy=self.accuracy,
@@ -922,7 +921,7 @@ class SWDataBase(object):
             logger_name=self.logger_name,
         )
 
-        ffr_ramification_points = []
+        self.ffr_ramification_points = []
         for z_i, (x_j, m_x) in sols:
             rp = RamificationPoint(
                 z=PSL2C(mt_params, z_i, numerical=True),
@@ -930,9 +929,9 @@ class SWDataBase(object):
                 x=x_j,
                 i=m_x,
                 label=('ramification point #{}'
-                       .format(len(ffr_ramification_points)))
+                       .format(len(self.ffr_ramification_points)))
             )
-            ffr_ramification_points.append(rp)
+            self.ffr_ramification_points.append(rp)
 
         self.analyze_ffr_ramification_points()
 
@@ -950,6 +949,10 @@ class SWDataBase(object):
         for i, z_bp in enumerate(bpzs):
             bp = BranchPoint(z=z_bp)
             bp.label = 'branch point #{}'.format(i)
+            bp.ffr_ramification_points = [
+                rp for rp in self.ffr_ramification_points
+                if abs(rp.z - bp.z) < self.accuracy
+            ]
             # XXX: Accidental branch points are removed after trivialization.
             self.branch_points.append(bp)
 
@@ -998,8 +1001,9 @@ class SWDataBase(object):
 
     def set_z_rotation(self, z_rotation):
         for p in (
-            self.regular_punctures + self.irregular_punctures +
-            self.ffr_ramification_points
+            self.regular_punctures + self.irregular_punctures
+            + self.ffr_ramification_points
+            + self.branch_points + self.irregular_singularities
         ):
             p.set_z_rotation(z_rotation)
 

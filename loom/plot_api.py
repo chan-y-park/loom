@@ -9,7 +9,8 @@ from math import pi
 from sympy import oo
 from matplotlib.backends.backend_agg import FigureCanvas
 
-from misc import put_on_cylinder, get_splits_with_overlap
+from misc import put_on_cylinder
+#from misc import get_splits_with_overlap
 
 class NetworkPlot(object):
     def __init__(self, matplotlib_figure=None, plot_range=None,):
@@ -97,23 +98,24 @@ class NetworkPlot(object):
             )
 
         # Plot branch cuts according to the z-plane rotation.
-        y_r = complex((2j * axes.get_ylim()[1]) * branch_cut_rotation)
+        if branch_cut_rotation is not None:
+            y_r = complex((2j * axes.get_ylim()[1]) * branch_cut_rotation)
 
-        for i, bp in enumerate(branch_points):
-            bpx, bpy = bp
-            axes.plot(
-                [bpx, bpx + y_r.real], [bpy, bpy + y_r.imag],
-                ':', color='k',
-                label='Cut of ' + labels['branch_points'][i],
-            )
+            for i, bp in enumerate(branch_points):
+                bpx, bpy = bp
+                axes.plot(
+                    [bpx, bpx + y_r.real], [bpy, bpy + y_r.imag],
+                    ':', color='k',
+                    label='Cut of ' + labels['branch_points'][i],
+                )
 
-        for i, irr_sing in enumerate(irregular_singularities):
-            isx, isy = irr_sing
-            axes.plot([
-                isx, isx + y_r.real], [isy, isy + y_r.imag],
-                ':', color='k',
-                label='Cut of ' + labels['irregular_singularities'][i],
-            )
+            for i, irr_sing in enumerate(irregular_singularities):
+                isx, isy = irr_sing
+                axes.plot([
+                    isx, isx + y_r.real], [isy, isy + y_r.imag],
+                    ':', color='k',
+                    label='Cut of ' + labels['irregular_singularities'][i],
+                )
 
         # Plot joints.
         if plot_joints is True:
@@ -125,7 +127,7 @@ class NetworkPlot(object):
                     color='k', label=labels['joints'][i],
                 )
 
-        # Plot puncturess.
+        # Plot punctures.
         for i, p in enumerate(punctures):
             px, py = p
             axes.plot(
@@ -134,8 +136,6 @@ class NetworkPlot(object):
                 color='k', markerfacecolor='none',
                 label=labels['punctures'][i],
             )
-
-        self.figure.tight_layout()
 
 
 class SpectralNetworkPlot(NetworkPlot):
@@ -146,6 +146,7 @@ class SpectralNetworkPlot(NetworkPlot):
         spectral_network=None,
         soliton_tree=None,
         logger_name='loom',
+        trivialized=True,
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
@@ -240,28 +241,36 @@ class SpectralNetworkPlot(NetworkPlot):
             else:
                 walls.append(s_wall.z)
                 wall_segments.append(
-                    get_splits_with_overlap(s_wall.get_splits())
+#                    get_splits_with_overlap(s_wall.get_splits())
+                    s_wall.get_segments()
                 )
-                wall_roots.append(s_wall.local_roots)
+                if trivialized is True:
+                    wall_roots.append(s_wall.local_roots)
 
-                seg_labels = [s_wall.label + '\n' + root_str
-                              for root_str in map(str, s_wall.local_roots)]
+                    seg_labels = [s_wall.label + '\n' + root_str
+                                  for root_str in map(str, s_wall.local_roots)]
+                else:
+                    seg_labels = [s_wall.label]
                 labels['walls'].append(seg_labels)
 
         wall_colors = []
-        for seg_roots in wall_roots:
-            colors = []
-            for root in seg_roots:
-                color = g_data.get_root_color(root)
-                if color is None:
-                    color = '#000000'
-                    logger.warning(
-                        'Unknown root color for {} '
-                        'of a spectral network with phase = {}.'
-                        .format(s_wall.label, spectral_network.phase)
-                    )
-                colors.append(color)
-            wall_colors.append(colors)
+        if trivialized is True:
+            for seg_roots in wall_roots:
+                colors = []
+                for root in seg_roots:
+                    color = g_data.get_root_color(root)
+                    if color is None:
+                        color = '#000000'
+                        logger.warning(
+                            'Unknown root color for {} '
+                            'of a spectral network with phase = {}.'
+                            .format(s_wall.label, spectral_network.phase)
+                        )
+                    colors.append(color)
+                wall_colors.append(colors)
+        else:
+            for _ in wall_segments:
+                wall_colors.append(['#000000'])
 
         super(SpectralNetworkPlot, self).draw(
             axes=axes,

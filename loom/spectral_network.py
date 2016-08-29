@@ -10,6 +10,8 @@ import json
 
 from cmath import exp
 from scipy import integrate
+from sympy import oo
+
 from s_wall import (
     SWall, Joint, get_s_wall_seeds, MIN_NUM_OF_DATA_PTS,
 )
@@ -1230,18 +1232,16 @@ def get_joint_data_groups_from_xs(
 
     if(
         (abs(nx2 - px1) < max(dnx2, dpx1))
-        and (
-            (g_type != 'D') and (abs(nx1 - (-px2)) < max(dnx1, dpx2))
-        )
+        and not ((g_type == 'D') and (abs(nx1 - (-px2)) < max(dnx1, dpx2)))
     ):
         ode_xs = nx1, px2
     elif(
         (abs(px2 - nx1) < max(dpx2, dnx1))
-        and (
-            (g_type != 'D') and (abs(px1 - (-nx2)) < max(dpx1, dnx2))
-        )
+        and not ((g_type == 'D') and (abs(px1 - (-nx2)) < max(dpx1, dnx2)))
     ):
         ode_xs = px1, nx2
+    else:
+        return []
 
     return [([], ode_xs)]
 
