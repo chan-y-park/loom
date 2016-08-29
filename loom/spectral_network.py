@@ -315,18 +315,16 @@ class SpectralNetwork:
             use_cgal = False
 
         # ODE solver setup
+        ode_f, ode = get_ode(
+            sw_data, self.phase, accuracy,
+            use_scipy_ode=config['use_scipy_ode'],
+        )
         if config['use_scipy_ode'] is True:
-            logger.debug('Setup the ODE integrator...')
-            ode = get_ode(sw_data, self.phase, accuracy)
-
-#        # manual integration setup
-#        m_derivatives = ode_derivatives(sw_data, self.phase, accuracy)
+            s_wall_grow_func = ode
+        else:
+            s_wall_grow_func = (ode_f, sw_data.ffr_curve.get_xs)
 
         # Gather z-coordinates of punctures and branch points.
-#        punctures = sw_data.regular_punctures + sw_data.irregular_punctures
-#        ppzs = [p.z for p in punctures]
-#        bpzs = [bp.z for bp in sw_data.branch_points +
-#                sw_data.irregular_singularities]
         ppzs = [
             p.z for p in
             sw_data.regular_punctures + sw_data.irregular_punctures
@@ -461,32 +459,12 @@ class SpectralNetwork:
                 s_i = new_s_walls[i]
                 logger.info('Growing {}...'.format(s_i.label))
                 try:
-#                    if integration_method == 'ode_int':
-#                        s_i.grow(ode, bpzs, ppzs, config,)
-#
-#                    elif integration_method == 'manual':
-#                        s_i.grow_manually(
-#                            m_derivatives, sw_data,
-#                            bpzs, ppzs, config,
-#                        )
-#
-#                    else:
-#                        raise Exception(
-#                            'Unknown integration method {}'
-#                            .format(integration_method)
-#                        )
-                    
-#                    import pickle
-#                    with open('s_wall_with_ode.pkl', 'w') as fp:
-#                        pickle.dump(s_i, fp)
-#                    import pdb
-#                    pdb.set_trace()
                     s_i.grow(
                         branch_point_zs=bpzs,
                         puncture_point_zs=ppzs,
                         config=config,
-                        func=ode,
-                        method='scipy_ode',
+                        func=s_wall_grow_func,
+                        use_scipy_ode=config['use_scipy_ode'],
                     )
 
                     if len(s_i.z) < MIN_NUM_OF_DATA_PTS:
@@ -511,8 +489,6 @@ class SpectralNetwork:
                     # Cut the grown S-walls
                     # at the intersetions with branch cuts
                     # and decorate each segment with its root data.
-                    logger.info('Determining the root type of {}...'
-                                .format(s_i.label))
                     try:
                         root_types = s_i.determine_root_types(
                             sw_data,
@@ -520,8 +496,7 @@ class SpectralNetwork:
                         )
                         if (
                             root_types == 'Rebuild S-wall'
-                            #XXX
-                            #and integration_method == 'ode_int'
+                            and config['use_scipy_ode'] is True 
                         ):
                             logger.info(
                                 'Grow this S-wall again, '
@@ -531,8 +506,8 @@ class SpectralNetwork:
                                 branch_point_zs=bpzs,
                                 puncture_point_zs=ppzs,
                                 config=config,
-                                func=(m_derivatives, sw_data.ffr_curve.get_xs),
-                                method='manual_ode',
+                                func=(ode_f, sw_data.ffr_curve.get_xs),
+                                use_scipy_ode=False,
                             )
                             root_types = s_i.determine_root_types(
                                 sw_data,
@@ -952,10 +927,62 @@ class SpectralNetwork:
         return new_joints
 
     def trivialize(self, config, sw_data,):
-        pass
+        logger = logging.getLogger(self.logger_name)
+        accuracy = config['accuracy']
+
         # check the trivialized sw data.
+        if isinstance(sw_data, SWDataWithTrivialization) is False:
+            raise RuntimeError('Need a trivalized Seiberg-Witten data.')
+
         # set the parent roots of S-walls.
+
         # determine the root type of each S-wall.
+        ode_f, ode = get_ode(
+            sw_data, self.phase, accuracy,
+            use_scipy_ode=config['use_scipy_ode'],
+        )
+        for s_i in self.s_walls:
+            try:
+                root_types = s_i.determine_root_types(
+                    sw_data,
+                    cutoff_radius=config['size_of_small_step'],
+                )
+                if (
+                    root_types == 'Rebuild S-wall'
+                    and config['use_scipy_ode'] is True 
+                ):
+                    logger.info(
+                        'Grow this S-wall again, '
+                        'using manual integration.'
+                    )
+                    s_i.grow(
+                        branch_point_zs=bpzs,
+                        puncture_point_zs=ppzs,
+                        config=config,
+                        func=(ode_f, sw_data.ffr_curve.get_xs),
+                        use_scipy_ode=False,
+                    )
+                    root_types = s_i.determine_root_types(
+                        sw_data,
+                        cutoff_radius=config['size_of_small_step'],
+                    )
+                    if root_types == 'Rebuild S-wall':
+                        logger.warning(
+                            'Could not determine the root '
+                            'types of this wall even manually. Likely '
+                            'numerical failure.'
+                        )
+                    raise RuntimeError
+            except RuntimeError as e:
+                error_msg = (
+                    'Error while determining root types of {}: {}'
+                    .format(s_i.label, e)
+                )
+                logger.error(error_msg)
+                self.errors.append(
+                    ('RuntimeError', error_msg)
+                )
+                continue
         # determine the root type of each joint.
 
     def find_two_way_streets(
@@ -1054,41 +1081,44 @@ def get_ode(sw, phase, accuracy):
         dM_dt = 1
         return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
 
-    ode = integrate.ode(ode_f)
-    ode.set_integrator(
-        'zvode',
-        # method='adams',
-        atol=ode_absolute_tolerance,
-    )
+    if use_scipy_ode is True:
+        ode = integrate.ode(ode_f)
+        ode.set_integrator(
+            'zvode',
+            # method='adams',
+            atol=ode_absolute_tolerance,
+        )
+    else:
+        ode = None
 
-    return ode
+    return (ode_f, ode)
 
 
-def ode_derivatives(sw, phase, accuracy):
-    x, z = sympy.symbols('x z')
-    ode_absolute_tolerance = accuracy
-
-    # Even for higher-reps, we always use the
-    # first fundamental representation curve
-    # for evolving the network
-    f = sw.ffr_curve.num_eq
-    df_dz = f.diff(z)
-    df_dx = f.diff(x)
-    # F = -(\partial f / \partial z) / (\partial f / \partial x).
-    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
-    v = sympy.lambdify((z, x), sw.diff.num_v)
-
-    def ode_f(z_x1_x2_M):
-        z_i = z_x1_x2_M[0]
-        x1_i = z_x1_x2_M[1]
-        x2_i = z_x1_x2_M[2]
-        dz_i_dt = exp(phase * 1j) / (v(z_i, x1_i) - v(z_i, x2_i))
-        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
-        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-        dM_dt = 1
-        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
-
-    return ode_f
+#def ode_derivatives(sw, phase, accuracy):
+#    x, z = sympy.symbols('x z')
+#    ode_absolute_tolerance = accuracy
+#
+#    # Even for higher-reps, we always use the
+#    # first fundamental representation curve
+#    # for evolving the network
+#    f = sw.ffr_curve.num_eq
+#    df_dz = f.diff(z)
+#    df_dx = f.diff(x)
+#    # F = -(\partial f / \partial z) / (\partial f / \partial x).
+#    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
+#    v = sympy.lambdify((z, x), sw.diff.num_v)
+#
+#    def ode_f(z_x1_x2_M):
+#        z_i = z_x1_x2_M[0]
+#        x1_i = z_x1_x2_M[1]
+#        x2_i = z_x1_x2_M[2]
+#        dz_i_dt = exp(phase * 1j) / (v(z_i, x1_i) - v(z_i, x2_i))
+#        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+#        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+#        dM_dt = 1
+#        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+#
+#    return ode_f
 
 
 def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,

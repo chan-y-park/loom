@@ -109,6 +109,7 @@ class LoomConfig:
             'size_of_bin': None,
             'size_of_ramification_pt_cutoff': None,
             'n_processes': None,
+            'integration_method': 'use_scipy_ode',
         }
 
         if file_path is not None:

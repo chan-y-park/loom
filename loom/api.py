@@ -679,9 +679,16 @@ class SpectralNetworkData:
             self.config.save(config_file_path)
 
     def trivialize(self):
-        pass
         # Get the trivialized SW data.
+        self.sw_data = SWDataWithTrivialization(
+            self.config,
+            logger_name=self.logger_name,
+            sw_data_base=self.sw_data,
+        )
+
         # call SpectralNetwork.trivialize() for each spectral network.
+
+        self.config['trivialize'] = True
 
     def plot(
         self,

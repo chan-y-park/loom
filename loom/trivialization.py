@@ -279,10 +279,23 @@ class SWDataWithTrivialization(SWDataBase):
         The output looks like this
         {0 : x_0, ... , i : x_i, ...}
     """
-    def __init__(self, config, logger_name='loom', json_data=None,):
-        super(SWDataWithTrivialization, self).__init__(
-            config, logger_name=logger_name, json_data=json_data,
-        )
+    def __init__(
+        self,
+        config,
+        logger_name='loom',
+        json_data=None,
+        sw_data_base=None,
+    ):
+        if sw_data_base is None:
+            super(SWDataWithTrivialization, self).__init__(
+                config, logger_name=logger_name, json_data=json_data,
+            )
+        else:
+            base_json_data = sw_data_base.get_json_data()
+            super(SWDataWithTrivialization, self).set_from_json_data(
+                base_json_data
+            )
+
 #        self.branch_points = []
 #        self.irregular_singularities = []
 
