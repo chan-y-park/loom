@@ -687,6 +687,8 @@ class SpectralNetworkData:
         )
 
         # call SpectralNetwork.trivialize() for each spectral network.
+        for sn in self.spectral_networks:
+            sn.trivialize()
 
         self.config['trivialize'] = True
 
