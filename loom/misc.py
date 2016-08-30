@@ -514,3 +514,21 @@ def get_delta(a, i):
         return a[i] - a[i - 1]
     else:
         return a[1] - a[0]
+
+
+def build_family_tree(obj, tree=None):
+    """
+    For an object 'obj' with an attribute for its parents 'obj.parents'
+    recursively build a family tree starting from 'obj'
+    until a parent does not have 'parents' attribute.
+    """
+    if tree is None:
+        tree = []
+    try:
+        for parent in obj.parents:
+            tree.append(parent)
+            build_family_tree(parent, tree)
+    except AttributeError:
+        return None
+
+    return tree

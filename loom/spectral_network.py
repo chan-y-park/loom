@@ -104,6 +104,7 @@ class SolitonTree:
             self.Z += street.Z
 
     def grow(self, street=None):
+        # TODO: use misc.build_family_tree()
         for parent in street.parents:
             if isinstance(parent, BranchPoint):
                 # Branch points are leaves of this tree.
@@ -147,6 +148,10 @@ class SpectralNetwork:
         self.phase = phase
         self.n_finished_s_walls = None
         self.s_walls = []
+        # TODO: Currently SpectralNetwork.joints are used
+        # only when growing a spectral network.
+        # Decide whether to save them as data
+        # or discard them after generating a spectral network.
         self.joints = []
         self.logger_name = logger_name
         # errors is a list of (error type string, error value tuples).
@@ -930,18 +935,53 @@ class SpectralNetwork:
         logger = logging.getLogger(self.logger_name)
         accuracy = config['accuracy']
 
-        # check the trivialized sw data.
+        # Check the trivialized sw data.
         if isinstance(sw_data, SWDataWithTrivialization) is False:
             raise RuntimeError('Need a trivalized Seiberg-Witten data.')
 
-        # set the parent roots of S-walls.
-
+        # Set the parent roots of S-walls and 
         # determine the root type of each S-wall.
-        ode_f, ode = get_ode(
+        ode_f, _ = get_ode(
             sw_data, self.phase, accuracy,
-            use_scipy_ode=config['use_scipy_ode'],
+            use_scipy_ode=False,
         )
         for s_i in self.s_walls:
+            if len(s_i.parents) == 1:
+                parent = s_i.parents[0]
+                if isinstance(parent, BranchPoint):
+                    s_i.parent_roots = [root for root in parent.positive_roots]
+                else:
+                    raise RuntimeError(
+                        '{} has an invalid parent: {}.'
+                        .format(s_i.label, parent.label)
+                    )
+            elif len(s_i.parents) == 2:
+                parent_roots = []
+                ip_z = s_i.z[0]
+                for parent in s_i.parents:
+                    if not(isinstance(parent, SWall)):
+                        raise RuntimeError(
+                            '{} has an invalid parent: {}.'
+                            .format(s_i.label, parent.label)
+                        )
+                    t = get_nearest_point_index(
+                        parent.z, ip_z, sw_data.branch_points, accuracy,
+                    )
+                    parent_roots += parent.get_roots_at_t(t)
+                descendant_roots = get_descendant_roots(
+                    parent_roots, sw_data.g_data,
+                )
+                if len(descendant_roots) != 1:
+                    raise NotImplementedError
+                else:
+                    s_i.roots = descendant_roots
+            else:
+                raise RuntimeError(
+                    '{} has invalid parents: {}.'
+                    .format(s_i.label, [parent.label for parent in s_i.parents])
+                )
+                
+
             try:
                 root_types = s_i.determine_root_types(
                     sw_data,
@@ -984,6 +1024,7 @@ class SpectralNetwork:
                 )
                 continue
         # determine the root type of each joint.
+        # XXX: is this necessary?
 
     def find_two_way_streets(
         self, config=None, sw_data=None,
@@ -1057,7 +1098,7 @@ class SpectralNetwork:
         return soliton_trees
 
 
-def get_ode(sw, phase, accuracy):
+def get_ode(sw, phase, accuracy, use_scipy_ode=True):
     x, z = sympy.symbols('x z')
     ode_absolute_tolerance = accuracy
 
