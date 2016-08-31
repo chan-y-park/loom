@@ -731,8 +731,9 @@ class SWDataBase(object):
         self.data_attributes = [
             'g_data', 'regular_punctures', 'irregular_punctures',
             'branch_points', 'irregular_singularities',
-            'ffr_ramification_points', 'z_plane_rotation', 'accuracy',
-            'ffr_curve', 'curve', 'diff',
+            'ffr_ramification_points',
+            #'z_plane_rotation',
+            'accuracy', 'ffr_curve', 'curve', 'diff',
         ]
 
         self.g_data = None
@@ -747,6 +748,8 @@ class SWDataBase(object):
 #        self.branch_cut_rotation = None
         self.accuracy = config['accuracy']
 
+        # TODO: Remove SWDataBase.curve,
+        # and rename SWDataBase.ffr_curve to .curve, if necessary.
         self.ffr_curve = None
         self.curve = None
         self.diff = None

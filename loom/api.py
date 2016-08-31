@@ -683,14 +683,15 @@ class SpectralNetworkData:
         self.sw_data = SWDataWithTrivialization(
             self.config,
             logger_name=self.logger_name,
-            sw_data_base_json_data=self.sw_data.get_json_data(),
+            #sw_data_base_json_data=self.sw_data.get_json_data(),
+            sw_data_base=self.sw_data,
         )
 
         # call SpectralNetwork.trivialize() for each spectral network.
-#        for sn in self.spectral_networks:
-#            sn.trivialize(self.config, self.sw_data,)
-#
-#        self.config['trivialize'] = True
+        for sn in self.spectral_networks:
+            sn.trivialize(self.config, self.sw_data,)
+
+        self.config['trivialize'] = True
 
     def plot(
         self,

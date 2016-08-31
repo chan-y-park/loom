@@ -284,12 +284,32 @@ class SWDataWithTrivialization(SWDataBase):
         config,
         logger_name='loom',
         json_data=None,
-        sw_data_base_json_data=None,
+        #sw_data_base_json_data=None,
+        sw_data_base=None,
     ):
-        super(SWDataWithTrivialization, self).__init__(
-            config, logger_name=logger_name,
-            json_data=sw_data_base_json_data,
-        )
+        self.logger_name = logger_name
+        logger = logging.getLogger(self.logger_name)
+
+        # NOTE: The following makes the objects in the attributes of
+        # SWDataBase different from those of SWDataWithTrivialization
+        # as this instantiates new objects and assign them to
+        # SWDataWtihTrivialization. 
+        # super(SWDataWithTrivialization, self).__init__(
+        #    config, logger_name=logger_name,
+        #    json_data=sw_data_base_json_data,
+        # )
+
+        if sw_data_base is None: 
+            super(SWDataWithTrivialization, self).__init__(
+               config, logger_name=logger_name,
+               json_data=json_data,
+            )
+        else:
+            for name in sw_data_base.data_attributes:
+                setattr(
+                    self, name, getattr(sw_data_base, name),
+                )
+            self.data_attributes = sw_data_base.data_attributes
 
 #        self.branch_points = []
 #        self.irregular_singularities = []

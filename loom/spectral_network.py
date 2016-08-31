@@ -24,6 +24,7 @@ from intersection import (
 )
 #from trivialization import BranchPoint
 from geometry import BranchPoint
+from trivialization import SWDataWithTrivialization
 
 
 class Street(SWall):
@@ -939,6 +940,20 @@ class SpectralNetwork:
         if isinstance(sw_data, SWDataWithTrivialization) is False:
             raise RuntimeError('Need a trivalized Seiberg-Witten data.')
 
+        # Rotate the network properly.
+        self.set_z_rotation(1/sw_data.z_plane_rotation)
+
+        ppzs = [
+            p.z for p in
+            sw_data.regular_punctures + sw_data.irregular_punctures
+            if p.z != oo
+        ]
+        bpzs = [
+            p.z for p in
+            sw_data.ffr_ramification_points + sw_data.irregular_punctures
+            if p.z != oo
+        ]
+
         # Set the parent roots of S-walls and 
         # determine the root type of each S-wall.
         ode_f, _ = get_ode(
@@ -974,7 +989,8 @@ class SpectralNetwork:
                 if len(descendant_roots) != 1:
                     raise NotImplementedError
                 else:
-                    s_i.roots = descendant_roots
+                    # XXX: parent_roots != (roots of parents)
+                    s_i.parent_roots = descendant_roots
             else:
                 raise RuntimeError(
                     '{} has invalid parents: {}.'
@@ -995,6 +1011,7 @@ class SpectralNetwork:
                         'Grow this S-wall again, '
                         'using manual integration.'
                     )
+                    # TODO: Need to reset numpy arrays of s_i.
                     s_i.grow(
                         branch_point_zs=bpzs,
                         puncture_point_zs=ppzs,

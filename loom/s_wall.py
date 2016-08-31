@@ -378,7 +378,7 @@ class SWall(object):
                 else:
                     dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
 
-                derivatives = ode_f(y_i)
+                derivatives = ode_f(None, y_i)
                 new_z = y_i[0] + dt * derivatives[0]
                 # new_x_0 = y_i[1] + dt * derivatives[1]
                 # new_x_1 = y_i[2] + dt * derivatives[2]
@@ -407,7 +407,7 @@ class SWall(object):
         """
         logger = logging.getLogger(self.logger_name)
         logger.info('Determining the root type of {}...'
-                    .format(s_i.label))
+                    .format(self.label))
 
         g_data = sw_data.g_data
         # branching will occur at branch points or irregular singularities
@@ -550,8 +550,8 @@ class SWall(object):
         initial_root = get_s_wall_root(z_0, xs_0, sw_data,)
 
         if is_root(initial_root, sw_data.g_data) is False:
-            logging.info(
-                'Warning: could not assign a root to {}'
+            logging.warning(
+                'Could not assign a root to {}'
                 .format(self.label)
             )
 
@@ -617,10 +617,12 @@ class SWall(object):
                     for x in self.parent_roots
                 )
             ):
-                logger.info(
-                    'WARNING: the root type of the S-wall is incompatible '
+                logger.warning(
+                    'The root type of the S-wall is incompatible '
                     'with the sum of roots of its parents!'
                 )
+                import pdb
+                pdb.set_trace()
                 return 'Rebuild S-wall'
 
         # Finished handling the single 'base' root of the S-wall.
