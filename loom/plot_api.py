@@ -33,7 +33,7 @@ class NetworkPlot(object):
         labels=None,
         plot_joints=False,
         plot_data_points=False,
-        branch_cut_rotation=1,
+        branch_cut_rotation=None,
         markersize=2,
         markeredgewidth=1,
     ):
@@ -161,7 +161,10 @@ class SpectralNetworkPlot(NetworkPlot):
         punctures = sw_data.regular_punctures + sw_data.irregular_punctures
         irregular_singularities = sw_data.irregular_singularities
         g_data = sw_data.g_data
-        branch_cut_rotation = sw_data.branch_cut_rotation
+        try:
+            branch_cut_rotation = sw_data.branch_cut_rotation
+        except AttributeError:
+            branch_cut_rotation = None
 
         if self.plot_range is None:
             if plot_on_cylinder is True:
@@ -426,3 +429,72 @@ def get_sw_data_legend(sw_data):
             )
 
     return legend
+
+
+def plot_on_z(
+    sw_data=None,
+    points=[],
+    lines=[],
+    plot_data_points=False,
+    plot_range=None,
+    file_path=None,
+):
+    """
+    Plot for debugging purpose.
+    """
+    from matplotlib import pyplot
+    pyplot.figure()
+    pyplot.axes().set_aspect('equal')
+
+    for pp in (sw_data.regular_punctures + sw_data.irregular_punctures):
+        if pp.z == oo:
+            continue
+        pyplot.plot(
+            pp.z.real, pp.z.imag, 'o',
+            markeredgewidth=2, markersize=8,
+            color='k', markerfacecolor='none',
+            label=pp.label,
+        )
+
+    for bp in sw_data.branch_points:
+        pyplot.plot(
+            bp.z.real, bp.z.imag, 'x',
+            markeredgewidth=2, markersize=8,
+            color='k', label=bp.label,
+        )
+
+    for z, label in points:
+        pyplot.plot(
+            z.real, z.imag, '.',
+            markeredgewidth=2, markersize=8,
+            color='r', label=label,
+        )
+
+    for zs, label in lines:
+        xs = zs.real
+        ys = zs.imag
+        pyplot.plot(xs, ys, '-', label=label)
+
+        if(plot_data_points is True):
+            pyplot.plot(xs, ys, 'o', color='k', markersize=4)
+
+    if plot_range is None:
+        pyplot.autoscale(enable=True, axis='both', tight=True)
+        pyplot.margins(0.1)
+    else:
+        [[x_min, x_max], [y_min, y_max]] = plot_range
+        pyplot.xlim(x_min, x_max)
+        pyplot.ylim(y_min, y_max)
+
+    if file_path is not None:
+        pyplot.savefig(file_path)
+    else:
+        import mpldatacursor
+        mpldatacursor.datacursor(
+            formatter='{label}'.format,
+            hover=True,
+        )
+
+        pyplot.show()
+
+

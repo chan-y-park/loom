@@ -516,6 +516,7 @@ def get_delta(a, i):
         return a[1] - a[0]
 
 
+# XXX: This is not used anywhere yet.
 def build_family_tree(obj, tree=None):
     """
     For an object 'obj' with an attribute for its parents 'obj.parents'

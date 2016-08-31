@@ -284,23 +284,19 @@ class SWDataWithTrivialization(SWDataBase):
         config,
         logger_name='loom',
         json_data=None,
-        sw_data_base=None,
+        sw_data_base_json_data=None,
     ):
-        if sw_data_base is None:
-            super(SWDataWithTrivialization, self).__init__(
-                config, logger_name=logger_name, json_data=json_data,
-            )
-        else:
-            base_json_data = sw_data_base.get_json_data()
-            super(SWDataWithTrivialization, self).set_from_json_data(
-                base_json_data
-            )
+        super(SWDataWithTrivialization, self).__init__(
+            config, logger_name=logger_name,
+            json_data=sw_data_base_json_data,
+        )
 
 #        self.branch_points = []
 #        self.irregular_singularities = []
 
         self.reference_ffr_xs = None
         self.reference_xs = None
+        self.z_plane_rotation = None
         self.branch_cut_rotation = None
 
         # The following attributes are not used outside this module,
@@ -321,7 +317,8 @@ class SWDataWithTrivialization(SWDataBase):
 #            'branch_points', 'irregular_singularities',
             'min_distance', 'min_horizontal_distance',
             'farthest_branching_locus', 'base_point',
-            'reference_ffr_xs', 'reference_xs', 'branch_cut_rotation',
+            'reference_ffr_xs', 'reference_xs',
+            'z_plane_rotation', 'branch_cut_rotation',
         ]
 
     def init_z_rotation(self):   
@@ -335,11 +332,10 @@ class SWDataWithTrivialization(SWDataBase):
         rotate_z_plane = True
         pi_div = 0
 
-#        bpzs = n_remove_duplicate(
-#            [r.z for r in ffr_ramification_points if r.z != oo],
-#            self.accuracy,
-#        )
-        bpzs = [bp.z for bp in self.branch_points]
+        bpzs = [bp.z for bp in self.branch_points if bp.z != oo]
+        ppzs = [pp.z for pp
+                in (self.regular_punctures + self.irregular_punctures)
+                if pp.z != oo]
         # TODO: instead of just printing a warning, increase the accuracy
         # or other relevant parameters to overcome this issue.
         spread = spread_of_branch_points(bpzs, min_spread=MIN_SPREAD)
@@ -352,13 +348,10 @@ class SWDataWithTrivialization(SWDataBase):
                 'Branch points are:\n{}'
                 .format(
                     spread,
-                    [ffr_rp.z for ffr_rp in ffr_ramification_points]
+                    #[ffr_rp.z for ffr_rp in self.ffr_ramification_points]
+                    bpzs,
                 )
             )
-
-#        logger.debug('These are the punctures:')
-#        for pct in punctures:
-#            logger.debug('{} at z={}'.format(pct.label, pct.z))
 
         for pi_div in range(max_pi_div + 1):
             if pi_div == 0:
@@ -393,19 +386,20 @@ class SWDataWithTrivialization(SWDataBase):
                 # and branch points will rotate contravariantly
                 # z_pt -> c^{-1} z_pt
 
-                # z-coords of branch points.
-                bpzs = n_remove_duplicate(
-                    [r.z / complex(z_plane_rotation)
-                     for r in ffr_ramification_points if r.z != oo],
-                    self.accuracy,
-                )
-                # z-coords of punctures.
-                pctzs = n_remove_duplicate(
-                    [p.z / complex(z_plane_rotation)
-                     for p in punctures if p.z != oo],
-                    self.accuracy,
-                )
-                z_list = bpzs + pctzs
+#                # z-coords of branch points.
+#                bpzs = n_remove_duplicate(
+#                    [r.z / complex(z_plane_rotation)
+#                     for r in self.ffr_ramification_points if r.z != oo],
+#                    self.accuracy,
+#                )
+#                # z-coords of punctures.
+#                pctzs = n_remove_duplicate(
+#                    [p.z / complex(z_plane_rotation)
+#                     for p in self.punctures if p.z != oo],
+#                    self.accuracy,
+#                )
+#                z_list = bpzs + pctzs
+                z_list = [z / complex(z_plane_rotation) for z in (bpzs + ppzs)]
                 z_r_list = [z.real for z in z_list]
                 if len(z_r_list) > 1:
                     min_x_distance = min([
@@ -472,14 +466,31 @@ class SWDataWithTrivialization(SWDataBase):
 
         self.set_z_rotation(1/z_plane_rotation)
         # Now all the branch cuts run vertically.
+        self.z_plane_rotation = z_plane_rotation 
         self.branch_cut_rotation = 1
 
-
     def set_z_rotation(self, z_rotation):
-        super(SWDataWithTrivialization, self).set_z_rotation(z_rotation)
-
+#        super(SWDataWithTrivialization, self).set_z_rotation(z_rotation)
 #        for p in (self.branch_points + self.irregular_singularities):
 #            p.set_z_rotation(z_rotation)
+        for p in (
+            self.regular_punctures + self.irregular_punctures
+            + self.ffr_ramification_points
+            + self.branch_points + self.irregular_singularities
+        ):
+            p.set_z_rotation(z_rotation)
+
+        if self.ffr_curve is not None:
+            self.ffr_curve.set_z_rotation(1/z_rotation)
+
+#        if self.curve is not None:
+#            self.curve.set_z_rotation(1/z_rotation)
+
+        if self.diff is not None:
+            self.diff.set_z_rotation(1/z_rotation)
+
+        if self.z_plane_rotation is not None:
+            self.z_plane_rotation /= z_rotation
 
         if self.base_point is not None:
             self.base_point *= complex(z_rotation)
@@ -503,6 +514,7 @@ class SWDataWithTrivialization(SWDataBase):
         json_data['reference_xs'] = [
             ctor2(x) for x in self.reference_xs
         ]
+        json_data['z_plane_rotation'] = str(self.z_plane_rotation),
         json_data['branch_cut_rotation'] = str(
             self.branch_cut_rotation
         )
@@ -527,18 +539,24 @@ class SWDataWithTrivialization(SWDataBase):
 #            IrregularSingularity(json_data=data)
 #            for data in json_data['irregular_singularities']
 #        ]
-        self.reference_ffr_xs = [
-            r2toc(x) for x in json_data['reference_ffr_xs']
-        ]
-        self.reference_xs = [
-            r2toc(x) for x in json_data['reference_xs']
-        ]
+
+        z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
+        self.set_z_rotation(1/z_plane_rotation)
+        self.z_plane_rotation = z_plane_rotation
+
         try:
             self.branch_cut_rotation = sympy.sympify(
                 json_data['branch_cut_rotation']
             )
         except KeyError:
             pass
+
+        self.reference_ffr_xs = [
+            r2toc(x) for x in json_data['reference_ffr_xs']
+        ]
+        self.reference_xs = [
+            r2toc(x) for x in json_data['reference_xs']
+        ]
 
         self.min_distance = json_data['min_distance']
         self.min_horizontal_distance = json_data['min_horizontal_distance']
@@ -649,7 +667,7 @@ class SWDataWithTrivialization(SWDataBase):
 #                # and will have no obvious monodromy. Need to deal with it.
 #                self.branch_points.append(bp)
 
-        # Analyze each branch points and assign ramification points to it.
+        # Analyze each branch points.
         bps = []
         for bp in self.branch_points:
             self.analyze_branch_point(bp)
@@ -737,7 +755,7 @@ class SWDataWithTrivialization(SWDataBase):
             m_tot = numpy.dot(m_tot, m_i)
 
         if numpy.array_equal(m_tot, m_oo) is True:
-            logger.debug(
+            logger.info(
                 "Monodromy at infinity agrees with the product "
                 "of all monodromies, as expected."
             )
@@ -839,7 +857,7 @@ class SWDataWithTrivialization(SWDataBase):
                     z_0=z_path[i - 1], z_1=z_path[i],
                     g_data=g_data,
                     logger_name=self.logger_name,
-                    sw_curve=self.curve,
+                    sw_curve=self.ffr_curve,
                 )
             # if it's a path to branch point, but we are far from it,
             # still check tracking
@@ -851,7 +869,7 @@ class SWDataWithTrivialization(SWDataBase):
                     z_0=z_path[i - 1], z_1=z_path[i],
                     g_data=g_data,
                     logger_name=self.logger_name,
-                    sw_curve=self.curve,
+                    sw_curve=self.ffr_curve,
                 )
             # if it's a path to a branch point and we are getting close to it,
             # don't check tracking anymore
@@ -862,7 +880,7 @@ class SWDataWithTrivialization(SWDataBase):
                     check_tracking=False,
                     g_data=g_data,
                     logger_name=self.logger_name,
-                    sw_curve=self.curve,
+                    sw_curve=self.ffr_curve,
                 )
             if sorted_ffr_xs == 'sorting failed':
                 logger.debug(
@@ -1312,9 +1330,21 @@ class SWDataWithTrivialization(SWDataBase):
         # will be used along with the algorithm for matching them to
         # roots, and there the sheets will be assumed to be in 1-1
         # correspondence (and ordered) with the weights of the representation
-        sheets_along_path = self.get_sheets_along_path(
-            path_to_bp, is_path_to_bp=True, ffr=False,
-        )
+        try:
+            sheets_along_path = self.get_sheets_along_path(
+                path_to_bp, is_path_to_bp=True, ffr=False,
+            )
+        except:
+            from plot_api import plot_on_z
+            plot_on_z(
+                sw_data=self,
+                lines=[
+                    (numpy.array(path_to_bp), 'path_to_bp',)
+                ],
+            )
+            import pdb
+            pdb.set_trace()
+
         xs_at_bp = [s_i[-1] for s_i in sheets_along_path]
         enum_sh = [[i, x_i] for i, x_i in enumerate(xs_at_bp)]
 

@@ -493,7 +493,7 @@ class BranchPoint:
 
             self.groups = None
 #            self.positive_roots = None
-            self.positive_roots = []
+            self.positive_roots = numpy.array([])
             self.order = None
 
             self.ffr_ramification_points = None
@@ -514,13 +514,19 @@ class BranchPoint:
         json_data = {
             'z': ctor2(self.z),
             'label': self.label,
-            'monodromy': self.monodromy.tolist(),
-            'groups': self.groups,
-            'positive_roots': self.positive_roots.tolist(),
-            'order': self.order,
             'ffr_ramification_points': [
                 rp.label for rp in self.ffr_ramification_points
             ],
+            'monodromy': (
+                self.monodromy.tolist() if self.monodromy is not None
+                else None
+            ),
+            'groups': self.groups,
+            'positive_roots': (
+                self.positive_roots.tolist() if self.positive_roots is not None
+                else None
+            ),
+            'order': self.order,
         }
         return json_data
 
@@ -580,7 +586,10 @@ class IrregularSingularity:
         json_data = {
             'z': ctor2(self.z),
             'label': self.label,
-            'monodromy': self.monodromy.tolist(),
+            'monodromy': (
+                self.monodromy.tolist() if self.monodromy is not None
+                else None
+            ),
         }
         return json_data
 
@@ -732,10 +741,10 @@ class SWDataBase(object):
         self.branch_points = []
         self.irregular_singularities = []
         self.ffr_ramification_points = None
-        # This rotation is applied when getting the trivialization.
+#        # This rotation is applied when getting the trivialization.
 #        self.z_plane_rotation = None
-        self.z_plane_rotation = sympy.sympify('1')
-        self.branch_cut_rotation = None
+#        self.z_plane_rotation = sympy.sympify('1')
+#        self.branch_cut_rotation = None
         self.accuracy = config['accuracy']
 
         self.ffr_curve = None
@@ -791,7 +800,7 @@ class SWDataBase(object):
                 g_data=self.g_data,
                 diff_params=diff_params,
                 mt_params=mt_params,
-                z_rotation=self.z_plane_rotation,
+                #z_rotation=self.z_plane_rotation,
                 ffr=True,
             )
             self.diff = SWDiff(
@@ -799,18 +808,18 @@ class SWDataBase(object):
                 g_data=self.g_data,
                 diff_params=diff_params,
                 mt_params=mt_params,
-                z_rotation=self.z_plane_rotation,
+                #z_rotation=self.z_plane_rotation,
             )
 
         # TODO: SWCurve in a general representation.
-        if self.g_data.fundamental_representation_index == 1:
-            self.curve = self.ffr_curve
-        else:
-            logger.warning(
-                'Seiberg-Witten curve in a general representation '
-                'is not implemented yet.'
-            )
-            self.curve = None
+#        if self.g_data.fundamental_representation_index == 1:
+#            self.curve = self.ffr_curve
+#        else:
+#            logger.warning(
+#                'Seiberg-Witten curve in a general representation '
+#                'is not implemented yet.'
+#            )
+#            self.curve = None
 
         # TODO: move these messages somewhere inside set_from_config
         # otherwise the messages about finding ramification points
@@ -999,24 +1008,24 @@ class SWDataBase(object):
         logger.info('size_of_puncture_cutoff = {}'
                     .format(config['size_of_puncture_cutoff']))
 
-    def set_z_rotation(self, z_rotation):
-        for p in (
-            self.regular_punctures + self.irregular_punctures
-            + self.ffr_ramification_points
-            + self.branch_points + self.irregular_singularities
-        ):
-            p.set_z_rotation(z_rotation)
-
-        if self.ffr_curve is not None:
-            self.ffr_curve.set_z_rotation(1/z_rotation)
-
-        if self.curve is not None:
-            self.curve.set_z_rotation(1/z_rotation)
-
-        if self.diff is not None:
-            self.diff.set_z_rotation(1/z_rotation)
-
-        self.z_plane_rotation /= z_rotation
+#    def set_z_rotation(self, z_rotation):
+#        for p in (
+#            self.regular_punctures + self.irregular_punctures
+#            + self.ffr_ramification_points
+#            + self.branch_points + self.irregular_singularities
+#        ):
+#            p.set_z_rotation(z_rotation)
+#
+#        if self.ffr_curve is not None:
+#            self.ffr_curve.set_z_rotation(1/z_rotation)
+#
+#        if self.curve is not None:
+#            self.curve.set_z_rotation(1/z_rotation)
+#
+#        if self.diff is not None:
+#            self.diff.set_z_rotation(1/z_rotation)
+#
+#        self.z_plane_rotation /= z_rotation
 
     def save(self, file_path):
         with open(file_path, 'wb') as fp:
@@ -1033,7 +1042,7 @@ class SWDataBase(object):
             'ffr_ramification_points': [
                 rp.get_json_data() for rp in self.ffr_ramification_points
             ],
-            'z_plane_rotation': str(self.z_plane_rotation),
+            #'z_plane_rotation': str(self.z_plane_rotation),
             'accuracy': self.accuracy,
         }
         json_data['branch_points'] = [
@@ -1079,7 +1088,7 @@ class SWDataBase(object):
             RamificationPoint(json_data=data)
             for data in json_data['ffr_ramification_points']
         ]
-        self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
+        #self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
         self.accuracy = json_data['accuracy']
 
         self.branch_points = [
@@ -1091,6 +1100,7 @@ class SWDataBase(object):
             IrregularSingularity(json_data=data)
             for data in json_data['irregular_singularities']
         ]
+
     def get_aligned_xs(self, z_0, near_degenerate_branch_locus=False):
         """
         Returns (aligned_ffr_xs, aligned_xs), where each element is

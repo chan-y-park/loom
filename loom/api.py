@@ -683,14 +683,14 @@ class SpectralNetworkData:
         self.sw_data = SWDataWithTrivialization(
             self.config,
             logger_name=self.logger_name,
-            sw_data_base=self.sw_data,
+            sw_data_base_json_data=self.sw_data.get_json_data(),
         )
 
         # call SpectralNetwork.trivialize() for each spectral network.
-        for sn in self.spectral_networks:
-            sn.trivialize()
-
-        self.config['trivialize'] = True
+#        for sn in self.spectral_networks:
+#            sn.trivialize(self.config, self.sw_data,)
+#
+#        self.config['trivialize'] = True
 
     def plot(
         self,
@@ -698,6 +698,7 @@ class SpectralNetworkData:
         show_plot=True,
         plot_range=[[-4, 4], [-4, 4]],
         logger_name='loom',
+        reset_z_rotation=True,
         **kwargs
     ):
         logger = logging.getLogger(logger_name)
@@ -719,7 +720,8 @@ class SpectralNetworkData:
             )
 
         # Rotate the z-plane into the location defined by the curve.
-        self.reset_z_rotation()
+        if reset_z_rotation is True:
+            self.reset_z_rotation()
 
         for spectral_network in spectral_networks:
             logger.info('Generating the plot of a spectral network '
@@ -766,20 +768,26 @@ class SpectralNetworkData:
         # note that each parameter choice may have its own
         # different z_r
         if type(self.sw_data) is list:
-            pass
-        else:
+            return None
+
+        try:
             z_r = self.sw_data.z_plane_rotation
             self.set_z_rotation(z_r)
+        except AttributeError:
+            pass
 
     def rotate_back(self):
         # TODO: handle z-rotation for multi-parameter case
         # note that each parameter choice may have its own
         # different z_r
         if type(self.sw_data) is list:
-            pass
-        else:
+            return None
+
+        try:
             bc_r = self.sw_data.branch_cut_rotation
             self.set_z_rotation(1/bc_r)
+        except AttributeError:
+            pass
 
     def plot_s_walls(
         self,
@@ -791,7 +799,6 @@ class SpectralNetworkData:
         """
         Plot walls on a complex plane for debugging purpose.
         """
-        pyplot.figure()
         pyplot.axes().set_aspect('equal')
 
         sw_data = self.sw_data
