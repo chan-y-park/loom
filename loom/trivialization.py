@@ -284,33 +284,23 @@ class SWDataWithTrivialization(SWDataBase):
         config,
         logger_name='loom',
         json_data=None,
-        #sw_data_base_json_data=None,
         sw_data_base=None,
     ):
         self.logger_name = logger_name
         logger = logging.getLogger(self.logger_name)
 
-        # NOTE: The following makes the objects in the attributes of
-        # SWDataBase different from those of SWDataWithTrivialization
-        # as this instantiates new objects and assign them to
-        # SWDataWtihTrivialization. 
-        # super(SWDataWithTrivialization, self).__init__(
-        #    config, logger_name=logger_name,
-        #    json_data=sw_data_base_json_data,
-        # )
-
-        if sw_data_base is None: 
-            super(SWDataWithTrivialization, self).__init__(
-               config, logger_name=logger_name,
-               json_data=json_data,
-            )
-        else:
-            for name in sw_data_base.data_attributes:
-                setattr(
-                    self, name, getattr(sw_data_base, name),
-                )
-            self.data_attributes = sw_data_base.data_attributes
-
+#        if sw_data_base is None: 
+#            super(SWDataWithTrivialization, self).__init__(
+#               config, logger_name=logger_name,
+#               json_data=json_data,
+#            )
+#        else:
+#            for name in sw_data_base.data_attributes:
+#                setattr(
+#                    self, name, getattr(sw_data_base, name),
+#                )
+#            self.data_attributes = sw_data_base.data_attributes
+#
 #        self.branch_points = []
 #        self.irregular_singularities = []
 
@@ -325,6 +315,27 @@ class SWDataWithTrivialization(SWDataBase):
         self.farthest_branching_locus = None
         self.base_point = None
 
+#        if json_data is None:
+#            # Check if there are branch points aligned vertically,
+#            # and rotate the z-plane until there is none.
+#            self.init_z_rotation()
+#            self.set_trivialization()
+#        else:
+#            self.set_trivialization_from_json_data(json_data)
+#
+        # Initialize the parent attributes.
+        if sw_data_base is not None: 
+            for name in (
+                sw_data_base.data_attributes
+                + ['data_attributes', 'accuracy', 'ffr_curve', 'diff',]
+            ):
+                setattr(self, name, getattr(sw_data_base, name),)
+        else:
+            super(SWDataWithTrivialization, self).__init__(
+               config, logger_name=logger_name,
+               json_data=json_data,
+            )
+
         if json_data is None:
             # Check if there are branch points aligned vertically,
             # and rotate the z-plane until there is none.
@@ -332,6 +343,10 @@ class SWDataWithTrivialization(SWDataBase):
             self.set_trivialization()
         else:
             self.set_trivialization_from_json_data(json_data)
+            for name in ('ffr_curve', 'diff'):
+                getattr(self, name).set_z_rotation(
+                    1 / self.z_plane_rotation
+                )
 
         self.data_attributes += [
 #            'branch_points', 'irregular_singularities',
@@ -340,6 +355,9 @@ class SWDataWithTrivialization(SWDataBase):
             'reference_ffr_xs', 'reference_xs',
             'z_plane_rotation', 'branch_cut_rotation',
         ]
+
+        logger.info('Seiberg-Witten data after trivialization:')
+        self.print_info()
 
     def init_z_rotation(self):   
         # Introduce a clockwise rotation of the z-plane,
@@ -534,7 +552,7 @@ class SWDataWithTrivialization(SWDataBase):
         json_data['reference_xs'] = [
             ctor2(x) for x in self.reference_xs
         ]
-        json_data['z_plane_rotation'] = str(self.z_plane_rotation),
+        json_data['z_plane_rotation'] = str(self.z_plane_rotation)
         json_data['branch_cut_rotation'] = str(
             self.branch_cut_rotation
         )
@@ -561,15 +579,15 @@ class SWDataWithTrivialization(SWDataBase):
 #        ]
 
         z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
-        self.set_z_rotation(1/z_plane_rotation)
+#        self.set_z_rotation(1/z_plane_rotation)
         self.z_plane_rotation = z_plane_rotation
-
         try:
             self.branch_cut_rotation = sympy.sympify(
                 json_data['branch_cut_rotation']
             )
         except KeyError:
-            pass
+            self.branch_cut_rotation = 1
+            #pass
 
         self.reference_ffr_xs = [
             r2toc(x) for x in json_data['reference_ffr_xs']

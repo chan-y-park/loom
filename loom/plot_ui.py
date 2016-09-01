@@ -168,7 +168,8 @@ class SpectralNetworkPlotUI(SpectralNetworkPlotUIBase):
             self.button_next = Button(axes_next, '>')
             self.button_next.on_clicked(self.show_next_plot)
 
-        self.figure.show()
+        if not('inline' in matplotlib.rcParams['backend']):
+           self.figure.show()
 
 
 class SpectralNetworkPlotTk(SpectralNetworkPlotUIBase):

@@ -201,7 +201,23 @@ class LoomConfig:
                         'Option \'{}\' is deprecated.'.format(old_option)
                     )
                     if option is None:
+                        # There is no newer version of this option,
+                        # discard the deprecated option.
                         continue
+                    elif old_option is 'integration_method':
+                        # XXX: temporary
+                        section = 'settings'
+                        # option = 'use_scipy_ode'
+                        if parser_value == 'ode_int':
+                            parser_value = 'True'
+                        elif parser_value == 'manual':
+                            parser_value = 'False'
+                        else:
+                            raise RuntimeError(
+                                'Unknown option: {} = {}'
+                                .format(old_option, parser_value)
+                            )
+
                     logger.warning('Use \'{}\' instead.'.format(option))
                     self.parser.remove_option(section, old_option)
                     self.parser.set(section, option, parser_value)

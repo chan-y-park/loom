@@ -724,52 +724,58 @@ class SWDataBase(object):
     This is the base class of SWDataWithTrivialization, where
     the trivialization data of the curve is contained.
     """
-    def __init__(self, config, logger_name='loom', json_data=None,):
+    def __init__(
+        self,
+        config,
+        logger_name='loom',
+        json_data=None,
+    ):
         self.logger_name = logger_name
         logger = logging.getLogger(self.logger_name)
 
         self.data_attributes = [
             'g_data', 'regular_punctures', 'irregular_punctures',
-            'branch_points', 'irregular_singularities',
             'ffr_ramification_points',
+            'branch_points', 'irregular_singularities',
             #'z_plane_rotation',
-            'accuracy', 'ffr_curve', 'curve', 'diff',
+            #'accuracy',
+            #'ffr_curve', 'curve', 'diff',
         ]
 
-        self.g_data = None
-        self.regular_punctures = []
-        self.irregular_punctures = []
-        self.branch_points = []
-        self.irregular_singularities = []
-        self.ffr_ramification_points = None
-#        # This rotation is applied when getting the trivialization.
-#        self.z_plane_rotation = None
-#        self.z_plane_rotation = sympy.sympify('1')
-#        self.branch_cut_rotation = None
-        self.accuracy = config['accuracy']
+#        self.g_data = None
+#        self.regular_punctures = []
+#        self.irregular_punctures = []
+#        self.branch_points = []
+#        self.irregular_singularities = []
+#        self.ffr_ramification_points = None
+##        # This rotation is applied when getting the trivialization.
+##        self.z_plane_rotation = None
+##        self.z_plane_rotation = sympy.sympify('1')
+##        self.branch_cut_rotation = None
 
         # TODO: Remove SWDataBase.curve,
         # and rename SWDataBase.ffr_curve to .curve, if necessary.
         self.ffr_curve = None
         self.curve = None
         self.diff = None
+        self.accuracy = config['accuracy']
 
         if config['mt_params'] is not None:
             mt_params = sympy.sympify(config['mt_params'])
         else:
             mt_params = None
 
-        if config['branch_points'] is not None:
-            branch_points = sympy.sympify(config['branch_points'])
-            config['ramification_point_finding_method'] = 'from_branch_points'
-        else:
-            branch_points = None
-
-        if config['ramification_points'] is not None:
-            ramification_points = sympy.sympify(config['ramification_points'])
-            config['ramification_point_finding_method'] = 'manual'
-        else:
-            ramification_points = None
+#        if config['branch_points'] is not None:
+#            branch_points = sympy.sympify(config['branch_points'])
+#            config['ramification_point_finding_method'] = 'from_branch_points'
+#        else:
+#            branch_points = None
+#
+#        if config['ramification_points'] is not None:
+#            ramification_points = sympy.sympify(config['ramification_points'])
+#            config['ramification_point_finding_method'] = 'manual'
+#        else:
+#            ramification_points = None
 
         casimir_differentials = {}
         for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
@@ -784,6 +790,29 @@ class SWDataBase(object):
 
         if json_data is None:
             # Work out the SW geometry data
+            self.g_data = None
+            self.regular_punctures = []
+            self.irregular_punctures = []
+            self.branch_points = []
+            self.irregular_singularities = []
+            self.ffr_ramification_points = None
+
+            if config['branch_points'] is not None:
+                branch_points = sympy.sympify(config['branch_points'])
+                config['ramification_point_finding_method'] = (
+                    'from_branch_points'
+                )
+            else:
+                branch_points = None
+
+            if config['ramification_points'] is not None:
+                ramification_points = sympy.sympify(
+                    config['ramification_points']
+                )
+                config['ramification_point_finding_method'] = 'manual'
+            else:
+                ramification_points = None
+
             self.g_data = GData(root_system=config['root_system'],
                                 representation_str=config['representation'],
                                 logger_name=self.logger_name,)
@@ -828,6 +857,32 @@ class SWDataBase(object):
         # otherwise the messages about finding ramification points
         # will show up in the output even before we prin the curve.
         # Display the Seiberg-Witten curve given by the configuration
+#        logger.info(
+#            'Seiberg-Witten curve in the 1st fundamental '
+#            'representation:\n(note: \lambda = x dz)'
+#            '\n{} = 0\n(numerically\n{}=0\n)'
+#            .format(sympy.latex(self.ffr_curve.sym_eq),
+#                    sympy.latex(self.ffr_curve.num_eq))
+#        )
+#
+#        logger.info(
+#            'Seiberg-Witten differential:\n{} dz\n(numerically\n{} dz\n)'
+#            .format(sympy.latex(self.diff.sym_v),
+#                    sympy.latex(self.diff.num_v))
+#        )
+#
+#        for rp in self.ffr_ramification_points:
+#            logger.info("{}: z = {}, x = {}, i = {}."
+#                        .format(rp.label, rp.z, rp.x, rp.i))
+#
+#        for pct in self.regular_punctures + self.irregular_punctures:
+#            logger.info('{} at z={}'.format(pct.label, pct.z))
+        logger.info('Seiberg-Witten data before trivialization:')
+        self.print_info()
+
+    def print_info(self):
+        logger = logging.getLogger(self.logger_name)
+
         logger.info(
             'Seiberg-Witten curve in the 1st fundamental '
             'representation:\n(note: \lambda = x dz)'
@@ -848,7 +903,7 @@ class SWDataBase(object):
 
         for pct in self.regular_punctures + self.irregular_punctures:
             logger.info('{} at z={}'.format(pct.label, pct.z))
-
+ 
     def set_from_config(
         self, config, mt_params=None,
         ramification_points=None, branch_points=None,
@@ -1092,7 +1147,7 @@ class SWDataBase(object):
             for data in json_data['ffr_ramification_points']
         ]
         #self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
-        self.accuracy = json_data['accuracy']
+#        self.accuracy = json_data['accuracy']
 
         self.branch_points = [
             BranchPoint(json_data=data,
