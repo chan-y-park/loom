@@ -678,7 +678,16 @@ class SpectralNetworkData:
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
 
-    def trivialize(self):
+    def trivialize(
+        self, n_processes=0,
+        result_queue=None, logging_queue=None, cache_dir=None,
+    ):
+        logger = logging.getLogger(self.logger_name)
+        logger.info('Trivializing spectral network data...')
+
+        if cache_dir is not None and os.path.exists(cache_dir) is False:
+            os.makedirs(cache_dir)
+
         # Get the trivialized SW data.
         self.sw_data = SWDataWithTrivialization(
             self.config,
@@ -686,10 +695,27 @@ class SpectralNetworkData:
             #sw_data_base_json_data=self.sw_data.get_json_data(),
             sw_data_base=self.sw_data,
         )
+        if cache_dir is not None:
+            sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
+            self.sw_data.save(sw_data_file_path)
 
         # call SpectralNetwork.trivialize() for each spectral network.
-        for sn in self.spectral_networks:
+        if len(self.spectral_networks) == 1:
+            sn = self.spectral_networks[0]
             sn.trivialize(self.config, self.sw_data,)
+            if cache_dir is not None:
+                sn_data_file_path = os.path.join(cache_dir, 'data_0.json',)
+                sn.save(sn_data_file_path)
+        else:
+            self.spectral_networks = parallel_get_spectral_network(
+                config=self.config,
+                sw_data=self.sw_data,
+                spectral_networks=self.spectral_networks,
+                n_processes=n_processes,
+                logger_name=self.logger_name,
+                cache_dir=cache_dir,
+                task='trivialize',
+            )
 
         self.config['trivialize'] = True
 

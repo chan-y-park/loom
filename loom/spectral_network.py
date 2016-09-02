@@ -932,7 +932,10 @@ class SpectralNetwork:
 
         return new_joints
 
-    def trivialize(self, config, sw_data,):
+    def trivialize(
+        self, config, sw_data,
+        cache_file_path=None,
+    ):
         logger = logging.getLogger(self.logger_name)
         accuracy = config['accuracy']
 
@@ -1040,8 +1043,13 @@ class SpectralNetwork:
                     ('RuntimeError', error_msg)
                 )
                 continue
-        # determine the root type of each joint.
+
         # XXX: is this necessary?
+        # determine the root type of each joint.
+
+        if cache_file_path is not None:
+            logger.info('Saving cache data to {}.'.format(cache_file_path))
+            self.save(cache_file_path)
 
     def find_two_way_streets(
         self, config=None, sw_data=None,

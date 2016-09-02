@@ -1,6 +1,5 @@
 import ConfigParser
 import logging
-# import pdb
 
 
 class LoomConfig:
@@ -11,58 +10,12 @@ class LoomConfig:
     def __init__(self, file_path=None, logger_name='loom'):
         logger = logging.getLogger(logger_name)
         self.logger_name = logger_name
+
         # The data dict has option values as Python objects,
         # some of them being strings.
         self.data = {}
+
         self.parser = ConfigParser.SafeConfigParser()
-#        # attribute options has the following structure:
-#        # options['section']['option'] = 'label'
-#        self.options = {
-#            'Seiberg-Witten data': {
-#                'description': 'Description',
-#                'root_system': 'Root system',
-#                'representation': 'Representation',
-#                'casimir_differentials': 'Casimir differentials',
-#                'differential_parameters': 'Parameters of differentials',
-#                'parameter_sequence': 'A sequence of values for a parameter',
-#                'regular_punctures': 'Regular punctures',
-#                'irregular_punctures': 'Irregular punctures',
-#                'ramification_points': 'Ramification points',
-#                'branch_points': 'Branch points',
-#                'branch_points_sequence': 'Branch points sequence',
-#                'mt_params': 'Mobius transformation',
-#                'ramification_point_finding_method':
-#                    'Ramification point finding method',
-##                'integration_method': 'Integration Method',
-#            },
-#            'numerical parameters': {
-#                'accuracy': 'Accuracy',
-#                'plot_range': 'Plot range',
-#                'num_of_steps': 'Number of steps',
-#                'num_of_iterations': 'Number of iterations',
-#                'size_of_small_step': 'Size of a small step',
-#                'size_of_large_step': 'Size of a large step',
-#                'size_of_bp_neighborhood':
-#                    'Size of a branch point neighborhood',
-#                'size_of_puncture_cutoff': 'Size of a puncture cutoff',
-#                'mass_limit': 'Mass limit',
-#                'phase': 'Phase (single value or range)',
-#            },
-#            'settings': {
-#                'trivialize': 'Trivialize the cover',
-#                'use_scipy_ode': 'Use SciPy ODE solver',
-#            },
-#        }
-#
-#        # {deprecated option: option,}
-#        self.deprecated_options = {
-#            'phase_range': 'phase',
-#            'punctures': 'irregular_punctures',
-#            'size_of_neighborhood': 'size_of_bp_neighborhood',
-#            'size_of_bin': None,
-#            'size_of_ramification_pt_cutoff': None,
-#            'n_processes': None,
-#        }
 
         # attribute options has the following structure:
         # options['section']['option'] = (default value) 
@@ -112,24 +65,14 @@ class LoomConfig:
             'integration_method': 'use_scipy_ode',
         }
 
-        if file_path is not None:
-            logger.info('Loading configuration from {}...'.format(file_path))
-            with open(file_path, 'r') as fp:
-                self.read(fp)
-            logger.info('Finished loading configuration from {}.'
-                        .format(file_path))
+        if file_path is None:
+            raise RuntimeError('No config file given.')
 
-        # Default settings.
-        if self.parser.has_section('settings') is False:
-            self.parser.add_section('settings')
-        for option, default in self.options['settings'].iteritems():
-            try:
-                if self[option] is not None:
-                    continue
-            except KeyError:
-                pass
-            self[option] = default
-
+        logger.info('Loading configuration from {}...'.format(file_path))
+        with open(file_path, 'r') as fp:
+            self.read(fp)
+        logger.info('Finished loading configuration from {}.'
+                    .format(file_path))
 
     def __setitem__(self, option, value):
         try:
@@ -182,6 +125,10 @@ class LoomConfig:
 
         self.parser.readfp(config_file)
 
+        if self.parser.has_section('settings') is False:
+            self.parser.add_section('settings')
+
+        # Read each option from the parser.
         for section in self.parser.sections():
             try:
                 not_configured_options = self.options[section].keys()
@@ -195,32 +142,35 @@ class LoomConfig:
 
                 # Check deprecated options
                 if option in self.deprecated_options:
-                    old_option = option
-                    option = self.deprecated_options[old_option]
+                    new_option = self.deprecated_options[option]
                     logger.warning(
-                        'Option \'{}\' is deprecated.'.format(old_option)
+                        'Option \'{}\' is deprecated.'.format(option)
                     )
-                    if option is None:
+                    if new_option is None:
                         # There is no newer version of this option,
                         # discard the deprecated option.
                         continue
-                    elif old_option is 'integration_method':
+                    elif option == 'integration_method':
                         # XXX: temporary
-                        section = 'settings'
+                        new_section = 'settings'
                         # option = 'use_scipy_ode'
                         if parser_value == 'ode_int':
-                            parser_value = 'True'
+                            new_parser_value = 'True'
                         elif parser_value == 'manual':
-                            parser_value = 'False'
+                            new_parser_value = 'False'
                         else:
                             raise RuntimeError(
-                                'Unknown option: {} = {}'
-                                .format(old_option, parser_value)
+                                'Unknown value: {} = {}'
+                                .format(option, parser_value)
                             )
+                    else:
+                        new_section = section
+                        new_parser_value = None
 
-                    logger.warning('Use \'{}\' instead.'.format(option))
-                    self.parser.remove_option(section, old_option)
-                    self.parser.set(section, option, parser_value)
+                    logger.warning('Use \'{}\' instead.'.format(new_option))
+                    self.parser.remove_option(section, option)
+                    self.parser.set(new_section, new_option, new_parser_value)
+                    continue
 
                 if (parser_value == 'None'):
                     value = eval(parser_value)
@@ -246,9 +196,14 @@ class LoomConfig:
                 self.parser.set(section, option, 'None')
                 self[option] = None
 
-#            # default integration is ode_int
-#            if self.data['integration_method'] is None:
-#                self.data['integration_method'] = 'ode_int'
+        # Default settings.
+        for option, default in self.options['settings'].iteritems():
+            try:
+                if self[option] is not None:
+                    continue
+            except KeyError:
+                pass
+            self[option] = default
 
     def save(self, file_path=None, logger_name=None,):
         logger = logging.getLogger(logger_name)

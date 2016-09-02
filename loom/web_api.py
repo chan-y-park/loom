@@ -204,7 +204,7 @@ class LoomDB(object):
         additional_iterations=0, additional_phases=None,
     ):
         logging_level = self.logging_level
-        if task == 'generate' or task == 'extend':
+        if task == 'generate' or task == 'extend' or task == 'trivialize':
             # Prepare a cache directory for new data.
             cache_dir = get_cache_dir(process_uuid)
             if os.path.exists(cache_dir) is False:
@@ -240,6 +240,8 @@ class LoomDB(object):
             logger.info('Loading spectral networks to rotate back...')
         elif task == 'plot_two_way_streets':
             logger.info('Loading spectral networks to find two-way streets...')
+        elif task == 'trivialize':
+            logger.info('Trivialize spectral networks...')
 
         if (
             task == 'load' or
@@ -281,7 +283,7 @@ class LoomDB(object):
                 ),
             )
 
-        elif task == 'extend':
+        elif task == 'extend'  or task == 'trivialize':
             if spectral_network_data is None:
                 spectral_network_data = SpectralNetworkData(
                     data_dir=full_data_dir,
@@ -291,19 +293,30 @@ class LoomDB(object):
                 spectral_network_data.logger_name = logger_name
                 for sn in spectral_network_data.spectral_networks:
                     sn.logger_name = logger_name
-            loom_process = multiprocessing.Process(
-                target=spectral_network_data.extend,
-                kwargs=dict(
-                    additional_n_steps=additional_n_steps,
-                    new_mass_limit=new_mass_limit,
-                    additional_iterations=additional_iterations,
-                    additional_phases=additional_phases,
-                    n_processes=n_processes,
-                    result_queue=result_queue,
-                    logging_queue=logging_queue,
-                    cache_dir=cache_dir,
+            if task == 'extend':
+                loom_process = multiprocessing.Process(
+                    target=spectral_network_data.extend,
+                    kwargs=dict(
+                        additional_n_steps=additional_n_steps,
+                        new_mass_limit=new_mass_limit,
+                        additional_iterations=additional_iterations,
+                        additional_phases=additional_phases,
+                        n_processes=n_processes,
+                        result_queue=result_queue,
+                        logging_queue=logging_queue,
+                        cache_dir=cache_dir,
+                    )
                 )
-            )
+            elif task == 'trivialize':
+                loom_process = multiprocessing.Process(
+                    target=spectral_network_data.trivialize,
+                    kwargs=dict(
+                        n_processes=n_processes,
+                        result_queue=result_queue,
+                        logging_queue=logging_queue,
+                        cache_dir=cache_dir,
+                    )
+                )
 
         self.loom_processes[process_uuid] = loom_process
         loom_process.start()

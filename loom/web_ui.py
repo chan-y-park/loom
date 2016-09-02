@@ -53,6 +53,7 @@ config_options = [
     ['num_of_iterations'],
     ['mass_limit'],
     ['phase'],
+    ['trivialize'],
 ]
 
 advanced_config_options = [
@@ -272,7 +273,7 @@ def progress():
                             **kwargs
                         )
                     )
-                elif task == 'extend':
+                elif task == 'extend' or task == 'trivialize':
                     spectral_network_data = result_queue.get()
         elif data_name is None:
             raise RuntimeError(
@@ -308,6 +309,7 @@ def progress():
             task == 'load'
             or task == 'rotate_back'
             or task == 'plot_two_way_streets'
+            or taks == 'trivialize':
         ):
             pass
         else:

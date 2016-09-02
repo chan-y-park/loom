@@ -77,6 +77,27 @@
 {% if download == 'False' %}
 <div class="container">
     <div class="col-xs-8" style="border:1px solid Gray; border-radius: 10px;">
+        <h4>Trivialize spectral networks</h4>
+        <form class="form-horizontal" action="{{ url_for('progress')}}"
+         method="post">
+            <div class="form-group">
+                <div class="col-xs-1">
+                    <input type="submit" class="btn btn-default"
+                     id="extend_button" value="Trivialize">
+                </div>
+            </div>
+            <input type="hidden" name="process_uuid" 
+             value="{{ process_uuid }}">
+            <input type="hidden" name="data_name" value="{{ data_name }}">
+            <input type="hidden" name="saved_data" value="{{ saved_data }}">
+            <input type="hidden" name="n_processes" value="{{ n_processes }}">
+            <input type="hidden" name="task" value="trivialize">
+        </form>
+    </div>
+</div>
+<br/>
+<div class="container">
+    <div class="col-xs-8" style="border:1px solid Gray; border-radius: 10px;">
         <h4>Extend spectral networks</h4>
         <form class="form-horizontal" action="{{ url_for('progress')}}"
          method="post">

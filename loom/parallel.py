@@ -34,29 +34,42 @@ def a_child_process(
     additional_n_steps=0,
     new_mass_limit=None,
     additional_iterations=0,
+    task='grow',
 ):
     logger = logging.getLogger(logger_name)
 
-    logger.info('Start generating spectral network #{}/{}: phase = {}.'
-                .format(job_id, n_jobs, spectral_network.phase))
+    if task == 'grow':
+        msg = 'growing' 
+    elif task == 'trivialize':
+        msg = 'trivializing' 
+
+    logger.info('Start {} spectral network #{}/{}: phase = {}.'
+                .format(msg, job_id, n_jobs, spectral_network.phase))
     try:
-        spectral_network.grow(
-            config, sw_data,
-            additional_iterations=additional_iterations,
-            additional_n_steps=additional_n_steps,
-            new_mass_limit=new_mass_limit,
-            cache_file_path=cache_file_path,
-        )
+        if task == 'grow':
+            spectral_network.grow(
+                config, sw_data,
+                additional_iterations=additional_iterations,
+                additional_n_steps=additional_n_steps,
+                new_mass_limit=new_mass_limit,
+                cache_file_path=cache_file_path,
+            )
+        elif task == 'trivialize':
+            spectral_network.trivialize(
+                config, sw_data,
+                cache_file_path=cache_file_path,
+            )
     except Exception as e:
         error_msg = (
-            'A child process calculating phase = {} caught an exception: {}'
-            .format(spectral_network.phase, e)
+            'A child process {} spectral network @ phase = {} '
+            'caught an exception: {}'
+            .format(msg, spectral_network.phase, e)
         )
         logger.warning(error_msg)
         spectral_network.errors.append = ('Unknown', error_msg)
 
-    logger.info('Finished generating spectral network #{}/{}.'
-                .format(job_id, n_jobs))
+    logger.info('Finished {} spectral network #{}/{}.'
+                .format(msg, job_id, n_jobs))
 
     if cache_file_path is None:
         return spectral_network
@@ -75,6 +88,7 @@ def parallel_get_spectral_network(
     logger_name='loom',
     cache_dir=None,
     data_file_prefix='data',
+    task='grow',
 ):
     logger = logging.getLogger(logger_name)
     phase = config['phase']
@@ -135,7 +149,8 @@ def parallel_get_spectral_network(
                     additional_iterations=additional_iterations,
                     cache_file_path=get_cache_file_path(
                         cache_dir, data_file_prefix, i,
-                    )
+                    ),
+                    task=task,
                 )
             ) for i, sn in enumerate(spectral_networks)
         ]
