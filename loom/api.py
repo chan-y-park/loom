@@ -882,9 +882,13 @@ class LoomLoggingFormatter(logging.Formatter):
 
 def get_sw_data(config, logger_name, json_data=None):
     if config['trivialize'] is True:
-        return SWDataWithTrivialization(config, logger_name, json_data)
+        return SWDataWithTrivialization(
+            config, logger_name,
+            json_data=json_data,
+        )
+
     else:
-        return SWDataBase(config, logger_name, json_data)
+        return SWDataBase(config, logger_name, json_data=json_data,)
 
 
 def set_logging(

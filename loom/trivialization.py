@@ -536,6 +536,8 @@ class SWDataWithTrivialization(SWDataBase):
         if self.branch_cut_rotation is not None:
             self.branch_cut_rotation *= z_rotation
 
+        self.analyze_ffr_ramification_points()
+
     def get_json_data(self):
         json_data = super(SWDataWithTrivialization, self).get_json_data()
 #        json_data['branch_points'] = [

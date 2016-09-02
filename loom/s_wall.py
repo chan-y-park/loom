@@ -957,11 +957,12 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
         rp_type = rp.ramification_type
         sw_diff_coeff = rp.sw_diff_coeff
 
-        logger.debug('Analyze ramification point (z,x)={}'.format([z_0, x_0]))
-        logger.debug('Ramification index = {}'.format(r_i))
-        logger.debug('Ramification type = {}'.format(rp_type))
+        logger.debug('Finding seeds at ramification point (z,x)={}:'
+                     .format([z_0, x_0]))
+        logger.debug('\tramification index = {}'.format(r_i))
+        logger.debug('\tramification type = {}'.format(rp_type))
         logger.debug(
-            'leading coefficient of SW diff: {}\t'
+            '\tleading coefficient of SW diff: {}'
             .format(sw_diff_coeff)
         )
 

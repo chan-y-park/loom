@@ -313,8 +313,13 @@ class RamificationPoint:
         ]
 
     def set_z_rotation(self, z_rotation):
+        z_r = complex(z_rotation)
         if self.z != oo:
-            self.z *= complex(z_rotation)
+            self.z *= z_r
+        # XXX: when rotating z, need to reset sw_diff_coeff.
+        # This is currently done by running 
+        # SWData.analyze_ffr_ramification_points() again
+        # in SWData.set_z_rotation().
 
     def __eq__(self, other):
         return self.label == other.label
@@ -482,7 +487,8 @@ class BranchPoint:
 
     """
     def __init__(
-        self, z=None, json_data=None, ffr_ramification_points=None,
+        self, z=None, json_data=None,
+        sw_data_ffr_ramification_points=None,
         logger_name='loom',
     ):
         self.logger_name = logger_name
@@ -499,7 +505,9 @@ class BranchPoint:
             self.ffr_ramification_points = None
             self.seeds = []
         else:
-            self.set_from_json_data(json_data, ffr_ramification_points,)
+            self.set_from_json_data(
+                json_data, sw_data_ffr_ramification_points,
+            )
 
         self.data_attributes = [
             'z', 'label', 'monodromy', 'groups', 'positive_roots',
@@ -530,7 +538,7 @@ class BranchPoint:
         }
         return json_data
 
-    def set_from_json_data(self, json_data, ffr_ramification_points,):
+    def set_from_json_data(self, json_data, sw_data_ffr_ramification_points,):
         self.z = r2toc(json_data['z'])
         self.label = json_data['label']
         self.monodromy = numpy.array(json_data['monodromy'])
@@ -539,7 +547,7 @@ class BranchPoint:
         self.order = json_data['order']
         self.ffr_ramification_points = []
         for rp_label in json_data['ffr_ramification_points']:
-            for rp in ffr_ramification_points:
+            for rp in sw_data_ffr_ramification_points:
                 if rp_label == rp.label:
                     self.ffr_ramification_points.append(rp)
 
@@ -1150,8 +1158,10 @@ class SWDataBase(object):
 #        self.accuracy = json_data['accuracy']
 
         self.branch_points = [
-            BranchPoint(json_data=data,
-                        ffr_ramification_points=self.ffr_ramification_points,)
+            BranchPoint(
+                json_data=data,
+                sw_data_ffr_ramification_points=self.ffr_ramification_points,
+            )
             for data in json_data['branch_points']
         ]
         self.irregular_singularities = [

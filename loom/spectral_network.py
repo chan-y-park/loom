@@ -866,6 +866,8 @@ class SpectralNetwork:
 #                            )
 #                        )
 
+                    dxs = (get_delta(new_s_wall.x, t_n).tolist()
+                           + get_delta(prev_s_wall.x, t_p).tolist())
                     if config['trivialize'] is True:
                         # TODO: check if the following descendant-roots
                         # finding is necessary, note that we calculate
@@ -879,8 +881,6 @@ class SpectralNetwork:
                             descendant_roots, ip_z, sw_data,
                         )
                     else:
-                        dxs = (get_delta(new_s_wall.x, t_n).tolist()
-                               + get_delta(prev_s_wall.x, t_p).tolist())
                         joint_data_groups = get_joint_data_groups_from_xs(
                             new_s_wall.x[t_n], 
                             prev_s_wall.x[t_p],
