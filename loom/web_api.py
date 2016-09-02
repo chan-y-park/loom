@@ -6,7 +6,6 @@ import time
 import os
 import sys
 import glob
-# import pdb
 
 import flask
 
@@ -32,13 +31,13 @@ PARENT_LOGGER_NAME = 'loom'
 WEB_APP_NAME = 'web_loom'
 STAT_LOGGER_NAME = 'stat_of_' + WEB_APP_NAME
 DEFAULT_NUM_PROCESSES = 4
-#LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
+# LOOM_PROCESS_JOIN_TIMEOUT_SECS = 3
 LOOM_CACHE_DIR = 'cache'
 DB_CLEANUP_CYCLE_SECS = 3600
 RESULT_QUEUE_LIFETIME_SECS = (24 * 3600)
 # Set RESULT_QUEUES_MAXSIZE > 0 to set the maximum number of queues.
 RESULT_QUEUES_MAXSIZE = 0
-#RESULT_QUEUES_MAXSIZE = 10
+# RESULT_QUEUES_MAXSIZE = 10
 
 
 class LoomDBQueue(object):
@@ -283,7 +282,7 @@ class LoomDB(object):
                 ),
             )
 
-        elif task == 'extend'  or task == 'trivialize':
+        elif task == 'extend' or task == 'trivialize':
             if spectral_network_data is None:
                 spectral_network_data = SpectralNetworkData(
                     data_dir=full_data_dir,
@@ -388,7 +387,6 @@ class LoomDB(object):
         logger_name = get_logger_name(process_uuid)
         logger = logging.getLogger(logger_name)
 
-        #result_queue = self.result_queues[process_uuid]
         result_queue = self.get_result_queue(process_uuid, create=False)
         if result_queue is None:
             logger.error(
@@ -437,7 +435,7 @@ class LoomDB(object):
 
     def finish_loom_process(
         self, process_uuid,
-        #join_timeout=LOOM_PROCESS_JOIN_TIMEOUT_SECS
+        # join_timeout=LOOM_PROCESS_JOIN_TIMEOUT_SECS
         join_timeout=0,
     ):
         logger_name = get_logger_name(process_uuid)

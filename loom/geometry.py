@@ -4,19 +4,17 @@ import logging
 import copy
 import json
 import mpmath
-# import pdb
 
 from sympy import oo, I
 from itertools import combinations
 from cmath import phase, pi
+from pprint import pprint
 from matplotlib import cm as mpl_color_map
 
 import sage_subprocess
-#from spectral_curve import get_ffr_curve_string
 from misc import (ctor2, r2toc, PSL2C,
                   delete_duplicates, gather, parse_sym_dict_str,
                   n_remove_duplicate,)
-#from misc import spread_of_branch_points
 
 x, z = sympy.symbols('x z')
 
@@ -32,8 +30,6 @@ ROOT_FINDING_PRECISION = 20
 mpmath.mp.dps = ROOT_FINDING_PRECISION
 
 DEFAULT_LARGE_STEP_SIZE = 0.01
-
-#MIN_SPREAD = 0.1
 
 X_ROOTS_ACCURACY_FACTOR = 1e-4
 
@@ -498,7 +494,6 @@ class BranchPoint:
             self.monodromy = None
 
             self.groups = None
-#            self.positive_roots = None
             self.positive_roots = numpy.array([])
             self.order = None
 
@@ -745,21 +740,7 @@ class SWDataBase(object):
             'g_data', 'regular_punctures', 'irregular_punctures',
             'ffr_ramification_points',
             'branch_points', 'irregular_singularities',
-            #'z_plane_rotation',
-            #'accuracy',
-            #'ffr_curve', 'curve', 'diff',
         ]
-
-#        self.g_data = None
-#        self.regular_punctures = []
-#        self.irregular_punctures = []
-#        self.branch_points = []
-#        self.irregular_singularities = []
-#        self.ffr_ramification_points = None
-##        # This rotation is applied when getting the trivialization.
-##        self.z_plane_rotation = None
-##        self.z_plane_rotation = sympy.sympify('1')
-##        self.branch_cut_rotation = None
 
         # TODO: Remove SWDataBase.curve,
         # and rename SWDataBase.ffr_curve to .curve, if necessary.
@@ -772,18 +753,6 @@ class SWDataBase(object):
             mt_params = sympy.sympify(config['mt_params'])
         else:
             mt_params = None
-
-#        if config['branch_points'] is not None:
-#            branch_points = sympy.sympify(config['branch_points'])
-#            config['ramification_point_finding_method'] = 'from_branch_points'
-#        else:
-#            branch_points = None
-#
-#        if config['ramification_points'] is not None:
-#            ramification_points = sympy.sympify(config['ramification_points'])
-#            config['ramification_point_finding_method'] = 'manual'
-#        else:
-#            ramification_points = None
 
         casimir_differentials = {}
         for k, phi_k in parse_sym_dict_str(config['casimir_differentials']):
@@ -840,7 +809,6 @@ class SWDataBase(object):
                 g_data=self.g_data,
                 diff_params=diff_params,
                 mt_params=mt_params,
-                #z_rotation=self.z_plane_rotation,
                 ffr=True,
             )
             self.diff = SWDiff(
@@ -848,43 +816,8 @@ class SWDataBase(object):
                 g_data=self.g_data,
                 diff_params=diff_params,
                 mt_params=mt_params,
-                #z_rotation=self.z_plane_rotation,
             )
 
-        # TODO: SWCurve in a general representation.
-#        if self.g_data.fundamental_representation_index == 1:
-#            self.curve = self.ffr_curve
-#        else:
-#            logger.warning(
-#                'Seiberg-Witten curve in a general representation '
-#                'is not implemented yet.'
-#            )
-#            self.curve = None
-
-        # TODO: move these messages somewhere inside set_from_config
-        # otherwise the messages about finding ramification points
-        # will show up in the output even before we prin the curve.
-        # Display the Seiberg-Witten curve given by the configuration
-#        logger.info(
-#            'Seiberg-Witten curve in the 1st fundamental '
-#            'representation:\n(note: \lambda = x dz)'
-#            '\n{} = 0\n(numerically\n{}=0\n)'
-#            .format(sympy.latex(self.ffr_curve.sym_eq),
-#                    sympy.latex(self.ffr_curve.num_eq))
-#        )
-#
-#        logger.info(
-#            'Seiberg-Witten differential:\n{} dz\n(numerically\n{} dz\n)'
-#            .format(sympy.latex(self.diff.sym_v),
-#                    sympy.latex(self.diff.num_v))
-#        )
-#
-#        for rp in self.ffr_ramification_points:
-#            logger.info("{}: z = {}, x = {}, i = {}."
-#                        .format(rp.label, rp.z, rp.x, rp.i))
-#
-#        for pct in self.regular_punctures + self.irregular_punctures:
-#            logger.info('{} at z={}'.format(pct.label, pct.z))
         logger.info('Seiberg-Witten data before trivialization:')
         self.print_info()
 
@@ -922,8 +855,6 @@ class SWDataBase(object):
         values using the configuration.
         """
         logger = logging.getLogger(self.logger_name)
-
-#        min_abs_distance = None
 
         method = config['ramification_point_finding_method']
         logger.info('Ramification point finding method: {}'.format(method))
@@ -998,15 +929,16 @@ class SWDataBase(object):
 
         self.ffr_ramification_points = []
         for z_i, (x_j, m_x) in sols:
-            rp = RamificationPoint(
-                z=PSL2C(mt_params, z_i, numerical=True),
-                Ciz=z_i,
-                x=x_j,
-                i=m_x,
-                label=('ramification point #{}'
-                       .format(len(self.ffr_ramification_points)))
+            self.ffr_ramification_points.append(
+                RamificationPoint(
+                    z=PSL2C(mt_params, z_i, numerical=True),
+                    Ciz=z_i,
+                    x=x_j,
+                    i=m_x,
+                    label=('ramification point #{}'
+                           .format(len(self.ffr_ramification_points)))
+                )
             )
-            self.ffr_ramification_points.append(rp)
 
         self.analyze_ffr_ramification_points()
 
@@ -1045,12 +977,11 @@ class SWDataBase(object):
  
         # Automatically configure various sizes
         # if not configured manually.
-#        if min_abs_distance is None:
-#            min_abs_distance = DEFAULT_LARGE_STEP_SIZE
 
         zs = bpzs + ipzs + [p.z for p in self.regular_punctures if p.z != oo] 
         min_abs_distance = min(
             [abs(x - y) for i, x in enumerate(zs) for y in zs[i + 1:]]
+            + [DEFAULT_LARGE_STEP_SIZE]
         )
 
         if config['size_of_small_step'] is None:
@@ -1074,25 +1005,6 @@ class SWDataBase(object):
         logger.info('size_of_puncture_cutoff = {}'
                     .format(config['size_of_puncture_cutoff']))
 
-#    def set_z_rotation(self, z_rotation):
-#        for p in (
-#            self.regular_punctures + self.irregular_punctures
-#            + self.ffr_ramification_points
-#            + self.branch_points + self.irregular_singularities
-#        ):
-#            p.set_z_rotation(z_rotation)
-#
-#        if self.ffr_curve is not None:
-#            self.ffr_curve.set_z_rotation(1/z_rotation)
-#
-#        if self.curve is not None:
-#            self.curve.set_z_rotation(1/z_rotation)
-#
-#        if self.diff is not None:
-#            self.diff.set_z_rotation(1/z_rotation)
-#
-#        self.z_plane_rotation /= z_rotation
-
     def save(self, file_path):
         with open(file_path, 'wb') as fp:
             json_data = self.get_json_data()
@@ -1108,7 +1020,6 @@ class SWDataBase(object):
             'ffr_ramification_points': [
                 rp.get_json_data() for rp in self.ffr_ramification_points
             ],
-            #'z_plane_rotation': str(self.z_plane_rotation),
             'accuracy': self.accuracy,
         }
         json_data['branch_points'] = [
@@ -1154,8 +1065,6 @@ class SWDataBase(object):
             RamificationPoint(json_data=data)
             for data in json_data['ffr_ramification_points']
         ]
-        #self.z_plane_rotation = sympy.sympify(json_data['z_plane_rotation'])
-#        self.accuracy = json_data['accuracy']
 
         self.branch_points = [
             BranchPoint(

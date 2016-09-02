@@ -61,7 +61,7 @@ def get_spectral_network_bokeh_plot(
 
     # Prepare a bokeh Figure.
     bokeh_figure = figure(
-        tools = 'reset,box_zoom,pan,wheel_zoom,save,tap',
+        tools='reset,box_zoom,pan,wheel_zoom,save,tap',
         plot_width=plot_width,
         plot_height=plot_height,
         title=None,
@@ -527,9 +527,8 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
             data_dict['label'].append(str(s_wall.label))
             data_dict['root'].append([])
             # (R, G, B, A)
-            #data_dict['color'].append((0, 0, 255, 1,))
+            # data_dict['color'].append((0, 0, 255, 1,))
             data_dict['color'].append('#0000FF')
             data_dict['alpha'].append(alpha)
             
-
     return data_dict

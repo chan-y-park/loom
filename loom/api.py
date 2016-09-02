@@ -8,8 +8,6 @@ import logging
 import subprocess
 import matplotlib
 import mpldatacursor
-# import traceback
-# import pdb 
 
 from logging.handlers import RotatingFileHandler
 from matplotlib import pyplot
@@ -27,6 +25,7 @@ from plot_ui import SpectralNetworkPlotUI, SpectralNetworkPlotTk
 from misc import get_phases_from_dict
 from misc import get_phase_dict
 from misc import parse_sym_dict_str
+
 
 # TODO: when parameter_sequence is not None, this class
 # contains a list of sw_data in self.sw_data, which conflicts
@@ -127,7 +126,7 @@ class SpectralNetworkData:
             sw_data = []
             for i in range(n_steps):
                 sw_data_file_path = os.path.join(
-                    data_dir, 'sw_data_'+str(i)+'.json'
+                    data_dir, 'sw_data_' + str(i) + '.json'
                 )
                 with open(sw_data_file_path, 'r') as fp:
                     json_data = json.load(fp)
@@ -236,7 +235,6 @@ class SpectralNetworkData:
                 )
                 logger.info('Saving data to {}.'.format(data_file_path))
                 spectral_network.save(data_file_path)
-
 
         if make_zipped_file is True:
             # Make a compressed data file.
@@ -660,7 +658,6 @@ class SpectralNetworkData:
         self.sw_data = SWDataWithTrivialization(
             self.config,
             logger_name=self.logger_name,
-            #sw_data_base_json_data=self.sw_data.get_json_data(),
             sw_data_base=self.sw_data,
         )
         if cache_dir is not None:
@@ -702,13 +699,10 @@ class SpectralNetworkData:
         if cache_dir is not None:
             version_file_path = os.path.join(cache_dir, 'version')
             save_version(version_file_path)
-            #sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
-            #self.sw_data.save(sw_data_file_path)
             # NOTE: The following should be placed
             # at the last stage of spectral network generation.
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
-
 
     def plot(
         self,
@@ -803,7 +797,7 @@ class SpectralNetworkData:
 
         try:
             bc_r = self.sw_data.branch_cut_rotation
-            self.set_z_rotation(1/bc_r)
+            self.set_z_rotation(1 / bc_r)
         except AttributeError:
             pass
 
@@ -978,60 +972,13 @@ def make_spectral_network_plot(
 ):
     logger = logging.getLogger(logger_name)
     if type(spectral_network_data.sw_data) != list:
-        pass
-#        sw_data = spectral_network_data.sw_data
-#        spectral_networks = spectral_network_data.spectral_networks
-#        spectral_network_plot_title = 'Spectral Network'
-#
-#        if matplotlib.rcParams['backend'] == 'TkAgg':
-#            spectral_network_plot = SpectralNetworkPlotTk(
-#                master=master,
-#                title=spectral_network_plot_title,
-#                plot_range=plot_range,
-#            )
-#        else:
-#            spectral_network_plot = SpectralNetworkPlotUI(
-#                title=spectral_network_plot_title,
-#                plot_range=plot_range,
-#            )
-##        spectral_network_plot = NetworkPlot(
-##            title=spectral_network_plot_title,
-##            plot_range=plot_range,
-##        )
-#
-#        # Rotate the z-plane into the location defined by the curve.
-#        spectral_network_data.reset_z_rotation()
-#
-#        for spectral_network in spectral_networks:
-#            logger.info('Generating the plot of a spectral network '
-#                        '@ theta = {}...'.format(spectral_network.phase))
-#            # TODO: When using plot_ui.py, remove the following
-#            # and uncomment the next following lines.
-#            plot_legend = spectral_network_plot.draw(
-#                spectral_network,
-#                sw_data.branch_points,
-#                punctures=(sw_data.regular_punctures +
-#                           sw_data.irregular_punctures),
-#                irregular_singularities=sw_data.irregular_singularities,
-#                g_data=sw_data.g_data,
-#                branch_cut_rotation=sw_data.branch_cut_rotation,
-#                logger_name=logger_name,
-#                **kwargs
-#            )
-#            # XXX: Use the following with plot_ui.py
-#    #        spectral_network_plot.draw(
-#    #            sw_data=sw_data,
-#    #            spectral_network=spectral_network,
-#    #            logger_name=logger_name,
-#    #            **kwargs
-#    #        )
-#    #        plot_legend = spectral_network_plot.get_legend()
-#            logger.info(plot_legend)
-#
-#        if show_plot is True:
-#            spectral_network_plot.show()
-#        
-#        return spectral_network_plot
+        return spectral_network_data.plot(
+            master=master,
+            show_plot=show_plot,
+            plot_range=plot_range,
+            logger_name=logger_name,
+            **kwargs
+        )
 
     # XXX
     else:
@@ -1197,5 +1144,3 @@ def generate_spectral_network(
     )
 
     return spectral_network_data
-
-

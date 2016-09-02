@@ -1,16 +1,14 @@
 import numpy
 import logging
-# import pdb
-
 import matplotlib
 
 from math import pi
-
 from sympy import oo
 from matplotlib.backends.backend_agg import FigureCanvas
 
 from misc import put_on_cylinder
-#from misc import get_splits_with_overlap
+from misc import get_splits_with_overlap 
+
 
 class NetworkPlot(object):
     def __init__(self, matplotlib_figure=None, plot_range=None,):
@@ -22,7 +20,6 @@ class NetworkPlot(object):
     def draw(
         self,
         axes=None,
-        #phase=None,
         branch_points=None,
         joints=None,
         punctures=None,
@@ -83,7 +80,7 @@ class NetworkPlot(object):
             axes.plot(
                 bpx, bpy, 'x',
                 color='k',
-                #markeredgewidth=2, markersize=8,
+                # markeredgewidth=2, markersize=8,
                 label=labels['branch_points'][i],
             )
 
@@ -92,7 +89,7 @@ class NetworkPlot(object):
             isx, isy = irr_sing
             axes.plot(
                 isx, isy, 'o',
-                #markeredgewidth=2, markersize=8,
+                # markeredgewidth=2, markersize=8,
                 color='k', markerfacecolor='none',
                 label=labels['irregular_singularities'][i],
             )
@@ -123,7 +120,7 @@ class NetworkPlot(object):
                 jpx, jpy = jp
                 axes.plot(
                     jpx, jpy, '+',
-                    #markeredgewidth=2, markersize=8,
+                    # markeredgewidth=2, markersize=8,
                     color='k', label=labels['joints'][i],
                 )
 
@@ -132,7 +129,7 @@ class NetworkPlot(object):
             px, py = p
             axes.plot(
                 px, py, 'o',
-                #markeredgewidth=2, markersize=8,
+                # markeredgewidth=2, markersize=8,
                 color='k', markerfacecolor='none',
                 label=labels['punctures'][i],
             )
@@ -244,7 +241,6 @@ class SpectralNetworkPlot(NetworkPlot):
             else:
                 walls.append(s_wall.z)
                 wall_segments.append(
-#                    get_splits_with_overlap(s_wall.get_splits())
                     s_wall.get_segments()
                 )
                 if trivialized is True:
@@ -273,13 +269,12 @@ class SpectralNetworkPlot(NetworkPlot):
                 wall_colors.append(colors)
         else:
             for s_wall in s_walls:
-                #wall_colors.append(['#000000'])
+                # wall_colors.append(['#000000'])
                 # (R, G, B, A)
                 wall_colors.append([(0, 0, 1, 1.0 / s_wall.get_generation(),)])
 
         super(SpectralNetworkPlot, self).draw(
             axes=axes,
-            #phase=spectral_network.phase,
             branch_points=branch_points_z,
             joints=joints_z,
             punctures=punctures_z,
@@ -302,7 +297,7 @@ class SpectralNetworkPlot(NetworkPlot):
             '\n'
             '------------------------\n'
             'phase : {}\n'.format(spectral_network.phase) +
-            '------------------------\n'\
+            '------------------------\n'
         )
         plot_legend += get_sw_data_legend(sw_data)
         return plot_legend
@@ -326,13 +321,13 @@ class SolitonTreePlot(SpectralNetworkPlot):
         title=None,
         **kwargs
     ):
-        #rect = [.1, 0.15, .8, .8]
-        #rect = [0, 0, 1, 1]
+        # rect = [.1, 0.15, .8, .8]
+        # rect = [0, 0, 1, 1]
 
-        #axes = self.figure.add_axes(
-        #    rect,
-        #    aspect='equal',
-        #)
+        # axes = self.figure.add_axes(
+        #     rect,
+        #     aspect='equal',
+        # )
         axes = self.figure.add_subplot(1, 1, 1, aspect='equal')
         axes.set_title(title)
 

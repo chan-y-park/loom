@@ -141,7 +141,7 @@ def parallel_get_spectral_network(
                     config=config,
                     sw_data=sw_data,
                     spectral_network=sn,
-                    job_id=i+1,
+                    job_id=(i + 1),
                     n_jobs=n_jobs,
                     logger_name=logger_name,
                     additional_n_steps=additional_n_steps,

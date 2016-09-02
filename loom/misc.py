@@ -464,6 +464,7 @@ def get_phases_from_range(phase_range):
     ]
     return phases
 
+
 def get_phases_from_dict(phase_dict, accuracy):
     """
     get a list of phases from a Python dict of form

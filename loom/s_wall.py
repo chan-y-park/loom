@@ -1,7 +1,6 @@
 import logging
 import numpy
 import sympy
-# import pdb
 
 from cmath import exp, pi
 from math import floor
@@ -11,7 +10,6 @@ from sympy import oo
 from geometry import (
     find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
 )
-#from trivialization import BranchPoint
 from geometry import BranchPoint
 
 from misc import (
@@ -316,7 +314,6 @@ class SWall(object):
         # it is a numpy array containing
         # array([z[t], x[t][0], x[t][1], M[t]])
         y_i = self[0]
-
 
         if use_scipy_ode is True:
             ode = func
@@ -1349,27 +1346,6 @@ def left_right(l, point):
             return 'right'
         else:
             return 'left'
-
-
-# def e_6_compatible(i, j):
-#     """
-#     Given two integers i,j =0, ..., 12
-#     determine whether the corresponding phases
-#     in the E_6 seeds can be paired together.
-#     This accounts for which sheets actually differ
-#     by a root, or not. The following prescription
-#     is derived from the Coxeter projection diagram
-#     of E_6, and looking for roots that connect
-#     a given weight with other weights.
-#     """
-#     dist = abs(i - j) % 12
-#     if (
-#         (0 <= i <= 12) and (0 <= i <= 12) and (dist <= 3 or dist >= 9) or
-#         (i == 12 or j == 12)
-#     ):
-#         return True
-#     else:
-#         return False
 
 
 # TODO: Merge the following two functions?

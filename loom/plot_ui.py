@@ -1,6 +1,5 @@
 import os
 import Tkinter as tk
-# import pdb
 import matplotlib
 
 from matplotlib.backends.backend_tkagg import (
@@ -13,6 +12,7 @@ from matplotlib import pyplot
 import mpldatacursor
 
 from plot_api import SpectralNetworkPlot
+
 
 class SpectralNetworkPlotUIBase(SpectralNetworkPlot):
     def __init__(self, matplotlib_figure=None, plot_range=None,):
@@ -169,7 +169,7 @@ class SpectralNetworkPlotUI(SpectralNetworkPlotUIBase):
             self.button_next.on_clicked(self.show_next_plot)
 
         if not('inline' in matplotlib.rcParams['backend']):
-           self.figure.show()
+            self.figure.show()
 
 
 class SpectralNetworkPlotTk(SpectralNetworkPlotUIBase):

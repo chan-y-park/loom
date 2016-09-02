@@ -7,7 +7,6 @@ import uuid
 import zipfile
 import glob
 import shutil
-# import pdb
 
 from io import BytesIO
 from cmath import pi
@@ -615,6 +614,7 @@ def download_plot(two_way_streets=False):
         as_attachment=True,
     )
 
+
 def download_two_way_streets():
     return download_plot(two_way_streets=True)
 
@@ -730,7 +730,7 @@ def render_plot_template(
         )
 
     # Make a Bokeh plot
-    plot_range=loom_config['plot_range']
+    plot_range = loom_config['plot_range']
     if plot_range is None:
         x_min = inf
         x_max = -inf
