@@ -273,7 +273,9 @@ class SpectralNetworkPlot(NetworkPlot):
                 wall_colors.append(colors)
         else:
             for _ in wall_segments:
-                wall_colors.append(['#000000'])
+                #wall_colors.append(['#000000'])
+                # (R, G, B, A)
+                wall_colors.append([(0, 0, 1, 1,)])
 
         super(SpectralNetworkPlot, self).draw(
             axes=axes,

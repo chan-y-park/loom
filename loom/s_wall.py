@@ -814,6 +814,27 @@ class SWall(object):
             new_cuts_intersections.append([br_loc, t_new, chi])
         self.cuts_intersections = new_cuts_intersections
 
+    def get_generation(self, generation=None):
+        """
+        Return the generation of this S-wall,
+        starting with 1 when this is a primary S-wall.
+        """
+        generations = []
+        if generation is None:
+            generation = 0
+
+        if len(self.parents) == 0:
+            raise RuntimeError
+
+        generation += 1
+        for parent in self.parents:
+            if isinstance(parent, BranchPoint):
+                generations.append(generation)
+            else:
+                generations.append(parent.get_generation(generation))
+
+        return max(generations)
+
 
 def get_s_wall_root(z, ffr_xs, sw_data):
     x_i, x_j = ffr_xs

@@ -1,21 +1,15 @@
 import logging
 import numpy
 import bokeh
-# import pdb
 
 from cmath import phase, pi
 from copy import deepcopy
 from sympy import oo
 from bokeh.io import vform
 from bokeh.models import CustomJS, ColumnDataSource, Slider
-#from bokeh.models import (HoverTool, BoxZoomTool, PanTool, WheelZoomTool,
-#                          ResetTool, PreviewSaveTool, TapTool,)
 from bokeh.models import HoverTool
 from bokeh.models.widgets import Button
-# from bokeh.models.widgets import Toggle
 from bokeh.plotting import figure
-
-#from misc import get_splits_with_overlap
 
 
 def get_spectral_network_bokeh_plot(
@@ -31,8 +25,6 @@ def get_spectral_network_bokeh_plot(
     without_errors=False,
     download=False,
 ):
-    # logger = logging.getLogger(logger_name)
-
     # Determine if the data set corresponds to a multi-parameter 
     # configuration
     if type(spectral_network_data.sw_data) is list:
@@ -56,25 +48,6 @@ def get_spectral_network_bokeh_plot(
 
     sw_data = spectral_network_data.sw_data
 
-#    x_min = min([min([min([z.real for z in s_wall.z])
-#                      for s_wall in sn.s_walls])
-#                 for sn in spectral_networks])
-#    x_max = max([max([max([z.real for z in s_wall.z])
-#                      for s_wall in sn.s_walls])
-#                 for sn in spectral_networks])
-#    y_min = min([min([min([z.imag for z in s_wall.z])
-#                      for s_wall in sn.s_walls])
-#                 for sn in spectral_networks])
-#    y_max = max([max([max([z.imag for z in s_wall.z])
-#                      for s_wall in sn.s_walls])
-#                 for sn in spectral_networks])
-#    if plot_range is None:
-#        # Need to maintain the aspect ratio.
-#        range_min = min(x_min, y_min)
-#        range_max = max(x_max, y_max)
-#        plot_x_range = plot_y_range = (range_min, range_max)
-#    else:
-#        plot_x_range, plot_y_range = plot_range
     plot_x_range, plot_y_range = plot_range
     y_min, y_max = plot_y_range
 
@@ -88,8 +61,6 @@ def get_spectral_network_bokeh_plot(
 
     # Prepare a bokeh Figure.
     bokeh_figure = figure(
-        #tools=[ResetTool(), BoxZoomTool(), PanTool(), WheelZoomTool(),
-        #       PreviewSaveTool(), TapTool(), hover],
         tools = 'reset,box_zoom,pan,wheel_zoom,save,tap',
         plot_width=plot_width,
         plot_height=plot_height,
@@ -142,25 +113,35 @@ def get_spectral_network_bokeh_plot(
             bpds.data['x'].append(bp.z.real)
             bpds.data['y'].append(bp.z.imag)
             bpds.data['label'].append(str(bp.label))
-            root_label = ''
-            for root in bp.positive_roots:
-                root_label += str(root.tolist()) + ', '
-            bpds.data['root'].append(root_label[:-2])
-
-        bcds = ColumnDataSource({'xs': [], 'ys': []})
-        for bl in sw_data.branch_points + sw_data.irregular_singularities:
-            y_r = (2j * y_max) * complex(sw_data.branch_cut_rotation)
-            bcds.data['xs'].append([bl.z.real, bl.z.real + y_r.real])
-            bcds.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
-
+            positive_roots = bp.positive_roots
+            if len(positive_roots) > 0:
+                root_label = ''
+                for root in positive_roots:
+                    root_label += str(root.tolist()) + ', '
+                bpds.data['root'].append(root_label[:-2])
+            else:
+                bpds.data['root'].append('')
         bokeh_figure.x(
             'x', 'y', size=10, color="#e6550D", line_width=3, source=bpds,
         )
-        bokeh_figure.multi_line(
-            xs='xs', ys='ys', line_width=2, color='gray', line_dash='dashed',
-            source=bcds,
-        )
 
+        bcds = ColumnDataSource({'xs': [], 'ys': []})
+        try:
+            branch_cut_rotation = sw_data.branch_cut_rotation
+        except AttributeError:
+            branch_cut_rotation = None
+        if branch_cut_rotation is not None:
+            for bl in sw_data.branch_points + sw_data.irregular_singularities:
+                y_r = (2j * y_max) * complex(sw_data.branch_cut_rotation)
+                bcds.data['xs'].append([bl.z.real, bl.z.real + y_r.real])
+                bcds.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
+
+            bokeh_figure.multi_line(
+                xs='xs', ys='ys', line_width=2, color='gray',
+                line_dash='dashed', source=bcds,
+            )
+
+    # XXX: Need to clean up copy-and-pasted codes.
     else:
         bpds = []
         bcds = []
@@ -197,6 +178,7 @@ def get_spectral_network_bokeh_plot(
         'ys': [],
         'ranges': [],
         'color': [],
+        'alpha': [],
         'arrow_x': [],
         'arrow_y': [],
         'arrow_angle': [],
@@ -281,12 +263,15 @@ def get_spectral_network_bokeh_plot(
     bokeh_figure.scatter(x='x', y='y', alpha=0.5, source=dpds,)
 
     bokeh_figure.multi_line(
-        xs='xs', ys='ys', color='color', line_width=1.5, source=cds,
+        xs='xs', ys='ys',
+        color='color', alpha='alpha', line_width=1.5,
+        source=cds,
     )
 
     bokeh_figure.triangle(
-        x='arrow_x', y='arrow_y', color='color', angle='arrow_angle',
-        size=8, source=cds,
+        x='arrow_x', y='arrow_y', angle='arrow_angle',
+        color='color', alpha='alpha', size=8,
+        source=cds,
     )
 
     bokeh_obj = {}
@@ -472,6 +457,7 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
     data_dict['ys'] = []
     data_dict['ranges'] = []
     data_dict['color'] = []
+    data_dict['alpha'] = []
     data_dict['arrow_x'] = []
     data_dict['arrow_y'] = []
     data_dict['arrow_angle'] = []
@@ -484,7 +470,7 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
         g_data = sw_data.g_data
 
     for s_wall in s_walls:
-#        z_segs = get_splits_with_overlap(s_wall.get_splits())
+        alpha = 1.0 / s_wall.get_generation() 
         z_segs = s_wall.get_segments()
         for start, stop in z_segs:
             z_r = s_wall.z[start:stop].real
@@ -522,7 +508,8 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
                         .format(s_wall.label, sn_phase)
                     )
                 data_dict['color'].append(color)
-        else:
+                data_dict['alpha'].append(alpha)
+        elif len(s_wall.local_roots) > 0:
             for root in s_wall.local_roots:
                 data_dict['label'].append(str(s_wall.label))
                 data_dict['root'].append(str(root.tolist()))
@@ -535,5 +522,14 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
                         .format(s_wall.label, sn_phase)
                     )
                 data_dict['color'].append(color)
+                data_dict['alpha'].append(alpha)
+        else:
+            data_dict['label'].append(str(s_wall.label))
+            data_dict['root'].append([])
+            # (R, G, B, A)
+            #data_dict['color'].append((0, 0, 255, 1,))
+            data_dict['color'].append('#0000FF')
+            data_dict['alpha'].append(alpha)
+            
 
     return data_dict
