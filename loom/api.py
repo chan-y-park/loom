@@ -260,6 +260,7 @@ class SpectralNetworkData:
         result_queue=None, logging_queue=None, cache_dir=None,
     ):
         logger = logging.getLogger(self.logger_name)
+
         if cache_dir is not None and os.path.exists(cache_dir) is False:
             os.makedirs(cache_dir)
 
@@ -331,9 +332,6 @@ class SpectralNetworkData:
                     spectral_network.grow(
                         config=self.config, sw_data=self.sw_data,
                         cache_file_path=cache_file_path,
-#                        integration_method=(
-#                            self.config['integration_method']
-#                        ),
                     )
 
                     spectral_networks = [spectral_network]
@@ -372,31 +370,6 @@ class SpectralNetworkData:
                 self.spectral_networks.sort(key=lambda sn: sn.phase)
             else:
                 self.spectral_networks = spectral_networks
-#                end_time = time.time()
-#                logger.info(
-#                    'Finished @ {}'.format(get_date_time_str(end_time))
-#                )
-#                logger.info('elapsed cpu time: %.3f', end_time - start_time)
-
-#            if logging_queue is not None:
-#                # Put a mark that generating spectral networks is done.
-#                try:
-#                    logging_queue.put_nowait(None)
-#                except:
-#                    logger.warn(
-#                        'Failed in putting a finish mark in the logging queue.'
-#                    )
-#
-#            if result_queue is not None:
-#                result_queue.put(self)
-#
-#            if cache_dir is not None and extend is False:
-#                version_file_path = os.path.join(cache_dir, 'version')
-#                save_version(version_file_path)
-#                # NOTE: The following should be placed
-#                # at the last stage of spectral network generation.
-#                config_file_path = os.path.join(cache_dir, 'config.ini')
-#                self.config.save(config_file_path)
 
         else:
             # phase = 1.570795
@@ -499,9 +472,6 @@ class SpectralNetworkData:
                 spectral_network.grow(
                     config=self.config, sw_data=self.sw_data,
                     cache_file_path=cache_file_path,
-#                    integration_method=(
-#                            self.config['integration_method']
-#                        ),
                 )
 
                 spectral_networks.append(spectral_network)
@@ -549,6 +519,9 @@ class SpectralNetworkData:
         if cache_dir is not None and os.path.exists(cache_dir) is not True:
             os.makedirs(cache_dir)
 
+        start_time = time.time()
+        logger.info('Started @ {}'.format(get_date_time_str(start_time)))
+
         if additional_n_steps > 0:
             # Extend existing S-walls.
             self.config['num_of_steps'] += additional_n_steps
@@ -559,9 +532,6 @@ class SpectralNetworkData:
 
         if new_mass_limit is not None:
             self.config['mass_limit'] = new_mass_limit
-
-        start_time = time.time()
-        logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
         # First rotate back the z-plane to the location
         # where spectral networks are generated.
@@ -582,9 +552,6 @@ class SpectralNetworkData:
                         additional_iterations=additional_iterations,
                         additional_n_steps=additional_n_steps,
                         new_mass_limit=new_mass_limit,
-#                        integration_method=(
-#                            self.config['integration_method']
-#                        ),
                     )
                     if cache_dir is not None:
                         sn_data_file_path = os.path.join(
@@ -683,10 +650,11 @@ class SpectralNetworkData:
         result_queue=None, logging_queue=None, cache_dir=None,
     ):
         logger = logging.getLogger(self.logger_name)
-        logger.info('Trivializing spectral network data...')
 
         if cache_dir is not None and os.path.exists(cache_dir) is False:
             os.makedirs(cache_dir)
+
+        logger.info('Trivializing spectral network data...')
 
         # Get the trivialized SW data.
         self.sw_data = SWDataWithTrivialization(
@@ -718,6 +686,29 @@ class SpectralNetworkData:
             )
 
         self.config['trivialize'] = True
+
+        if logging_queue is not None:
+            # Put a mark that generating spectral networks is done.
+            try:
+                logging_queue.put_nowait(None)
+            except:
+                logger.warn(
+                    'Failed in putting a finish mark in the logging queue.'
+                )
+
+        if result_queue is not None:
+            result_queue.put(self)
+
+        if cache_dir is not None:
+            version_file_path = os.path.join(cache_dir, 'version')
+            save_version(version_file_path)
+            #sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
+            #self.sw_data.save(sw_data_file_path)
+            # NOTE: The following should be placed
+            # at the last stage of spectral network generation.
+            config_file_path = os.path.join(cache_dir, 'config.ini')
+            self.config.save(config_file_path)
+
 
     def plot(
         self,
