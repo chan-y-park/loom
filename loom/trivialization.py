@@ -508,6 +508,11 @@ class SWDataWithTrivialization(SWDataBase):
         self.branch_cut_rotation = 1
 
     def set_z_rotation(self, z_rotation):
+        logger = logging.getLogger(self.logger_name)
+        logger.info(
+            'Update Seiberg-Witten data for the z-plane rotation {}.'
+            .format(z_rotation)
+        )
 #        super(SWDataWithTrivialization, self).set_z_rotation(z_rotation)
 #        for p in (self.branch_points + self.irregular_singularities):
 #            p.set_z_rotation(z_rotation)
@@ -536,6 +541,10 @@ class SWDataWithTrivialization(SWDataBase):
         if self.branch_cut_rotation is not None:
             self.branch_cut_rotation *= z_rotation
 
+        logger.info(
+            'Analyze ramification points again '
+            'to update the local Seiberg-Witten data.'
+        )
         self.analyze_ffr_ramification_points()
 
     def get_json_data(self):
