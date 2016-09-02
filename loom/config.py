@@ -18,39 +18,43 @@ class LoomConfig:
         self.parser = ConfigParser.SafeConfigParser()
 
         # attribute options has the following structure:
-        # options['section']['option'] = (default value) 
+        # options['section']['option'] = (label, default value) 
         self.options = {
             'Seiberg-Witten data': {
-                'description': None,
-                'root_system': None,
-                'representation': None,
-                'casimir_differentials': None,
-                'differential_parameters': None,
-                'parameter_sequence': None,
-                'regular_punctures': None,
-                'irregular_punctures': None,
-                'ramification_points': None,
-                'branch_points': None,
-                'branch_points_sequence': None,
-                'mt_params': None,
-                'ramification_point_finding_method': None,
-#                'integration_method': None,
+                'description': ('Description', None),
+                'root_system': ('Root system', None),
+                'representation': ('Representation', None),
+                'casimir_differentials': ('Casimir differentials', None),
+                'differential_parameters': 
+                    ('Parameters of differentials', None),
+                'parameter_sequence': 
+                    ('A sequence of values for a parameter', None),
+                'regular_punctures': ('Regular punctures', None),
+                'irregular_punctures': ('Irregular punctures', None),
+                'ramification_points': ('Ramification points', None),
+                'branch_points': ('Branch points', None),
+                'branch_points_sequence': ('Branch points sequence', None),
+                'mt_params': ('Mobius transformation', None),
+                'ramification_point_finding_method':
+                    ('Ramification point finding method', None),
+                'integration_method': ('Integration Method', None),
             },
             'numerical parameters': {
-                'accuracy': None,
-                'plot_range': None,
-                'num_of_steps': None,
-                'num_of_iterations': None,
-                'size_of_small_step': None,
-                'size_of_large_step': None,
-                'size_of_bp_neighborhood': None,
-                'size_of_puncture_cutoff': None,
-                'mass_limit': None,
-                'phase': None,
+                'accuracy': ('Accuracy', None),
+                'plot_range': ('Plot range', None),
+                'num_of_steps': ('Number of steps', None),
+                'num_of_iterations': ('Number of iterations', None),
+                'size_of_small_step': ('Size of a small step', None),
+                'size_of_large_step': ('Size of a large step', None),
+                'size_of_bp_neighborhood':
+                    ('Size of a branch point neighborhood', None),
+                'size_of_puncture_cutoff': ('Size of a puncture cutoff', None),
+                'mass_limit': ('Mass limit', None),
+                'phase': ('Phase (single value or range)', None),
             },
             'settings': {
-                'trivialize': True,
-                'use_scipy_ode': True,
+                'trivialize': ('Trivialize spectral networks', True),
+                'use_scipy_ode': ('Use SciPy ODE solver', True),
             },
         }
 
@@ -107,7 +111,8 @@ class LoomConfig:
     def get_label(self, option):
         for section in self.options.keys():
             if option in self.options[section]:
-                return self.options[section][option]
+                label, _ = self.options[section][option]
+                return label
 
         raise ValueError('Unknown option \'{}\'.'.format(option))
 
@@ -197,7 +202,7 @@ class LoomConfig:
                 self[option] = None
 
         # Default settings.
-        for option, default in self.options['settings'].iteritems():
+        for option, (_, default) in self.options['settings'].iteritems():
             try:
                 if self[option] is not None:
                     continue

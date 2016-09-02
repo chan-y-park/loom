@@ -309,7 +309,7 @@ def progress():
             task == 'load'
             or task == 'rotate_back'
             or task == 'plot_two_way_streets'
-            or taks == 'trivialize':
+            or task == 'trivialize'
         ):
             pass
         else:
