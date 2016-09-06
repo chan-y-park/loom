@@ -14,6 +14,7 @@ from sympy import oo
 from s_wall import (
     SWall, Joint, get_s_wall_seeds, MIN_NUM_OF_DATA_PTS,
 )
+from misc import n_nearest
 from misc import (
     n_nearest_indices, get_turning_points, get_splits_with_overlap,
     get_descendant_roots, sort_roots, get_delta,
@@ -1000,6 +1001,8 @@ class SpectralNetwork:
 
         if search_radius is None:
             search_radius = config['size_of_bp_neighborhood']
+        trivialized = config['trivialize']
+        accuracy = config['accuracy']
 
         soliton_trees = []
         # Search for the root of a soliton tree.
@@ -1022,7 +1025,12 @@ class SpectralNetwork:
                     else:
                         continue
 
-                if (abs(s_wall.z[min_t] - bp.z) < search_radius):
+                z_t = s_wall.z[min_t]
+
+                if (abs(z_t - bp.z) > search_radius):
+                    continue
+
+                if trivialized:
                     bp_roots = (
                         bp.positive_roots.tolist() +
                         (-bp.positive_roots).tolist()
@@ -1034,24 +1042,57 @@ class SpectralNetwork:
                     # XXX: If a branch cut goes through the z[min_t]
                     # then the following criterion may not work.
                     # Consider checking ODE x's?
-                    if s_wall_root in bp_roots:
-                        # Found a root of this S-wall tree.
-                        try:
-                            tree = SolitonTree(
-                                root_s_wall=s_wall,
-                                root_s_wall_end_t=min_t,
-                                root_branch_point=bp,
-                                phase=self.phase,
-                            )
-                        except RuntimeError as e:
-                            logger.warning(str(e))
-                            logger.warning(
-                                'Finding two-way streets '
-                                'for a spectral network at phase = {} '
-                                'using {} and {} failed.'
-                                .format(self.phase, s_wall.label, bp.label)
-                            )
-                            continue
+                    if s_wall_root not in bp_roots:
+                        continue
+                else:
+                    found = False
+                    xs_t = s_wall.x[min_t]
+                    for rp in bp.ffr_ramification_points:
+                        rp_type = rp.ramification_type
+                        if not(
+                            rp_type == 'type_I'
+                            # or rp_type == 'type_II'
+                            # or rp_type == 'type_III'
+                            # or rp_type == 'type_AD'
+                        ):
+                            raise NotImplementedError
+                        rp_x = rp.x
+                        #rp_c = rp.sw_diff_coeff
+                        #Dx = abs(rp.sw_diff_coeff * (rp.z - z_t)**(1.0 / rp.i))
+                        dx = max(get_delta(s_wall.x, min_t))
+                        xs = n_nearest(sw_data.ffr_curve.get_xs(z_t), rp_x, 2)
+                        if (
+                            max(abs(xs - xs_t)) < dx
+                            or max(abs(xs - xs_t[::-1])) < dx
+                        ):
+                            if found:
+                                raise RuntimeError(
+                                    'S-wall matched with more than '
+                                    'one ramification point.'
+                                )
+                            else:
+                                found = True
+                        
+                    if not found:
+                        continue
+
+                # Found a root of this S-wall tree.
+                try:
+                    tree = SolitonTree(
+                        root_s_wall=s_wall,
+                        root_s_wall_end_t=min_t,
+                        root_branch_point=bp,
+                        phase=self.phase,
+                    )
+                except RuntimeError as e:
+                    logger.warning(str(e))
+                    logger.warning(
+                        'Finding two-way streets '
+                        'for a spectral network at phase = {} '
+                        'using {} and {} failed.'
+                        .format(self.phase, s_wall.label, bp.label)
+                    )
+                    continue
 
                 if tree is not None:
                     soliton_trees.append(tree)

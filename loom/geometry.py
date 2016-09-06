@@ -979,10 +979,12 @@ class SWDataBase(object):
         # if not configured manually.
 
         zs = bpzs + ipzs + [p.z for p in self.regular_punctures if p.z != oo] 
-        min_abs_distance = min(
-            [abs(x - y) for i, x in enumerate(zs) for y in zs[i + 1:]]
-            + [DEFAULT_LARGE_STEP_SIZE]
-        )
+        if len(zs) > 1:
+            min_abs_distance = min(
+                [abs(x - y) for i, x in enumerate(zs) for y in zs[i + 1:]]
+            )
+        else:
+            min_abs_distance = DEFAULT_LARGE_STEP_SIZE
 
         if config['size_of_small_step'] is None:
             config['size_of_small_step'] = min_abs_distance / 100.0
