@@ -146,6 +146,9 @@ class SWDataWithTrivialization(SWDataBase):
         logger.info('Seiberg-Witten data after trivialization:')
         self.print_info()
 
+    def is_trivialized(self):
+        return True 
+
     def init_z_rotation(self):   
         # Introduce a clockwise rotation of the z-plane,
         # after the PSL2C transformation, by the following phase.

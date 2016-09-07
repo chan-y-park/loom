@@ -162,6 +162,9 @@ class SWall(object):
             'local_roots', 'multiple_local_roots', 'local_weight_pairs',
         ]
 
+    def is_trivialized(self):
+        return (len(self.local_roots) > 0)
+
     def set_z_rotation(self, z_rotation):
         self.z *= complex(z_rotation)
 

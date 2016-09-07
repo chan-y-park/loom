@@ -509,7 +509,8 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
                     )
                 data_dict['color'].append(color)
                 data_dict['alpha'].append(alpha)
-        elif len(s_wall.local_roots) > 0:
+        #elif len(s_wall.local_roots) > 0:
+        elif s_wall.is_trivialized():
             for root in s_wall.local_roots:
                 data_dict['label'].append(str(s_wall.label))
                 data_dict['root'].append(str(root.tolist()))

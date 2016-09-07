@@ -15,6 +15,7 @@ from s_wall import (
     SWall, Joint, get_s_wall_seeds, MIN_NUM_OF_DATA_PTS,
 )
 from misc import n_nearest
+from misc import ctor2, r2toc
 from misc import (
     n_nearest_indices, get_turning_points, get_splits_with_overlap,
     get_descendant_roots, sort_roots, get_delta,
@@ -34,45 +35,91 @@ class Street(SWall):
         end_t=None,
         parents=None,
         phase=None,
-        json_data=None,
+        #json_data=None,
         logger_name='loom',
     ):
         super(Street, self).__init__(logger_name=logger_name)
         self.phase = phase
+        self.s_wall = s_wall
         # Z is the central charge, i.e. integration of the SW diff
         # along the street.
         self.Z = None
 
-        if json_data is not None:
-            self.set_from_json_data(json_data)
-        else:
-            if end_t is None:
-                end_t = numpy.argmin(abs(s_wall.z - end_z))
+        #if json_data is not None:
+        #    self.set_from_json_data(json_data)
+        #else:
 
-            if end_t == 0:
-                raise RuntimeError('Street.__init__(): end_t == 0')
-            # XXX: Because a joint is not back-inserted into S-walls,
-            # neither [:end_t] nor [:end_t+1] is always correct.
-            # However, inserting a joint is an expensive operation.
-            self.z = s_wall.z[:end_t]
-            self.x = s_wall.x[:end_t]
-            self.M = s_wall.M[:end_t]
-            self.parents = parents
-            self.parent_roots = s_wall.parent_roots
-            self.label = s_wall.label
-            self.cuts_intersections = [
-                [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
-                if t < end_t
-            ]
-            n_segs = len(self.cuts_intersections) + 1
-            self.local_roots = s_wall.local_roots[:n_segs]
-            if s_wall.multiple_local_roots is not None:
-                self.multiple_local_roots = (
-                    s_wall.multiple_local_roots[:n_segs]
-                )
-            self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
+        if end_t is None:
+            end_t = numpy.argmin(abs(s_wall.z - end_z))
+
+        if end_t == 0:
+            raise RuntimeError('Street.__init__(): end_t == 0')
+        # XXX: Because a joint is not back-inserted into S-walls,
+        # neither [:end_t] nor [:end_t+1] is always correct.
+        # However, inserting a joint is an expensive operation.
+        self.z = s_wall.z[:end_t]
+        self.x = s_wall.x[:end_t]
+        self.M = s_wall.M[:end_t]
+        self.parents = parents
+        self.s_wall = s_wall
+        self.trivialize(end_t=end_t)
+
+#            self.parent_roots = s_wall.parent_roots
+#            self.label = s_wall.label
+#            self.cuts_intersections = [
+#                [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
+#                if t < end_t
+#            ]
+#            n_segs = len(self.cuts_intersections) + 1
+#            self.local_roots = s_wall.local_roots[:n_segs]
+#            if s_wall.multiple_local_roots is not None:
+#                self.multiple_local_roots = (
+#                    s_wall.multiple_local_roots[:n_segs]
+#                )
+#            self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
         self.Z = self.M[-1] * exp(self.phase * 1j)
+
+    def get_json_data(self):
+        json_data = super(Street, self).get_json_data()
+        json_data['phase'] = self.phase
+        json_data['s_wall'] = self.s_wall.label
+        json_data['Z'] = ctor2(self.Z)
+
+    def set_from_json_data(self, json_data=None, obj_dict=None,):
+        super(Street, self).set_from_json_data(street_data)
+        self.parents = [
+            obj_dict[parent_label]
+            for parent_label in self.parents
+        ]
+        self.cuts_intersections = [
+            [obj_dict[br_loc_label], t, d]
+            for br_loc_label, t, d
+            in self.cuts_intersections
+        ]
+
+        self.phase = json_data['phase']
+        self.s_wall = obj_dict[json_data['s_wall']]
+        self.Z = r2toc(json_data['Z'])
+
+
+    def trivialize(self): 
+        s_wall = self.s_wall
+        end_t = len(self.z)
+
+        self.parent_roots = s_wall.parent_roots
+        self.label = s_wall.label
+        self.cuts_intersections = [
+            [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
+            if t < end_t
+        ]
+        n_segs = len(self.cuts_intersections) + 1
+        self.local_roots = s_wall.local_roots[:n_segs]
+        if s_wall.multiple_local_roots is not None:
+            self.multiple_local_roots = (
+                s_wall.multiple_local_roots[:n_segs]
+            )
+        self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
 
 class SolitonTree:
@@ -88,19 +135,43 @@ class SolitonTree:
         # along the tree.
         self.Z = None
         self.root_branch_point = root_branch_point
-        root_street = Street(
-            s_wall=root_s_wall,
-            end_t=root_s_wall_end_t,
-            parents=root_s_wall.parents,
-            phase=self.phase,
-        )
-        self.streets = [root_street]
-        self.grow(root_street)
+        if root_s_wall is None:
+            self.streets = []
+        else:
+            root_street = Street(
+                s_wall=root_s_wall,
+                end_t=root_s_wall_end_t,
+                parents=root_s_wall.parents,
+                phase=self.phase,
+            )
+            self.streets = [root_street]
+            self.grow(root_street)
 
-        # Set the value of Z from those of its streets.
-        self.Z = 0
-        for street in self.streets:
-            self.Z += street.Z
+            # Set the value of Z from those of its streets.
+            self.Z = 0
+            for street in self.streets:
+                self.Z += street.Z
+
+    def get_json_data(self):
+        json_data['phase'] = self.phase
+        json_data['Z'] = ctor2(self.Z)
+        json_data['root_branch_point'] = self.root_branch_point.label
+        json_data['streets'] = [
+            street.get_json_data() for street in self.streets
+        ]
+
+    def set_from_json_data(self, json_data=None, obj_dict=None,):
+        self.phase = json_data['phase']
+        self.Z = r2toc(json_data['Z'])
+        self.root_branch_point = obj_dict[json_data['root_branch_point']]
+        self.streets = []
+        for street_data in json_data['streets']:
+            a_street = Street()
+            a_street.set_from_json_data(
+                json_data=street_data, obj_dict=obj_dict,
+            )
+            self.streets.append(a_street)
+            
 
     def grow(self, street=None):
         # TODO: use misc.build_family_tree()
@@ -118,6 +189,10 @@ class SolitonTree:
             self.grow(parent_street)
 
         return None
+
+    def trivialize(self):
+        for street in self.streets:
+            street.trivialize()
 
     def draw_graph(self, file_name='soliton_tree.pdf'):
         # XXX: Move the following import to the beginning of this module
@@ -145,19 +220,22 @@ class SpectralNetwork:
         logger_name='loom',
     ):
         self.phase = phase
-        self.n_finished_s_walls = None
         self.s_walls = []
         # TODO: Currently SpectralNetwork.joints are used
         # only when growing a spectral network.
         # Decide whether to save them as data
         # or discard them after generating a spectral network.
         self.joints = []
-        self.logger_name = logger_name
         # errors is a list of (error type string, error value tuples).
         self.errors = []
+        self.n_finished_s_walls = None
+        self.soliton_trees = None
         self.data_attributes = [
-            'phase', 's_walls', 'joints', 'errors'
+            'phase', 's_walls', 'joints', 'errors',
+            'n_finished_s_walls', 'soliton_trees',
         ]
+
+        self.logger_name = logger_name
 
     def set_z_rotation(self, z_rotation):
         for s_wall in self.s_walls:
@@ -187,6 +265,9 @@ class SpectralNetwork:
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
         json_data['errors'] = self.errors
+        json_data['soliton_trees'] = [
+            tree.get_json_data() for tree in self.soliton_trees
+        ]
         return json_data
 
     def set_from_json_data(self, json_data, sw_data):
@@ -234,6 +315,14 @@ class SpectralNetwork:
                 for parent_label in a_joint.parents
             ]
             self.joints.append(a_joint)
+
+        try:
+            self.soliton_trees = []
+            for tree_data in json_data['soliton_trees']:
+                a_tree = SolitonTree(tree_data)
+                self.soliton_trees.append(a_tree)
+        except KeyError:
+            self.soliton_trees = None
 
     def grow(
         self, config=None, sw_data=None,
@@ -483,7 +572,8 @@ class SpectralNetwork:
                     logger.error(error_msg)
                     self.errors.append(('RuntimeError', error_msg))
 
-                if config['trivialize'] is True:
+                #if config['trivialize'] is True:
+                if sw_data.is_trivialized():
                     # Cut the grown S-walls
                     # at the intersetions with branch cuts
                     # and decorate each segment with its root data.
@@ -608,7 +698,8 @@ class SpectralNetwork:
                     psw.x = numpy.concatenate((psw.x, nsw.x[1:]))
                     psw.M = numpy.concatenate((psw.M, nsw.M[1:]))
 
-                    if config['trivialize'] is True:
+                    #if config['trivialize'] is True:
+                    if sw_data.is_trivialized():
                         psw.local_roots += nsw.local_roots[1:]
                         psw.multiple_local_roots += (
                             nsw.multiple_local_roots[1:]
@@ -729,7 +820,8 @@ class SpectralNetwork:
                 p_z_i = p_z_splits[p_z_seg_i]
                 p_z_f = p_z_splits[p_z_seg_i + 1]
 
-                if config['trivialize'] is True:
+                #if config['trivialize'] is True:
+                if sw_data.is_trivialized():
                     descendant_roots = get_descendant_roots(
                         (prev_s_wall.multiple_local_roots[p_z_seg_i] +
                          new_s_wall.multiple_local_roots[n_z_seg_i]),
@@ -816,7 +908,8 @@ class SpectralNetwork:
 
                     dxs = (get_delta(new_s_wall.x, t_n).tolist()
                            + get_delta(prev_s_wall.x, t_p).tolist())
-                    if config['trivialize'] is True:
+                    #if config['trivialize'] is True:
+                    if sw_data.is_trivialized():
                         # TODO: check if the following descendant-roots
                         # finding is necessary, note that we calculate
                         # descendant roots above.
@@ -870,6 +963,8 @@ class SpectralNetwork:
     def trivialize(
         self, config, sw_data,
         cache_file_path=None,
+        z_plane_rotation=None,
+        two_way_streets_only=False,
     ):
         logger = logging.getLogger(self.logger_name)
         accuracy = config['accuracy']
@@ -879,7 +974,8 @@ class SpectralNetwork:
             raise RuntimeError('Need a trivalized Seiberg-Witten data.')
 
         # Rotate the network properly.
-        self.set_z_rotation(1 / sw_data.z_plane_rotation)
+        if z_plane_rotation is not None:
+            self.set_z_rotation(1 / z_plane_rotation)
 
         ppzs = [
             p.z for p in
@@ -898,7 +994,26 @@ class SpectralNetwork:
             sw_data, self.phase, accuracy,
             use_scipy_ode=False,
         )
-        for s_i in self.s_walls:
+
+        if two_way_streets_only:
+            if self.soliton_trees is None:
+                raise RuntimeError
+            s_wall_labels = []
+            for tree in self.soliton_trees:
+                for street in tree.streets:
+                    if street.label not in s_wall_labels:
+                        s_wall_labels.append(street.label)
+            s_walls = [
+                s_wall for s_wall in self.s_walls
+                if s_wall.label in s_wall_labels
+            ]
+        else:
+            s_walls = self.s_walls
+
+        for s_i in s_walls:
+            if s_i.is_trivialized():
+                continue
+
             if len(s_i.parents) == 1:
                 parent = s_i.parents[0]
                 if isinstance(parent, BranchPoint):
@@ -988,6 +1103,10 @@ class SpectralNetwork:
             logger.info('Saving cache data to {}.'.format(cache_file_path))
             self.save(cache_file_path)
 
+        if two_way_streets_only:
+            for tree in self.soliton_trees:
+                tree.trivialize()
+
     def find_two_way_streets(
         self, config=None, sw_data=None,
         search_radius=None,
@@ -1001,7 +1120,7 @@ class SpectralNetwork:
 
         if search_radius is None:
             search_radius = config['size_of_bp_neighborhood']
-        trivialized = config['trivialize']
+        #trivialized = config['trivialize']
         accuracy = config['accuracy']
 
         soliton_trees = []
@@ -1030,7 +1149,8 @@ class SpectralNetwork:
                 if (abs(z_t - bp.z) > search_radius):
                     continue
 
-                if trivialized:
+                #if trivialized:
+                if sw_data.is_trivialized():
                     bp_roots = (
                         bp.positive_roots.tolist() +
                         (-bp.positive_roots).tolist()
@@ -1103,6 +1223,7 @@ class SpectralNetwork:
                 if tree is not None:
                     soliton_trees.append(tree)
 
+        self.soliton_trees = soliton_trees
         return soliton_trees
 
 

@@ -34,6 +34,8 @@ def a_child_process(
     additional_n_steps=0,
     new_mass_limit=None,
     additional_iterations=0,
+    z_plane_rotation=None,
+    two_way_streets_only=False,
     task='grow',
 ):
     logger = logging.getLogger(logger_name)
@@ -58,6 +60,8 @@ def a_child_process(
             spectral_network.trivialize(
                 config, sw_data,
                 cache_file_path=cache_file_path,
+                z_plane_rotation=z_plane_rotation,
+                two_way_streets_only=two_way_streets_only,
             )
     except Exception as e:
         error_msg = (
@@ -87,6 +91,8 @@ def parallel_get_spectral_network(
     additional_iterations=0,
     logger_name='loom',
     cache_dir=None,
+    z_plane_rotation=None,
+    two_way_streets_only=False,
     data_file_prefix='data',
     task='grow',
 ):
@@ -150,6 +156,8 @@ def parallel_get_spectral_network(
                     cache_file_path=get_cache_file_path(
                         cache_dir, data_file_prefix, i,
                     ),
+                    z_plane_rotation=z_plane_rotation,
+                    two_way_streets_only=two_way_streets_only,
                     task=task,
                 )
             ) for i, sn in enumerate(spectral_networks)

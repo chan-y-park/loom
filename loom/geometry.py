@@ -821,6 +821,9 @@ class SWDataBase(object):
         logger.info('Seiberg-Witten data before trivialization:')
         self.print_info()
 
+    def is_trivialized(self):
+        return False
+
     def print_info(self):
         logger = logging.getLogger(self.logger_name)
 

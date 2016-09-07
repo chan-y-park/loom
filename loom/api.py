@@ -646,6 +646,7 @@ class SpectralNetworkData:
     def trivialize(
         self, n_processes=0,
         result_queue=None, logging_queue=None, cache_dir=None,
+        two_way_streets_only=False,
     ):
         logger = logging.getLogger(self.logger_name)
 
@@ -665,9 +666,19 @@ class SpectralNetworkData:
             self.sw_data.save(sw_data_file_path)
 
         # call SpectralNetwork.trivialize() for each spectral network.
+        if two_way_streets_only:
+            z_plane_rotation = None
+        else:
+            z_plane_rotation = self.sw_data.z_plane_rotation,
+
         if len(self.spectral_networks) == 1:
             sn = self.spectral_networks[0]
-            sn.trivialize(self.config, self.sw_data,)
+            sn.trivialize(
+                self.config,
+                self.sw_data,
+                z_plane_rotation=z_plane_rotation,
+                two_way_streets_only=two_way_streets_only,
+            )
             if cache_dir is not None:
                 sn_data_file_path = os.path.join(cache_dir, 'data_0.json',)
                 sn.save(sn_data_file_path)
@@ -679,10 +690,12 @@ class SpectralNetworkData:
                 n_processes=n_processes,
                 logger_name=self.logger_name,
                 cache_dir=cache_dir,
+                z_plane_rotation=z_plane_rotation,
+                two_way_streets_only=two_way_streets_only,
                 task='trivialize',
             )
 
-        self.config['trivialize'] = True
+        #self.config['trivialize'] = True
 
         if logging_queue is not None:
             # Put a mark that generating spectral networks is done.
@@ -744,7 +757,8 @@ class SpectralNetworkData:
                 sw_data=sw_data,
                 spectral_network=spectral_network,
                 logger_name=logger_name,
-                trivialized=self.config['trivialize'],
+                #trivialized=self.config['trivialize'],
+                trivialized=self.sw_data.is_trivialized(),
                 **kwargs
             )
             plot_legend = spectral_network_plot.get_legend(
@@ -897,7 +911,6 @@ def get_sw_data(config, logger_name, json_data=None):
             config, logger_name,
             json_data=json_data,
         )
-
     else:
         return SWDataBase(config, logger_name, json_data=json_data,)
 
