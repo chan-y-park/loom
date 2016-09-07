@@ -1064,15 +1064,10 @@ class SpectralNetwork:
                         ):
                             raise NotImplementedError
                         rp_x = rp.x
-                        #rp_c = rp.sw_diff_coeff
-                        #Dx = abs(rp.sw_diff_coeff * (rp.z - z_t)**(1.0 / rp.i))
-                        #dx = max(get_delta(s_wall.x, min_t))
                         sheets = n_nearest_indices(
                             sw_data.ffr_curve.get_xs(z_t), rp_x, 2,
                         )
                         if (
-                            #max(abs(xs - xs_t)) < dx
-                            #or max(abs(xs - xs_t[::-1])) < dx
                             sheet_1 in sheets and sheet_2 in sheets
                             
                         ):
