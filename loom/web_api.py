@@ -197,10 +197,11 @@ class LoomDB(object):
         saved_data=None,
         data_name=None,
         rotate_back=None,
-        plot_two_way_streets=None,
+        #plot_two_way_streets=None,
         search_radius=None,
         additional_n_steps=0, new_mass_limit=None,
         additional_iterations=0, additional_phases=None,
+        two_way_streets_only=None,
     ):
         logging_level = self.logging_level
         if task == 'generate' or task == 'extend' or task == 'trivialize':
@@ -314,6 +315,7 @@ class LoomDB(object):
                         result_queue=result_queue,
                         logging_queue=logging_queue,
                         cache_dir=cache_dir,
+                        two_way_streets_only=two_way_streets_only,
                     )
                 )
 

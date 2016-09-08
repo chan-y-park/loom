@@ -4,6 +4,7 @@ import logging
 import os
 
 from spectral_network import SpectralNetwork
+from geometry import BranchPoint
 
 
 def child_sigint_handler(signum, frame):
@@ -169,6 +170,17 @@ def parallel_get_spectral_network(
         for result in results:
             if cache_dir is None:
                 new_sn = result.get()
+                # NOTE: Need to replace all the branch points
+                # in a spectral network with those in sw_data,
+                # because a child process gets a copy of them.
+                for s_wall in new_sn.s_walls:
+                    if len(s_wall.parents) == 1:
+                        if isinstance(s_wall.parents[0], BranchPoint):
+                            bp_label = s_wall.parents[0].label
+                            s_wall.parents = [
+                                bp for bp in sw_data.branch_points
+                                if bp.label == bp_label
+                            ]
             else:
                 # XXX: Do we really need the following?
                 # It's probably good to use cache files

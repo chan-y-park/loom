@@ -232,7 +232,8 @@ def progress():
         'additional_n_steps': 0,
         'new_mass_limit': None,
         'additional_iterations': 0,
-        'additional_phases': None
+        'additional_phases': None,
+        'two_way_streets_only': False,
     }
 
     kwargs_string_valued = {

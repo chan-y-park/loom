@@ -40,30 +40,30 @@ class Street(SWall):
         super(Street, self).__init__(logger_name=logger_name)
         self.phase = phase
         self.s_wall = s_wall
-        self.label = s_wall.label
         self.parents = parents
 
-        #if json_data is not None:
-        #    self.set_from_json_data(json_data)
-        #else:
+#        if json_data is not None:
+#            self.set_from_json_data(json_data)
+#        else:
+        if self.s_wall is not None:
+            self.label = self.s_wall.label
+            if end_t is None:
+                end_t = numpy.argmin(abs(s_wall.z - end_z))
 
-        if end_t is None:
-            end_t = numpy.argmin(abs(s_wall.z - end_z))
+            if end_t == 0:
+                raise RuntimeError('Street.__init__(): end_t == 0')
+            # XXX: Because a joint is not back-inserted into S-walls,
+            # neither [:end_t] nor [:end_t+1] is always correct.
+            # However, inserting a joint is an expensive operation.
+            self.z = s_wall.z[:end_t]
+            self.x = s_wall.x[:end_t]
+            self.M = s_wall.M[:end_t]
+            # Z is the central charge, i.e. integration of the SW diff
+            # along the street.
+            self.Z = self.M[-1] * exp(self.phase * 1j)
 
-        if end_t == 0:
-            raise RuntimeError('Street.__init__(): end_t == 0')
-        # XXX: Because a joint is not back-inserted into S-walls,
-        # neither [:end_t] nor [:end_t+1] is always correct.
-        # However, inserting a joint is an expensive operation.
-        self.z = s_wall.z[:end_t]
-        self.x = s_wall.x[:end_t]
-        self.M = s_wall.M[:end_t]
-        # Z is the central charge, i.e. integration of the SW diff
-        # along the street.
-        self.Z = self.M[-1] * exp(self.phase * 1j)
-
-        if self.s_wall.is_trivialized():
-            self.trivialize()
+            if self.s_wall.is_trivialized():
+                self.trivialize()
 
 #            self.parent_roots = s_wall.parent_roots
 #            self.label = s_wall.label
@@ -101,6 +101,8 @@ class Street(SWall):
         json_data['phase'] = self.phase
         json_data['s_wall'] = self.s_wall.label
         json_data['Z'] = ctor2(self.Z)
+
+        return json_data
 
     def set_from_json_data(self, json_data=None, obj_dict=None,):
         super(Street, self).set_from_json_data(json_data)
@@ -320,7 +322,10 @@ class SpectralNetwork:
         try:
             self.soliton_trees = []
             for tree_data in json_data['soliton_trees']:
-                a_tree = SolitonTree(tree_data)
+                a_tree = SolitonTree()
+                a_tree.set_from_json_data(
+                    json_data=tree_data, obj_dict=obj_dict,
+                )
                 self.soliton_trees.append(a_tree)
         except KeyError:
             self.soliton_trees = None
@@ -1216,6 +1221,8 @@ class SpectralNetwork:
                         phase=self.phase,
                     )
                 except RuntimeError as e:
+                    import pdb
+                    pdb.set_trace()
                     logger.warning(str(e))
                     logger.warning(
                         'Finding two-way streets '
