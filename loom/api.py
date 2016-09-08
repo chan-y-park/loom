@@ -666,10 +666,11 @@ class SpectralNetworkData:
             self.sw_data.save(sw_data_file_path)
 
         # call SpectralNetwork.trivialize() for each spectral network.
-        if two_way_streets_only:
-            z_plane_rotation = None
-        else:
-            z_plane_rotation = self.sw_data.z_plane_rotation,
+#        if two_way_streets_only:
+#            z_plane_rotation = None
+#        else:
+#            z_plane_rotation = self.sw_data.z_plane_rotation
+        z_plane_rotation = self.sw_data.z_plane_rotation
 
         if len(self.spectral_networks) == 1:
             sn = self.spectral_networks[0]

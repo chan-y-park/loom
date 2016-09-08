@@ -14,7 +14,6 @@ from sympy import oo
 from s_wall import (
     SWall, Joint, get_s_wall_seeds, MIN_NUM_OF_DATA_PTS,
 )
-from misc import n_nearest
 from misc import ctor2, r2toc
 from misc import (
     n_nearest_indices, get_turning_points, get_splits_with_overlap,
@@ -41,9 +40,8 @@ class Street(SWall):
         super(Street, self).__init__(logger_name=logger_name)
         self.phase = phase
         self.s_wall = s_wall
-        # Z is the central charge, i.e. integration of the SW diff
-        # along the street.
-        self.Z = None
+        self.label = s_wall.label
+        self.parents = parents
 
         #if json_data is not None:
         #    self.set_from_json_data(json_data)
@@ -60,9 +58,12 @@ class Street(SWall):
         self.z = s_wall.z[:end_t]
         self.x = s_wall.x[:end_t]
         self.M = s_wall.M[:end_t]
-        self.parents = parents
-        self.s_wall = s_wall
-        self.trivialize(end_t=end_t)
+        # Z is the central charge, i.e. integration of the SW diff
+        # along the street.
+        self.Z = self.M[-1] * exp(self.phase * 1j)
+
+        if self.s_wall.is_trivialized():
+            self.trivialize()
 
 #            self.parent_roots = s_wall.parent_roots
 #            self.label = s_wall.label
@@ -78,7 +79,22 @@ class Street(SWall):
 #                )
 #            self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
-        self.Z = self.M[-1] * exp(self.phase * 1j)
+    def trivialize(self): 
+        s_wall = self.s_wall
+        end_t = len(self.z)
+
+        self.parent_roots = s_wall.parent_roots
+        self.cuts_intersections = [
+            [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
+            if t < end_t
+        ]
+        n_segs = len(self.cuts_intersections) + 1
+        self.local_roots = s_wall.local_roots[:n_segs]
+        if s_wall.multiple_local_roots is not None:
+            self.multiple_local_roots = (
+                s_wall.multiple_local_roots[:n_segs]
+            )
+        self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
     def get_json_data(self):
         json_data = super(Street, self).get_json_data()
@@ -87,7 +103,7 @@ class Street(SWall):
         json_data['Z'] = ctor2(self.Z)
 
     def set_from_json_data(self, json_data=None, obj_dict=None,):
-        super(Street, self).set_from_json_data(street_data)
+        super(Street, self).set_from_json_data(json_data)
         self.parents = [
             obj_dict[parent_label]
             for parent_label in self.parents
@@ -100,26 +116,8 @@ class Street(SWall):
 
         self.phase = json_data['phase']
         self.s_wall = obj_dict[json_data['s_wall']]
+        self.label = self.s_wall.label
         self.Z = r2toc(json_data['Z'])
-
-
-    def trivialize(self): 
-        s_wall = self.s_wall
-        end_t = len(self.z)
-
-        self.parent_roots = s_wall.parent_roots
-        self.label = s_wall.label
-        self.cuts_intersections = [
-            [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
-            if t < end_t
-        ]
-        n_segs = len(self.cuts_intersections) + 1
-        self.local_roots = s_wall.local_roots[:n_segs]
-        if s_wall.multiple_local_roots is not None:
-            self.multiple_local_roots = (
-                s_wall.multiple_local_roots[:n_segs]
-            )
-        self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
 
 class SolitonTree:
@@ -153,12 +151,14 @@ class SolitonTree:
                 self.Z += street.Z
 
     def get_json_data(self):
-        json_data['phase'] = self.phase
-        json_data['Z'] = ctor2(self.Z)
-        json_data['root_branch_point'] = self.root_branch_point.label
-        json_data['streets'] = [
-            street.get_json_data() for street in self.streets
-        ]
+        json_data = {
+            'phase': self.phase,
+            'Z': ctor2(self.Z),
+            'root_branch_point': self.root_branch_point.label,
+            'streets': [street.get_json_data() for street in self.streets],
+        }
+        
+        return json_data
 
     def set_from_json_data(self, json_data=None, obj_dict=None,):
         self.phase = json_data['phase']
@@ -265,9 +265,10 @@ class SpectralNetwork:
         json_data['joints'] = [joint.get_json_data()
                                for joint in self.joints]
         json_data['errors'] = self.errors
-        json_data['soliton_trees'] = [
-            tree.get_json_data() for tree in self.soliton_trees
-        ]
+        if self.soliton_trees is not None:
+            json_data['soliton_trees'] = [
+                tree.get_json_data() for tree in self.soliton_trees
+            ]
         return json_data
 
     def set_from_json_data(self, json_data, sw_data):
@@ -1000,6 +1001,10 @@ class SpectralNetwork:
                 raise RuntimeError
             s_wall_labels = []
             for tree in self.soliton_trees:
+                # NOTE: In principle each S-wall should be trivialized
+                # after their parents are trivialized. However, thanks to
+                # the nature of a soliton tree, this is implicitly done
+                # in the following.
                 for street in tree.streets:
                     if street.label not in s_wall_labels:
                         s_wall_labels.append(street.label)
@@ -1121,7 +1126,7 @@ class SpectralNetwork:
         if search_radius is None:
             search_radius = config['size_of_bp_neighborhood']
         #trivialized = config['trivialize']
-        accuracy = config['accuracy']
+        #accuracy = config['accuracy']
 
         soliton_trees = []
         # Search for the root of a soliton tree.
