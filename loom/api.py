@@ -773,17 +773,27 @@ class SpectralNetworkData:
         
         return spectral_network_plot
 
-    def find_two_way_streets(self, search_radius=None,):
+    def find_two_way_streets(self, search_radius=None, replace=True):
+        """
+        Find a street data, replacing one if it already exists.
+        """
         soliton_tree_data = []
         for sn in self.spectral_networks:
-            soliton_tree_data.append(
-                sn.find_two_way_streets(
+            soliton_trees = sn.soliton_trees
+            if soliton_trees is None or replace is True:
+                soliton_trees = sn.find_two_way_streets(
                     config=self.config,
                     sw_data=self.sw_data,
                     search_radius=search_radius,
                 )
-            )
+            soliton_tree_data.append(soliton_trees)
         return soliton_tree_data
+
+    def has_two_way_streets(self):
+        # XXX: Currently check only if the first spectral network
+        # has two-way streets stored in it. May need to implement
+        # a more refined test.
+        return (self.spectral_networks[0].soliton_trees is not None)
 
     def set_z_rotation(self, z_rotation):
         self.sw_data.set_z_rotation(z_rotation)

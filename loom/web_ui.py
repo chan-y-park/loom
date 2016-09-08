@@ -264,7 +264,11 @@ def progress():
                 prev_process_uuid, create=False,
             )
             if result_queue is not None:
-                if task == 'rotate_back' or task == 'plot_two_way_streets':
+                if (
+                    task == 'rotate_back'
+                    or task == 'plot_two_way_streets'
+                    or task == 'find_two_way_streets'
+                ):
                     # No need to load the data from files.
                     # Go directly to the plot page.
                     return flask.redirect(
@@ -306,10 +310,14 @@ def progress():
             # An extended spectral network is a new data.
             kwargs['saved_data'] = False
         elif (
+            task == 'trivialize'
+            or task == 'find_two_way_streets'
+        ):
+            kwargs['saved_data'] = False
+        elif (
             task == 'load'
             or task == 'rotate_back'
             or task == 'plot_two_way_streets'
-            or task == 'trivialize'
         ):
             pass
         else:
@@ -438,7 +446,17 @@ def plot():
     else:
         spectral_network_data.reset_z_rotation()
 
-    if task == 'plot_two_way_streets':
+    if task == 'find_two_way_streets':
+        spectral_network_data.find_two_way_streets(
+            search_radius=kwargs['search_radius'],
+            replace=True,
+        )
+    has_two_way_streets = spectral_network_data.has_two_way_streets()
+    if (
+        task == 'plot_two_way_streets'
+        or task == 'find_two_way_streets'
+        or (task == 'trivialize' and has_two_way_streets)
+    ):
         plot_two_way_streets = True
     else:
         plot_two_way_streets = False
@@ -728,6 +746,7 @@ def render_plot_template(
     if plot_two_way_streets is True:
         soliton_tree_data = spectral_network_data.find_two_way_streets(
             search_radius=search_radius,
+            replace=False,
         )
 
     # Make a Bokeh plot

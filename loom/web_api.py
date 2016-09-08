@@ -204,16 +204,21 @@ class LoomDB(object):
         two_way_streets_only=None,
     ):
         logging_level = self.logging_level
-        if task == 'generate' or task == 'extend' or task == 'trivialize':
+        if (
+            task == 'generate'
+            or task == 'extend'
+            or task == 'trivialize'
+            or task == 'find_two_way_streets'
+        ):
             # Prepare a cache directory for new data.
             cache_dir = get_cache_dir(process_uuid)
             if os.path.exists(cache_dir) is False:
                 os.makedirs(cache_dir)
             logging_file_name = os.path.join(cache_dir, 'log')
         elif (
-            task == 'load' or
-            task == 'rotate_back' or
-            task == 'plot_two_way_streets'
+            task == 'load'
+            or task == 'rotate_back'
+            or task == 'plot_two_way_streets'
         ):
             # Do not create a logging file
             logging_file_name = None
@@ -244,9 +249,10 @@ class LoomDB(object):
             logger.info('Trivialize spectral networks...')
 
         if (
-            task == 'load' or
-            task == 'rotate_back' or
-            task == 'plot_two_way_streets'
+            task == 'load'
+            or task == 'rotate_back'
+            or task == 'plot_two_way_streets'
+            or task == 'find_two_way_streets'
         ):
             spectral_network_data = SpectralNetworkData(
                 logger_name=logger_name,

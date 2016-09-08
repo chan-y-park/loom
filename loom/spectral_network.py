@@ -42,9 +42,6 @@ class Street(SWall):
         self.s_wall = s_wall
         self.parents = parents
 
-#        if json_data is not None:
-#            self.set_from_json_data(json_data)
-#        else:
         if self.s_wall is not None:
             self.label = self.s_wall.label
             if end_t is None:
@@ -64,20 +61,6 @@ class Street(SWall):
 
             if self.s_wall.is_trivialized():
                 self.trivialize()
-
-#            self.parent_roots = s_wall.parent_roots
-#            self.label = s_wall.label
-#            self.cuts_intersections = [
-#                [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
-#                if t < end_t
-#            ]
-#            n_segs = len(self.cuts_intersections) + 1
-#            self.local_roots = s_wall.local_roots[:n_segs]
-#            if s_wall.multiple_local_roots is not None:
-#                self.multiple_local_roots = (
-#                    s_wall.multiple_local_roots[:n_segs]
-#                )
-#            self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
     def trivialize(self): 
         s_wall = self.s_wall
@@ -195,6 +178,12 @@ class SolitonTree:
     def trivialize(self):
         for street in self.streets:
             street.trivialize()
+
+    def is_trivialized(self):
+        for street in self.streets:
+            if not street.is_trivialized():
+                return False
+        return True
 
     def draw_graph(self, file_name='soliton_tree.pdf'):
         # XXX: Move the following import to the beginning of this module
@@ -1006,13 +995,12 @@ class SpectralNetwork:
                 raise RuntimeError
             s_wall_labels = []
             for tree in self.soliton_trees:
-                # NOTE: In principle each S-wall should be trivialized
-                # after their parents are trivialized. However, thanks to
-                # the nature of a soliton tree, this is implicitly done
-                # in the following.
                 for street in tree.streets:
                     if street.label not in s_wall_labels:
                         s_wall_labels.append(street.label)
+            # NOTE: In principle each S-wall should be trivialized
+            # after their parents are trivialized. This is implicitly done
+            # in the following.
             s_walls = [
                 s_wall for s_wall in self.s_walls
                 if s_wall.label in s_wall_labels
@@ -1109,13 +1097,13 @@ class SpectralNetwork:
         # XXX: is this necessary?
         # determine the root type of each joint.
 
-        if cache_file_path is not None:
-            logger.info('Saving cache data to {}.'.format(cache_file_path))
-            self.save(cache_file_path)
-
         if two_way_streets_only:
             for tree in self.soliton_trees:
                 tree.trivialize()
+
+        if cache_file_path is not None:
+            logger.info('Saving cache data to {}.'.format(cache_file_path))
+            self.save(cache_file_path)
 
     def find_two_way_streets(
         self, config=None, sw_data=None,
@@ -1221,8 +1209,6 @@ class SpectralNetwork:
                         phase=self.phase,
                     )
                 except RuntimeError as e:
-                    import pdb
-                    pdb.set_trace()
                     logger.warning(str(e))
                     logger.warning(
                         'Finding two-way streets '
