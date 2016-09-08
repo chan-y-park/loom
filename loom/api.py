@@ -917,12 +917,12 @@ class LoomLoggingFormatter(logging.Formatter):
 
 
 def get_sw_data(config, logger_name, json_data=None):
+    use_trivialization = True
     if json_data is not None:
         for attribute in SWDataWithTrivialization.additional_data_attributes:
             if attribute not in json_data:
                 use_trivialization = False
                 break
-        use_trivialization = True
     else:
         use_trivialization = config['trivialize']
                 
