@@ -311,12 +311,14 @@ def progress():
             kwargs['saved_data'] = False
         elif (
             task == 'trivialize'
-            or task == 'find_two_way_streets'
         ):
+            #import pdb
+            #pdb.set_trace()
             kwargs['saved_data'] = False
         elif (
             task == 'load'
             or task == 'rotate_back'
+            or task == 'find_two_way_streets'
             or task == 'plot_two_way_streets'
         ):
             pass
@@ -446,7 +448,10 @@ def plot():
     else:
         spectral_network_data.reset_z_rotation()
 
-    if task == 'find_two_way_streets':
+    if (
+        task == 'plot_two_way_streets'
+        or task == 'find_two_way_streets'
+    ):
         spectral_network_data.find_two_way_streets(
             search_radius=kwargs['search_radius'],
             replace=True,

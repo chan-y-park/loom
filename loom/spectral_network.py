@@ -992,6 +992,7 @@ class SpectralNetwork:
 
         if two_way_streets_only:
             if self.soliton_trees is None:
+                #XXX
                 raise RuntimeError
             s_wall_labels = []
             for tree in self.soliton_trees:

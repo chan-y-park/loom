@@ -66,9 +66,9 @@ def a_child_process(
             )
     except Exception as e:
         error_msg = (
-            'A child process {} spectral network @ phase = {} '
+            'A child process {} spectral network #{} @ phase = {} '
             'caught an exception: {}'
-            .format(msg, spectral_network.phase, e)
+            .format(msg, job_id, spectral_network.phase, e)
         )
         logger.warning(error_msg)
         spectral_network.errors.append = ('Unknown', error_msg)
