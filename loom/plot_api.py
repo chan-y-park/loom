@@ -143,7 +143,7 @@ class SpectralNetworkPlot(NetworkPlot):
         spectral_network=None,
         soliton_tree=None,
         logger_name='loom',
-        trivialized=True,
+        #trivialized=True,
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
@@ -211,6 +211,7 @@ class SpectralNetworkPlot(NetworkPlot):
         walls = []
         wall_segments = []
         wall_roots = []
+        wall_colors = []
 
         if soliton_tree is not None:
             s_walls = soliton_tree.streets
@@ -225,54 +226,72 @@ class SpectralNetworkPlot(NetworkPlot):
                 # Need to include local root data.
                 raise NotImplementedError
 
-                zs_on_cylinder = numpy.fromfunction(
-                    lambda i: put_on_cylinder(s_wall.z[i], C),
-                    (len(s_wall.z)),
-                )
-                walls.append(zs_on_cylinder)
-
-                splits = []
-                for j, delta_z in enumerate(numpy.diff(zs_on_cylinder)):
-                    if abs(delta_z) > pi:
-                        splits.append(j)
-
-                wall_segments.append(get_splits_with_overlap(splits))
+#                zs_on_cylinder = numpy.fromfunction(
+#                    lambda i: put_on_cylinder(s_wall.z[i], C),
+#                    (len(s_wall.z)),
+#                )
+#                walls.append(zs_on_cylinder)
+#
+#                splits = []
+#                for j, delta_z in enumerate(numpy.diff(zs_on_cylinder)):
+#                    if abs(delta_z) > pi:
+#                        splits.append(j)
+#
+#                wall_segments.append(get_splits_with_overlap(splits))
 
             else:
                 walls.append(s_wall.z)
                 wall_segments.append(
                     s_wall.get_segments()
                 )
-                if trivialized is True:
-                    wall_roots.append(s_wall.local_roots)
+                if s_wall.is_trivialized():
+                    seg_roots = s_wall.local_roots
+                    wall_roots.append(seg_roots)
 
                     seg_labels = [s_wall.label + '\n' + root_str
                                   for root_str in map(str, s_wall.local_roots)]
+                    colors = []
+                    for root in seg_roots:
+                        color = g_data.get_root_color(root)
+                        if color is None:
+                            color = '#000000'
+                            logger.warning(
+                                'Unknown root color for {} '
+                                'of a spectral network with phase = {}.'
+                                .format(s_wall.label, spectral_network.phase)
+                            )
+                        colors.append(color)
+                    wall_colors.append(colors)
                 else:
                     seg_labels = [s_wall.label]
+                    # wall_colors.append(['#000000'])
+                    # (R, G, B, A)
+                    wall_colors.append(
+                        [(0, 0, 1, 1.0 / s_wall.get_generation(),)]
+                    )
                 labels['walls'].append(seg_labels)
 
-        wall_colors = []
-        if trivialized is True:
-            for seg_roots in wall_roots:
-                colors = []
-                for root in seg_roots:
-                    color = g_data.get_root_color(root)
-                    if color is None:
-                        color = '#000000'
-                        logger.warning(
-                            'Unknown root color for {} '
-                            'of a spectral network with phase = {}.'
-                            .format(s_wall.label, spectral_network.phase)
-                        )
-                    colors.append(color)
-                wall_colors.append(colors)
-        else:
-            for s_wall in s_walls:
-                # wall_colors.append(['#000000'])
-                # (R, G, B, A)
-                wall_colors.append([(0, 0, 1, 1.0 / s_wall.get_generation(),)])
-
+#        wall_colors = []
+#        if trivialized is True:
+#            for seg_roots in wall_roots:
+#                colors = []
+#                for root in seg_roots:
+#                    color = g_data.get_root_color(root)
+#                    if color is None:
+#                        color = '#000000'
+#                        logger.warning(
+#                            'Unknown root color for {} '
+#                            'of a spectral network with phase = {}.'
+#                            .format(s_wall.label, spectral_network.phase)
+#                        )
+#                    colors.append(color)
+#                wall_colors.append(colors)
+#        else:
+#            for s_wall in s_walls:
+#                # wall_colors.append(['#000000'])
+#                # (R, G, B, A)
+#                wall_colors.append([(0, 0, 1, 1.0 / s_wall.get_generation(),)])
+#
         super(SpectralNetworkPlot, self).draw(
             axes=axes,
             branch_points=branch_points_z,

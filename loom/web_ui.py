@@ -591,7 +591,9 @@ def download_plot(two_way_streets=False):
     else:
         plot_range = eval(flask.request.form['plot_range'])
         zip_file_prefix = 'loom_streets_{}'.format(process_uuid)
-        soliton_tree_data = spectral_network_data.find_two_way_streets()
+        soliton_tree_data = spectral_network_data.find_two_way_streets(
+            replace=False,
+        )
         for i, trees in enumerate(soliton_tree_data):
             for j, tree in enumerate(trees):
                 soliton_tree_plot = SolitonTreePlot(

@@ -759,7 +759,7 @@ class SpectralNetworkData:
                 spectral_network=spectral_network,
                 logger_name=logger_name,
                 #trivialized=self.config['trivialize'],
-                trivialized=self.sw_data.is_trivialized(),
+                #trivialized=self.sw_data.is_trivialized(),
                 **kwargs
             )
             plot_legend = spectral_network_plot.get_legend(
