@@ -1149,7 +1149,8 @@ class SpectralNetwork:
                     continue
 
                 #if trivialized:
-                if sw_data.is_trivialized():
+                #if sw_data.is_trivialized():
+                if s_wall.is_trivialized():
                     bp_roots = (
                         bp.positive_roots.tolist() +
                         (-bp.positive_roots).tolist()

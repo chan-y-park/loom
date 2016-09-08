@@ -90,6 +90,12 @@ class SWDataWithTrivialization(SWDataBase):
         The output looks like this
         {0 : x_0, ... , i : x_i, ...}
     """
+    additional_data_attributes = [
+        'min_distance', 'min_horizontal_distance',
+        'farthest_branching_locus', 'base_point',
+        'reference_ffr_xs', 'reference_xs',
+        'z_plane_rotation', 'branch_cut_rotation',
+    ]
     def __init__(
         self,
         config,
@@ -136,12 +142,13 @@ class SWDataWithTrivialization(SWDataBase):
                     1 / self.z_plane_rotation
                 )
 
-        self.data_attributes += [
-            'min_distance', 'min_horizontal_distance',
-            'farthest_branching_locus', 'base_point',
-            'reference_ffr_xs', 'reference_xs',
-            'z_plane_rotation', 'branch_cut_rotation',
-        ]
+        self.data_attributes += self.additional_data_attributes
+#        self.data_attributes += [
+#            'min_distance', 'min_horizontal_distance',
+#            'farthest_branching_locus', 'base_point',
+#            'reference_ffr_xs', 'reference_xs',
+#            'z_plane_rotation', 'branch_cut_rotation',
+#        ]
 
         logger.info('Seiberg-Witten data after trivialization:')
         self.print_info()
@@ -1093,8 +1100,6 @@ class SWDataWithTrivialization(SWDataBase):
                     (numpy.array(path_to_bp), 'path_to_bp',)
                 ],
             )
-            import pdb
-            pdb.set_trace()
 
         xs_at_bp = [s_i[-1] for s_i in sheets_along_path]
         enum_sh = [[i, x_i] for i, x_i in enumerate(xs_at_bp)]

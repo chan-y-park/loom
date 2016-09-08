@@ -3,7 +3,6 @@ import logging
 import Tkinter as tk
 import tkFileDialog
 import multiprocessing
-# import pdb
 
 from StringIO import StringIO
 from Queue import Empty as QueueEmpty

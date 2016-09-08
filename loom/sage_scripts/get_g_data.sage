@@ -1,6 +1,5 @@
 import sys
 import numpy
-import pdb
 
 from pprint import pprint
 

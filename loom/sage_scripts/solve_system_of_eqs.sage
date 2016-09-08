@@ -1,5 +1,4 @@
 import sys
-import pdb
 
 z, x = var('z x')
 eqs = []

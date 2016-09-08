@@ -130,7 +130,7 @@ class SpectralNetworkData:
                 )
                 with open(sw_data_file_path, 'r') as fp:
                     json_data = json.load(fp)
-                    sw_data_i = get_sw_data(
+                    sw_data_i = SWDataWithTrivialization(
                         config, logger_name=logger_name,
                         json_data=json_data,
                     )
@@ -444,7 +444,7 @@ class SpectralNetworkData:
                 logger.info(
                     'Started @ {}'.format(get_date_time_str(start_time))
                 )
-                self.sw_data = get_sw_data(
+                self.sw_data = SWDataWithTrivialization(
                     self.config, logger_name=self.logger_name
                 )
                 sw_data_sequence.append(self.sw_data)
@@ -917,7 +917,16 @@ class LoomLoggingFormatter(logging.Formatter):
 
 
 def get_sw_data(config, logger_name, json_data=None):
-    if config['trivialize'] is True:
+    if json_data is not None:
+        for attribute in SWDataWithTrivialization.additional_data_attributes:
+            if attribute not in json_data:
+                use_trivialization = False
+                break
+        use_trivialization = True
+    else:
+        use_trivialization = config['trivialize']
+                
+    if use_trivialization is True:
         return SWDataWithTrivialization(
             config, logger_name,
             json_data=json_data,

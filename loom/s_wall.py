@@ -621,8 +621,6 @@ class SWall(object):
                     'The root type of the S-wall is incompatible '
                     'with the sum of roots of its parents!'
                 )
-                import pdb
-                pdb.set_trace()
                 return 'Rebuild S-wall'
 
         # Finished handling the single 'base' root of the S-wall.

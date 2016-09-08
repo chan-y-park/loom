@@ -7,7 +7,6 @@ on a real 2-dim plane.
 
 import logging
 import numpy
-# import pdb
 
 from scipy.interpolate import interp1d
 from scipy.optimize import brentq, newton

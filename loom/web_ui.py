@@ -312,8 +312,6 @@ def progress():
         elif (
             task == 'trivialize'
         ):
-            #import pdb
-            #pdb.set_trace()
             kwargs['saved_data'] = False
         elif (
             task == 'load'
@@ -750,7 +748,7 @@ def render_plot_template(
 
     if plot_two_way_streets is True:
         soliton_tree_data = spectral_network_data.find_two_way_streets(
-            search_radius=search_radius,
+            #search_radius=search_radius,
             replace=False,
         )
 
