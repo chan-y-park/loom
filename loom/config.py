@@ -68,14 +68,12 @@ class LoomConfig:
             'integration_method': 'use_scipy_ode',
         }
 
-        if file_path is None:
-            raise RuntimeError('No config file given.')
-
-        logger.info('Loading configuration from {}...'.format(file_path))
-        with open(file_path, 'r') as fp:
-            self.read(fp)
-        logger.info('Finished loading configuration from {}.'
-                    .format(file_path))
+        if file_path is not None:
+            logger.info('Loading configuration from {}...'.format(file_path))
+            with open(file_path, 'r') as fp:
+                self.read(fp)
+                logger.info('Finished loading configuration from {}.'
+                            .format(file_path))
 
     def __setitem__(self, option, value):
         try:
