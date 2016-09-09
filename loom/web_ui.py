@@ -309,9 +309,7 @@ def progress():
                 )
             # An extended spectral network is a new data.
             kwargs['saved_data'] = False
-        elif (
-            task == 'trivialize'
-        ):
+        elif (task == 'trivialize'):
             kwargs['saved_data'] = False
         elif (
             task == 'load'
@@ -446,14 +444,24 @@ def plot():
     else:
         spectral_network_data.reset_z_rotation()
 
-    if (
-        task == 'plot_two_way_streets'
-        or task == 'find_two_way_streets'
-    ):
+    if (task == 'plot_two_way_streets'):
+        spectral_network_data.find_two_way_streets(
+            search_radius=kwargs['search_radius'],
+            replace=False,
+        )
+    elif (task == 'find_two_way_streets'):
         spectral_network_data.find_two_way_streets(
             search_radius=kwargs['search_radius'],
             replace=True,
         )
+#    if (
+#        task == 'plot_two_way_streets'
+#        or task == 'find_two_way_streets'
+#    ):
+#        spectral_network_data.find_two_way_streets(
+#            search_radius=kwargs['search_radius'],
+#            replace=True,
+#        )
     has_two_way_streets = spectral_network_data.has_two_way_streets()
     if (
         task == 'plot_two_way_streets'

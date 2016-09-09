@@ -2,6 +2,7 @@ import time
 import os
 import json
 import glob
+import numpy
 import sympy
 import zipfile
 import logging
@@ -788,6 +789,14 @@ class SpectralNetworkData:
                 )
             soliton_tree_data.append(soliton_trees)
         return soliton_tree_data
+
+    def get_spectral_network(self, phase=None, index=False):
+        phase_diffs = [abs(sn.phase - phase) for sn in self.spectral_networks]
+        sn_i = numpy.argmin(phase_diffs)
+        if index:
+            return sn_i
+        else:
+            return self.spectral_networks[i]
 
     def has_two_way_streets(self):
         # XXX: Currently check only if the first spectral network

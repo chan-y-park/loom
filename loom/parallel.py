@@ -47,7 +47,7 @@ def a_child_process(
         msg = 'trivializing' 
 
     logger.info('Start {} spectral network #{}/{}: phase = {}.'
-                .format(msg, job_id, n_jobs, spectral_network.phase))
+                .format(msg, job_id, n_jobs - 1, spectral_network.phase))
     try:
         if task == 'grow':
             spectral_network.grow(
@@ -74,7 +74,7 @@ def a_child_process(
         spectral_network.errors.append = ('Unknown', error_msg)
 
     logger.info('Finished {} spectral network #{}/{}.'
-                .format(msg, job_id, n_jobs))
+                .format(msg, job_id, n_jobs - 1))
 
     if cache_file_path is None:
         return spectral_network
@@ -148,7 +148,8 @@ def parallel_get_spectral_network(
                     config=config,
                     sw_data=sw_data,
                     spectral_network=sn,
-                    job_id=(i + 1),
+                    #job_id=(i + 1),
+                    job_id=i,
                     n_jobs=n_jobs,
                     logger_name=logger_name,
                     additional_n_steps=additional_n_steps,

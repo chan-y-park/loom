@@ -37,6 +37,8 @@ class Street(SWall):
         #json_data=None,
         logger_name='loom',
     ):
+        logger = logging.getLogger(logger_name)
+
         super(Street, self).__init__(logger_name=logger_name)
         self.phase = phase
         self.s_wall = s_wall
@@ -48,13 +50,20 @@ class Street(SWall):
                 end_t = numpy.argmin(abs(s_wall.z - end_z))
 
             if end_t == 0:
-                raise RuntimeError('Street.__init__(): end_t == 0')
+                #raise RuntimeError('Street.__init__(): end_t == 0')
+                logger.warning(
+                    'Street.__init__(): end_t == 0 for {} at phase = {}.'
+                    .format(self.label, self.phase)
+                )
+                # XXX: To draw this street, include at least two points.
+                end_t = 1
+
             # XXX: Because a joint is not back-inserted into S-walls,
             # neither [:end_t] nor [:end_t+1] is always correct.
             # However, inserting a joint is an expensive operation.
-            self.z = s_wall.z[:end_t]
-            self.x = s_wall.x[:end_t]
-            self.M = s_wall.M[:end_t]
+            self.z = s_wall.z[:end_t + 1]
+            self.x = s_wall.x[:end_t + 1]
+            self.M = s_wall.M[:end_t + 1]
             # Z is the central charge, i.e. integration of the SW diff
             # along the street.
             self.Z = self.M[-1] * exp(self.phase * 1j)
@@ -64,8 +73,11 @@ class Street(SWall):
 
     def trivialize(self): 
         s_wall = self.s_wall
-        end_t = len(self.z)
 
+        if not s_wall.is_trivialized():
+            return None
+
+        end_t = len(self.z)
         self.parent_roots = s_wall.parent_roots
         self.cuts_intersections = [
             [br_loc, t, d] for br_loc, t, d in s_wall.cuts_intersections
@@ -175,6 +187,10 @@ class SolitonTree:
 
         return None
 
+    def set_z_rotation(self, z_rotation):
+        for street in self.streets:
+            street.set_z_rotation(z_rotation)
+
     def trivialize(self):
         for street in self.streets:
             street.trivialize()
@@ -233,6 +249,9 @@ class SpectralNetwork:
             s_wall.set_z_rotation(z_rotation)
         for joint in self.joints:
             joint.set_z_rotation(z_rotation)
+        if self.soliton_trees is not None:
+            for tree in self.soliton_trees:
+                tree.set_z_rotation(z_rotation)
 
     def save(self, file_path):
         with open(file_path, 'wb') as fp:
@@ -1031,10 +1050,14 @@ class SpectralNetwork:
                             '{} has an invalid parent: {}.'
                             .format(s_i.label, parent.label)
                         )
+                    if not parent.is_trivialized():
+                        continue
                     t = get_nearest_point_index(
                         parent.z, ip_z, sw_data.branch_points, accuracy,
                     )
                     parent_roots += parent.get_roots_at_t(t)
+                if len(parent_roots) == 0:
+                    continue
                 descendant_roots = get_descendant_roots(
                     parent_roots, sw_data.g_data,
                 )
@@ -1172,7 +1195,17 @@ class SpectralNetwork:
                     sheet_1 = abs(curve_xs - x1_t).argmin()
                     sheet_2 = abs(curve_xs - x2_t).argmin()
                     if sheet_1 == sheet_2:
-                        raise RuntimeError
+                        #raise RuntimeError
+                        logger.warning(
+                            'Failed in finding sheets of {} '
+                            'at {} near {} at phase ={}:\n'
+                            '\txs[t = {}] = {}\n'
+                            '\tcurve_xs = {}.'
+                            .format(
+                                s_wall.label, z_t, bp.label, self.phase,
+                                min_t, (x1_t, x2_t), curve_xs,    
+                            )
+                        )
                         
                     for rp in bp.ffr_ramification_points:
                         rp_type = rp.ramification_type

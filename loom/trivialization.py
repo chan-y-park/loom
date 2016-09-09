@@ -596,50 +596,64 @@ class SWDataWithTrivialization(SWDataBase):
             near_degenerate_branch_locus = False
             if is_path_to_bp is True and abs(z - z_path[-1]) < self.accuracy:
                 near_degenerate_branch_locus = True
-            # NOTE: Commenting this, since we don't need to bother
-            # with alignment for now. This saves a lot of problems
-            # with numerics and make the code much faster.
-            # Delete the following commend after EXTENSIVE testing.
-            # ffr_xs_1, xs_1 = self.get_aligned_xs(
-            #     z,
-            #     near_degenerate_branch_locus=near_degenerate_branch_locus
-            # )
+
             ffr_xs_1 = self.ffr_curve.get_xs(z)
 
+#            # if it's not a path to branch point, check tracking
+#            if is_path_to_bp is False:
+#                sorted_ffr_xs = get_sorted_xs(
+#                    ffr_xs_0, ffr_xs_1,
+#                    accuracy=accuracy,
+#                    check_tracking=True, index=i,
+#                    z_0=z_path[i - 1], z_1=z_path[i],
+#                    g_data=g_data,
+#                    logger_name=self.logger_name,
+#                    sw_curve=self.ffr_curve,
+#                )
+#            # if it's a path to branch point, but we are far from it,
+#            # still check tracking
+#            elif near_degenerate_branch_locus is False:
+#                sorted_ffr_xs = get_sorted_xs(
+#                    ffr_xs_0, ffr_xs_1,
+#                    accuracy=accuracy,
+#                    check_tracking=True,
+#                    z_0=z_path[i - 1], z_1=z_path[i],
+#                    g_data=g_data,
+#                    logger_name=self.logger_name,
+#                    sw_curve=self.ffr_curve,
+#                )
+#            # if it's a path to a branch point and we are getting close to it,
+#            # don't check tracking anymore
+#            else:
+#                sorted_ffr_xs = get_sorted_xs(
+#                    ffr_xs_0, ffr_xs_1,
+#                    accuracy=accuracy,
+#                    check_tracking=False,
+#                    g_data=g_data,
+#                    logger_name=self.logger_name,
+#                    sw_curve=self.ffr_curve,
+#                )
             # if it's not a path to branch point, check tracking
-            if is_path_to_bp is False:
-                sorted_ffr_xs = get_sorted_xs(
-                    ffr_xs_0, ffr_xs_1,
-                    accuracy=accuracy,
-                    check_tracking=True, index=i,
-                    z_0=z_path[i - 1], z_1=z_path[i],
-                    g_data=g_data,
-                    logger_name=self.logger_name,
-                    sw_curve=self.ffr_curve,
-                )
             # if it's a path to branch point, but we are far from it,
             # still check tracking
-            elif near_degenerate_branch_locus is False:
-                sorted_ffr_xs = get_sorted_xs(
-                    ffr_xs_0, ffr_xs_1,
-                    accuracy=accuracy,
-                    check_tracking=True,
-                    z_0=z_path[i - 1], z_1=z_path[i],
-                    g_data=g_data,
-                    logger_name=self.logger_name,
-                    sw_curve=self.ffr_curve,
-                )
             # if it's a path to a branch point and we are getting close to it,
             # don't check tracking anymore
-            else:
-                sorted_ffr_xs = get_sorted_xs(
-                    ffr_xs_0, ffr_xs_1,
-                    accuracy=accuracy,
-                    check_tracking=False,
-                    g_data=g_data,
-                    logger_name=self.logger_name,
-                    sw_curve=self.ffr_curve,
-                )
+            check_tracking = not (
+                is_path_to_bp and near_degenerate_branch_locus
+            )
+
+            sorted_ffr_xs = get_sorted_xs(
+                ffr_xs_0, ffr_xs_1,
+                sw_curve=self.ffr_curve,
+                g_data=g_data,
+                accuracy=accuracy,
+                check_tracking=check_tracking,
+                index=i,
+                z_0=z_path[i - 1],
+                z_1=z_path[i],
+                logger_name=self.logger_name,
+            )
+
             if sorted_ffr_xs == 'sorting failed':
                 logger.debug(
                     'Encountered a problem with sheet tracking.'
@@ -671,7 +685,8 @@ class SWDataWithTrivialization(SWDataBase):
                         zoom_s[-1] for zoom_s in sheets_along_zoomed_path
                     ]
 
-                else:
+                #else:
+                elif len(ffr_sheets_along_path[0]) >= 2:
                     old_ffr_xs = [s[-2] for s in ffr_sheets_along_path]
                     delta_xs = [
                         ffr_xs_0[j] - old_ffr_xs[j]
@@ -682,27 +697,24 @@ class SWDataWithTrivialization(SWDataBase):
                         logger_name=self.logger_name,
                     )
                     if sorted_ffr_xs == 'sorting failed':
-                        ffr_xs_1_s = self.ffr_curve.get_xs(z, use_sage=True)
+                        ffr_xs_1 = self.ffr_curve.get_xs(z, use_sage=True)
                         sorted_ffr_xs = sort_xs_by_derivative(
-                            ffr_xs_0, ffr_xs_1_s, delta_xs, self.accuracy,
+                            ffr_xs_0, ffr_xs_1, delta_xs, self.accuracy,
                             logger_name=self.logger_name,
                         )
-                        if sorted_ffr_xs == 'sorting failed':
-                            logger.info(
-                                'Studying sheets near z = {} found sheets'
-                                '\n ffr_xs_0 = {} \n ffr_xs_1 = {}'
-                                .format(z, ffr_xs_0, ffr_xs_1_s)
-                            )
-                            raise RuntimeError(
-                                'get_sheets_along_path(): '
-                                'Cannot track the sheets; '
-                                'probably passing too close to a branch point '
-                                'or a puncture. Try increasing N_PATH_TO_PT '
-                                'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
-                            )
 
-            # this is just the ordinary step, where we add the
-            # latest value of ordered sheets
+            if sorted_ffr_xs == 'sorting failed':
+                raise RuntimeError(
+                    'get_sheets_along_path(): '
+                    'Cannot track the sheets at z = {}.\n'
+                    '\txs_0 = {}\n\txs_1 = {}\n'
+                    'Probably passing too close to a branch point '
+                    'or a puncture. Try increasing N_PATH_TO_PT '
+                    'or N_PATH_AROUND_PT, or MAX_ZOOM_LEVEL.'
+                    .format(z, ffr_xs_0, ffr_xs_1)
+                )
+
+            # Add the latest value of ordered sheets.
             for j, s_j in enumerate(ffr_sheets_along_path):
                 s_j.append(sorted_ffr_xs[j])
 
@@ -713,6 +725,7 @@ class SWDataWithTrivialization(SWDataBase):
         # of the sheet along the path
         if ffr is True:
             return ffr_sheets_along_path
+
         elif ffr is False:
             rep_dim = len(g_data.weights)
             # XXX Warning: the following is offset by 1 from len(z_path)!
@@ -740,13 +753,14 @@ class SWDataWithTrivialization(SWDataBase):
         which cannot be a branch point or a singularity.
         """
         z_path = get_path_to(z_pt, self)
-        try:
-            sheets = self.get_sheets_along_path(z_path, ffr=ffr)
-        except IndexError:
-            raise RuntimeError(
-                'get_sheets_at_z(): get_sheets_along_path() failed '
-                'at z = {}.'.format(z_pt)
-            )
+        sheets = self.get_sheets_along_path(z_path, ffr=ffr)
+#        try:
+#            sheets = self.get_sheets_along_path(z_path, ffr=ffr)
+#        except IndexError:
+#            raise RuntimeError(
+#                'get_sheets_at_z(): get_sheets_along_path() failed '
+#                'at z = {}.'.format(z_pt)
+#            )
         final_xs = [s_i[-1] for s_i in sheets]
         final_sheets = {i: x for i, x in enumerate(final_xs)}
         return final_sheets
@@ -1345,9 +1359,15 @@ def get_path_around(z_pt, base_pt, sw):
 # TODO: Try using numba.
 # TODO: Make smarter checks based on the types
 # of ramification points above the branch point.
-def get_sorted_xs(ref_xs, new_xs, accuracy=None, check_tracking=True,
-                  index=None, z_0=None, z_1=None, g_data=None,
-                  logger_name='loom', sw_curve=None):
+def get_sorted_xs(
+    ref_xs, new_xs,
+    sw_curve=None,
+    g_data=None,
+    accuracy=None,
+    check_tracking=True,
+    logger_name='loom',
+    index=None, z_0=None, z_1=None, 
+):
     """
     Returns a sorted version of 'new_xs'
     based on matching the closest points with
