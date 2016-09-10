@@ -1132,6 +1132,7 @@ class SpectralNetwork:
     def find_two_way_streets(
         self, config=None, sw_data=None,
         search_radius=None,
+        cache_file_path=None,
     ):
         """
         Find soliton trees that make up two-way streets
@@ -1257,6 +1258,11 @@ class SpectralNetwork:
                     soliton_trees.append(tree)
 
         self.soliton_trees = soliton_trees
+
+        if cache_file_path is not None:
+            logger.info('Saving cache data to {}.'.format(cache_file_path))
+            self.save(cache_file_path)
+
         return soliton_trees
 
 

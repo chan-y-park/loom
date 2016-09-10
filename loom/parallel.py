@@ -37,6 +37,7 @@ def a_child_process(
     additional_iterations=0,
     z_plane_rotation=None,
     two_way_streets_only=False,
+    search_radius=None,
     task='grow',
 ):
     logger = logging.getLogger(logger_name)
@@ -45,6 +46,8 @@ def a_child_process(
         msg = 'growing' 
     elif task == 'trivialize':
         msg = 'trivializing' 
+    elif task == 'find_two_way_streets':
+        msg = 'finding two-way streets of'
 
     logger.info('Start {} spectral network #{}/{}: phase = {}.'
                 .format(msg, job_id, n_jobs - 1, spectral_network.phase))
@@ -63,6 +66,13 @@ def a_child_process(
                 cache_file_path=cache_file_path,
                 z_plane_rotation=z_plane_rotation,
                 two_way_streets_only=two_way_streets_only,
+            )
+        elif task == 'find_two_way_streets':
+            spectral_network.find_two_way_streets(
+                config=config,
+                sw_data=sw_data,
+                search_radius=search_radius,
+                cache_file_path=cache_file_path,
             )
     except Exception as e:
         error_msg = (
@@ -94,6 +104,7 @@ def parallel_get_spectral_network(
     cache_dir=None,
     z_plane_rotation=None,
     two_way_streets_only=False,
+    search_radius=None,
     data_file_prefix='data',
     task='grow',
 ):
@@ -159,6 +170,7 @@ def parallel_get_spectral_network(
                         cache_dir, data_file_prefix, i,
                     ),
                     z_plane_rotation=z_plane_rotation,
+                    search_radius=search_radius,
                     two_way_streets_only=two_way_streets_only,
                     task=task,
                 )

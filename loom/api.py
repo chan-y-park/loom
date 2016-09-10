@@ -774,12 +774,26 @@ class SpectralNetworkData:
         
         return spectral_network_plot
 
-    def find_two_way_streets(self, search_radius=None, replace=True):
+    def find_two_way_streets(
+        self, n_processes=0, search_radius=None, replace=True,
+        result_queue=None, logging_queue=None, cache_dir=None,
+    ):
         """
         Find a street data, replacing one if it already exists.
         """
+        logger = logging.getLogger(self.logger_name)
+
+        if cache_dir is not None and os.path.exists(cache_dir) is False:
+            os.makedirs(cache_dir)
+
+        logger.info('Finding two-way streets of spectral networks...')
+        start_time = time.time()
+        logger.info('Started @ {}'.format(get_date_time_str(start_time)))
+
         soliton_tree_data = []
-        for sn in self.spectral_networks:
+
+        if len(self.spectral_networks) == 1:
+            sn = self.spectral_networks[0]
             soliton_trees = sn.soliton_trees
             if soliton_trees is None or replace is True:
                 soliton_trees = sn.find_two_way_streets(
@@ -788,6 +802,63 @@ class SpectralNetworkData:
                     search_radius=search_radius,
                 )
             soliton_tree_data.append(soliton_trees)
+        else:
+            sns = []
+            for sn in self.spectral_networks:
+                trees = sn.soliton_trees
+                if trees is None or replace is True:
+                    soliton_tree_data.append(None)
+                    sns.append(sn)
+                else:
+                    soliton_tree_data.append(trees)
+
+            if len(sns) > 0:
+                sns = parallel_get_spectral_network(
+                    config=self.config,
+                    sw_data=self.sw_data,
+                    spectral_networks=sns,
+                    n_processes=n_processes,
+                    logger_name=self.logger_name,
+                    cache_dir=cache_dir,
+                    search_radius=search_radius,
+                    task='find_two_way_streets',
+                )
+
+                for i, trees in enumerate(soliton_tree_data):
+                    if trees is None:
+                        sn_i = self.spectral_networks[i] 
+                        for sn in sns:
+                            if sn.phase == sn_i.phase:
+                                sn_i.soliton_trees = sn.soliton_trees
+                                break
+                        soliton_tree_data[i] = sn_i.soliton_trees
+
+        end_time = time.time()
+        logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
+        logger.info('elapsed cpu time: %.3f', end_time - start_time)
+
+        if logging_queue is not None:
+            # Put a mark that generating spectral networks is done.
+            try:
+                logging_queue.put_nowait(None)
+            except:
+                logger.warn(
+                    'Failed in putting a finish mark in the logging queue.'
+                )
+
+        if result_queue is not None:
+            result_queue.put(self)
+
+        if cache_dir is not None:
+            version_file_path = os.path.join(cache_dir, 'version')
+            save_version(version_file_path)
+            sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
+            self.sw_data.save(sw_data_file_path)
+            # NOTE: The following should be placed
+            # at the last stage of spectral network generation.
+            config_file_path = os.path.join(cache_dir, 'config.ini')
+            self.config.save(config_file_path)
+
         return soliton_tree_data
 
     def get_spectral_network(self, phase=None, index=False):

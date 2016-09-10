@@ -218,7 +218,7 @@ class LoomDB(object):
         elif (
             task == 'load'
             or task == 'rotate_back'
-            or task == 'plot_two_way_streets'
+            #or task == 'plot_two_way_streets'
         ):
             # Do not create a logging file
             logging_file_name = None
@@ -244,7 +244,9 @@ class LoomDB(object):
         if task == 'rotate_back':
             logger.info('Loading spectral networks to rotate back...')
         elif task == 'plot_two_way_streets':
-            logger.info('Loading spectral networks to find two-way streets...')
+            logger.info('Loading spectral networks with two-way streets...')
+        elif task == 'finding_two_way_streets':
+            logger.info('Finding two-way streets of spectral networks ...')
         elif task == 'trivialize':
             logger.info('Trivialize spectral networks...')
 
@@ -252,7 +254,7 @@ class LoomDB(object):
             task == 'load'
             or task == 'rotate_back'
             or task == 'plot_two_way_streets'
-            or task == 'find_two_way_streets'
+            #or task == 'find_two_way_streets'
         ):
             spectral_network_data = SpectralNetworkData(
                 logger_name=logger_name,
@@ -289,7 +291,11 @@ class LoomDB(object):
                 ),
             )
 
-        elif task == 'extend' or task == 'trivialize':
+        elif (
+            task == 'extend'
+            or task == 'trivialize'
+            or task == 'find_two_way_streets'
+        ):
             if spectral_network_data is None:
                 spectral_network_data = SpectralNetworkData(
                     data_dir=full_data_dir,
@@ -299,6 +305,7 @@ class LoomDB(object):
                 spectral_network_data.logger_name = logger_name
                 for sn in spectral_network_data.spectral_networks:
                     sn.logger_name = logger_name
+
             if task == 'extend':
                 loom_process = multiprocessing.Process(
                     target=spectral_network_data.extend,
@@ -324,7 +331,18 @@ class LoomDB(object):
                         two_way_streets_only=two_way_streets_only,
                     )
                 )
-
+            elif task == 'find_two_way_streets':
+                loom_process = multiprocessing.Process(
+                    target=spectral_network_data.find_two_way_streets,
+                    kwargs=dict(
+                        n_processes=n_processes,
+                        search_radius=search_radius,
+                        replace=True,
+                        result_queue=result_queue,
+                        logging_queue=logging_queue,
+                        cache_dir=cache_dir,
+                    )
+                )
         self.loom_processes[process_uuid] = loom_process
         loom_process.start()
 

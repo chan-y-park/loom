@@ -267,7 +267,7 @@ def progress():
                 if (
                     task == 'rotate_back'
                     or task == 'plot_two_way_streets'
-                    or task == 'find_two_way_streets'
+                    #or task == 'find_two_way_streets'
                 ):
                     # No need to load the data from files.
                     # Go directly to the plot page.
@@ -277,7 +277,11 @@ def progress():
                             **kwargs
                         )
                     )
-                elif task == 'extend' or task == 'trivialize':
+                elif (
+                    task == 'extend'
+                    or task == 'trivialize'
+                    or task == 'find_two_way_streets'
+                ):
                     spectral_network_data = result_queue.get()
         elif data_name is None:
             raise RuntimeError(
@@ -309,12 +313,14 @@ def progress():
                 )
             # An extended spectral network is a new data.
             kwargs['saved_data'] = False
-        elif (task == 'trivialize'):
+        elif (
+            task == 'trivialize'
+            or task == 'find_two_way_streets'
+        ):
             kwargs['saved_data'] = False
         elif (
             task == 'load'
             or task == 'rotate_back'
-            or task == 'find_two_way_streets'
             or task == 'plot_two_way_streets'
         ):
             pass
@@ -444,16 +450,16 @@ def plot():
     else:
         spectral_network_data.reset_z_rotation()
 
-    if (task == 'plot_two_way_streets'):
-        spectral_network_data.find_two_way_streets(
-            search_radius=kwargs['search_radius'],
-            replace=False,
-        )
-    elif (task == 'find_two_way_streets'):
-        spectral_network_data.find_two_way_streets(
-            search_radius=kwargs['search_radius'],
-            replace=True,
-        )
+#    if (task == 'plot_two_way_streets'):
+#        spectral_network_data.find_two_way_streets(
+#            search_radius=kwargs['search_radius'],
+#            replace=False,
+#        )
+#    elif (task == 'find_two_way_streets'):
+#        spectral_network_data.find_two_way_streets(
+#            search_radius=kwargs['search_radius'],
+#            replace=True,
+#        )
 #    if (
 #        task == 'plot_two_way_streets'
 #        or task == 'find_two_way_streets'
