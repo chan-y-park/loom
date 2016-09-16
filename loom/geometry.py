@@ -5,6 +5,7 @@ import copy
 import json
 import mpmath
 
+from math import factorial
 from sympy import oo, I
 from itertools import combinations
 from cmath import phase, pi
@@ -32,6 +33,7 @@ mpmath.mp.dps = ROOT_FINDING_PRECISION
 DEFAULT_LARGE_STEP_SIZE = 0.01
 
 X_ROOTS_ACCURACY_FACTOR = 1e-4
+RAMIFICATION_PT_ANALYSIS_ACCURACY = 100
 
 
 class GData:
@@ -943,6 +945,10 @@ class SWDataBase(object):
                 )
             )
 
+#        import pickle
+#        with open('SWDataBase.pkl', 'w') as fp:
+#            pickle.dump(self, fp)
+
         self.analyze_ffr_ramification_points()
 
         # Branch points from ramification points.
@@ -1254,10 +1260,16 @@ class SWDataBase(object):
                 .format(rp.z, rp.x)
             )
 
-            zero_threshold = self.accuracy * 100
+            #zero_threshold = self.accuracy * 100
+            zero_threshold = self.accuracy * RAMIFICATION_PT_ANALYSIS_ACCURACY
             g_data = self.g_data
 
-            if g_data.type == 'A' or g_data.type == 'D':
+            #if g_data.type == 'A' or g_data.type == 'D':
+            if g_data.type == 'A':
+                local_curve = None
+            elif g_data.type == 'D':
+#                import pdb
+#                pdb.set_trace()
                 local_curve = (
                     num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
                     .series(dx, 0, rp.i + 1).removeO()
@@ -1345,8 +1357,14 @@ class SWDataBase(object):
             # coordinate around the ramification point) as a function of z
             # (also intended as a local coordinate near a ramification point)
             if rp_type == 'type_I' or rp_type == 'type_II':
-                a = local_curve.n().subs(dx, 0).coeff(dz)
-                b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+                #a = local_curve.n().subs(dx, 0).coeff(dz)
+                #b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
+                curve_dx_dz = num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
+                a = curve_dx_dz.subs(dx, 0).diff(dz).subs(dz, 0).evalf()
+                b = (
+                    curve_dx_dz.subs(dz, 0).diff(dx, rp.i).subs(dx, 0)
+                    .evalf()
+                ) / factorial(rp.i)
                 dx_dz = (-1.0 * (a / b) * dz) ** sympy.Rational(1, rp.i)
 
             elif rp_type == 'type_III':
