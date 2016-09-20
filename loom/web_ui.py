@@ -53,6 +53,7 @@ config_options = [
     ['mass_limit'],
     ['phase'],
     ['trivialize'],
+    ['twist_lines'],
 ]
 
 advanced_config_options = [

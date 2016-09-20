@@ -742,6 +742,7 @@ class SWDataBase(object):
             'g_data', 'regular_punctures', 'irregular_punctures',
             'ffr_ramification_points',
             'branch_points', 'irregular_singularities',
+            'twise_lines',
         ]
 
         # TODO: Remove SWDataBase.curve,
@@ -749,6 +750,7 @@ class SWDataBase(object):
         self.ffr_curve = None
         self.curve = None
         self.diff = None
+        self.twist_lines = None
         self.accuracy = config['accuracy']
 
         if config['mt_params'] is not None:
@@ -766,6 +768,16 @@ class SWDataBase(object):
                 config['differential_parameters']
             ):
                 diff_params[var] = sympy.sympify(val)
+
+        config_twist_lines = config['twist_lines']
+        if config_twist_lines is not None:
+            twist_lines = sympy.S.EmptySet
+            for start, end in eval(config_twist_lines):
+                # Add an interval [start, end].
+                twist_lines = sympy.Union(
+                    twist_lines, sympy.Interval(start, end)
+                )
+            self.twist_lines = twist_lines
 
         if json_data is None:
             # Work out the SW geometry data
@@ -944,10 +956,6 @@ class SWDataBase(object):
                            .format(len(self.ffr_ramification_points)))
                 )
             )
-
-#        import pickle
-#        with open('SWDataBase.pkl', 'w') as fp:
-#            pickle.dump(self, fp)
 
         self.analyze_ffr_ramification_points()
 
@@ -1268,8 +1276,6 @@ class SWDataBase(object):
             if g_data.type == 'A':
                 local_curve = None
             elif g_data.type == 'D':
-#                import pdb
-#                pdb.set_trace()
                 local_curve = (
                     num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
                     .series(dx, 0, rp.i + 1).removeO()

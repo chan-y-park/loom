@@ -417,14 +417,14 @@ class SpectralNetwork:
             use_cgal = False
 
         # ODE solver setup
-        ode_f, ode = get_ode(
+        s_wall_grow_f = get_s_wall_grow_f(
             sw_data, self.phase, accuracy,
             use_scipy_ode=config['use_scipy_ode'],
         )
-        if config['use_scipy_ode'] is True:
-            s_wall_grow_func = ode
-        else:
-            s_wall_grow_func = (ode_f, sw_data.ffr_curve.get_xs)
+#        if config['use_scipy_ode'] is True:
+#            s_wall_grow_func = ode
+#        else:
+#            s_wall_grow_func = (ode_f, sw_data.ffr_curve.get_xs)
 
         # Gather z-coordinates of punctures and branch points.
         ppzs = [
@@ -565,8 +565,9 @@ class SpectralNetwork:
                         branch_point_zs=bpzs,
                         puncture_point_zs=ppzs,
                         config=config,
-                        func=s_wall_grow_func,
+                        s_wall_grow_f=s_wall_grow_f,
                         use_scipy_ode=config['use_scipy_ode'],
+                        twist_lines=sw_data.twist_lines,
                     )
 
                     if len(s_i.z) < MIN_NUM_OF_DATA_PTS:
@@ -1266,41 +1267,51 @@ class SpectralNetwork:
         return soliton_trees
 
 
-def get_ode(sw, phase, accuracy, use_scipy_ode=True):
+def get_s_wall_grow_f(sw, phase, accuracy, use_scipy_ode=True):
     x, z = sympy.symbols('x z')
-    ode_absolute_tolerance = accuracy
 
-    # Even for higher-reps, we always use the
+    # NOTE: Even for higher-reps, we always use the
     # first fundamental representation curve
     # for evolving the network
     f = sw.ffr_curve.num_eq
-    df_dz = f.diff(z)
-    df_dx = f.diff(x)
-    # F = -(\partial f / \partial z) / (\partial f / \partial x).
-    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
     v = sympy.lambdify((z, x), sw.diff.num_v)
 
-    def ode_f(t, z_x1_x2_M):
-        z_i = z_x1_x2_M[0]
-        x1_i = z_x1_x2_M[1]
-        x2_i = z_x1_x2_M[2]
-        dz_i_dt = exp(phase * 1j) / (v(z_i, x1_i) - v(z_i, x2_i))
-        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
-        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-        dM_dt = 1
-        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+    def dz_dt(z, x1, x2):
+        Dv = (v(z, x1) - v(z, x2))
+        if abs(Dv) < accuracy:
+            raise RuntimeError(
+                'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
+                .format(Dv, accuracy)
+            )
+        dz_dt = exp(phase * 1j) / Dv
+        return dz_dt
 
-    if use_scipy_ode is True:
+    if not use_scipy_ode:
+        return (dz_dt, sw_data.ffr_curve.get_xs) 
+    else:
+        df_dz = f.diff(z)
+        df_dx = f.diff(x)
+        # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
+        F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
+
+        def ode_f(t, z_x1_x2_M):
+            z_i = z_x1_x2_M[0]
+            x1_i = z_x1_x2_M[1]
+            x2_i = z_x1_x2_M[2]
+            dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
+            dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+            dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+            dM_dt = 1
+            return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+
+        ode_absolute_tolerance = accuracy
         ode = integrate.ode(ode_f)
         ode.set_integrator(
             'zvode',
             # method='adams',
             atol=ode_absolute_tolerance,
         )
-    else:
-        ode = None
-
-    return (ode_f, ode)
+        return ode
 
 
 def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,

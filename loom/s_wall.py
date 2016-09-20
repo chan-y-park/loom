@@ -16,6 +16,7 @@ from misc import (
     cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root,
     get_descendant_roots, sort_roots, n_nearest
 )
+from misc import n_nearest_indices
 
 x, z = sympy.symbols('x z')
 
@@ -296,8 +297,9 @@ class SWall(object):
         branch_point_zs=[],
         puncture_point_zs=[],
         config=[],
-        func=None,
+        s_wall_grow_f=None,
         use_scipy_ode=True,
+        twist_lines=None,
     ):
         bpzs = branch_point_zs
         ppzs = puncture_point_zs
@@ -309,88 +311,250 @@ class SWall(object):
 
         step = 0
         array_size = len(self.z)
-        z_i = self.z[0]
-        M_i = self.M[0]
+#        z_i = self.z[0]
+#        M_i = self.M[0]
         # Prepare a 1-dim array for ode
         # Note: the meaning of the following command is established by the
         # self.__getitem__ method defined above.
         # it is a numpy array containing
         # array([z[t], x[t][0], x[t][1], M[t]])
-        y_i = self[0]
+#        y_i = self[0]
 
-        if use_scipy_ode is True:
-            ode = func
+        if use_scipy_ode:
+            ode = s_wall_grow_f
             ode.set_initial_value(y_i)
-
-            while ode.successful() and step < (array_size - 1):
-                step += 1
-                if step > MIN_NUM_OF_DATA_PTS:
-                    # Stop if z is inside a cutoff of a puncture.
-                    if len(ppzs) > 0:
-                        min_d = min([abs(z_i - ppz) for ppz in ppzs])
-                        if min_d < size_of_puncture_cutoff:
-                            self.resize(step)
-                            break
-
-                    # Stop if M exceeds mass limit.
-                    if mass_limit is not None:
-                        if M_i > mass_limit:
-                            self.resize(step)
-                            break
-
-                # Adjust the step size if z is near a branch point.
-                if (len(bpzs) > 0 and
-                    (min([abs(z_i - bpz) for bpz in bpzs]) < 
-                        size_of_bp_neighborhood)):
-                    dt = size_of_small_step * min([1.0, abs(y_i[1] - y_i[2])])
-                else:
-                    dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
-
-                y_i = ode.integrate(ode.t + dt)
-                z_i = y_i[0]
-                M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
-                self[step] = y_i
-
         else:
-            ode_f, get_xs = func 
+            dz_dt, get_xs = s_wall_grow_f 
 
-            while step < (array_size - 1):
-                step += 1
-                if step > MIN_NUM_OF_DATA_PTS:
-                    # Stop if z is inside a cutoff of a puncture.
-                    if len(ppzs) > 0:
-                        min_d = min([abs(z_i - ppz) for ppz in ppzs])
-                        if min_d < size_of_puncture_cutoff:
-                            self.resize(step)
-                            break
+        # NOTE: When either SciPy ODE or manual method fails,
+        # first try switching to the other method.
+        # If it also fails, raise a RuntimeError.
+        grow_method_changed = False
 
-                    # Stop if M exceeds mass limit.
-                    if mass_limit is not None:
-                        if M_i > mass_limit:
-                            self.resize(step)
-                            break
+        while step < (array_size - 1):
+            z_i, x_i_1, x_i_2, M_i = self[step] 
 
-                # Adjust the step size if z is near a branch point.
-                if (len(bpzs) > 0 and
-                    (min([abs(z_i - bpz) for bpz in bpzs]) < 
-                        size_of_bp_neighborhood)):
-                    dt = size_of_small_step * min([1.0, abs(y_i[1] - y_i[2])])
+#            if use_scipy_ode and not ode.successful():
+#                if grow_method_changed:
+#                    break
+#                else:
+#                    grow_method_changed = True
+#                    use_scipy_ode = False
+
+            step += 1
+            if step > MIN_NUM_OF_DATA_PTS:
+                # Stop if z is inside a cutoff of a puncture.
+                if len(ppzs) > 0:
+                    min_d = min([abs(z_i - ppz) for ppz in ppzs])
+                    if min_d < size_of_puncture_cutoff:
+                        self.resize(step)
+                        break
+
+                # Stop if M exceeds mass limit.
+                if mass_limit is not None:
+                    if M_i > mass_limit:
+                        self.resize(step)
+                        break
+
+            # Adjust the step size if z is near a branch point.
+            step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
+            if (
+                len(bpzs) > 0
+                and (min([abs(z_i - bpz) for bpz in bpzs])
+                     < size_of_bp_neighborhood)
+            ):
+                dt = size_of_small_step * step_size_factor
+            else:
+                dt = size_of_large_step * step_size_factor
+
+            try:
+                if use_scipy_ode:
+                    y_i = ode.integrate(ode.t + dt)
+
+                    if not ode.successful():
+                        if grow_method_changed:
+                            raise RuntimeError(
+                                'SWall.grow(): ode.integrate() failed at '
+                                't = {} of {}; z_i = {}, x_i = ({}, {}).'
+                                .format(
+                                    ode.t + dt, self.label,
+                                    z_i, x_i_1, x_i_2,
+                                )
+                            )
+                        else:
+                            use_scipy_ode = False
+                            grow_method_changed = True
+                            step -= 1
+                            continue
+
+                    z_n, x_n_1, x_n_2, M_n = y_i
+
                 else:
-                    dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
+                    z_n = z_p + dt * dz_dt(z_i, x_i_1, x_i_2)
+                    xs_at_z_n = get_xs(z_n)
+                    i_1 = n_nearest_indices(xs_at_z_n, x_i_1, 1)[0]
+                    i_2 = n_nearest_indices(xs_at_z_n, x_i_2, 1)[0]
+                    if i_1 == i_2:
+                        if grow_method_changed:
+                            raise RuntimeError(
+                                'SWall.grow(): failed to get x\'s at '
+                                'z_i = {} of {}, x_i = ({}, {}), '
+                                'xs_at_z_i = {}.'
+                                .format(
+                                    z_i, self.label, x_i_1, x_i_2, xs_at_z_i
+                                )
+                            )
+                        else:
+                            use_scipy_ode = True
+                            grow_method_changed = True
+                            step -= 1
+                            continue
+                    else:
+                        x_n_1 = xs_at_z_n[i_1]
+                        x_n_2 = xs_at_z_n[i_2]
+                    M_n = M_i + dt
+                    y_i = [z_n, x_n_1, x_n_2, M_n]
+            except RuntimeError as e:
+                import pdb
+                pdb.set_trace()
 
-                derivatives = ode_f(None, y_i)
-                new_z = y_i[0] + dt * derivatives[0]
-                # new_x_0 = y_i[1] + dt * derivatives[1]
-                # new_x_1 = y_i[2] + dt * derivatives[2]
-                xs_at_new_z = get_xs(new_z)
-                new_x_0 = n_nearest(xs_at_new_z, y_i[1], 1)[0]
-                new_x_1 = n_nearest(xs_at_new_z, y_i[2], 1)[0]
-                new_M = y_i[3] + dt * derivatives[3]
-                new_y_i = [new_z, new_x_0, new_x_1, new_M]
-                y_i = new_y_i
-                z_i = y_i[0]
-                M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
-                self[step] = y_i
+            # Check if this S-wall is near a twist line.
+            twisted = False
+            if twist_lines is not None:
+                if (
+                    (z_i.imag * z_n.imag) < 0
+                    and twist_lines.contains((z_i.real + z_n.real) * 0.5)
+                ):
+                    # XXX: May need to calculate new z, x's, and M 
+                    # rather than plugging in previous values.
+                    y_i = [z_n, (-1 * x_i_2), (-1 * x_i_1), M_n]
+                    twisted = True
+
+            # XXX
+            if not twisted:
+                Delta = 1.5
+
+                if abs(x_i_1 - x_n_1) > Delta:
+                    print(
+                        '{}: z_i = {}, x_i_1 = {}, z_n = {}, x_n_1 = {}.'
+                        .format(self.label, z_i, x_i_1, z_n, x_n_1)
+                    )
+                if abs(x_i_2 - x_n_2) > Delta:
+                    print(
+                        '{}: z_i = {}, x_i_2 = {}, z_n = {}, x_n_2 = {}.'
+                        .format(self.label, z_i, x_i_2, z_n, x_n_2)
+                    )
+        
+
+#            self[step] = y_i
+
+#        if use_scipy_ode:
+#            ode = func
+#            ode.set_initial_value(y_i)
+#
+#            while ode.successful() and step < (array_size - 1):
+#                step += 1
+#                if step > MIN_NUM_OF_DATA_PTS:
+#                    # Stop if z is inside a cutoff of a puncture.
+#                    if len(ppzs) > 0:
+#                        min_d = min([abs(z_i - ppz) for ppz in ppzs])
+#                        if min_d < size_of_puncture_cutoff:
+#                            self.resize(step)
+#                            break
+#
+#                    # Stop if M exceeds mass limit.
+#                    if mass_limit is not None:
+#                        if M_i > mass_limit:
+#                            self.resize(step)
+#                            break
+#
+#                # Adjust the step size if z is near a branch point.
+#                if (len(bpzs) > 0 and
+#                    (min([abs(z_i - bpz) for bpz in bpzs]) < 
+#                        size_of_bp_neighborhood)):
+#                    dt = size_of_small_step * min([1.0, abs(y_i[1] - y_i[2])])
+#                else:
+#                    dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
+#
+##                if twist_lines is not None:
+##                    z_p, x_p_1, x_p_2, M_p = y_i 
+#                z_p, x_p_1, x_p_2, M_p = y_i 
+#
+#                y_i = ode.integrate(ode.t + dt)
+#                z_i = y_i[0]
+#                # Check if this S-wall is near a twist line.
+#                twisted = False
+#                if twist_lines is not None:
+#                    if (
+#                        (z_p.imag * z_i.imag) < 0
+#                        and twist_lines.contains((z_p.real + z_i.real) * 0.5)
+#                    ):
+#                        #z_i = z_p.real + z_p.imag * (-1j)
+#                        # XXX: May need to calculate new z, x's, and M 
+#                        # rather than plugging in previous values.
+#                        #y_i = [z_i, (-1 * x_p_1), (-1 * x_p_2), M_p]
+#                        y_i = [z_i, (-1 * x_p_2), (-1 * x_p_1), M_p]
+#                        twisted = True
+#
+#                if not twisted:
+#                    x_i_1 = y_i[1]
+#                    x_i_2 = y_i[2]
+#
+#                    Delta = 1.5
+#
+#                    if abs(x_i_1 - x_p_1) > Delta:
+#                        print(
+#                            '{}: z_p = {}, x_p_1 = {}, z_i = {}, x_i_1 = {}'
+#                            .format(self.label, z_p, x_p_1, z_i, x_i_1)
+#                        )
+#                    if abs(x_i_2 - x_p_2) > Delta:
+#                        print(
+#                            '{}: z_p = {}, x_p_2 = {}, z_i = {}, x_i_2 = {}'
+#                            .format(self.label, z_p, x_p_2, z_i, x_i_2)
+#                        )
+#
+#                M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
+#                self[step] = y_i
+#        else:
+#            ode_f, get_xs = func 
+#
+#            while step < (array_size - 1):
+#                step += 1
+#                if step > MIN_NUM_OF_DATA_PTS:
+#                    # Stop if z is inside a cutoff of a puncture.
+#                    if len(ppzs) > 0:
+#                        min_d = min([abs(z_i - ppz) for ppz in ppzs])
+#                        if min_d < size_of_puncture_cutoff:
+#                            self.resize(step)
+#                            break
+#
+#                    # Stop if M exceeds mass limit.
+#                    if mass_limit is not None:
+#                        if M_i > mass_limit:
+#                            self.resize(step)
+#                            break
+#
+#                # Adjust the step size if z is near a branch point.
+#                if (len(bpzs) > 0 and
+#                    (min([abs(z_i - bpz) for bpz in bpzs]) < 
+#                        size_of_bp_neighborhood)):
+#                    dt = size_of_small_step * min([1.0, abs(y_i[1] - y_i[2])])
+#                else:
+#                    dt = size_of_large_step * min([1.0, abs(y_i[1] - y_i[2])])
+#
+#                derivatives = ode_f(None, y_i)
+#                new_z = y_i[0] + dt * derivatives[0]
+#                # new_x_0 = y_i[1] + dt * derivatives[1]
+#                # new_x_1 = y_i[2] + dt * derivatives[2]
+#                xs_at_new_z = get_xs(new_z)
+#                new_x_0 = n_nearest(xs_at_new_z, y_i[1], 1)[0]
+#                new_x_1 = n_nearest(xs_at_new_z, y_i[2], 1)[0]
+#                new_M = y_i[3] + dt * derivatives[3]
+#                new_y_i = [new_z, new_x_0, new_x_1, new_M]
+#                y_i = new_y_i
+#                z_i = y_i[0]
+#                M_i = y_i[NUM_ODE_XS_OVER_Z + 1]
+#                self[step] = y_i
 
     def determine_root_types(self, sw_data, cutoff_radius=0,):
         """

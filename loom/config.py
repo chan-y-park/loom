@@ -37,6 +37,7 @@ class LoomConfig:
                 'mt_params': ('Mobius transformation', None),
                 'ramification_point_finding_method':
                     ('Ramification point finding method', None),
+                'twist_lines': ('Twist lines', None)
             },
             'numerical parameters': {
                 'accuracy': ('Accuracy', None),
