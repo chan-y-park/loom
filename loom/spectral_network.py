@@ -1283,35 +1283,36 @@ def get_s_wall_grow_f(sw, phase, accuracy, use_scipy_ode=True):
                 'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
                 .format(Dv, accuracy)
             )
-        dz_dt = exp(phase * 1j) / Dv
-        return dz_dt
+        return exp(phase * 1j) / Dv
 
-    if not use_scipy_ode:
-        return (dz_dt, sw.ffr_curve.get_xs) 
-    else:
-        df_dz = f.diff(z)
-        df_dx = f.diff(x)
-        # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
-        F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
+    df_dz = f.diff(z)
+    df_dx = f.diff(x)
+    # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
+    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
 
-        def ode_f(t, z_x1_x2_M):
-            z_i = z_x1_x2_M[0]
-            x1_i = z_x1_x2_M[1]
-            x2_i = z_x1_x2_M[2]
-            dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
-            dx1_i_dt = F(z_i, x1_i) * dz_i_dt
-            dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-            dM_dt = 1
-            return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+    def ode_f(t, z_x1_x2_M):
+        z_i = z_x1_x2_M[0]
+        x1_i = z_x1_x2_M[1]
+        x2_i = z_x1_x2_M[2]
+        dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
+        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+        dM_dt = 1
+        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
 
-        ode_absolute_tolerance = accuracy
-        ode = integrate.ode(ode_f)
-        ode.set_integrator(
-            'zvode',
-            # method='adams',
-            atol=ode_absolute_tolerance,
-        )
-        return ode
+    # XXX:
+    import pickle
+    with open('f.pkl', 'w') as fp:
+        pickle.dump(f, fp)
+
+    #ode_absolute_tolerance = accuracy
+    ode = integrate.ode(ode_f)
+    ode.set_integrator(
+        'zvode',
+        # method='adams',
+        #atol=ode_absolute_tolerance,
+    )
+    return (dz_dt, sw.ffr_curve.get_xs, ode) 
 
 
 def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
