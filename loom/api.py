@@ -867,7 +867,7 @@ class SpectralNetworkData:
         if index:
             return sn_i
         else:
-            return self.spectral_networks[i]
+            return self.spectral_networks[sn_i]
 
     def has_two_way_streets(self):
         # XXX: Currently check only if the first spectral network

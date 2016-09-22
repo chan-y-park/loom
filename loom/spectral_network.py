@@ -609,7 +609,7 @@ class SpectralNetwork:
                                 branch_point_zs=bpzs,
                                 puncture_point_zs=ppzs,
                                 config=config,
-                                func=(ode_f, sw_data.ffr_curve.get_xs),
+                                func=s_wall_grow_f,
                                 use_scipy_ode=False,
                             )
                             root_types = s_i.determine_root_types(
@@ -1005,7 +1005,7 @@ class SpectralNetwork:
 
         # Set the parent roots of S-walls and 
         # determine the root type of each S-wall.
-        ode_f, _ = get_ode(
+        s_wall_grow_f = get_s_wall_grow_f(
             sw_data, self.phase, accuracy,
             use_scipy_ode=False,
         )
@@ -1094,7 +1094,7 @@ class SpectralNetwork:
                         branch_point_zs=bpzs,
                         puncture_point_zs=ppzs,
                         config=config,
-                        func=(ode_f, sw_data.ffr_curve.get_xs),
+                        func=s_wall_grow_f,
                         use_scipy_ode=False,
                     )
                     root_types = s_i.determine_root_types(
@@ -1287,7 +1287,7 @@ def get_s_wall_grow_f(sw, phase, accuracy, use_scipy_ode=True):
         return dz_dt
 
     if not use_scipy_ode:
-        return (dz_dt, sw_data.ffr_curve.get_xs) 
+        return (dz_dt, sw.ffr_curve.get_xs) 
     else:
         df_dz = f.diff(z)
         df_dx = f.diff(x)

@@ -322,15 +322,16 @@ class SWall(object):
 
         if use_scipy_ode:
             ode = s_wall_grow_f
-            ode.set_initial_value(y_i)
+#            ode.set_initial_value(y_i)
+            ode.set_initial_value(self[0])
         else:
             dz_dt, get_xs = s_wall_grow_f 
 
         # NOTE: When either SciPy ODE or manual method fails,
         # first try switching to the other method.
         # If it also fails, raise a RuntimeError.
-        grow_method_changed = False
 
+        grow_method_changed = False
         while step < (array_size - 1):
             z_i, x_i_1, x_i_2, M_i = self[step] 
 
@@ -369,7 +370,7 @@ class SWall(object):
 
             try:
                 if use_scipy_ode:
-                    y_i = ode.integrate(ode.t + dt)
+                    y_n = ode.integrate(ode.t + dt)
 
                     if not ode.successful():
                         if grow_method_changed:
@@ -387,10 +388,10 @@ class SWall(object):
                             step -= 1
                             continue
 
-                    z_n, x_n_1, x_n_2, M_n = y_i
+                    z_n, x_n_1, x_n_2, M_n = y_n
 
                 else:
-                    z_n = z_p + dt * dz_dt(z_i, x_i_1, x_i_2)
+                    z_n = z_i + dt * dz_dt(z_i, x_i_1, x_i_2)
                     xs_at_z_n = get_xs(z_n)
                     i_1 = n_nearest_indices(xs_at_z_n, x_i_1, 1)[0]
                     i_2 = n_nearest_indices(xs_at_z_n, x_i_2, 1)[0]
@@ -401,7 +402,7 @@ class SWall(object):
                                 'z_i = {} of {}, x_i = ({}, {}), '
                                 'xs_at_z_i = {}.'
                                 .format(
-                                    z_i, self.label, x_i_1, x_i_2, xs_at_z_i
+                                    z_i, self.label, x_i_1, x_i_2, xs_at_z_n
                                 )
                             )
                         else:
@@ -412,8 +413,14 @@ class SWall(object):
                     else:
                         x_n_1 = xs_at_z_n[i_1]
                         x_n_2 = xs_at_z_n[i_2]
+                        if grow_method_changed:
+                            # When the manual method was invoked due to
+                            # the error while using SciPy ODE, go back to
+                            # using SciPy ODE because it's faster.
+                            use_scipy_ode = True
+
                     M_n = M_i + dt
-                    y_i = [z_n, x_n_1, x_n_2, M_n]
+                    y_n = [z_n, x_n_1, x_n_2, M_n]
             except RuntimeError as e:
                 import pdb
                 pdb.set_trace()
@@ -427,7 +434,7 @@ class SWall(object):
                 ):
                     # XXX: May need to calculate new z, x's, and M 
                     # rather than plugging in previous values.
-                    y_i = [z_n, (-1 * x_i_2), (-1 * x_i_1), M_n]
+                    y_n = [z_n, (-1 * x_i_2), (-1 * x_i_1), M_n]
                     twisted = True
 
             # XXX
@@ -446,7 +453,9 @@ class SWall(object):
                     )
         
 
-#            self[step] = y_i
+            self[step] = y_n
+            # Can switch between SciPy ODE and manual at every point.
+            grow_method_changed = False
 
 #        if use_scipy_ode:
 #            ode = func
