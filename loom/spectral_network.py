@@ -15,6 +15,7 @@ from s_wall import (
     SWall, Joint, get_s_wall_seeds, MIN_NUM_OF_DATA_PTS,
 )
 from misc import ctor2, r2toc
+from misc import nearest_index
 from misc import (
     n_nearest_indices, get_turning_points, get_splits_with_overlap,
     get_descendant_roots, sort_roots, get_delta,
@@ -416,15 +417,11 @@ class SpectralNetwork:
             get_intersections = find_intersections_of_curves
             use_cgal = False
 
-        # ODE solver setup
         s_wall_grow_f = get_s_wall_grow_f(
             sw_data, self.phase, accuracy,
-            use_scipy_ode=config['use_scipy_ode'],
+            use_numba=config['use_numba'],
+            #use_scipy_ode=config['use_scipy_ode'],
         )
-#        if config['use_scipy_ode'] is True:
-#            s_wall_grow_func = ode
-#        else:
-#            s_wall_grow_func = (ode_f, sw_data.ffr_curve.get_xs)
 
         # Gather z-coordinates of punctures and branch points.
         ppzs = [
@@ -567,6 +564,7 @@ class SpectralNetwork:
                         config=config,
                         s_wall_grow_f=s_wall_grow_f,
                         use_scipy_ode=config['use_scipy_ode'],
+                        use_numba=config['use_numba'],
                         twist_lines=sw_data.twist_lines,
                     )
 
@@ -611,6 +609,7 @@ class SpectralNetwork:
                                 config=config,
                                 func=s_wall_grow_f,
                                 use_scipy_ode=False,
+                                use_numba=config['use_numba'],
                             )
                             root_types = s_i.determine_root_types(
                                 sw_data,
@@ -899,8 +898,8 @@ class SpectralNetwork:
                     ):
                         continue
                     elif (
-                        n_nearest_indices(prev_s_wall.z, ip_z, 1)[0] == 0
-                        or n_nearest_indices(new_s_wall.z, ip_z, 1)[0] == 0
+                        nearest_index(prev_s_wall.z, ip_z) == 0
+                        or nearest_index(new_s_wall.z, ip_z) == 0
                     ):
                         continue
                     else:
@@ -1007,7 +1006,7 @@ class SpectralNetwork:
         # determine the root type of each S-wall.
         s_wall_grow_f = get_s_wall_grow_f(
             sw_data, self.phase, accuracy,
-            use_scipy_ode=False,
+            #use_scipy_ode=False,
         )
 
         if two_way_streets_only:
@@ -1096,6 +1095,7 @@ class SpectralNetwork:
                         config=config,
                         func=s_wall_grow_f,
                         use_scipy_ode=False,
+                        use_numba=config['use_numba'],
                     )
                     root_types = s_i.determine_root_types(
                         sw_data,
@@ -1267,52 +1267,62 @@ class SpectralNetwork:
         return soliton_trees
 
 
-def get_s_wall_grow_f(sw, phase, accuracy, use_scipy_ode=True):
+def get_s_wall_grow_f(sw, phase, accuracy, use_numba=False):
     x, z = sympy.symbols('x z')
 
     # NOTE: Even for higher-reps, we always use the
     # first fundamental representation curve
     # for evolving the network
     f = sw.ffr_curve.num_eq
-    v = sympy.lambdify((z, x), sw.diff.num_v)
+    if use_numba:
+        # NOTE: The following assumes that \lambda = x dz.
+        c_v = sw.diff.num_v.coeff(x, n=1)
+        c_dz_dt = complex(exp(phase * 1j) / c_v)
 
-    def dz_dt(z, x1, x2):
-        Dv = (v(z, x1) - v(z, x2))
-        if abs(Dv) < accuracy:
-            raise RuntimeError(
-                'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
-                .format(Dv, accuracy)
-            )
-        return exp(phase * 1j) / Dv
+        N = sympy.degree(f, x)
+        phi_k_czes = []
+        for k in range(N + 1):
+            phi_k = f.coeff(x, n=k).expand()
+            for z_monomial in phi_k.as_ordered_terms():
+                c, e = z_monomial.as_coeff_exponent(z)
+                phi_k_czes.append((int(k), complex(c), float(e)))
 
-    df_dz = f.diff(z)
-    df_dx = f.diff(x)
-    # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
-    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
+        return (phi_k_czes, c_dz_dt)
+    else:
+        v = sympy.lambdify((z, x), sw.diff.num_v)
 
-    def ode_f(t, z_x1_x2_M):
-        z_i = z_x1_x2_M[0]
-        x1_i = z_x1_x2_M[1]
-        x2_i = z_x1_x2_M[2]
-        dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
-        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
-        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-        dM_dt = 1
-        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+        def dz_dt(z, x1, x2):
+            Dv = (v(z, x1) - v(z, x2))
+            if abs(Dv) < accuracy:
+                raise RuntimeError(
+                    'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
+                    .format(Dv, accuracy)
+                )
+            return exp(phase * 1j) / Dv
 
-    # XXX:
-    import pickle
-    with open('f.pkl', 'w') as fp:
-        pickle.dump(f, fp)
+        df_dz = f.diff(z)
+        df_dx = f.diff(x)
+        # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
+        F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
 
-    #ode_absolute_tolerance = accuracy
-    ode = integrate.ode(ode_f)
-    ode.set_integrator(
-        'zvode',
-        # method='adams',
-        #atol=ode_absolute_tolerance,
-    )
-    return (dz_dt, sw.ffr_curve.get_xs, ode) 
+        def ode_f(t, z_x1_x2_M):
+            z_i = z_x1_x2_M[0]
+            x1_i = z_x1_x2_M[1]
+            x2_i = z_x1_x2_M[2]
+            dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
+            dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+            dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+            dM_dt = 1
+            return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+
+        #ode_absolute_tolerance = accuracy
+        ode = integrate.ode(ode_f)
+        ode.set_integrator(
+            'zvode',
+            # method='adams',
+            #atol=ode_absolute_tolerance,
+        )
+        return (dz_dt, sw.ffr_curve.get_xs, ode) 
 
 
 def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
@@ -1326,7 +1336,7 @@ def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
     """
     logger = logging.getLogger(logger_name)
 
-    t_0 = n_nearest_indices(s_wall_z, p_z, 1)[0]
+    t_0 = nearest_index(s_wall_z, p_z)
 
     t = t_0
 

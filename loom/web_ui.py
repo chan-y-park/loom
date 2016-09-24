@@ -53,10 +53,10 @@ config_options = [
     ['mass_limit'],
     ['phase'],
     ['trivialize'],
-    ['twist_lines'],
 ]
 
 advanced_config_options = [
+    ['twist_lines'],
     ['mt_params'],
     ['ramification_point_finding_method'],
     ['ramification_points'],

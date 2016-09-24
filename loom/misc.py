@@ -109,6 +109,30 @@ def n_remove_duplicate(a_list, accuracy):
     return gather(a_list, compare).keys()
 
 
+def nearest(a_list, value):
+    min_d = float('+inf')
+    min_v = None
+    for i, item in enumerate(a_list):
+        d_i = abs(item - value)
+        if d_i < min_d:
+            min_d = d_i
+            min_v = item
+
+    return min_v
+
+
+def nearest_index(a_list, value):
+    min_d = float('+inf')
+    min_i = None
+    for i, item in enumerate(a_list):
+        d_i = abs(item - value)
+        if d_i < min_d:
+            min_d = d_i
+            min_i = i
+
+    return min_i       
+        
+
 def n_nearest(a_list, value, n):
     """
     Find n elements of a_list nearest to value and return them,
