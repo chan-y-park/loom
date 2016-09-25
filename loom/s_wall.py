@@ -298,10 +298,10 @@ class SWall(object):
         branch_point_zs=[],
         puncture_point_zs=[],
         config=[],
-        s_wall_grow_f=None,
+        method=None,
         use_scipy_ode=True,
         twist_lines=None,
-        use_numba=False,
+        #use_numba=False,
     ):
         logger = logging.getLogger(self.logger_name)
         bpzs = branch_point_zs
@@ -313,41 +313,45 @@ class SWall(object):
         mass_limit = config['mass_limit']
         accuracy = config['accuracy']
         
-        # XXX: temporary
-        if use_numba:
-            phi_k_czes, c_dz_dt = s_wall_grow_f
-            if len(ppzs) > 0:
-                ppzs = numpy.array([complex(z) for z in ppzs])
-            else:
-                ppzs = numpy.empty([1])
-                
-            try:
-                self.resize(
-                    numba_grow(
-                        phi_k_czes, c_dz_dt, self.z, self.x, self.M,
-                        bpzs=numpy.array([complex(z) for z in bpzs]),
-                        #ppzs=ppzs,
-                        size_of_small_step=float(size_of_small_step),
-                        size_of_large_step=float(size_of_large_step),
-                        size_of_bp_neighborhood=float(size_of_bp_neighborhood),
-                        size_of_puncture_cutoff=float(size_of_puncture_cutoff),
-                        mass_limit=float(mass_limit),
-                        accuracy=float(accuracy),
-                        #twist_lines=twist_lines,
-                    )
-                )
-            except RuntimeError as e:
-                raise RuntimeError(
-                    '{}: {}'.format(self.label, e)
-                )
-            import pdb
-            pdb.set_trace()
-            return None
+#        # XXX: temporary
+#        if use_numba:
+#            phi_k_czes, c_dz_dt = s_wall_grow_f
+#            if len(ppzs) > 0:
+#                ppzs = numpy.array([complex(z) for z in ppzs])
+#            else:
+#                ppzs = numpy.empty([1])
+#                
+#            try:
+#                self.resize(
+#                    numba_grow(
+#                        phi_k_czes, c_dz_dt, self.z, self.x, self.M,
+#                        bpzs=numpy.array([complex(z) for z in bpzs]),
+#                        #ppzs=ppzs,
+#                        size_of_small_step=float(size_of_small_step),
+#                        size_of_large_step=float(size_of_large_step),
+#                        size_of_bp_neighborhood=float(size_of_bp_neighborhood),
+#                        size_of_puncture_cutoff=float(size_of_puncture_cutoff),
+#                        mass_limit=float(mass_limit),
+#                        accuracy=float(accuracy),
+#                        #twist_lines=twist_lines,
+#                    )
+#                )
+#            except RuntimeError as e:
+#                raise RuntimeError(
+#                    '{}: {}'.format(self.label, e)
+#                )
+#            import pdb
+#            pdb.set_trace()
+#            return None
 
         step = 0
         array_size = len(self.z)
         
-        dz_dt, get_xs, ode = s_wall_grow_f 
+#        dz_dt, get_xs, ode = s_wall_grow_f 
+        ode = method.ode
+        dz_dt = method.dz_dt
+        get_xs = method.get_xs
+
         if use_scipy_ode:
             # Prepare a 1-dim array for ode
             # NOTE: the meaning of the following command is established by the
