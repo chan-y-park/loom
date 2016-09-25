@@ -455,6 +455,7 @@ class SpectralNetwork:
         s_wall_grow_method = GrowMethod(
             sw_data=sw_data,
             phase=self.phase,
+            accuracy=accuracy,
             logger_name=self.logger_name,
         )
 
@@ -1316,12 +1317,14 @@ class GrowMethod:
         self,
         sw_data=None,
         phase=None,
+        accuracy=None,
         logger_name='loom',
     ):
         self.logger_name = logger_name
         self.f = sw_data.ffr_curve.num_eq
         self.v = sw_data.diff.num_v
         self.phase = phase
+        #self.accuracy = accuracy
         # Method using SciPy ODE solver.
         self.ode = None
         # Method using Python routines.
@@ -1367,6 +1370,7 @@ class GrowMethod:
         self.ode.set_integrator('zvode')
 
     def set_clib(self):
+        logger = logging.getLogger(self.logger_name)
         try:
             clib_s_wall = numpy.ctypeslib.load_library(
                 's_wall',
@@ -1405,6 +1409,7 @@ class GrowMethod:
             ctypes.c_int, # int n_tl
         ]
 
+        x, z = sympy.symbols('x z')
 
         # NOTE: The following assumes that \lambda = x dz.
         c_v = self.v.coeff(x, n=1)

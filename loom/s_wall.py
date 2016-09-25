@@ -1,6 +1,7 @@
 import logging
 import numpy
 import sympy
+import ctypes
 import numba
 
 from cmath import exp, pi
@@ -312,8 +313,48 @@ class SWall(object):
         size_of_puncture_cutoff = config['size_of_puncture_cutoff']
         mass_limit = config['mass_limit']
         accuracy = config['accuracy']
+
         
-#        # XXX: temporary
+        # XXX: temporary
+    
+        msg = [len(self.z), 0]
+        diff_k = []
+        diff_c = []
+        diff_e = []
+        for k, c, e in method.phi_k_czes:
+            diff_k.append(k)
+            diff_c.append(c)
+            diff_e.append(e)
+        tl = [[-1.0, 1.0]]
+        for s, e in twist_lines:
+            # XXX: How to implement oo?
+            pass
+
+        method.clib_s_wall_grow(
+            numpy.array(msg, dtype=numpy.int32),
+            ctypes.c_int(len(msg)),
+            numpy.array(diff_k, dtypes=numpy.int32), 
+            numpy.array(diff_c, dtypes=numpy.complex128), 
+            numpy.array(diff_e, dtypes=numpy.float64),
+            ctypes.c_int(len(diff_k)),
+            numpy.array(method.c_dz_dt, dtypes=numpy.complex128),
+            self.z,
+            self.x,
+            self.M,
+            numpy.array(bpzs, dtype=numpy.complex128),
+            ctypes.c_int(len(bpzs)),
+            numpy.array(ppzs, dtype=numpy.complex128),
+            ctypes.c_int(len(ppzs)),
+            ctypes.c_double(size_of_small_step),
+            ctypes.c_double(size_of_large_step),
+            ctypes.c_double(size_of_bp_neighborhood),
+            ctypes.c_double(size_of_puncture_cutoff),
+            ctypes.c_double(mass_limit),
+            ctypes.c_double(accuracy),
+            numpy.array(tl, dtypes=numpy.float64),
+            ctypes.c_int(len(tl)),
+        )
+
 #        if use_numba:
 #            phi_k_czes, c_dz_dt = s_wall_grow_f
 #            if len(ppzs) > 0:
