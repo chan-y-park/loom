@@ -7,7 +7,7 @@ int grow(
     int* diff_k, double complex* diff_c, double* diff_e, int n_diff,
     double complex* c_dz_dt,
     double complex* z,
-    double complex** x,
+    ode_xs* x,
     double complex* M,
     double complex* bpz, int n_bpz,
     double complex* ppz, int n_ppz,
@@ -40,8 +40,8 @@ int grow(
     );
 
     printf("z[0] = (%.8f)+(%.8f)I\n", creal(z[0]), cimag(z[0]));
-    printf("x[0][0] = (%.8f)+(%.8f)I\n", creal(x[0][0]), cimag(x[0][0]));
-    printf("x[0][1] = (%.8f)+(%.8f)I\n", creal(x[0][1]), cimag(x[0][1]));
+    printf("x[0][0] = (%.8f)+(%.8f)I\n", creal(x[0].x1), cimag(x[0].x2));
+    printf("x[0][1] = (%.8f)+(%.8f)I\n", creal(x[0].x2), cimag(x[0].x2));
     printf("M[0] = (%.8f)+(%.8f)I\n", creal(M[0]), cimag(M[0]));
 
     for (i = 0; i < n_bpz; i++) {

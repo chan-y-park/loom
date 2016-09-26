@@ -140,9 +140,14 @@ class SWall(object):
             self.x = []
             self.M = []
         else:
-            self.z = numpy.empty(n_steps + 1, complex)
-            self.x = numpy.empty(n_steps + 1, (complex, NUM_ODE_XS_OVER_Z))
-            self.M = numpy.empty(n_steps + 1, complex)
+#            self.z = numpy.empty(n_steps + 1, complex)
+#            self.x = numpy.empty(n_steps + 1, (complex, NUM_ODE_XS_OVER_Z))
+#            self.M = numpy.empty(n_steps + 1, complex)
+            self.z = numpy.empty(n_steps + 1, numpy.complex128)
+            self.x = numpy.empty(
+                n_steps + 1, (numpy.complex128, NUM_ODE_XS_OVER_Z)
+            )
+            self.M = numpy.empty(n_steps + 1, numpy.complex128)
             self.z[0] = z_0
             self.x[0] = x_0
             self.M[0] = M_0
@@ -317,27 +322,30 @@ class SWall(object):
         
         # XXX: temporary
     
-        msg = [len(self.z), 0]
-        diff_k = []
+        msg = numpy.array([len(self.z), 0], dtype=numpy.int32)
+        diff_k = [] 
         diff_c = []
         diff_e = []
         for k, c, e in method.phi_k_czes:
             diff_k.append(k)
             diff_c.append(c)
             diff_e.append(e)
-        tl = [[-1.0, 1.0]]
-        for s, e in twist_lines:
+
+        if twist_lines is None:
+            twist_lines = [[-1.0, 1.0]]
+        tl = numpy.empty([len(twist_lines), 2], dtype=numpy.float64)
+        for i, (s, e) in enumerate(twist_lines):
             # XXX: How to implement oo?
-            pass
+            tl[i] = (s, e)
 
         method.clib_s_wall_grow(
-            numpy.array(msg, dtype=numpy.int32),
+            msg,
             ctypes.c_int(len(msg)),
-            numpy.array(diff_k, dtypes=numpy.int32), 
-            numpy.array(diff_c, dtypes=numpy.complex128), 
-            numpy.array(diff_e, dtypes=numpy.float64),
+            numpy.array(diff_k, dtype=numpy.int32), 
+            numpy.array(diff_c, dtype=numpy.complex128), 
+            numpy.array(diff_e, dtype=numpy.float64),
             ctypes.c_int(len(diff_k)),
-            numpy.array(method.c_dz_dt, dtypes=numpy.complex128),
+            numpy.array([method.c_dz_dt], dtype=numpy.complex128),
             self.z,
             self.x,
             self.M,
@@ -351,9 +359,12 @@ class SWall(object):
             ctypes.c_double(size_of_puncture_cutoff),
             ctypes.c_double(mass_limit),
             ctypes.c_double(accuracy),
-            numpy.array(tl, dtypes=numpy.float64),
+            tl,
             ctypes.c_int(len(tl)),
         )
+
+        import pdb
+        pdb.set_trace()
 
 #        if use_numba:
 #            phi_k_czes, c_dz_dt = s_wall_grow_f
