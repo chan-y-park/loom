@@ -3,7 +3,7 @@
 #include "s_wall.h"
 
 int grow(
-    int* msg, int n_msg,
+    message* msg,
     int* diff_k, double complex* diff_c, double* diff_e, int n_diff,
     double complex* c_dz_dt,
     double complex* z,
@@ -11,12 +11,13 @@ int grow(
     double complex* M,
     double complex* bpz, int n_bpz,
     double complex* ppz, int n_ppz,
-    double size_of_small_step,
-    double size_of_large_step,
-    double size_of_bp_neighborhood,
-    double size_of_puncture_cutoff,
-    double mass_limit,
-    double accuracy,
+//    double size_of_small_step,
+//    double size_of_large_step,
+//    double size_of_bp_neighborhood,
+//    double size_of_puncture_cutoff,
+//    double mass_limit,
+//    double accuracy,
+    numerical_parameters np,
     twist_line* tl, int n_tl
 ) {
     int i;
@@ -52,16 +53,16 @@ int grow(
         printf("ppz[%d] = (%.8f)+(%.8f)I\n", i, creal(ppz[i]), cimag(ppz[i]));
     }
 
-    printf("size_of_small_step = %.8f\n", size_of_small_step);
-    printf("size_of_large_step = %.8f\n", size_of_large_step);
-    printf("size_of_bp_neighborhood = %.8f\n", size_of_bp_neighborhood);
-    printf("size_of_puncture_cutoff = %.8f\n", size_of_puncture_cutoff);
-    printf("mass_limit = %.8f\n", mass_limit);
-    printf("accuracy = %.8f\n", accuracy);
-    printf("array_size = %d\n", msg[0]);
-    printf("rv = %d\n", msg[1]);
+    printf("size_of_small_step = %.8f\n", np.size_of_small_step);
+    printf("size_of_large_step = %.8f\n", np.size_of_large_step);
+    printf("size_of_bp_neighborhood = %.8f\n", np.size_of_bp_neighborhood);
+    printf("size_of_puncture_cutoff = %.8f\n", np.size_of_puncture_cutoff);
+    printf("mass_limit = %.8f\n", np.mass_limit);
+    printf("accuracy = %.8f\n", np.accuracy);
+    printf("s_wall_size = %d\n", msg->s_wall_size);
+    printf("rv = %d\n", msg->rv);
 
-    msg[0] -= 10;
-    msg[1] = ERROR_SAME_XS;
+    msg->s_wall_size -= 10;
+    msg->rv = ERROR_SAME_XS;
     return 0;
 }

@@ -322,45 +322,15 @@ class SWall(object):
         
         # XXX: temporary
     
-        msg = numpy.array([len(self.z), 0], dtype=numpy.int32)
-        diff_k = [] 
-        diff_c = []
-        diff_e = []
-        for k, c, e in method.phi_k_czes:
-            diff_k.append(k)
-            diff_c.append(c)
-            diff_e.append(e)
+        msg = method.ctypes_s_wall.message
+        msg.s_wall_size = len(self.z)
+        msg.rv = 0
 
-        if twist_lines is None:
-            twist_lines = [[-1.0, 1.0]]
-        tl = numpy.empty([len(twist_lines), 2], dtype=numpy.float64)
-        for i, (s, e) in enumerate(twist_lines):
-            # XXX: How to implement oo?
-            tl[i] = (s, e)
-
-        method.clib_s_wall_grow(
-            msg,
-            ctypes.c_int(len(msg)),
-            numpy.array(diff_k, dtype=numpy.int32), 
-            numpy.array(diff_c, dtype=numpy.complex128), 
-            numpy.array(diff_e, dtype=numpy.float64),
-            ctypes.c_int(len(diff_k)),
-            numpy.array([method.c_dz_dt], dtype=numpy.complex128),
+        method.ctypes_s_wall.grow(
+            method.ctypes_s_wall.message,
             self.z,
             self.x,
             self.M,
-            numpy.array(bpzs, dtype=numpy.complex128),
-            ctypes.c_int(len(bpzs)),
-            numpy.array(ppzs, dtype=numpy.complex128),
-            ctypes.c_int(len(ppzs)),
-            ctypes.c_double(size_of_small_step),
-            ctypes.c_double(size_of_large_step),
-            ctypes.c_double(size_of_bp_neighborhood),
-            ctypes.c_double(size_of_puncture_cutoff),
-            ctypes.c_double(mass_limit),
-            ctypes.c_double(accuracy),
-            tl,
-            ctypes.c_int(len(tl)),
         )
 
         import pdb

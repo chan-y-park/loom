@@ -26,37 +26,17 @@ from intersection import (
 from geometry import BranchPoint
 from trivialization import SWDataWithTrivialization
 
-numpy_ctypeslib_flags = ['C_CONTIGUOUS', 'ALIGNED']
-
-array_1d_int = numpy.ctypeslib.ndpointer(
-    dtype=numpy.int32,
-    ndim=1,
-    flags=numpy_ctypeslib_flags,
-)
-
-array_1d_float = numpy.ctypeslib.ndpointer(
-    dtype=numpy.float64,
-    ndim=1,
-    flags=numpy_ctypeslib_flags,
-)
-
-array_2d_float = numpy.ctypeslib.ndpointer(
-    dtype=numpy.float64,
-    ndim=2,
-    flags=numpy_ctypeslib_flags,
-)
-
-array_1d_complex = numpy.ctypeslib.ndpointer(
-    dtype=numpy.complex128,
-    ndim=1,
-    flags=numpy_ctypeslib_flags,
-)
-
-array_2d_complex = numpy.ctypeslib.ndpointer(
-    dtype=numpy.complex128,
-    ndim=2,
-    flags=numpy_ctypeslib_flags,
-)
+from ctypes_api import array_1d_int
+from ctypes_api import array_1d_float
+from ctypes_api import array_2d_float
+from ctypes_api import array_1d_complex
+from ctypes_api import array_2d_complex
+#from ctypes_api import Message
+#from ctypes_api import DiffParams
+#from ctypes_api import Points
+#from ctypes_api import NumericalParameters
+#from ctypes_api import TwistLines
+from ctypes_api import CTypesSWall 
 
 
 class Street(SWall):
@@ -453,9 +433,9 @@ class SpectralNetwork:
 #            #use_scipy_ode=config['use_scipy_ode'],
 #        )
         s_wall_grow_method = GrowMethod(
+            config=config,
             sw_data=sw_data,
             phase=self.phase,
-            accuracy=accuracy,
             logger_name=self.logger_name,
         )
 
@@ -1047,6 +1027,7 @@ class SpectralNetwork:
 #            #use_scipy_ode=False,
 #        )
         s_wall_grow_method = GrowMethod(
+            config=config,
             sw_data=sw_data,
             phase=self.phase,
             logger_name=self.logger_name,
@@ -1315,9 +1296,10 @@ class SpectralNetwork:
 class GrowMethod:
     def __init__(
         self,
+        config=None,
         sw_data=None,
         phase=None,
-        accuracy=None,
+        #accuracy=None,
         logger_name='loom',
     ):
         self.logger_name = logger_name
@@ -1331,15 +1313,27 @@ class GrowMethod:
         self.dz_dt = None
         self.get_xs = sw_data.ffr_curve.get_xs
         # Method using C libraries.
-        self.clib_s_wall_grow = None
-        self.phi_k_czes = None
-        self.c_dz_dt = None
+        self.ctypes_s_wall = CTypesSWall(
+            config=config,
+            sw_data=sw_data,
+            phase=phase,
+            logger_name=logger_name,
+        )
+#        self.clib_s_wall_grow = None
+#        self.clib_message = Message()
+#        self.clib_diff_params = DiffParams()
+#        self.clib_c_dz_dt = None
+#        self.clib_bps = Points()
+#        self.clib_pps = Points()
+#        self.clib_numerical_parameters = NumericalParameters()
+#        self.clib_twist_lines = TwistLines()
 
         logger = logging.getLogger(logger_name)
         x, z = sympy.symbols('x z')
 
-        self.set_clib()
+#        self.load_clib()
 
+        accuracy = config['accuracy']
         v = sympy.lambdify((z, x), self.v)
         def dz_dt(z, x1, x2):
             Dv = (v(z, x1) - v(z, x2))
@@ -1369,60 +1363,87 @@ class GrowMethod:
         self.ode = integrate.ode(ode_f)
         self.ode.set_integrator('zvode')
 
-    def set_clib(self):
-        logger = logging.getLogger(self.logger_name)
-        try:
-            clib_s_wall = numpy.ctypeslib.load_library(
-                's_wall',
-                (os.path.dirname(os.path.realpath(__file__)) +
-                 '/clibs/'),
-            )
-            self.clib_s_wall_grow = clib_s_wall.grow
-        except OSError:
-            logger.warning( 'Unable to load clib_s_wall_grow().')
-            return None
-        
-        self.clib_s_wall_grow.restype = ctypes.c_int
-
-        self.clib_s_wall_grow.argtypes = [
-            array_1d_int, # int* msg
-            ctypes.c_int, # int n_msg
-            array_1d_int, # int* diff_k
-            array_1d_complex, # double complex* diff_c
-            array_1d_float, # double* diff_e
-            ctypes.c_int, # int n_diff
-            array_1d_complex, # double complex* c_dz_dt
-            array_1d_complex, # double complex* z
-            array_2d_complex, # double complex** x
-            array_1d_complex, # double complex* M
-            array_1d_complex, # double complex* bpz
-            ctypes.c_int, # int n_bpz
-            array_1d_complex, # double complex* ppz
-            ctypes.c_int, # int n_ppz
-            ctypes.c_double, # double size_of_small_step
-            ctypes.c_double, # double size_of_large_step
-            ctypes.c_double, # double size_of_bp_neighborhood
-            ctypes.c_double, # double size_of_puncture_cutoff
-            ctypes.c_double, # double mass_limit
-            ctypes.c_double, # double accuracy
-            array_2d_float, # twist_line* tl
-            ctypes.c_int, # int n_tl
-        ]
-
-        x, z = sympy.symbols('x z')
-
-        # NOTE: The following assumes that \lambda = x dz.
-        c_v = self.v.coeff(x, n=1)
-        self.c_dz_dt = complex(exp(self.phase * 1j) / c_v)
-
-        N = sympy.degree(self.f, x)
-        self.phi_k_czes = []
-        for k in range(N + 1):
-            phi_k = self.f.coeff(x, n=k).expand()
-            for z_monomial in phi_k.as_ordered_terms():
-                c, e = z_monomial.as_coeff_exponent(z)
-                self.phi_k_czes.append((int(k), complex(c), float(e)))
-
+#    def load_clib(self):
+#        logger = logging.getLogger(self.logger_name)
+#        try:
+#            clib_s_wall = numpy.ctypeslib.load_library(
+#                's_wall',
+#                (os.path.dirname(os.path.realpath(__file__)) +
+#                 '/clibs/'),
+#            )
+#            self.ctypes_s_wall.grow = clib_s_wall.grow
+#        except OSError:
+#            logger.warning( 'Unable to load clib_s_wall_grow().')
+#            return None
+#        
+#        self.ctypes_s_wall_grow.restype = ctypes.c_int
+#
+#        self.clib_s_wall_grow.argtypes = [
+#            ctypes.POINTER(Message),
+##            array_1d_int, # int* msg
+##            ctypes.c_int, # int n_msg
+##            array_1d_int, # int* diff_k
+##            array_1d_complex, # double complex* diff_c
+##            array_1d_float, # double* diff_e
+##            ctypes.c_int, # int n_diff
+#            DiffParams,
+#            array_1d_complex, # double complex* c_dz_dt
+#            array_1d_complex, # double complex* z
+#            array_2d_complex, # double complex** x
+#            array_1d_complex, # double complex* M
+##            array_1d_complex, # double complex* bpz
+##            ctypes.c_int, # int n_bpz
+#            Points,
+##            array_1d_complex, # double complex* ppz
+##            ctypes.c_int, # int n_ppz
+#            Points,
+##            ctypes.c_double, # double size_of_small_step
+##            ctypes.c_double, # double size_of_large_step
+##            ctypes.c_double, # double size_of_bp_neighborhood
+##            ctypes.c_double, # double size_of_puncture_cutoff
+##            ctypes.c_double, # double mass_limit
+##            ctypes.c_double, # double accuracy
+#            NumericalParameters,
+##            array_2d_float, # twist_line* tl
+##            ctypes.c_int, # int n_tl
+#            TwistLines,
+#        ]
+#
+#        x, z = sympy.symbols('x z')
+#
+#        # NOTE: The following assumes that \lambda = x dz.
+#        c_v = self.v.coeff(x, n=1)
+#        self.clib_c_dz_dt = complex(exp(self.phase * 1j) / c_v)
+#
+#        N = sympy.degree(self.f, x)
+#        #phi_k_czes = []
+#        diff_k = []
+#        diff_c = []
+#        diff_e = []
+#        for k in range(N + 1):
+#            phi_k = self.f.coeff(x, n=k).expand()
+#            for z_monomial in phi_k.as_ordered_terms():
+#                c, e = z_monomial.as_coeff_exponent(z)
+#                #phi_k_czes.append((int(k), complex(c), float(e)))
+#                diff_k.append(int(k))
+#                diff_c.append(complex(c))
+#                diff_e.append(float(e))
+#
+#        diff_params = self.clib_diff_params
+#        
+#        diff_params.n = len(diff_k)
+#        diff_params.k = numpy.array(diff_k, dtype=numpy.int32) 
+#        diff_params.c = numpy.array(
+#            diff_c, dtype=numpy.complex128,
+#        ) 
+#        diff_params.e = numpy.array(
+#            diff_c, dtype=numpy.float64,
+#        )
+##        for i, (k, c, e) in enumerate(phi_k_czes):
+##            diff_params.k[i] = k
+##            diff_params.c[i] = c
+##            diff_params.e[i] = e
+#
 # XXX: Define instead a wrapper class.
 def get_s_wall_grow_f(
     sw, phase, accuracy,
