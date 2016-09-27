@@ -578,10 +578,8 @@ class SpectralNetwork:
                         branch_point_zs=bpzs,
                         puncture_point_zs=ppzs,
                         config=config,
-                        #s_wall_grow_f=s_wall_grow_f,
                         method=s_wall_grow_method,
                         use_scipy_ode=config['use_scipy_ode'],
-                        #use_numba=config['use_numba'],
                         twist_lines=sw_data.twist_lines,
                     )
 
@@ -624,10 +622,8 @@ class SpectralNetwork:
                                 branch_point_zs=bpzs,
                                 puncture_point_zs=ppzs,
                                 config=config,
-                                #func=s_wall_grow_f,
                                 method=s_wall_grow_method,
                                 use_scipy_ode=False,
-                                #use_numba=config['use_numba'],
                             )
                             root_types = s_i.determine_root_types(
                                 sw_data,
@@ -1022,10 +1018,6 @@ class SpectralNetwork:
 
         # Set the parent roots of S-walls and 
         # determine the root type of each S-wall.
-#        s_wall_grow_f = get_s_wall_grow_f(
-#            sw_data, self.phase, accuracy,
-#            #use_scipy_ode=False,
-#        )
         s_wall_grow_method = GrowMethod(
             config=config,
             sw_data=sw_data,
@@ -1088,7 +1080,7 @@ class SpectralNetwork:
                 if len(descendant_roots) != 1:
                     raise NotImplementedError
                 else:
-                    # XXX: parent_roots != (roots of parents)
+                    # NOTE: parent_roots != (roots of parents)
                     s_i.parent_roots = descendant_roots
             else:
                 raise RuntimeError(
@@ -1119,7 +1111,6 @@ class SpectralNetwork:
                         config=config,
                         method=s_wall_grow_method,
                         use_scipy_ode=False,
-                        #use_numba=config['use_numba'],
                     )
                     root_types = s_i.determine_root_types(
                         sw_data,
@@ -1293,20 +1284,19 @@ class SpectralNetwork:
 
 # End of class SpectralNetwork
 
+
 class GrowMethod:
     def __init__(
         self,
         config=None,
         sw_data=None,
         phase=None,
-        #accuracy=None,
         logger_name='loom',
     ):
         self.logger_name = logger_name
         self.f = sw_data.ffr_curve.num_eq
         self.v = sw_data.diff.num_v
         self.phase = phase
-        #self.accuracy = accuracy
         # Method using SciPy ODE solver.
         self.ode = None
         # Method using Python routines.
@@ -1319,19 +1309,9 @@ class GrowMethod:
             phase=phase,
             logger_name=logger_name,
         )
-#        self.clib_s_wall_grow = None
-#        self.clib_message = Message()
-#        self.clib_diff_params = DiffParams()
-#        self.clib_c_dz_dt = None
-#        self.clib_bps = Points()
-#        self.clib_pps = Points()
-#        self.clib_numerical_parameters = NumericalParameters()
-#        self.clib_twist_lines = TwistLines()
 
         logger = logging.getLogger(logger_name)
         x, z = sympy.symbols('x z')
-
-#        self.load_clib()
 
         accuracy = config['accuracy']
         v = sympy.lambdify((z, x), self.v)
@@ -1363,134 +1343,54 @@ class GrowMethod:
         self.ode = integrate.ode(ode_f)
         self.ode.set_integrator('zvode')
 
-#    def load_clib(self):
-#        logger = logging.getLogger(self.logger_name)
-#        try:
-#            clib_s_wall = numpy.ctypeslib.load_library(
-#                's_wall',
-#                (os.path.dirname(os.path.realpath(__file__)) +
-#                 '/clibs/'),
+
+## XXX: Define instead a wrapper class.
+#def get_s_wall_grow_f(
+#    sw, phase, accuracy,
+#    logger_name='loom',
+#    #use_numba=False
+#):
+#    logger = logging.getLogger(logger_name)
+#    x, z = sympy.symbols('x z')
+#
+#    # NOTE: Even for higher-reps, we always use the
+#    # first fundamental representation curve
+#    # for evolving the network
+#    f = sw.ffr_curve.num_eq
+#    v = sympy.lambdify((z, x), sw.diff.num_v)
+#
+#    def dz_dt(z, x1, x2):
+#        Dv = (v(z, x1) - v(z, x2))
+#        if abs(Dv) < accuracy:
+#            raise RuntimeError(
+#                'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
+#                .format(Dv, accuracy)
 #            )
-#            self.ctypes_s_wall.grow = clib_s_wall.grow
-#        except OSError:
-#            logger.warning( 'Unable to load clib_s_wall_grow().')
-#            return None
-#        
-#        self.ctypes_s_wall_grow.restype = ctypes.c_int
+#        return exp(phase * 1j) / Dv
 #
-#        self.clib_s_wall_grow.argtypes = [
-#            ctypes.POINTER(Message),
-##            array_1d_int, # int* msg
-##            ctypes.c_int, # int n_msg
-##            array_1d_int, # int* diff_k
-##            array_1d_complex, # double complex* diff_c
-##            array_1d_float, # double* diff_e
-##            ctypes.c_int, # int n_diff
-#            DiffParams,
-#            array_1d_complex, # double complex* c_dz_dt
-#            array_1d_complex, # double complex* z
-#            array_2d_complex, # double complex** x
-#            array_1d_complex, # double complex* M
-##            array_1d_complex, # double complex* bpz
-##            ctypes.c_int, # int n_bpz
-#            Points,
-##            array_1d_complex, # double complex* ppz
-##            ctypes.c_int, # int n_ppz
-#            Points,
-##            ctypes.c_double, # double size_of_small_step
-##            ctypes.c_double, # double size_of_large_step
-##            ctypes.c_double, # double size_of_bp_neighborhood
-##            ctypes.c_double, # double size_of_puncture_cutoff
-##            ctypes.c_double, # double mass_limit
-##            ctypes.c_double, # double accuracy
-#            NumericalParameters,
-##            array_2d_float, # twist_line* tl
-##            ctypes.c_int, # int n_tl
-#            TwistLines,
-#        ]
+#    df_dz = f.diff(z)
+#    df_dx = f.diff(x)
+#    # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
+#    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
 #
-#        x, z = sympy.symbols('x z')
+#    def ode_f(t, z_x1_x2_M):
+#        z_i = z_x1_x2_M[0]
+#        x1_i = z_x1_x2_M[1]
+#        x2_i = z_x1_x2_M[2]
+#        dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
+#        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+#        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+#        dM_dt = 1
+#        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
 #
-#        # NOTE: The following assumes that \lambda = x dz.
-#        c_v = self.v.coeff(x, n=1)
-#        self.clib_c_dz_dt = complex(exp(self.phase * 1j) / c_v)
-#
-#        N = sympy.degree(self.f, x)
-#        #phi_k_czes = []
-#        diff_k = []
-#        diff_c = []
-#        diff_e = []
-#        for k in range(N + 1):
-#            phi_k = self.f.coeff(x, n=k).expand()
-#            for z_monomial in phi_k.as_ordered_terms():
-#                c, e = z_monomial.as_coeff_exponent(z)
-#                #phi_k_czes.append((int(k), complex(c), float(e)))
-#                diff_k.append(int(k))
-#                diff_c.append(complex(c))
-#                diff_e.append(float(e))
-#
-#        diff_params = self.clib_diff_params
-#        
-#        diff_params.n = len(diff_k)
-#        diff_params.k = numpy.array(diff_k, dtype=numpy.int32) 
-#        diff_params.c = numpy.array(
-#            diff_c, dtype=numpy.complex128,
-#        ) 
-#        diff_params.e = numpy.array(
-#            diff_c, dtype=numpy.float64,
-#        )
-##        for i, (k, c, e) in enumerate(phi_k_czes):
-##            diff_params.k[i] = k
-##            diff_params.c[i] = c
-##            diff_params.e[i] = e
-#
-# XXX: Define instead a wrapper class.
-def get_s_wall_grow_f(
-    sw, phase, accuracy,
-    logger_name='loom',
-    #use_numba=False
-):
-    logger = logging.getLogger(logger_name)
-    x, z = sympy.symbols('x z')
-
-    # NOTE: Even for higher-reps, we always use the
-    # first fundamental representation curve
-    # for evolving the network
-    f = sw.ffr_curve.num_eq
-    v = sympy.lambdify((z, x), sw.diff.num_v)
-
-    def dz_dt(z, x1, x2):
-        Dv = (v(z, x1) - v(z, x2))
-        if abs(Dv) < accuracy:
-            raise RuntimeError(
-                'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
-                .format(Dv, accuracy)
-            )
-        return exp(phase * 1j) / Dv
-
-    df_dz = f.diff(z)
-    df_dx = f.diff(x)
-    # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
-    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
-
-    def ode_f(t, z_x1_x2_M):
-        z_i = z_x1_x2_M[0]
-        x1_i = z_x1_x2_M[1]
-        x2_i = z_x1_x2_M[2]
-        dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
-        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
-        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-        dM_dt = 1
-        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
-
-    #ode_absolute_tolerance = accuracy
-    ode = integrate.ode(ode_f)
-    ode.set_integrator(
-        'zvode',
-        # method='adams',
-        #atol=ode_absolute_tolerance,
-    )
-    return (dz_dt, sw.ffr_curve.get_xs, ode) 
+#    #ode_absolute_tolerance = accuracy
+#    ode = integrate.ode(ode_f)
+#    ode.set_integrator(
+#        'zvode',
+#        # method='adams',
+#        #atol=ode_absolute_tolerance,
+#    )
+#    return (dz_dt, sw.ffr_curve.get_xs, ode) 
 
 
 def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,

@@ -34,6 +34,8 @@ SEED_PRECISION_MAX_DEPTH = 5
 # Minimum number of data points for each S-wall.
 MIN_NUM_OF_DATA_PTS = 3
 
+# Maximum number of steps for the Newton method C library.
+NEWTON_MAX_STEPS = 100
 
 class Joint:
     def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
@@ -307,9 +309,39 @@ class SWall(object):
         method=None,
         use_scipy_ode=True,
         twist_lines=None,
-        #use_numba=False,
+        use_numba=False,
     ):
         logger = logging.getLogger(self.logger_name)
+        array_size = len(self.z)
+
+        if not use_scipy_ode and method.ctypes_s_wall.grow is not None:
+            msg = method.ctypes_s_wall.message
+            msg.s_wall_size = array_size
+            msg.rv = NEWTON_MAX_STEPS
+
+            method.ctypes_s_wall.grow(
+                #method.ctypes_s_wall.message,
+                msg,
+                self.z,
+                self.x,
+                self.M,
+            )
+
+            if msg.rv < 0:
+                logger.warning(
+                    'Failed in growing {} using C libraries: {} at t = {}.'
+                    .format(self.label, msg, msg.s_wall_size)
+                )
+                logger.warning('Fall back to using SciPy ODE.')
+                use_scipy_ode = True
+            else:
+                if msg.s_wall_size < array_size:
+                    logger.info(
+                        'Growing {} stopped at t = {}: {}.'
+                        .format(self.label, msg.s_wall_size, msg)
+                    )
+                    return self.resize(msg.s_wall_size)
+
         bpzs = branch_point_zs
         ppzs = puncture_point_zs
         size_of_small_step = config['size_of_small_step']
@@ -319,57 +351,8 @@ class SWall(object):
         mass_limit = config['mass_limit']
         accuracy = config['accuracy']
 
-        
-        # XXX: temporary
-    
-        msg = method.ctypes_s_wall.message
-        msg.s_wall_size = len(self.z)
-        msg.rv = 0
-
-        method.ctypes_s_wall.grow(
-            method.ctypes_s_wall.message,
-            self.z,
-            self.x,
-            self.M,
-        )
-
-        import pdb
-        pdb.set_trace()
-
-#        if use_numba:
-#            phi_k_czes, c_dz_dt = s_wall_grow_f
-#            if len(ppzs) > 0:
-#                ppzs = numpy.array([complex(z) for z in ppzs])
-#            else:
-#                ppzs = numpy.empty([1])
-#                
-#            try:
-#                self.resize(
-#                    numba_grow(
-#                        phi_k_czes, c_dz_dt, self.z, self.x, self.M,
-#                        bpzs=numpy.array([complex(z) for z in bpzs]),
-#                        #ppzs=ppzs,
-#                        size_of_small_step=float(size_of_small_step),
-#                        size_of_large_step=float(size_of_large_step),
-#                        size_of_bp_neighborhood=float(size_of_bp_neighborhood),
-#                        size_of_puncture_cutoff=float(size_of_puncture_cutoff),
-#                        mass_limit=float(mass_limit),
-#                        accuracy=float(accuracy),
-#                        #twist_lines=twist_lines,
-#                    )
-#                )
-#            except RuntimeError as e:
-#                raise RuntimeError(
-#                    '{}: {}'.format(self.label, e)
-#                )
-#            import pdb
-#            pdb.set_trace()
-#            return None
-
         step = 0
-        array_size = len(self.z)
         
-#        dz_dt, get_xs, ode = s_wall_grow_f 
         ode = method.ode
         dz_dt = method.dz_dt
         get_xs = method.get_xs
@@ -489,7 +472,6 @@ class SWall(object):
                         ode.set_initial_value(y_n)
 
             # Check if this S-wall is near a twist line.
-            twisted = False
             if twist_lines is not None:
                 if (
                     (z_i.imag * z_n.imag) < 0
@@ -513,9 +495,8 @@ class SWall(object):
                     x_n_1 = xs_at_z_n[i_1]
                     x_n_2 = xs_at_z_n[i_2]
                     y_n = [z_n, x_n_1, x_n_2, M_n]
-                    #twisted = True
-                    ode.set_initial_value(y_n)
-                    #use_scipy_ode = False
+                    if use_scipy_ode:
+                            ode.set_initial_value(y_n)
 
             self[step] = y_n
             grow_error = False
@@ -961,8 +942,12 @@ class SWall(object):
 
         return max(generations)
 
+
 # End of the definition of class SWall
 
+
+# XXX: JIT complier fails to compile the following,
+# left for future use.
 @numba.jit(nopython=True)
 def numba_grow(
     phi_k_czes, c_dz_dt, zs, xs, Ms,
@@ -985,22 +970,16 @@ def numba_grow(
         step += 1
         if step > MIN_NUM_OF_DATA_PTS:
             # Stop if z is inside a cutoff of a puncture.
-#            if len(ppzs) > 0:
-#                min_d = min([abs(z_i - ppz) for ppz in ppzs])
-#                if min_d < size_of_puncture_cutoff:
-#                    #zs.resize(step)
-#                    #xs.resize(step)
-#                    #Ms.resize(step)
-#                    #break
-#                    return step
+            if len(ppzs) > 0:
+                min_d = min([abs(z_i - ppz) for ppz in ppzs])
+                if min_d < size_of_puncture_cutoff:
+                    # NOTE: Don't forget to resize arrays.
+                    return step
 
             # Stop if M exceeds mass limit.
             if mass_limit is not None:
                 if M_i > mass_limit:
-                    #zs.resize(step)
-                    #xs.resize(step)
-                    #Ms.resize(step)
-                    #break
+                    # NOTE: Don't forget to resize arrays.
                     return step
 
         # Adjust the step size if z is near a branch point.
@@ -1011,24 +990,24 @@ def numba_grow(
             else:
                 dt = size_of_large_step * step_size_factor
 
-#        z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
-#        x_n_1 = numba_get_x(phi_k_czes, x_i_1, z_n, accuracy)
-#        x_n_2 = numba_get_x(phi_k_czes, x_i_2, z_n, accuracy)
-#        if abs(x_n_1 - x_n_2) < accuracy:
-#            raise RuntimeError(
-#                'numba_grow(): failed to get x\'s at '
-#                't = {}; z_i = {}, x_i = ({}, {}), '
-#                'z_n = {}, x_n_1 = x_n_2 = {}.'
-#                .format(step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2)
-#            )
-#        M_n = M_i + dt
-#        #y_n = [z_n, x_n_1, x_n_2, M_n]
-#
-#
-#        zs[step] = z_n
-#        xs[step] = (x_n_1, x_n_2)
-#        Ms[step] = M_n
-        #s_wall_data[step] = y_n
+        z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
+        x_n_1 = numba_get_x(phi_k_czes, x_i_1, z_n, accuracy)
+        x_n_2 = numba_get_x(phi_k_czes, x_i_2, z_n, accuracy)
+        if abs(x_n_1 - x_n_2) < accuracy:
+            raise RuntimeError(
+                'numba_grow(): failed to get x\'s at '
+                't = {}; z_i = {}, x_i = ({}, {}), '
+                'z_n = {}, x_n_1 = x_n_2 = {}.'
+                .format(step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2)
+            )
+        M_n = M_i + dt
+        y_n = [z_n, x_n_1, x_n_2, M_n]
+
+
+        zs[step] = z_n
+        xs[step] = (x_n_1, x_n_2)
+        Ms[step] = M_n
+        s_wall_data[step] = y_n
 
     return step
 
