@@ -1,17 +1,19 @@
+#include <stdio.h>
 #include <complex.h>
 #include "solve.h"
-
 
 newton_params f_df_dx_0(
     diff_params phi,
     double complex x_0,
     double complex z_0
 ) {
-    double f_0 = 0;
-    double df_dx_0 = 0;
+    double complex f_0 = 0;
+    double complex df_dx_0 = 0;
+
     int k;
     double complex c;
     double e;
+
     newton_params newton;
 
     for(int i = 0; i < phi.n; i++) {
@@ -40,14 +42,28 @@ double complex get_x(
     newton_params newton;
     double complex Delta;
 
+//    printf("x_0 = (%.8f)+(%.8f)I\n", creal(x_0), cimag(x_0));
     while (step < max_steps) {
         newton = f_df_dx_0(phi, x_i, z_0);
         Delta = newton.f / newton.df_dx;
-        if (cabs(Delta) > accuracy) {
-            break;
-        }
         x_i -= Delta;
-        step++;
+/*
+        printf(
+            "%d:\tf = (%.8f)+(%.8f)I\n"
+            "\tdf_dx = (%.8f)+(%.8f)I\n"
+            "\tDelta = (%.8f)+(%.8f)I\n",
+            step,
+            creal(newton.f), cimag(newton.f),
+            creal(newton.df_dx), cimag(newton.df_dx),
+            creal(Delta), cimag(Delta)
+        );
+*/
+        if (cabs(Delta) < accuracy) {
+            break;
+        } else {
+            step++;
+        }
     }
+//    printf("x_i = (%.8f)+(%.8f)I\n", creal(x_i), cimag(x_i));
     return x_i;
 }

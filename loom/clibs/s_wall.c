@@ -17,11 +17,7 @@ int grow(
 ) {
     int s_wall_size = msg->s_wall_size;
     int max_steps = msg->rv;
-/*
-    int k;
-    double complex c;
-    double e;
-*/
+
     diff_params phi;
     phi.k = diff_k;
     phi.c = diff_c;
@@ -34,7 +30,6 @@ int grow(
 
 /*
     int i;
-
     for (i = 0; i < n_diff; i++) {
         k = diff_k[i];
         c = diff_c[i];
@@ -72,6 +67,7 @@ int grow(
     printf("s_wall_size = %d\n", msg->s_wall_size);
     printf("rv = %d\n", msg->rv);
 */
+
     int i = 0;
     double min_d;
     double d;
@@ -121,7 +117,7 @@ int grow(
         x[i]._1 = get_x(phi, x_i_1, z[i], np.accuracy, max_steps);
         x[i]._2 = get_x(phi, x_i_2, z[i], np.accuracy, max_steps);
         M[i] = M_i + dt;
-        if (cabs(x_n_1 - x_n_2) < np.accuracy) {
+        if (cabs(x[i]._1 - x[i]._2) < np.accuracy) {
             msg->s_wall_size = i;
             msg->rv = ERROR_SAME_XS;
             return 0;

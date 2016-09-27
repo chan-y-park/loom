@@ -314,9 +314,6 @@ class SWall(object):
         logger = logging.getLogger(self.logger_name)
         array_size = len(self.z)
 
-        # XXX: Temporary
-        method.ctypes_s_wall.grow = None
-
         if not use_scipy_ode and method.ctypes_s_wall.grow is not None:
             msg = method.ctypes_s_wall.message
             msg.s_wall_size = array_size
@@ -329,9 +326,6 @@ class SWall(object):
                 self.x,
                 self.M,
             )
-
-            import pdb
-            pdb.set_trace()
 
             if msg.rv < 0:
                 logger.warning(
