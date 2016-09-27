@@ -10,4 +10,11 @@ typedef struct {
 } numerical_parameters;
 typedef struct {double start; double end;} twist_line;
 
-#define ERROR_SAME_XS -1;
+#define ERROR_SAME_XS -1
+#define NEAR_PUNCTURE 1
+#define MASS_LIMIT 2
+
+#define MIN_NUM_OF_DATA_PTS 3
+
+#define N_INF -1e308
+#define P_INF +1e308

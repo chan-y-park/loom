@@ -28,7 +28,7 @@ newton_params f_df_dx_0(
     return newton;
 }
 
-double get_x(
+double complex get_x(
     diff_params phi,
     double complex x_0,
     double complex z_0,
@@ -36,7 +36,7 @@ double get_x(
     int max_steps
 ) {
     int step = 0;
-    double x_i = x_0;
+    double complex x_i = x_0;
     newton_params newton;
     double complex Delta;
 

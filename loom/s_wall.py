@@ -314,6 +314,9 @@ class SWall(object):
         logger = logging.getLogger(self.logger_name)
         array_size = len(self.z)
 
+        # XXX: Temporary
+        method.ctypes_s_wall.grow = None
+
         if not use_scipy_ode and method.ctypes_s_wall.grow is not None:
             msg = method.ctypes_s_wall.message
             msg.s_wall_size = array_size
@@ -326,6 +329,9 @@ class SWall(object):
                 self.x,
                 self.M,
             )
+
+            import pdb
+            pdb.set_trace()
 
             if msg.rv < 0:
                 logger.warning(
@@ -393,15 +399,17 @@ class SWall(object):
                         break
 
             # Adjust the step size if z is near a branch point.
-            step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
+#            step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
             if (
                 len(bpzs) > 0
                 and (min([abs(z_i - bpz) for bpz in bpzs])
                      < size_of_bp_neighborhood)
             ):
-                dt = size_of_small_step * step_size_factor
+#                dt = size_of_small_step * step_size_factor
+                dt = size_of_small_step
             else:
-                dt = size_of_large_step * step_size_factor
+#                dt = size_of_large_step * step_size_factor
+                dt = size_of_large_step
 
             if use_scipy_ode:
                 y_n = ode.integrate(ode.t + dt)
