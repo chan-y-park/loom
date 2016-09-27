@@ -149,7 +149,7 @@ class SWall(object):
             self.x = numpy.empty(
                 n_steps + 1, (numpy.complex128, NUM_ODE_XS_OVER_Z)
             )
-            self.M = numpy.empty(n_steps + 1, numpy.complex128)
+            self.M = numpy.empty(n_steps + 1, numpy.float64)
             self.z[0] = z_0
             self.x[0] = x_0
             self.M[0] = M_0
@@ -309,7 +309,6 @@ class SWall(object):
         method=None,
         use_scipy_ode=True,
         twist_lines=None,
-        use_numba=False,
     ):
         logger = logging.getLogger(self.logger_name)
         array_size = len(self.z)
@@ -341,6 +340,8 @@ class SWall(object):
                         .format(self.label, msg.s_wall_size, msg)
                     )
                     return self.resize(msg.s_wall_size)
+                else:
+                    return None
 
         bpzs = branch_point_zs
         ppzs = puncture_point_zs
@@ -379,18 +380,24 @@ class SWall(object):
 
             step += 1
             if step > MIN_NUM_OF_DATA_PTS:
-                # Stop if z is inside a cutoff of a puncture.
+                stop_msg = None
                 if len(ppzs) > 0:
+                    # Stop if z is inside a cutoff of a puncture.
                     min_d = min([abs(z_i - ppz) for ppz in ppzs])
                     if min_d < size_of_puncture_cutoff:
-                        self.resize(step)
-                        break
-
-                # Stop if M exceeds mass limit.
-                if mass_limit is not None:
+                        stop_msg = 'near a puncture'
+                elif mass_limit is not None:
+                    # Stop if M exceeds mass limit.
                     if M_i > mass_limit:
-                        self.resize(step)
-                        break
+                        stop_msg = 'reached the mass limit'
+
+                if stop_msg is not None:
+                    logger.info(
+                        'Growing {} stopped at t = {}: {}.'
+                        .format(self.label, step, stop_msg)
+                    )
+                    self.resize(step)
+                    break
 
             # Adjust the step size if z is near a branch point.
 #            step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])

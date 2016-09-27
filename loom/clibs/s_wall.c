@@ -117,6 +117,12 @@ int grow(
         x[i]._1 = get_x(phi, x_i_1, z[i], np.accuracy, max_steps);
         x[i]._2 = get_x(phi, x_i_2, z[i], np.accuracy, max_steps);
         M[i] = M_i + dt;
+/*
+        printf(
+            "%d: M[i] = %.8f, M_i = %.8f, dt = %.8f\n",
+            i, M[i], M_i, dt
+        );
+*/
         if (cabs(x[i]._1 - x[i]._2) < np.accuracy) {
             msg->s_wall_size = i;
             msg->rv = ERROR_SAME_XS;
