@@ -69,7 +69,8 @@ class Joint:
     def get_json_data(self):
         json_data = {
             'z': ctor2(self.z),
-            'M': ctor2(self.M),
+#            'M': ctor2(self.M),
+            'M': self.M,
             'parents': [parent.label for parent in self.parents],
             'label': self.label,
             'ode_xs': [ctor2(x) for x in self.ode_xs],
@@ -82,7 +83,11 @@ class Joint:
 
     def set_from_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
-        self.M = r2toc(json_data['M'])
+        # XXX: The following fixes the bug in the old data.
+        if (len(json_data['M']) == 2):
+            self.M = r2toc(json_data['M'])
+        else:
+            self.M = json_data['M']
         # NOTE: Joint.parents is loaded from JSON with labels of parents,
         # but is replaced with parent objects
         # in SpectralNetwork.set_from_json_data()
@@ -142,9 +147,6 @@ class SWall(object):
             self.x = []
             self.M = []
         else:
-#            self.z = numpy.empty(n_steps + 1, complex)
-#            self.x = numpy.empty(n_steps + 1, (complex, NUM_ODE_XS_OVER_Z))
-#            self.M = numpy.empty(n_steps + 1, complex)
             self.z = numpy.empty(n_steps + 1, numpy.complex128)
             self.x = numpy.empty(
                 n_steps + 1, (numpy.complex128, NUM_ODE_XS_OVER_Z)
@@ -192,7 +194,8 @@ class SWall(object):
         Get the data of the S-wall at t, where
             data = [z[t], x[t][0], x[t][1], ..., M[t]]
         """
-        return numpy.concatenate([[self.z[t]], self.x[t], [self.M[t]]])
+#        return numpy.concatenate([[self.z[t]], self.x[t], [self.M[t]]])
+        return [self.z[t], self.x[t][0], self.x[t][1], self.M[t]]
 
     def resize(self, size):
         """
@@ -205,7 +208,8 @@ class SWall(object):
     def get_json_data(self):
         json_data = {
             'z': numpy.array([self.z.real, self.z.imag]).T.tolist(),
-            'M': numpy.array([self.M.real, self.M.imag]).T.tolist(),
+#            'M': numpy.array([self.M.real, self.M.imag]).T.tolist(),
+            'M': self.M.tolist(),
             'x': numpy.rollaxis(
                 numpy.array([self.x.real, self.x.imag]), 0, 3
             ).tolist(),
@@ -239,7 +243,11 @@ class SWall(object):
 
     def set_from_json_data(self, json_data):
         self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
-        self.M = numpy.array([r2toc(M_t) for M_t in json_data['M']])
+        # XXX: The following fixes the bug in the old data.
+        if len(json_data['M'][0]) == 2:
+            self.M = numpy.array([r2toc(M_t) for M_t in json_data['M']])
+        else:
+            self.M = numpy.array(json_data['M'])
         self.x = numpy.array(
             [[r2toc(x_i) for x_i in x_t] for x_t in json_data['x']]
         )
@@ -438,6 +446,8 @@ class SWall(object):
                         continue
 
                 z_n, x_n_1, x_n_2, M_n = y_n
+                M_n = M_n.real
+                y_n = [z_n, x_n_1, x_n_2, M_n]
 
             else:
                 z_n = z_i + dt * dz_dt(z_i, x_i_1, x_i_2)
@@ -895,7 +905,7 @@ class SWall(object):
             ]
 
             M_to_add = get_intermediate_value(
-                self.M[t], self.M[t + 1], z_1, z_2, z_to_add
+                self.M[t], self.M[t + 1], z_1.real, z_2.real, z_to_add.real
             )
 
             z_piece = numpy.concatenate(
