@@ -549,14 +549,14 @@ class SWall(object):
                         )
                         M_n = M_i + abs(Dx_i) * dt
 
-                        if twist_lines is not None:
-                            if (
-                                (z_i.imag * z_n.imag) < 0
-                                and twist_lines.contains(
-                                    (z_i.real + z_n.real) * 0.5
-                                )
-                            ):
-                                x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
+                        if (
+                            twist_lines is not None
+                            and (z_i.imag * z_n.imag) < 0
+                            and twist_lines.contains(
+                                (z_i.real + z_n.real) * 0.5
+                            )
+                        ):
+                            x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
 
                         xs_at_z_n = get_xs(z_n)
                         i_1 = nearest_index(xs_at_z_n, x_i_1)
@@ -565,7 +565,7 @@ class SWall(object):
                             logger.warning(
                                 '{} grow(): failed to get x\'s at '
                                 't = {}; z_i = {}, x_i = ({}, {}), '
-                                'z_n = {}, xs_at_z_i = {}, i_1 == i_2 == {}.'
+                                'z_n = {}, xs_at_z_n = {}, i_1 == i_2 == {}.'
                                 .format(
                                     self.label, step,
                                     z_i, x_i_1, x_i_2, z_n, xs_at_z_n, i_1,
