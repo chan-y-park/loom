@@ -967,17 +967,25 @@ class SWall(object):
 
 # XXX: JIT complier fails to compile the following,
 # left for future use.
-@numba.jit(nopython=True)
+#@numba.jit(nopython=True)
 def numba_grow(
-    phi_k_czes, c_dz_dt, zs, xs, Ms,
+    phi_k_czes, c_dz_dt,
+    zs, xs, Ms,
     bpzs=None,
-    #ppzs=None,
-    size_of_small_step=None, size_of_large_step=None,
-    size_of_bp_neighborhood=None, size_of_puncture_cutoff=None,
-    mass_limit=None, accuracy=None,
+    ppzs=None,
+    config=None,
+    #size_of_small_step=None, size_of_large_step=None,
+    #size_of_bp_neighborhood=None, size_of_puncture_cutoff=None,
+    #mass_limit=None, accuracy=None,
     #twist_lines=None,
 ):
 
+    size_of_small_step = config['size_of_small_step']
+    size_of_large_step = config['size_of_large_step']
+    size_of_bp_neighborhood = config['size_of_bp_neighborhood']
+    size_of_puncture_cutoff = config['size_of_puncture_cutoff']
+    mass_limit = config['mass_limit']
+    accuracy = config['accuracy']
     step = 0
     array_size = len(zs)
     while step < (array_size - 1):
@@ -1026,7 +1034,6 @@ def numba_grow(
         zs[step] = z_n
         xs[step] = (x_n_1, x_n_2)
         Ms[step] = M_n
-        s_wall_data[step] = y_n
 
     return step
 
