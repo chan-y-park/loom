@@ -24,9 +24,9 @@ int grow(
     phi.e = diff_e;
     phi.n = n_diff;
 
-    double complex z_i, x_i_1, x_i_2;
+    double complex z_i, x_i_1, x_i_2, x_tmp;
     double M_i;
-    double complex x_n_1, x_n_2;
+    //double complex x_n_1, x_n_2;
 
 /*
     int i;
@@ -113,42 +113,36 @@ int grow(
         }
 
         Dx_i = x_i_1 - x_i_2;
-        z[i] = z_i + dt * c_dz_dt[0] / Dx_i;
-        x[i]._1 = get_x(phi, x_i_1, z[i], np.accuracy, max_steps);
-        x[i]._2 = get_x(phi, x_i_2, z[i], np.accuracy, max_steps);
-        M[i] = M_i + dt;
+        //z[i] = z_i + dt * c_dz_dt[0] / Dx_i;
+        z[i] = z_i + dt * cexp((carg(c_dz_dt[0]) - carg(Dx_i))*I);
+        M[i] = M_i + cabs(Dx_i) * dt;
 /*
         printf(
             "%d: M[i] = %.8f, M_i = %.8f, dt = %.8f\n",
             i, M[i], M_i, dt
         );
 */
+        if (n_tl > 0 && cimag(z[i]) * cimag(z_i) < 0) {
+            avg_z_r = (creal(z[i]) + creal(z_i)) * 0.5;
+            for (int j = 0; j < n_tl; j++) {
+                if (tl[j].start < avg_z_r && avg_z_r < tl[j].end) {
+                    x_tmp = x_i_1;
+                    x_i_1 = -1.0 * x_i_2;
+                    x_i_2 = -1.0 * x_tmp;
+                    break;
+                }
+            }
+        }
+
+        x[i]._1 = get_x(phi, z[i], x_i_1, np.accuracy, max_steps);
+        x[i]._2 = get_x(phi, z[i], x_i_2, np.accuracy, max_steps);
+
         if (cabs(x[i]._1 - x[i]._2) < np.accuracy) {
             msg->s_wall_size = i;
             msg->rv = ERROR_SAME_XS;
             return 0;
         }
 
-        if (cimag(z[i]) * cimag(z_i) < 0) {
-            avg_z_r = (creal(z[i]) + creal(z_i)) * 0.5;
-            for (int j = 0; j < n_tl; j++) {
-                if (tl[j].start < avg_z_r && avg_z_r < tl[j].end) {
-                    x_n_1 = get_x(
-                        phi, -1.0 * x_i_2, z[i], np.accuracy, max_steps
-                    );
-                    x_n_2 = get_x(
-                        phi, -1.0 * x_i_1, z[i], np.accuracy, max_steps
-                    );
-                    x[i]._1 = x_n_1;
-                    x[i]._2 = x_n_2;
-                    if (cabs(x_n_1 - x_n_2) < np.accuracy) {
-                        msg->s_wall_size = i;
-                        msg->rv = ERROR_SAME_XS;
-                        return 0;
-                    }
-                }
-            }
-        }
     }
 
     return 0;

@@ -2,6 +2,7 @@ import logging
 import numpy
 import scipy
 import sympy
+import cmath
 
 use_numba = True
 try:
@@ -345,6 +346,10 @@ class SWall(object):
                 method == constants.LIB_C
                 and libs.ctypes_s_wall.grow is not None
             ):
+                logger.info(
+                    'Growing {} using C libraries...'
+                    .format(self.label)
+                )
                 msg = libs.ctypes_s_wall.message
                 msg.s_wall_size = array_size
                 msg.rv = NEWTON_MAX_STEPS
@@ -383,13 +388,20 @@ class SWall(object):
             mass_limit = config['mass_limit']
             accuracy = config['accuracy']
 
-            if method == constants.LIB_NUMBA:
+            if (
+                method == constants.LIB_NUMBA
+                and libs.numba_grow is not None
+            ):
+                logger.info(
+                    'Growing {} using Numba...'
+                    .format(self.label)
+                )
                 numba_rv = libs.numba_grow(
                     self.z, self.x, self.M,
                     #numba_f_df_at_xz=libs.numba_f_df_at_xz,
                     numba_get_x=libs.numba_get_x,
                     phi_k_czes=libs.phi_k_czes,
-                    c_dz_dt=libs.ctypes_s_wall.c_dz_dt[0],
+                    c_dz_dt=libs.c_dz_dt,
                     bpzs=bpzs,
                     ppzs=ppzs,
                     size_of_small_step=size_of_small_step,
@@ -400,7 +412,7 @@ class SWall(object):
                     accuracy=accuracy,
                     twist_lines=libs.ctypes_s_wall.tl,
                 )
-                if(isinstance(numba_rv), int):
+                if(isinstance(numba_rv, int)):
                     if numba_rv < array_size:
                         self.resize(numba_rv)
                     finished = True
@@ -424,12 +436,19 @@ class SWall(object):
                 step = 0
                 
                 ode = libs.ode
-                dz_dt = libs.dz_dt
+#                dz_dt = libs.dz_dt
                 get_xs = libs.get_xs
 
                 if method == constants.LIB_SCIPY_ODE:
                     ode.set_initial_value(self[0])
+                    info_msg = 'SciPy ODE'
+                else:
+                    info_msg = 'Python libraries'
 
+                logger.info(
+                    'Growing {} using {}...'
+                    .format(self.label, info_msg)
+                )
                 while step < (array_size - 1):
                     z_i, x_i_1, x_i_2, M_i = self[step] 
 
@@ -456,13 +475,16 @@ class SWall(object):
                             break
 
                     # Adjust the step size if z is near a branch point.
+#                    step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
                     if (
                         len(bpzs) > 0
                         and (min([abs(z_i - bpz) for bpz in bpzs])
                              < size_of_bp_neighborhood)
                     ):
+#                        dt = size_of_small_step * step_size_factor
                         dt = size_of_small_step
                     else:
+#                        dt = size_of_large_step * step_size_factor
                         dt = size_of_large_step
 
                     if method == constants.LIB_SCIPY_ODE:
@@ -492,8 +514,50 @@ class SWall(object):
                         M_n = M_n.real
                         y_n = [z_n, x_n_1, x_n_2, M_n]
 
+                        # Check if this S-wall is near a twist line.
+                        if twist_lines is not None:
+                            if (
+                                (z_i.imag * z_n.imag) < 0
+                                and twist_lines.contains(
+                                    (z_i.real + z_n.real) * 0.5
+                                )
+                            ):
+                                xs_at_z_n = get_xs(z_n)
+                                i_1 = nearest_index(xs_at_z_n, (-1 * x_i_2))
+                                i_2 = nearest_index(xs_at_z_n, (-1 * x_i_1))
+                                if i_1 == i_2:
+                                    self.resize(step)
+                                    raise RuntimeError(
+                                        '{} grow(): failed to get x\'s at '
+                                        't = {} near a twist line; '
+                                        'z_n = {}, x_i = ({}, {}), '
+                                        'xs_at_z_n = {}, i_1 == i_2 == {}.'
+                                        .format(
+                                            self.label, step,
+                                            z_n, x_i_1, x_i_2, xs_at_z_n, i_1,
+                                        )
+                                    )
+                                x_n_1 = xs_at_z_n[i_1]
+                                x_n_2 = xs_at_z_n[i_2]
+                                y_n = [z_n, x_n_1, x_n_2, M_n]
+                                ode.set_initial_value(y_n)
                     else:
-                        z_n = z_i + dt * dz_dt(z_i, x_i_1, x_i_2)
+#                        z_n = z_i + dt * dz_dt(z_i, x_i_1, x_i_2)
+                        Dx_i = x_i_1 - x_i_2
+                        z_n = z_i + dt * exp(
+                            1j*(cmath.phase(libs.c_dz_dt) - cmath.phase(Dx_i))
+                        )
+                        M_n = M_i + abs(Dx_i) * dt
+
+                        if twist_lines is not None:
+                            if (
+                                (z_i.imag * z_n.imag) < 0
+                                and twist_lines.contains(
+                                    (z_i.real + z_n.real) * 0.5
+                                )
+                            ):
+                                x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
+
                         xs_at_z_n = get_xs(z_n)
                         i_1 = nearest_index(xs_at_z_n, x_i_1)
                         i_2 = nearest_index(xs_at_z_n, x_i_2)
@@ -501,12 +565,13 @@ class SWall(object):
                             logger.warning(
                                 '{} grow(): failed to get x\'s at '
                                 't = {}; z_i = {}, x_i = ({}, {}), '
-                                'xs_at_z_i = {}, i_1 == i_2 == {}.'
+                                'z_n = {}, xs_at_z_i = {}, i_1 == i_2 == {}.'
                                 .format(
                                     self.label, step,
-                                    z_i, x_i_1, x_i_2, xs_at_z_n, i_1,
+                                    z_i, x_i_1, x_i_2, z_n, xs_at_z_n, i_1,
                                 )
                             )
+                            # XXX Or start again from the beginning?
                             logger.warning(
                                 '{} grow(): change from manual to ODE '
                                 'at t = {}, z_i = {}.'
@@ -520,39 +585,10 @@ class SWall(object):
                         else:
                             x_n_1 = xs_at_z_n[i_1]
                             x_n_2 = xs_at_z_n[i_2]
-                            M_n = M_i + dt
                             y_n = [z_n, x_n_1, x_n_2, M_n]
-
-                    # Check if this S-wall is near a twist line.
-                    if twist_lines is not None:
-                        if (
-                            (z_i.imag * z_n.imag) < 0
-                            and twist_lines.contains(
-                                (z_i.real + z_n.real) * 0.5
-                            )
-                        ):
-                            xs_at_z_n = get_xs(z_n)
-                            i_1 = nearest_index(xs_at_z_n, (-1 * x_i_2))
-                            i_2 = nearest_index(xs_at_z_n, (-1 * x_i_1))
-                            if i_1 == i_2:
-                                self.resize(step)
-                                raise RuntimeError(
-                                    '{} grow(): failed to get x\'s at '
-                                    't = {} near a twist line; '
-                                    'z_n = {}, x_i = ({}, {}), '
-                                    'xs_at_z_n = {}, i_1 == i_2 == {}.'
-                                    .format(
-                                        self.label, step,
-                                        z_n, x_i_1, x_i_2, xs_at_z_n, i_1,
-                                    )
-                                )
-                            x_n_1 = xs_at_z_n[i_1]
-                            x_n_2 = xs_at_z_n[i_2]
-                            y_n = [z_n, x_n_1, x_n_2, M_n]
-                            if method == constants.LIB_SCIPY_ODE:
-                                ode.set_initial_value(y_n)
 
                     self[step] = y_n
+
                 if step == (array_size -1):
                     finished = True
                 if not finished:
@@ -563,9 +599,6 @@ class SWall(object):
                 logger.warning('SWall.grow(): no grow method specified.')
                 finished = True
                 break
-
-#            finished = True
-
 
 #        step = 0
 #        
@@ -1184,40 +1217,46 @@ class GrowLibs:
         self.f = sw_data.ffr_curve.num_eq
         self.v = sw_data.diff.num_v
         self.phase = phase
+        self.accuracy = config['accuracy']
+        self.c_dz_dt = None 
+        self.phi_k_czes = None
         # Method using SciPy ODE solver.
         self.ode = None
         # Method using Python routines.
         self.dz_dt = None
         self.get_xs = sw_data.ffr_curve.get_xs
         # Method using C libraries.
-        self.ctypes_s_wall = CTypesSWall(
-            config=config,
-            sw_data=sw_data,
-            phase=phase,
-            logger_name=logger_name,
-        )
+        self.ctypes_s_wall = None
         # Method using numba
-        if use_numba:
-            self.numba_grow = _grow
-            #self.numba_grow = numba.jit(nopython=True()_grow)
-            self.numba_f_df_at_xz = numba.jit(nopython=True)(_f_df_at_xz)
-            self.numba_get_x = numba.jit(nopython=True)(_get_x)
-        else:
-            self.numba_grow = None 
+        self.numba_grow = None
 
-        logger = logging.getLogger(logger_name)
         x, z = sympy.symbols('x z')
 
-        accuracy = config['accuracy']
-        v = sympy.lambdify((z, x), self.v)
+        # NOTE: The following assumes that \lambda = x dz.
+        c_v = self.v.coeff(x, n=1)
+        self.c_dz_dt = complex(exp(phase * 1j) / c_v)
+
+        N = sympy.degree(self.f, x)
+        phi_k_czes = []
+        for k in range(N + 1):
+            phi_k = self.f.coeff(x, n=k).expand()
+            for z_monomial in phi_k.as_ordered_terms():
+                c, e = z_monomial.as_coeff_exponent(z)
+                phi_k_czes.append((int(k), complex(c), float(e)))
+        self.phi_k_czes = phi_k_czes
+
+        logger = logging.getLogger(logger_name)
+
+        #v = sympy.lambdify((z, x), self.v)
         def dz_dt(z, x1, x2):
-            Dv = (v(z, x1) - v(z, x2))
-            if abs(Dv) < accuracy:
+            #Dv = (v(z, x1) - v(z, x2))
+            Dv = x1 - x2
+            if abs(Dv) < self.accuracy:
                 raise RuntimeError(
                     'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
                     .format(Dv, accuracy)
                 )
-            return exp(self.phase * 1j) / Dv
+            return self.c_dz_dt / Dv
         self.dz_dt = dz_dt
 
         df_dz = self.f.diff(z)
@@ -1238,14 +1277,32 @@ class GrowLibs:
         self.ode = scipy.integrate.ode(ode_f)
         self.ode.set_integrator('zvode')
 
+        self.ctypes_s_wall = CTypesSWall(
+            config=config,
+            sw_data=sw_data,
+            phase=phase,
+            c_dz_dt=self.c_dz_dt,
+            phi_k_czes=self.phi_k_czes,
+            logger_name=logger_name,
+        )
+
+        if use_numba:
+            self.numba_grow = _grow
+            # XXX Failed to compile a Numba function from _grow, try later.
+            # self.numba_grow = numba.jit(nopython=True)(_grow)
+            # self.numba_f_df_at_xz = numba.jit(nopython=True)(_f_df_at_xz)
+            self.numba_get_x = numba.jit(nopython=True)(_get_x)
+        else:
+            self.numba_grow = None 
+
+    def get_x(self, z_0, x_0, max_steps=100):
+        return _get_x(self.phi_k_czes, z_0, x_0, self.accuracy, max_steps)
+
 
 # XXX: JIT complier fails to compile the following,
 # left for future use.
-#@numba.jit(nopython=True)
-#def numba_grow(
 def _grow(
     zs, xs, Ms,
-    #numba_f_df_at_xz=None,
     numba_get_x=None,
     phi_k_czes=None,
     c_dz_dt=None,
@@ -1283,38 +1340,49 @@ def _grow(
                     return step
 
         # Adjust the step size if z is near a branch point.
-        step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
         if len(bpzs) > 0:
             if min(abs(bpzs - z_i)) < size_of_bp_neighborhood:
-                dt = size_of_small_step * step_size_factor
+                dt = size_of_small_step
             else:
-                dt = size_of_large_step * step_size_factor
+                dt = size_of_large_step
 
-        z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
-        x_n_1 = numba_get_x(phi_k_czes, x_i_1, z_n, accuracy)
-        x_n_2 = numba_get_x(phi_k_czes, x_i_2, z_n, accuracy)
-        M_n = M_i + dt
+        #z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
+        Dx_i = x_i_1 - x_i_2
+        z_n = z_i + dt * exp(1j * (cmath.phase(c_dz_dt) - cmath.phase(Dx_i)))
+        x_n_1 = numba_get_x(phi_k_czes, z_n, x_i_1, accuracy)
+        x_n_2 = numba_get_x(phi_k_czes, z_n, x_i_2, accuracy)
+        M_n = M_i + abs(Dx_i) * dt
 
         zs[step] = z_n
-        xs[step] = (x_n_1, x_n_2)
         Ms[step] = M_n
+
+        if (twist_lines is not None and (z_i.imag * z_n.imag) < 0):
+            avg_z_r = (z_i.real + z_n.real) * 0.5
+            for s, e in twist_lines:
+                if (s <= avg_z_r and avg_z_r <= e):
+                    x_n_1 = numba_get_x(
+                        phi_k_czes, z_n, (-1 * x_i_2), accuracy
+                    )
+                    x_n_2 = numba_get_x(
+                        phi_k_czes, z_n, (-1 * x_i_1), accuracy
+                    )
 
         if abs(x_n_1 - x_n_2) < accuracy:
             return (step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2)
+        else:
+            xs[step] = (x_n_1, x_n_2)
 
     return (step + 1)
 
 
-#@numba.jit(nopython=True)
-#def numba_f_df_at_xz(phi_k_czes, x_0, z_0):
-def _f_df_at_xz(phi_k_czes, x_0, z_0):
+def _f_df_at_zx(phi_k_czes, z_0, x_0):
     """
-    Calculate f(x_0, z_0) and df(x_0, z_0)/dx,
+    Calculate f(z_0, x_0) and df(z_0, x_0)/dx,
     which are used in Newton's method
-    to find the root of f(x, z_0) near x = x_0.
+    to find the root of f(z_0, x) near x = x_0.
 
     phi_k_czes = [(k, c, e), ...], where
-        f(x, z) = ... + (c*z^e + ...) * x^k + ...
+        f(z, x) = ... + (c*z^e + ...) * x^k + ...
     """
     f_0 = 0
     df_0 = 0
@@ -1325,16 +1393,13 @@ def _f_df_at_xz(phi_k_czes, x_0, z_0):
     return f_0, df_0
 
 
-#@numba.jit(nopython=True)
-#def numba_get_x(phi_k_czes, x_0, z_0, accuracy, max_steps=100):
-def _get_x(phi_k_czes, x_0, z_0, accuracy, max_steps=100):
+def _get_x(phi_k_czes, z_0, x_0, accuracy, max_steps=100):
     """
-    Solve f(x, z_0) = 0 using Newton's method from x = x_0.
+    Solve f(z_0, x) = 0 using Newton's method from x = x_0.
     """
     step = 0
     x_i = x_0
     while(step < max_steps):
-        #f_i, df_i = numba_f_df_at_xz(phi_k_czes, x_i, z_0)
         f_i = 0
         df_i = 0
         for k, c, e in phi_k_czes:
@@ -1349,6 +1414,27 @@ def _get_x(phi_k_czes, x_0, z_0, accuracy, max_steps=100):
         step += 1
     return x_i
 
+
+def debug_get_x(phi_k_czes, z_0, x_0, accuracy, max_steps=100):
+    """
+    Solve f(z_0, x) = 0 using Newton's method from x = x_0.
+    """
+    step = 0
+    x_i = x_0
+    while(step < max_steps):
+        f_i = 0
+        df_i = 0
+        for k, c, e in phi_k_czes:
+            f_i += (x_i ** k) * c * (z_0 ** e)
+            if k > 0:
+                df_i += k * x_i ** (k - 1) * c * (z_0 ** e)
+        Delta = f_i / df_i
+        if abs(Delta) < accuracy:
+            break
+        else:
+            x_i -= Delta
+        step += 1
+    return x_i
 
 def get_s_wall_root(z, ffr_xs, sw_data):
     x_i, x_j = ffr_xs

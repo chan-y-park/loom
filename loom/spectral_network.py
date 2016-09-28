@@ -523,7 +523,7 @@ class SpectralNetwork:
             i = 0
             while (i < len(new_s_walls)):
                 s_i = new_s_walls[i]
-                logger.info('Growing {}...'.format(s_i.label))
+                #logger.info('Growing {}...'.format(s_i.label))
                 try:
                     s_i.grow(
                         branch_point_zs=bpzs,

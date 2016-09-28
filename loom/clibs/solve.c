@@ -4,8 +4,8 @@
 
 newton_params f_df_dx_0(
     diff_params phi,
-    double complex x_0,
-    double complex z_0
+    double complex z_0,
+    double complex x_0
 ) {
     double complex f_0 = 0;
     double complex df_dx_0 = 0;
@@ -32,8 +32,8 @@ newton_params f_df_dx_0(
 
 double complex get_x(
     diff_params phi,
-    double complex x_0,
     double complex z_0,
+    double complex x_0,
     double accuracy,
     int max_steps
 ) {
@@ -44,7 +44,7 @@ double complex get_x(
 
 //    printf("x_0 = (%.8f)+(%.8f)I\n", creal(x_0), cimag(x_0));
     while (step < max_steps) {
-        newton = f_df_dx_0(phi, x_i, z_0);
+        newton = f_df_dx_0(phi, z_0, x_i);
         Delta = newton.f / newton.df_dx;
         x_i -= Delta;
 /*
