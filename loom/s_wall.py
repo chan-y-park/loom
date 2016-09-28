@@ -1,5 +1,6 @@
 import logging
 import numpy
+import scipy
 import sympy
 
 use_numba = True
@@ -365,7 +366,7 @@ class SWall(object):
                     continue
                 else:
                     if msg.s_wall_size < array_size:
-                        logger.info(
+                        logger.debug(
                             'Growing {} stopped at t = {}: {}.'
                             .format(self.label, msg.s_wall_size, msg)
                         )
