@@ -54,7 +54,7 @@ class LoomConfig:
             },
             'settings': {
                 'trivialize': ('Trivialize spectral networks', True),
-                'use_scipy_ode': ('Use SciPy ODE solver', True),
+                'use_scipy_ode': ('Use SciPy ODE solver', False),
             },
         }
 

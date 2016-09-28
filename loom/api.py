@@ -257,6 +257,7 @@ class SpectralNetworkData:
     def generate(
         self, phases=None, n_processes=0, extend=False,
         result_queue=None, logging_queue=None, cache_dir=None,
+        method=None,
     ):
         logger = logging.getLogger(self.logger_name)
 
@@ -331,6 +332,7 @@ class SpectralNetworkData:
                     spectral_network.grow(
                         config=self.config, sw_data=self.sw_data,
                         cache_file_path=cache_file_path,
+                        method=method,
                     )
 
                     spectral_networks = [spectral_network]
@@ -353,6 +355,7 @@ class SpectralNetworkData:
                         logger_name=self.logger_name,
                         cache_dir=cache_dir,
                         data_file_prefix=data_file_prefix,
+                        method=method,
                     )
 
             except (KeyboardInterrupt, SystemExit) as e:

@@ -39,6 +39,7 @@ def a_child_process(
     two_way_streets_only=False,
     search_radius=None,
     task='grow',
+    method=None,
 ):
     logger = logging.getLogger(logger_name)
 
@@ -59,6 +60,7 @@ def a_child_process(
                 additional_n_steps=additional_n_steps,
                 new_mass_limit=new_mass_limit,
                 cache_file_path=cache_file_path,
+                method=method,
             )
         elif task == 'trivialize':
             spectral_network.trivialize(
@@ -107,6 +109,7 @@ def parallel_get_spectral_network(
     search_radius=None,
     data_file_prefix='data',
     task='grow',
+    method=None,
 ):
     logger = logging.getLogger(logger_name)
     phase = config['phase']
@@ -173,6 +176,7 @@ def parallel_get_spectral_network(
                     search_radius=search_radius,
                     two_way_streets_only=two_way_streets_only,
                     task=task,
+                    method=method,
                 )
             ) for i, sn in enumerate(spectral_networks)
         ]

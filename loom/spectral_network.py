@@ -1,4 +1,3 @@
-import platform
 import os
 import numpy
 import sympy
@@ -8,12 +7,12 @@ import itertools
 import json
 
 from cmath import exp
-from scipy import integrate
 from sympy import oo
 
 from s_wall import (
     SWall, Joint, get_s_wall_seeds, MIN_NUM_OF_DATA_PTS,
 )
+from s_wall import GrowLibs
 from misc import ctor2, r2toc
 from misc import nearest_index
 from misc import (
@@ -25,18 +24,18 @@ from intersection import (
 )
 from geometry import BranchPoint
 from trivialization import SWDataWithTrivialization
+from ctypes_api import libcgal_get_intersections
 
-from ctypes_api import array_1d_int
-from ctypes_api import array_1d_float
-from ctypes_api import array_2d_float
-from ctypes_api import array_1d_complex
-from ctypes_api import array_2d_complex
+#from ctypes_api import array_1d_int
+#from ctypes_api import array_1d_float
+#from ctypes_api import array_2d_float
+#from ctypes_api import array_1d_complex
+#from ctypes_api import array_2d_complex
 #from ctypes_api import Message
 #from ctypes_api import DiffParams
 #from ctypes_api import Points
 #from ctypes_api import NumericalParameters
 #from ctypes_api import TwistLines
-from ctypes_api import CTypesSWall 
 
 
 class Street(SWall):
@@ -357,6 +356,7 @@ class SpectralNetwork:
         additional_n_steps=0,
         new_mass_limit=None,
         cache_file_path=None,
+        method=None,
     ):
         """
         Grow the spectral network by seeding SWall's
@@ -374,65 +374,16 @@ class SpectralNetwork:
         # Determine the intersection-finding algorithm
         # according to the availability of CGAL.
         try:
-            lib_name = 'libcgal_intersection'
-
-            linux_distribution = platform.linux_distribution()[0]
-            if linux_distribution == 'Ubuntu':
-                lib_name += '_ubuntu'
-            elif linux_distribution == 'debian':
-                # FIXME: Anaconda Python returns 'debian' instead of 'Ubuntu'.
-                lib_name += '_ubuntu'
-            elif linux_distribution == 'Scientific Linux':
-                lib_name += '_het-math2'
-            else:
-                raise OSError
-
-            # Load CGAL shared library.
-            libcgal_intersection = numpy.ctypeslib.load_library(
-                lib_name,
-                (os.path.dirname(os.path.realpath(__file__)) +
-                 '/cgal_intersection/'),
-            )
-
-            get_intersections = (libcgal_intersection.
-                                 find_intersections_of_curves)
-
-            # Prepare types for CGAL library.
-#            array_2d_float = numpy.ctypeslib.ndpointer(
-#                dtype=numpy.float64,
-#                ndim=2,
-#                flags=['C_CONTIGUOUS', 'ALIGNED'],
-#            )
-#            array_1d_complex = numpy.ctypeslib.ndpointer(
-#                dtype=numpy.complex128,
-#                ndim=1,
-#                flags=['C_CONTIGUOUS', 'ALIGNED'],
-#            )
-
-            get_intersections.restype = ctypes.c_int
-            get_intersections.argtypes = [
-                array_1d_complex,
-                ctypes.c_long,
-                array_1d_complex,
-                ctypes.c_long,
-                array_2d_float, ctypes.c_int,
-            ]
-
+            get_intersections = libcgal_get_intersections()
             logger.info('Use CGAL to find intersections.')
             use_cgal = True
-
         except OSError:
             logger.warning('CGAL not available; use interpolation '
                            'to find intersections.')
             get_intersections = find_intersections_of_curves
             use_cgal = False
 
-#        s_wall_grow_f = get_s_wall_grow_f(
-#            sw_data, self.phase, accuracy,
-#            #use_numba=config['use_numba'],
-#            #use_scipy_ode=config['use_scipy_ode'],
-#        )
-        s_wall_grow_method = GrowMethod(
+        s_wall_grow_libs = GrowLibs(
             config=config,
             sw_data=sw_data,
             phase=self.phase,
@@ -578,9 +529,10 @@ class SpectralNetwork:
                         branch_point_zs=bpzs,
                         puncture_point_zs=ppzs,
                         config=config,
-                        method=s_wall_grow_method,
+                        libs=s_wall_grow_libs,
                         use_scipy_ode=config['use_scipy_ode'],
                         twist_lines=sw_data.twist_lines,
+                        method=method,
                     )
 
                     if len(s_i.z) < MIN_NUM_OF_DATA_PTS:
@@ -600,7 +552,6 @@ class SpectralNetwork:
                     logger.error(error_msg)
                     self.errors.append(('RuntimeError', error_msg))
 
-                #if config['trivialize'] is True:
                 if sw_data.is_trivialized():
                     # Cut the grown S-walls
                     # at the intersetions with branch cuts
@@ -622,8 +573,9 @@ class SpectralNetwork:
                                 branch_point_zs=bpzs,
                                 puncture_point_zs=ppzs,
                                 config=config,
-                                method=s_wall_grow_method,
+                                libs=s_wall_grow_libs,
                                 use_scipy_ode=False,
+                                method=method,
                             )
                             root_types = s_i.determine_root_types(
                                 sw_data,
@@ -1018,7 +970,7 @@ class SpectralNetwork:
 
         # Set the parent roots of S-walls and 
         # determine the root type of each S-wall.
-        s_wall_grow_method = GrowMethod(
+        s_wall_grow_libs = GrowLibs(
             config=config,
             sw_data=sw_data,
             phase=self.phase,
@@ -1109,7 +1061,7 @@ class SpectralNetwork:
                         branch_point_zs=bpzs,
                         puncture_point_zs=ppzs,
                         config=config,
-                        method=s_wall_grow_method,
+                        libs=s_wall_grow_libs,
                         use_scipy_ode=False,
                     )
                     root_types = s_i.determine_root_types(
@@ -1283,116 +1235,67 @@ class SpectralNetwork:
 
 
 # End of class SpectralNetwork
-
-
-class GrowMethod:
-    def __init__(
-        self,
-        config=None,
-        sw_data=None,
-        phase=None,
-        logger_name='loom',
-    ):
-        self.logger_name = logger_name
-        self.f = sw_data.ffr_curve.num_eq
-        self.v = sw_data.diff.num_v
-        self.phase = phase
-        # Method using SciPy ODE solver.
-        self.ode = None
-        # Method using Python routines.
-        self.dz_dt = None
-        self.get_xs = sw_data.ffr_curve.get_xs
-        # Method using C libraries.
-        self.ctypes_s_wall = CTypesSWall(
-            config=config,
-            sw_data=sw_data,
-            phase=phase,
-            logger_name=logger_name,
-        )
-
-        logger = logging.getLogger(logger_name)
-        x, z = sympy.symbols('x z')
-
-        accuracy = config['accuracy']
-        v = sympy.lambdify((z, x), self.v)
-        def dz_dt(z, x1, x2):
-            Dv = (v(z, x1) - v(z, x2))
-            if abs(Dv) < accuracy:
-                raise RuntimeError(
-                    'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
-                    .format(Dv, accuracy)
-                )
-            return exp(self.phase * 1j) / Dv
-        self.dz_dt = dz_dt
-
-        df_dz = self.f.diff(z)
-        df_dx = self.f.diff(x)
-        # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
-        F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
-
-        def ode_f(t, z_x1_x2_M):
-            z_i = z_x1_x2_M[0]
-            x1_i = z_x1_x2_M[1]
-            x2_i = z_x1_x2_M[2]
-            dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
-            dx1_i_dt = F(z_i, x1_i) * dz_i_dt
-            dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-            dM_dt = 1
-            return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
-
-        self.ode = integrate.ode(ode_f)
-        self.ode.set_integrator('zvode')
-
-
-## XXX: Define instead a wrapper class.
-#def get_s_wall_grow_f(
-#    sw, phase, accuracy,
-#    logger_name='loom',
-#    #use_numba=False
-#):
-#    logger = logging.getLogger(logger_name)
-#    x, z = sympy.symbols('x z')
 #
-#    # NOTE: Even for higher-reps, we always use the
-#    # first fundamental representation curve
-#    # for evolving the network
-#    f = sw.ffr_curve.num_eq
-#    v = sympy.lambdify((z, x), sw.diff.num_v)
 #
-#    def dz_dt(z, x1, x2):
-#        Dv = (v(z, x1) - v(z, x2))
-#        if abs(Dv) < accuracy:
-#            raise RuntimeError(
-#                'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
-#                .format(Dv, accuracy)
-#            )
-#        return exp(phase * 1j) / Dv
+#class GrowLibs:
+#    def __init__(
+#        self,
+#        config=None,
+#        sw_data=None,
+#        phase=None,
+#        logger_name='loom',
+#    ):
+#        self.logger_name = logger_name
+#        self.f = sw_data.ffr_curve.num_eq
+#        self.v = sw_data.diff.num_v
+#        self.phase = phase
+#        # Method using SciPy ODE solver.
+#        self.ode = None
+#        # Method using Python routines.
+#        self.dz_dt = None
+#        self.get_xs = sw_data.ffr_curve.get_xs
+#        # Method using C libraries.
+#        self.ctypes_s_wall = CTypesSWall(
+#            config=config,
+#            sw_data=sw_data,
+#            phase=phase,
+#            logger_name=logger_name,
+#        )
 #
-#    df_dz = f.diff(z)
-#    df_dx = f.diff(x)
-#    # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
-#    F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
+#        logger = logging.getLogger(logger_name)
+#        x, z = sympy.symbols('x z')
 #
-#    def ode_f(t, z_x1_x2_M):
-#        z_i = z_x1_x2_M[0]
-#        x1_i = z_x1_x2_M[1]
-#        x2_i = z_x1_x2_M[2]
-#        dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
-#        dx1_i_dt = F(z_i, x1_i) * dz_i_dt
-#        dx2_i_dt = F(z_i, x2_i) * dz_i_dt
-#        dM_dt = 1
-#        return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+#        accuracy = config['accuracy']
+#        v = sympy.lambdify((z, x), self.v)
+#        def dz_dt(z, x1, x2):
+#            Dv = (v(z, x1) - v(z, x2))
+#            if abs(Dv) < accuracy:
+#                raise RuntimeError(
+#                    'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
+#                    .format(Dv, accuracy)
+#                )
+#            return exp(self.phase * 1j) / Dv
+#        self.dz_dt = dz_dt
 #
-#    #ode_absolute_tolerance = accuracy
-#    ode = integrate.ode(ode_f)
-#    ode.set_integrator(
-#        'zvode',
-#        # method='adams',
-#        #atol=ode_absolute_tolerance,
-#    )
-#    return (dz_dt, sw.ffr_curve.get_xs, ode) 
-
-
+#        df_dz = self.f.diff(z)
+#        df_dx = self.f.diff(x)
+#        # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
+#        F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
+#
+#        def ode_f(t, z_x1_x2_M):
+#            z_i = z_x1_x2_M[0]
+#            x1_i = z_x1_x2_M[1]
+#            x2_i = z_x1_x2_M[2]
+#            dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
+#            dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+#            dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+#            dM_dt = 1
+#            return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+#
+#        self.ode = integrate.ode(ode_f)
+#        self.ode.set_integrator('zvode')
+#
+#
 def get_nearest_point_index(s_wall_z, p_z, branch_points, accuracy,
                             logger_name='loom',):
     """

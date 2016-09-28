@@ -1,8 +1,14 @@
 import logging
 import numpy
 import sympy
-import ctypes
-import numba
+
+use_numba = True
+try:
+    import numba
+except ImportError, e:
+    use_numba = False
+
+import constants
 
 from cmath import exp, pi
 from math import floor
@@ -13,6 +19,8 @@ from geometry import (
     find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
 )
 from geometry import BranchPoint
+
+from ctypes_api import CTypesSWall 
 
 from misc import (
     cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root,
@@ -85,7 +93,7 @@ class Joint:
         self.z = r2toc(json_data['z'])
         # XXX: The following fixes the bug in the old data.
         if (len(json_data['M']) == 2):
-            self.M = r2toc(json_data['M'])
+            self.M = json_data['M'][0]
         else:
             self.M = json_data['M']
         # NOTE: Joint.parents is loaded from JSON with labels of parents,
@@ -245,7 +253,7 @@ class SWall(object):
         self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
         # XXX: The following fixes the bug in the old data.
         if len(json_data['M'][0]) == 2:
-            self.M = numpy.array([r2toc(M_t) for M_t in json_data['M']])
+            self.M = numpy.array([M_t [0]for M_t in json_data['M']])
         else:
             self.M = numpy.array(json_data['M'])
         self.x = numpy.array(
@@ -314,211 +322,409 @@ class SWall(object):
         branch_point_zs=[],
         puncture_point_zs=[],
         config=[],
-        method=None,
+        libs=None,
         use_scipy_ode=True,
+        method=None,
         twist_lines=None,
     ):
         logger = logging.getLogger(self.logger_name)
         array_size = len(self.z)
 
-        if not use_scipy_ode and method.ctypes_s_wall.grow is not None:
-            msg = method.ctypes_s_wall.message
-            msg.s_wall_size = array_size
-            msg.rv = NEWTON_MAX_STEPS
-
-            method.ctypes_s_wall.grow(
-                #method.ctypes_s_wall.message,
-                msg,
-                self.z,
-                self.x,
-                self.M,
-            )
-
-            if msg.rv < 0:
-                logger.warning(
-                    'Failed in growing {} using C libraries: {} at t = {}.'
-                    .format(self.label, msg, msg.s_wall_size)
-                )
-                logger.warning('Fall back to using SciPy ODE.')
-                use_scipy_ode = True
+        if method is None:
+            if use_scipy_ode:
+                method = constants.LIB_SCIPY_ODE
             else:
-                if msg.s_wall_size < array_size:
-                    logger.info(
-                        'Growing {} stopped at t = {}: {}.'
-                        .format(self.label, msg.s_wall_size, msg)
+                method = constants.LIB_C
+
+        finished = False
+        count = 3
+        while(not finished and count > 0):
+            count -= 1
+            if (
+                method == constants.LIB_C
+                and libs.ctypes_s_wall.grow is not None
+            ):
+                msg = libs.ctypes_s_wall.message
+                msg.s_wall_size = array_size
+                msg.rv = NEWTON_MAX_STEPS
+
+                libs.ctypes_s_wall.grow(
+                    msg,
+                    self.z,
+                    self.x,
+                    self.M,
+                )
+
+                if msg.rv < 0:
+                    logger.warning(
+                        'Failed in growing {} using C libraries: {} at t = {}.'
+                        .format(self.label, msg, msg.s_wall_size)
                     )
-                    return self.resize(msg.s_wall_size)
+                    logger.warning('Try using SciPy ODE.')
+                    method = constants.LIB_SCIPY_ODE 
+                    continue
                 else:
-                    return None
-
-        bpzs = branch_point_zs
-        ppzs = puncture_point_zs
-        size_of_small_step = config['size_of_small_step']
-        size_of_large_step = config['size_of_large_step']
-        size_of_bp_neighborhood = config['size_of_bp_neighborhood']
-        size_of_puncture_cutoff = config['size_of_puncture_cutoff']
-        mass_limit = config['mass_limit']
-        accuracy = config['accuracy']
-
-        step = 0
-        
-        ode = method.ode
-        dz_dt = method.dz_dt
-        get_xs = method.get_xs
-
-        if use_scipy_ode:
-            # Prepare a 1-dim array for ode
-            # NOTE: the meaning of the following command is established by the
-            # self.__getitem__ method defined above.
-            # it is a numpy array containing
-            # array([z[t], x[t][0], x[t][1], M[t]])
-            ode.set_initial_value(self[0])
-
-        # NOTE: When either SciPy ODE or manual method fails,
-        # first try switching to the other method.
-        # If it also fails, raise a RuntimeError.
-
-        # Mark if the current method failed to get the next point.
-        # When an error occurs, change the grow method.
-        # If there is an error even after changing the grow method,
-        # raise a RuntimeError.
-        grow_error = False
-        while step < (array_size - 1):
-            z_i, x_i_1, x_i_2, M_i = self[step] 
-
-            step += 1
-            if step > MIN_NUM_OF_DATA_PTS:
-                stop_msg = None
-                if len(ppzs) > 0:
-                    # Stop if z is inside a cutoff of a puncture.
-                    min_d = min([abs(z_i - ppz) for ppz in ppzs])
-                    if min_d < size_of_puncture_cutoff:
-                        stop_msg = 'near a puncture'
-                elif mass_limit is not None:
-                    # Stop if M exceeds mass limit.
-                    if M_i > mass_limit:
-                        stop_msg = 'reached the mass limit'
-
-                if stop_msg is not None:
-                    logger.info(
-                        'Growing {} stopped at t = {}: {}.'
-                        .format(self.label, step, stop_msg)
-                    )
-                    self.resize(step)
+                    if msg.s_wall_size < array_size:
+                        logger.info(
+                            'Growing {} stopped at t = {}: {}.'
+                            .format(self.label, msg.s_wall_size, msg)
+                        )
+                        self.resize(msg.s_wall_size)
+                    finished = True
                     break
 
-            # Adjust the step size if z is near a branch point.
-#            step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
-            if (
-                len(bpzs) > 0
-                and (min([abs(z_i - bpz) for bpz in bpzs])
-                     < size_of_bp_neighborhood)
-            ):
-#                dt = size_of_small_step * step_size_factor
-                dt = size_of_small_step
-            else:
-#                dt = size_of_large_step * step_size_factor
-                dt = size_of_large_step
+            bpzs = branch_point_zs
+            ppzs = puncture_point_zs
+            size_of_small_step = config['size_of_small_step']
+            size_of_large_step = config['size_of_large_step']
+            size_of_bp_neighborhood = config['size_of_bp_neighborhood']
+            size_of_puncture_cutoff = config['size_of_puncture_cutoff']
+            mass_limit = config['mass_limit']
+            accuracy = config['accuracy']
 
-            if use_scipy_ode:
-                y_n = ode.integrate(ode.t + dt)
-
-                if not ode.successful():
-                    if grow_error:
-                        self.resize(step)
-                        raise RuntimeError(
-                            '{} grow(): ode.integrate() failed at '
-                            't = {}; z_i = {}, x_i = ({}, {}).'
-                            .format(
-                                self.label, step,
-                                z_i, x_i_1, x_i_2,
-                            )
-                        )
-                    else:
-                        logger.warning(
-                            '{} grow(): change from ODE to manual '
-                            'at t = {}, z_i = {}.'
-                            .format(self.label, step, z_i)
-                        )
-                        use_scipy_ode = False
-                        grow_error = True
-                        step -= 1
-                        continue
-
-                z_n, x_n_1, x_n_2, M_n = y_n
-                M_n = M_n.real
-                y_n = [z_n, x_n_1, x_n_2, M_n]
-
-            else:
-                z_n = z_i + dt * dz_dt(z_i, x_i_1, x_i_2)
-                xs_at_z_n = get_xs(z_n)
-                i_1 = nearest_index(xs_at_z_n, x_i_1)
-                i_2 = nearest_index(xs_at_z_n, x_i_2)
-                if i_1 == i_2:
-                    if grow_error:
-                        self.resize(step)
-                        raise RuntimeError(
-                            '{} grow(): failed to get x\'s at '
-                            't = {}; z_i = {}, x_i = ({}, {}), '
-                            'xs_at_z_i = {}, i_1 == i_2 == {}.'
-                            .format(
-                                self.label, step,
-                                z_i, x_i_1, x_i_2, xs_at_z_n, i_1,
-                            )
-                        )
-                    else:
-                        logger.warning(
-                            '{} grow(): change from manual to ODE '
-                            'at t = {}, z_i = {}.'
-                            .format(self.label, step, z_i)
-                        )
-                        use_scipy_ode = True
-                        grow_error = True
-                        step -= 1
-                        ode.set_initial_value(self[step])
-                        continue
+            if method == constants.LIB_NUMBA:
+                numba_rv = libs.numba_grow(
+                    self.z, self.x, self.M,
+                    #numba_f_df_at_xz=libs.numba_f_df_at_xz,
+                    numba_get_x=libs.numba_get_x,
+                    phi_k_czes=libs.phi_k_czes,
+                    c_dz_dt=libs.ctypes_s_wall.c_dz_dt[0],
+                    bpzs=bpzs,
+                    ppzs=ppzs,
+                    size_of_small_step=size_of_small_step,
+                    size_of_large_step=size_of_large_step,
+                    size_of_bp_neighborhood=size_of_bp_neighborhood,
+                    size_of_puncture_cutoff=size_of_puncture_cutoff,
+                    mass_limit=mass_limit,
+                    accuracy=accuracy,
+                    twist_lines=libs.ctypes_s_wall.tl,
+                )
+                if(isinstance(numba_rv), int):
+                    if numba_rv < array_size:
+                        self.resize(numba_rv)
+                    finished = True
+                    break
                 else:
-                    x_n_1 = xs_at_z_n[i_1]
-                    x_n_2 = xs_at_z_n[i_2]
-                    M_n = M_i + dt
-                    y_n = [z_n, x_n_1, x_n_2, M_n]
+                    (step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2) = numba_rv
+                    logger.warning(
+                        'numba_grow(): failed to get x\'s at '
+                        't = {}; z_i = {}, x_i = ({}, {}), '
+                        'z_n = {}, x_n_1 = x_n_2 = {}.'
+                        'Will try using SciPy ODE.'
+                        .format(step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2)
+                    )
+                    method = constants.LIB_SCIPY_ODE
+                    continue
 
-                    if grow_error:
-                        # When the manual method was invoked due to
-                        # the error while using SciPy ODE, go back to
-                        # using SciPy ODE because it's faster.
-                        use_scipy_ode = True
-                        ode.set_initial_value(y_n)
+            elif (
+                method == constants.LIB_SCIPY_ODE
+                or method == constants.LIB_PYTHON
+            ):
+                step = 0
+                
+                ode = libs.ode
+                dz_dt = libs.dz_dt
+                get_xs = libs.get_xs
 
-            # Check if this S-wall is near a twist line.
-            if twist_lines is not None:
-                if (
-                    (z_i.imag * z_n.imag) < 0
-                    and twist_lines.contains((z_i.real + z_n.real) * 0.5)
-                ):
-                    xs_at_z_n = get_xs(z_n)
-                    i_1 = nearest_index(xs_at_z_n, (-1 * x_i_2))
-                    i_2 = nearest_index(xs_at_z_n, (-1 * x_i_1))
-                    if i_1 == i_2:
-                        self.resize(step)
-                        raise RuntimeError(
-                            '{} grow(): failed to get x\'s at '
-                            't = {} near a twist line; '
-                            'z_n = {}, x_i = ({}, {}), '
-                            'xs_at_z_n = {}, i_1 == i_2 == {}.'
-                            .format(
-                                self.label, step,
-                                z_n, x_i_1, x_i_2, xs_at_z_n, i_1,
+                if method == constants.LIB_SCIPY_ODE:
+                    ode.set_initial_value(self[0])
+
+                while step < (array_size - 1):
+                    z_i, x_i_1, x_i_2, M_i = self[step] 
+
+                    step += 1
+                    if step > MIN_NUM_OF_DATA_PTS:
+                        stop_msg = None
+                        if len(ppzs) > 0:
+                            # Stop if z is inside a cutoff of a puncture.
+                            min_d = min([abs(z_i - ppz) for ppz in ppzs])
+                            if min_d < size_of_puncture_cutoff:
+                                stop_msg = 'near a puncture'
+                        elif mass_limit is not None:
+                            # Stop if M exceeds mass limit.
+                            if M_i > mass_limit:
+                                stop_msg = 'reached the mass limit'
+
+                        if stop_msg is not None:
+                            logger.debug(
+                                'Growing {} stopped at t = {}: {}.'
+                                .format(self.label, step, stop_msg)
                             )
-                        )
-                    x_n_1 = xs_at_z_n[i_1]
-                    x_n_2 = xs_at_z_n[i_2]
-                    y_n = [z_n, x_n_1, x_n_2, M_n]
-                    if use_scipy_ode:
-                            ode.set_initial_value(y_n)
+                            self.resize(step)
+                            finished = True
+                            break
 
-            self[step] = y_n
-            grow_error = False
+                    # Adjust the step size if z is near a branch point.
+                    if (
+                        len(bpzs) > 0
+                        and (min([abs(z_i - bpz) for bpz in bpzs])
+                             < size_of_bp_neighborhood)
+                    ):
+                        dt = size_of_small_step
+                    else:
+                        dt = size_of_large_step
+
+                    if method == constants.LIB_SCIPY_ODE:
+                        y_n = ode.integrate(ode.t + dt)
+
+                        if not ode.successful():
+                            logger.warning(
+                                '{} grow(): ode.integrate() failed at '
+                                't = {}; z_i = {}, x_i = ({}, {}). '
+                                'Will try using a different method.'
+                                .format(
+                                    self.label, step,
+                                    z_i, x_i_1, x_i_2,
+                                )
+                            )
+                            if libs.ctypes_s_wall.grow is not None:
+                                method = constants.LIB_C
+                            elif libs.numba_grow is not None:
+                                method = constants.LIB_NUMBA
+                            else:
+                                method = constants.LIB_PYTHON
+                            finished = False
+                            break
+
+                        z_n, x_n_1, x_n_2, M_n = y_n
+                        # SciPy ODE returns M as a complex number.
+                        M_n = M_n.real
+                        y_n = [z_n, x_n_1, x_n_2, M_n]
+
+                    else:
+                        z_n = z_i + dt * dz_dt(z_i, x_i_1, x_i_2)
+                        xs_at_z_n = get_xs(z_n)
+                        i_1 = nearest_index(xs_at_z_n, x_i_1)
+                        i_2 = nearest_index(xs_at_z_n, x_i_2)
+                        if i_1 == i_2:
+                            logger.warning(
+                                '{} grow(): failed to get x\'s at '
+                                't = {}; z_i = {}, x_i = ({}, {}), '
+                                'xs_at_z_i = {}, i_1 == i_2 == {}.'
+                                .format(
+                                    self.label, step,
+                                    z_i, x_i_1, x_i_2, xs_at_z_n, i_1,
+                                )
+                            )
+                            logger.warning(
+                                '{} grow(): change from manual to ODE '
+                                'at t = {}, z_i = {}.'
+                                .format(self.label, step, z_i)
+                            )
+                            finished = False
+                            method = constants.LIB_SCIPY_ODE
+                            step -= 1
+                            ode.set_initial_value(self[step])
+                            continue
+                        else:
+                            x_n_1 = xs_at_z_n[i_1]
+                            x_n_2 = xs_at_z_n[i_2]
+                            M_n = M_i + dt
+                            y_n = [z_n, x_n_1, x_n_2, M_n]
+
+                    # Check if this S-wall is near a twist line.
+                    if twist_lines is not None:
+                        if (
+                            (z_i.imag * z_n.imag) < 0
+                            and twist_lines.contains(
+                                (z_i.real + z_n.real) * 0.5
+                            )
+                        ):
+                            xs_at_z_n = get_xs(z_n)
+                            i_1 = nearest_index(xs_at_z_n, (-1 * x_i_2))
+                            i_2 = nearest_index(xs_at_z_n, (-1 * x_i_1))
+                            if i_1 == i_2:
+                                self.resize(step)
+                                raise RuntimeError(
+                                    '{} grow(): failed to get x\'s at '
+                                    't = {} near a twist line; '
+                                    'z_n = {}, x_i = ({}, {}), '
+                                    'xs_at_z_n = {}, i_1 == i_2 == {}.'
+                                    .format(
+                                        self.label, step,
+                                        z_n, x_i_1, x_i_2, xs_at_z_n, i_1,
+                                    )
+                                )
+                            x_n_1 = xs_at_z_n[i_1]
+                            x_n_2 = xs_at_z_n[i_2]
+                            y_n = [z_n, x_n_1, x_n_2, M_n]
+                            if method == constants.LIB_SCIPY_ODE:
+                                ode.set_initial_value(y_n)
+
+                    self[step] = y_n
+                if step == (array_size -1):
+                    finished = True
+                if not finished:
+                    continue
+                else:
+                    break
+            else:
+                logger.warning('SWall.grow(): no grow method specified.')
+                finished = True
+                break
+
+#            finished = True
+
+
+#        step = 0
+#        
+#        ode = libs.ode
+#        dz_dt = libs.dz_dt
+#        get_xs = libs.get_xs
+#
+#        if use_scipy_ode:
+#            # Prepare a 1-dim array for ode
+#            # NOTE: the meaning of the following command is established by the
+#            # self.__getitem__ method defined above.
+#            # it is a numpy array containing
+#            # array([z[t], x[t][0], x[t][1], M[t]])
+#            ode.set_initial_value(self[0])
+#
+#        # NOTE: When either SciPy ODE or manual method fails,
+#        # first try switching to the other method.
+#        # If it also fails, raise a RuntimeError.
+#
+#        # Mark if the current method failed to get the next point.
+#        # When an error occurs, change the grow method.
+#        # If there is an error even after changing the grow method,
+#        # raise a RuntimeError.
+#        grow_error = False
+#        while step < (array_size - 1):
+#            z_i, x_i_1, x_i_2, M_i = self[step] 
+#
+#            step += 1
+#            if step > MIN_NUM_OF_DATA_PTS:
+#                stop_msg = None
+#                if len(ppzs) > 0:
+#                    # Stop if z is inside a cutoff of a puncture.
+#                    min_d = min([abs(z_i - ppz) for ppz in ppzs])
+#                    if min_d < size_of_puncture_cutoff:
+#                        stop_msg = 'near a puncture'
+#                elif mass_limit is not None:
+#                    # Stop if M exceeds mass limit.
+#                    if M_i > mass_limit:
+#                        stop_msg = 'reached the mass limit'
+#
+#                if stop_msg is not None:
+#                    logger.info(
+#                        'Growing {} stopped at t = {}: {}.'
+#                        .format(self.label, step, stop_msg)
+#                    )
+#                    self.resize(step)
+#                    break
+#
+#            # Adjust the step size if z is near a branch point.
+##            step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
+#            if (
+#                len(bpzs) > 0
+#                and (min([abs(z_i - bpz) for bpz in bpzs])
+#                     < size_of_bp_neighborhood)
+#            ):
+##                dt = size_of_small_step * step_size_factor
+#                dt = size_of_small_step
+#            else:
+##                dt = size_of_large_step * step_size_factor
+#                dt = size_of_large_step
+#
+#            if use_scipy_ode:
+#                y_n = ode.integrate(ode.t + dt)
+#
+#                if not ode.successful():
+#                    if grow_error:
+#                        self.resize(step)
+#                        raise RuntimeError(
+#                            '{} grow(): ode.integrate() failed at '
+#                            't = {}; z_i = {}, x_i = ({}, {}).'
+#                            .format(
+#                                self.label, step,
+#                                z_i, x_i_1, x_i_2,
+#                            )
+#                        )
+#                    else:
+#                        logger.warning(
+#                            '{} grow(): change from ODE to manual '
+#                            'at t = {}, z_i = {}.'
+#                            .format(self.label, step, z_i)
+#                        )
+#                        use_scipy_ode = False
+#                        grow_error = True
+#                        step -= 1
+#                        continue
+#
+#                z_n, x_n_1, x_n_2, M_n = y_n
+#                M_n = M_n.real
+#                y_n = [z_n, x_n_1, x_n_2, M_n]
+#
+#            else:
+#                z_n = z_i + dt * dz_dt(z_i, x_i_1, x_i_2)
+#                xs_at_z_n = get_xs(z_n)
+#                i_1 = nearest_index(xs_at_z_n, x_i_1)
+#                i_2 = nearest_index(xs_at_z_n, x_i_2)
+#                if i_1 == i_2:
+#                    if grow_error:
+#                        self.resize(step)
+#                        raise RuntimeError(
+#                            '{} grow(): failed to get x\'s at '
+#                            't = {}; z_i = {}, x_i = ({}, {}), '
+#                            'xs_at_z_i = {}, i_1 == i_2 == {}.'
+#                            .format(
+#                                self.label, step,
+#                                z_i, x_i_1, x_i_2, xs_at_z_n, i_1,
+#                            )
+#                        )
+#                    else:
+#                        logger.warning(
+#                            '{} grow(): change from manual to ODE '
+#                            'at t = {}, z_i = {}.'
+#                            .format(self.label, step, z_i)
+#                        )
+#                        use_scipy_ode = True
+#                        grow_error = True
+#                        step -= 1
+#                        ode.set_initial_value(self[step])
+#                        continue
+#                else:
+#                    x_n_1 = xs_at_z_n[i_1]
+#                    x_n_2 = xs_at_z_n[i_2]
+#                    M_n = M_i + dt
+#                    y_n = [z_n, x_n_1, x_n_2, M_n]
+#
+#                    if grow_error:
+#                        # When the manual method was invoked due to
+#                        # the error while using SciPy ODE, go back to
+#                        # using SciPy ODE because it's faster.
+#                        use_scipy_ode = True
+#                        ode.set_initial_value(y_n)
+#
+#            # Check if this S-wall is near a twist line.
+#            if twist_lines is not None:
+#                if (
+#                    (z_i.imag * z_n.imag) < 0
+#                    and twist_lines.contains((z_i.real + z_n.real) * 0.5)
+#                ):
+#                    xs_at_z_n = get_xs(z_n)
+#                    i_1 = nearest_index(xs_at_z_n, (-1 * x_i_2))
+#                    i_2 = nearest_index(xs_at_z_n, (-1 * x_i_1))
+#                    if i_1 == i_2:
+#                        self.resize(step)
+#                        raise RuntimeError(
+#                            '{} grow(): failed to get x\'s at '
+#                            't = {} near a twist line; '
+#                            'z_n = {}, x_i = ({}, {}), '
+#                            'xs_at_z_n = {}, i_1 == i_2 == {}.'
+#                            .format(
+#                                self.label, step,
+#                                z_n, x_i_1, x_i_2, xs_at_z_n, i_1,
+#                            )
+#                        )
+#                    x_n_1 = xs_at_z_n[i_1]
+#                    x_n_2 = xs_at_z_n[i_2]
+#                    y_n = [z_n, x_n_1, x_n_2, M_n]
+#                    if use_scipy_ode:
+#                            ode.set_initial_value(y_n)
+#
+#            self[step] = y_n
+#            grow_error = False
 
     def determine_root_types(self, sw_data, cutoff_radius=0,):
         """
@@ -965,34 +1171,100 @@ class SWall(object):
 # End of the definition of class SWall
 
 
+class GrowLibs:
+    def __init__(
+        self,
+        config=None,
+        sw_data=None,
+        phase=None,
+        logger_name='loom',
+    ):
+        self.logger_name = logger_name
+        self.f = sw_data.ffr_curve.num_eq
+        self.v = sw_data.diff.num_v
+        self.phase = phase
+        # Method using SciPy ODE solver.
+        self.ode = None
+        # Method using Python routines.
+        self.dz_dt = None
+        self.get_xs = sw_data.ffr_curve.get_xs
+        # Method using C libraries.
+        self.ctypes_s_wall = CTypesSWall(
+            config=config,
+            sw_data=sw_data,
+            phase=phase,
+            logger_name=logger_name,
+        )
+        # Method using numba
+        if use_numba:
+            self.numba_grow = _grow
+            #self.numba_grow = numba.jit(nopython=True()_grow)
+            self.numba_f_df_at_xz = numba.jit(nopython=True)(_f_df_at_xz)
+            self.numba_get_x = numba.jit(nopython=True)(_get_x)
+        else:
+            self.numba_grow = None 
+
+        logger = logging.getLogger(logger_name)
+        x, z = sympy.symbols('x z')
+
+        accuracy = config['accuracy']
+        v = sympy.lambdify((z, x), self.v)
+        def dz_dt(z, x1, x2):
+            Dv = (v(z, x1) - v(z, x2))
+            if abs(Dv) < accuracy:
+                raise RuntimeError(
+                    'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
+                    .format(Dv, accuracy)
+                )
+            return exp(self.phase * 1j) / Dv
+        self.dz_dt = dz_dt
+
+        df_dz = self.f.diff(z)
+        df_dx = self.f.diff(x)
+        # NOTE: F = -(\partial f / \partial z) / (\partial f / \partial x).
+        F = sympy.lambdify((z, x), sympy.simplify(-df_dz / df_dx))
+
+        def ode_f(t, z_x1_x2_M):
+            z_i = z_x1_x2_M[0]
+            x1_i = z_x1_x2_M[1]
+            x2_i = z_x1_x2_M[2]
+            dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
+            dx1_i_dt = F(z_i, x1_i) * dz_i_dt
+            dx2_i_dt = F(z_i, x2_i) * dz_i_dt
+            dM_dt = 1
+            return [dz_i_dt, dx1_i_dt, dx2_i_dt, dM_dt]
+
+        self.ode = scipy.integrate.ode(ode_f)
+        self.ode.set_integrator('zvode')
+
+
 # XXX: JIT complier fails to compile the following,
 # left for future use.
 #@numba.jit(nopython=True)
-def numba_grow(
-    phi_k_czes, c_dz_dt,
+#def numba_grow(
+def _grow(
     zs, xs, Ms,
+    #numba_f_df_at_xz=None,
+    numba_get_x=None,
+    phi_k_czes=None,
+    c_dz_dt=None,
     bpzs=None,
     ppzs=None,
-    config=None,
-    #size_of_small_step=None, size_of_large_step=None,
-    #size_of_bp_neighborhood=None, size_of_puncture_cutoff=None,
-    #mass_limit=None, accuracy=None,
-    #twist_lines=None,
+    size_of_small_step=None,
+    size_of_large_step=None,
+    size_of_bp_neighborhood=None,
+    size_of_puncture_cutoff=None,
+    mass_limit=None,
+    accuracy=None,
+    twist_lines=None,
 ):
-
-    size_of_small_step = config['size_of_small_step']
-    size_of_large_step = config['size_of_large_step']
-    size_of_bp_neighborhood = config['size_of_bp_neighborhood']
-    size_of_puncture_cutoff = config['size_of_puncture_cutoff']
-    mass_limit = config['mass_limit']
-    accuracy = config['accuracy']
     step = 0
+
     array_size = len(zs)
     while step < (array_size - 1):
         z_i = zs[step]
         x_i_1, x_i_2 = xs[step]
         M_i = Ms[step] 
-        #z_i, x_i_1, x_i_2, M_i = s_wall_data[step] 
 
         step += 1
         if step > MIN_NUM_OF_DATA_PTS:
@@ -1020,26 +1292,21 @@ def numba_grow(
         z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
         x_n_1 = numba_get_x(phi_k_czes, x_i_1, z_n, accuracy)
         x_n_2 = numba_get_x(phi_k_czes, x_i_2, z_n, accuracy)
-        if abs(x_n_1 - x_n_2) < accuracy:
-            raise RuntimeError(
-                'numba_grow(): failed to get x\'s at '
-                't = {}; z_i = {}, x_i = ({}, {}), '
-                'z_n = {}, x_n_1 = x_n_2 = {}.'
-                .format(step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2)
-            )
         M_n = M_i + dt
-        y_n = [z_n, x_n_1, x_n_2, M_n]
-
 
         zs[step] = z_n
         xs[step] = (x_n_1, x_n_2)
         Ms[step] = M_n
 
-    return step
+        if abs(x_n_1 - x_n_2) < accuracy:
+            return (step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2)
+
+    return (step + 1)
 
 
-@numba.jit(nopython=True)
-def numba_f_df_at_xz(phi_k_czes, x_0, z_0):
+#@numba.jit(nopython=True)
+#def numba_f_df_at_xz(phi_k_czes, x_0, z_0):
+def _f_df_at_xz(phi_k_czes, x_0, z_0):
     """
     Calculate f(x_0, z_0) and df(x_0, z_0)/dx,
     which are used in Newton's method
@@ -1057,15 +1324,22 @@ def numba_f_df_at_xz(phi_k_czes, x_0, z_0):
     return f_0, df_0
 
 
-@numba.jit(nopython=True)
-def numba_get_x(phi_k_czes, x_0, z_0, accuracy, max_steps=100):
+#@numba.jit(nopython=True)
+#def numba_get_x(phi_k_czes, x_0, z_0, accuracy, max_steps=100):
+def _get_x(phi_k_czes, x_0, z_0, accuracy, max_steps=100):
     """
     Solve f(x, z_0) = 0 using Newton's method from x = x_0.
     """
     step = 0
     x_i = x_0
     while(step < max_steps):
-        f_i, df_i = numba_f_df_at_xz(phi_k_czes, x_i, z_0)
+        #f_i, df_i = numba_f_df_at_xz(phi_k_czes, x_i, z_0)
+        f_i = 0
+        df_i = 0
+        for k, c, e in phi_k_czes:
+            f_i += (x_i ** k) * c * (z_0 ** e)
+            if k > 0:
+                df_i += k * x_i ** (k - 1) * c * (z_0 ** e)
         Delta = f_i / df_i
         if abs(Delta) < accuracy:
             break
