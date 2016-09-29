@@ -197,7 +197,6 @@ class LoomDB(object):
         saved_data=None,
         data_name=None,
         rotate_back=None,
-        #plot_two_way_streets=None,
         search_radius=None,
         additional_n_steps=0, new_mass_limit=None,
         additional_iterations=0, additional_phases=None,
@@ -205,10 +204,10 @@ class LoomDB(object):
     ):
         logging_level = self.logging_level
         if (
-            task == 'generate'
-            or task == 'extend'
-            or task == 'trivialize'
-            or task == 'find_two_way_streets'
+            task == 'generate' or
+            task == 'extend' or
+            task == 'trivialize' or
+            task == 'find_two_way_streets'
         ):
             # Prepare a cache directory for new data.
             cache_dir = get_cache_dir(process_uuid)
@@ -216,9 +215,8 @@ class LoomDB(object):
                 os.makedirs(cache_dir)
             logging_file_name = os.path.join(cache_dir, 'log')
         elif (
-            task == 'load'
-            or task == 'rotate_back'
-            #or task == 'plot_two_way_streets'
+            task == 'load' or
+            task == 'rotate_back'
         ):
             # Do not create a logging file
             logging_file_name = None
@@ -251,10 +249,9 @@ class LoomDB(object):
             logger.info('Trivialize spectral networks...')
 
         if (
-            task == 'load'
-            or task == 'rotate_back'
-            or task == 'plot_two_way_streets'
-            #or task == 'find_two_way_streets'
+            task == 'load' or
+            task == 'rotate_back' or
+            task == 'plot_two_way_streets'
         ):
             spectral_network_data = SpectralNetworkData(
                 logger_name=logger_name,
@@ -292,9 +289,9 @@ class LoomDB(object):
             )
 
         elif (
-            task == 'extend'
-            or task == 'trivialize'
-            or task == 'find_two_way_streets'
+            task == 'extend' or
+            task == 'trivialize' or
+            task == 'find_two_way_streets'
         ):
             if spectral_network_data is None:
                 spectral_network_data = SpectralNetworkData(
@@ -538,8 +535,8 @@ def get_loom_config(request_dict=None, logger_name=get_logger_name()):
                     else:
                         value = request_dict[option]
                     if (
-                        section == 'numerical parameters'
-                        or value == 'None'
+                        section == 'numerical parameters' or
+                        value == 'None'
                     ):
                         loom_config[option] = eval(value)
                     else:

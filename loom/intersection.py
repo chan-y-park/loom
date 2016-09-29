@@ -113,7 +113,9 @@ def find_intersection_of_segments(segment_1, segment_2, accuracy=1e-1,
 
     f1 = interp1d(*segment_1)
     f2 = interp1d(*segment_2)
-    delta_f12 = lambda x: f1(x) - f2(x)
+
+    def delta_f12(x):
+        f1(x) - f2(x)
 
     try:
         logging.debug('try brentq.')

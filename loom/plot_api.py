@@ -7,7 +7,7 @@ from sympy import oo
 from matplotlib.backends.backend_agg import FigureCanvas
 
 from misc import put_on_cylinder
-from misc import get_splits_with_overlap 
+# from misc import get_splits_with_overlap
 
 
 class NetworkPlot(object):
@@ -143,7 +143,6 @@ class SpectralNetworkPlot(NetworkPlot):
         spectral_network=None,
         soliton_tree=None,
         logger_name='loom',
-        #trivialized=True,
         plot_joints=False,
         plot_data_points=False,
         plot_on_cylinder=False,
@@ -271,27 +270,6 @@ class SpectralNetworkPlot(NetworkPlot):
                     )
                 labels['walls'].append(seg_labels)
 
-#        wall_colors = []
-#        if trivialized is True:
-#            for seg_roots in wall_roots:
-#                colors = []
-#                for root in seg_roots:
-#                    color = g_data.get_root_color(root)
-#                    if color is None:
-#                        color = '#000000'
-#                        logger.warning(
-#                            'Unknown root color for {} '
-#                            'of a spectral network with phase = {}.'
-#                            .format(s_wall.label, spectral_network.phase)
-#                        )
-#                    colors.append(color)
-#                wall_colors.append(colors)
-#        else:
-#            for s_wall in s_walls:
-#                # wall_colors.append(['#000000'])
-#                # (R, G, B, A)
-#                wall_colors.append([(0, 0, 1, 1.0 / s_wall.get_generation(),)])
-#
         super(SpectralNetworkPlot, self).draw(
             axes=axes,
             branch_points=branch_points_z,
@@ -512,5 +490,3 @@ def plot_on_z(
         )
 
         pyplot.show()
-
-

@@ -44,9 +44,9 @@ def a_child_process(
     logger = logging.getLogger(logger_name)
 
     if task == 'grow':
-        msg = 'growing' 
+        msg = 'growing'
     elif task == 'trivialize':
-        msg = 'trivializing' 
+        msg = 'trivializing'
     elif task == 'find_two_way_streets':
         msg = 'finding two-way streets of'
 
@@ -162,7 +162,6 @@ def parallel_get_spectral_network(
                     config=config,
                     sw_data=sw_data,
                     spectral_network=sn,
-                    #job_id=(i + 1),
                     job_id=i,
                     n_jobs=n_jobs,
                     logger_name=logger_name,

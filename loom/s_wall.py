@@ -4,12 +4,6 @@ import scipy
 import sympy
 import cmath
 
-use_numba = True
-try:
-    import numba
-except ImportError, e:
-    use_numba = False
-
 import constants
 
 from cmath import exp, pi
@@ -22,13 +16,19 @@ from geometry import (
 )
 from geometry import BranchPoint
 
-from ctypes_api import CTypesSWall 
+from ctypes_api import CTypesSWall
 
 from misc import (
     cpow, remove_duplicate, ctor2, r2toc, delete_duplicates, is_root,
     get_descendant_roots, sort_roots, n_nearest
 )
 from misc import nearest_index
+
+use_numba = True
+try:
+    import numba
+except ImportError, e:
+    use_numba = False
 
 x, z = sympy.symbols('x z')
 
@@ -46,6 +46,7 @@ MIN_NUM_OF_DATA_PTS = 3
 
 # Maximum number of steps for the Newton method C library.
 NEWTON_MAX_STEPS = 100
+
 
 class Joint:
     def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
@@ -79,7 +80,6 @@ class Joint:
     def get_json_data(self):
         json_data = {
             'z': ctor2(self.z),
-#            'M': ctor2(self.M),
             'M': self.M,
             'parents': [parent.label for parent in self.parents],
             'label': self.label,
@@ -204,7 +204,6 @@ class SWall(object):
         Get the data of the S-wall at t, where
             data = [z[t], x[t][0], x[t][1], ..., M[t]]
         """
-#        return numpy.concatenate([[self.z[t]], self.x[t], [self.M[t]]])
         return [self.z[t], self.x[t][0], self.x[t][1], self.M[t]]
 
     def resize(self, size):
@@ -218,7 +217,6 @@ class SWall(object):
     def get_json_data(self):
         json_data = {
             'z': numpy.array([self.z.real, self.z.imag]).T.tolist(),
-#            'M': numpy.array([self.M.real, self.M.imag]).T.tolist(),
             'M': self.M.tolist(),
             'x': numpy.rollaxis(
                 numpy.array([self.x.real, self.x.imag]), 0, 3
@@ -349,9 +347,9 @@ class SWall(object):
         while(not finished and count > 0):
             count -= 1
             if (
-                method == constants.LIB_C
-                and libs.ctypes_s_wall.grow is not None
-                and not failed['lib_c']
+                method == constants.LIB_C and
+                libs.ctypes_s_wall.grow is not None and
+                not failed['lib_c']
             ):
                 logger.info(
                     'Growing {} using C libraries...'
@@ -375,7 +373,7 @@ class SWall(object):
                     )
                     failed['lib_c'] = True
                     logger.warning('Try using SciPy ODE.')
-                    method = constants.LIB_SCIPY_ODE 
+                    method = constants.LIB_SCIPY_ODE
                     continue
                 else:
                     if msg.s_wall_size < array_size:
@@ -397,9 +395,9 @@ class SWall(object):
             accuracy = config['accuracy']
 
             if (
-                method == constants.LIB_NUMBA
-                and libs.numba_grow is not None
-                and not failed['lib_numba']
+                method == constants.LIB_NUMBA and
+                libs.numba_grow is not None and
+                not failed['lib_numba']
             ):
                 logger.info(
                     'Growing {} using Numba...'
@@ -407,7 +405,6 @@ class SWall(object):
                 )
                 numba_rv = libs.numba_grow(
                     self.z, self.x, self.M,
-                    #numba_f_df_at_xz=libs.numba_f_df_at_xz,
                     numba_get_x=libs.numba_get_x,
                     phi_k_czes=libs.phi_k_czes,
                     c_dz_dt=libs.c_dz_dt,
@@ -440,11 +437,11 @@ class SWall(object):
                     continue
 
             elif (
-                (method == constants.LIB_SCIPY_ODE
-                 or method == constants.LIB_PYTHON)
+                method == constants.LIB_SCIPY_ODE or
+                method == constants.LIB_PYTHON
             ):
                 step = 0
-                
+
                 ode = libs.ode
                 # dz_dt = libs.dz_dt
                 get_xs = libs.get_xs
@@ -460,7 +457,7 @@ class SWall(object):
                     .format(self.label, info_msg)
                 )
                 while step < (array_size - 1):
-                    z_i, x_i_1, x_i_2, M_i = self[step] 
+                    z_i, x_i_1, x_i_2, M_i = self[step]
 
                     step += 1
                     if step > MIN_NUM_OF_DATA_PTS:
@@ -488,9 +485,9 @@ class SWall(object):
                     # XXX: Is the following helpful?
                     # step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
                     if (
-                        len(bpzs) > 0
-                        and (min([abs(z_i - bpz) for bpz in bpzs])
-                             < size_of_bp_neighborhood)
+                        len(bpzs) > 0 and
+                        (min([abs(z_i - bpz) for bpz in bpzs]) <
+                         size_of_bp_neighborhood)
                     ):
                         # dt = size_of_small_step * step_size_factor
                         dt = size_of_small_step
@@ -499,8 +496,8 @@ class SWall(object):
                         dt = size_of_large_step
 
                     if (
-                        method == constants.LIB_SCIPY_ODE
-                        and not failed['lib_scipy_ode']
+                        method == constants.LIB_SCIPY_ODE and
+                        not failed['lib_scipy_ode']
                     ):
                         y_n = ode.integrate(ode.t + dt)
 
@@ -516,14 +513,14 @@ class SWall(object):
                             )
                             failed['scipy_ode'] = True
                             if (
-                                libs.ctypes_s_wall.grow is not None
-                                and not failed['lib_c']
+                                libs.ctypes_s_wall.grow is not None and
+                                not failed['lib_c']
                             ):
                                 finished = False
                                 method = constants.LIB_C
                             elif (
-                                libs.numba_grow is not None
-                                and not failed['lib_numba']
+                                libs.numba_grow is not None and
+                                not failed['lib_numba']
                             ):
                                 finished = False
                                 method = constants.LIB_NUMBA
@@ -544,8 +541,8 @@ class SWall(object):
                         # Check if this S-wall is near a twist line.
                         if twist_lines is not None:
                             if (
-                                (z_i.imag * z_n.imag) < 0
-                                and twist_lines.contains(
+                                (z_i.imag * z_n.imag) < 0 and
+                                twist_lines.contains(
                                     (z_i.real + z_n.real) * 0.5
                                 )
                             ):
@@ -577,9 +574,9 @@ class SWall(object):
                         M_n = M_i + abs(Dx_i) * dt
 
                         if (
-                            twist_lines is not None
-                            and (z_i.imag * z_n.imag) < 0
-                            and twist_lines.contains(
+                            twist_lines is not None and
+                            (z_i.imag * z_n.imag) < 0 and
+                            twist_lines.contains(
                                 (z_i.real + z_n.real) * 0.5
                             )
                         ):
@@ -619,7 +616,7 @@ class SWall(object):
 
                 # End of while()
 
-                if step == (array_size -1):
+                if step == (array_size - 1):
                     finished = True
                 if not finished:
                     continue
@@ -629,7 +626,6 @@ class SWall(object):
                 logger.warning('SWall.grow(): no grow method specified.')
                 finished = True
                 break
-
 
     def determine_root_types(self, sw_data, cutoff_radius=0,):
         """
@@ -843,15 +839,15 @@ class SWall(object):
                 self.local_roots.insert(0, new_root)
                 self.local_weight_pairs.insert(0, new_weight_pairs)
 
-        # check that the roots obtained through comparison with the 
-        # trivialization coincides with the roots of the joint 
+        # check that the roots obtained through comparison with the
+        # trivialization coincides with the roots of the joint
         # or branch point sourcing the S-wall.
         if self.parent_roots is not None:
             if not (
                 any(
                     (
                         (self.local_roots[0] == x).all() or
-                        (self.local_roots[0] == -x).all() 
+                        (self.local_roots[0] == -x).all()
                     )
                     for x in self.parent_roots
                 )
@@ -1084,12 +1080,13 @@ class GrowLibs:
         phase=None,
         logger_name='loom',
     ):
-        self.logger_name = logger_name
+        # logger = logging.getLogger(logger_name)
+        # self.logger_name = logger_name
         self.f = sw_data.ffr_curve.num_eq
         self.v = sw_data.diff.num_v
         self.phase = phase
         self.accuracy = config['accuracy']
-        self.c_dz_dt = None 
+        self.c_dz_dt = None
         self.phi_k_czes = None
         # Method using SciPy ODE solver.
         self.ode = None
@@ -1116,16 +1113,14 @@ class GrowLibs:
                 phi_k_czes.append((int(k), complex(c), float(e)))
         self.phi_k_czes = phi_k_czes
 
-        logger = logging.getLogger(logger_name)
-
-        #v = sympy.lambdify((z, x), self.v)
+        # v = sympy.lambdify((z, x), self.v)
         def dz_dt(z, x1, x2):
-            #Dv = (v(z, x1) - v(z, x2))
+            # Dv = (v(z, x1) - v(z, x2))
             Dv = x1 - x2
             if abs(Dv) < self.accuracy:
                 raise RuntimeError(
                     'dz_dt(): Dv is too small, Dv={}, accuracy={}.'
-                    .format(Dv, accuracy)
+                    .format(Dv, self.accuracy)
                 )
             return self.c_dz_dt / Dv
         self.dz_dt = dz_dt
@@ -1139,7 +1134,7 @@ class GrowLibs:
             z_i = z_x1_x2_M[0]
             x1_i = z_x1_x2_M[1]
             x2_i = z_x1_x2_M[2]
-            dz_i_dt = dz_dt(z_i, x1_i, x2_i) 
+            dz_i_dt = dz_dt(z_i, x1_i, x2_i)
             dx1_i_dt = F(z_i, x1_i) * dz_i_dt
             dx2_i_dt = F(z_i, x2_i) * dz_i_dt
             dM_dt = 1
@@ -1164,7 +1159,7 @@ class GrowLibs:
             # self.numba_f_df_at_xz = numba.jit(nopython=True)(_f_df_at_xz)
             self.numba_get_x = numba.jit(nopython=True)(_get_x)
         else:
-            self.numba_grow = None 
+            self.numba_grow = None
 
     def get_x(self, z_0, x_0, max_steps=100):
         return _get_x(self.phi_k_czes, z_0, x_0, self.accuracy, max_steps)
@@ -1193,7 +1188,7 @@ def _grow(
     while step < (array_size - 1):
         z_i = zs[step]
         x_i_1, x_i_2 = xs[step]
-        M_i = Ms[step] 
+        M_i = Ms[step]
 
         step += 1
         if step > MIN_NUM_OF_DATA_PTS:
@@ -1217,7 +1212,7 @@ def _grow(
             else:
                 dt = size_of_large_step
 
-        #z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
+        # z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
         Dx_i = x_i_1 - x_i_2
         z_n = z_i + dt * exp(1j * (cmath.phase(c_dz_dt) - cmath.phase(Dx_i)))
         x_n_1 = numba_get_x(phi_k_czes, z_n, x_i_1, accuracy)
@@ -1307,6 +1302,7 @@ def debug_get_x(phi_k_czes, z_0, x_0, accuracy, max_steps=100):
         step += 1
     return x_i
 
+
 def get_s_wall_root(z, ffr_xs, sw_data):
     x_i, x_j = ffr_xs
 
@@ -1351,8 +1347,8 @@ def get_s_wall_root(z, ffr_xs, sw_data):
                 # For E-type should introduce a little check to see if
                 # there is actually more than one combo that works.
                 alpha = (
-                    sw_data.g_data.ffr_weights[j]
-                    - sw_data.g_data.ffr_weights[k]
+                    sw_data.g_data.ffr_weights[j] -
+                    sw_data.g_data.ffr_weights[k]
                 )
                 if is_root(alpha, sw_data.g_data):
                     i = k
@@ -1380,8 +1376,8 @@ def get_s_wall_root(z, ffr_xs, sw_data):
                 # For E-type should introduce a little check to see if
                 # there is actually more than one combo that works.
                 alpha = (
-                    sw_data.g_data.ffr_weights[k]
-                    - sw_data.g_data.ffr_weights[i]
+                    sw_data.g_data.ffr_weights[k] -
+                    sw_data.g_data.ffr_weights[i]
                 )
                 if is_root(alpha, sw_data.g_data):
                     j = k
@@ -1482,15 +1478,15 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
             dz_phases = ([
                 (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
                 exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
-                ((-1.0 / phi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1)))
-                * (omega ** s)
+                ((-1.0 / phi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) *
+                (omega ** s)
                 for i in range(r_k) for j in range(r_k)
                 for s in range(2 * r_k + 1) if i != j
             ] + [
                 (1.0 / cpow(sw_diff_coeff, 2 * r_k, 2 * r_k + 1)) *
                 exp(1j * theta * float(2 * r_k) / (2 * r_k + 1)) *
-                ((-1.0 / psi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1)))
-                * (omega ** s)
+                ((-1.0 / psi[i][j]) ** (float(2 * r_k) / (2 * r_k + 1))) *
+                (omega ** s)
                 for i in range(r_k) for j in range(r_k)
                 for s in range(2 * r_k + 1) if i != j
             ])
@@ -1640,8 +1636,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
                                 )
                                 ij_factor = (
-                                    -1.0 * exp(1j * theta)
-                                    / (lambda_j - lambda_i)
+                                    -1.0 * exp(1j * theta) /
+                                    (lambda_j - lambda_i)
                                 )
                                 x_i_x_j_phases.append(
                                     [(ij_factor) / abs(ij_factor), [x_i, x_j]]
@@ -1656,13 +1652,13 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     # of sheets at z_1
                     if rp_type == 'type_II':
                         dx = (
-                            abs(cpow(sw_diff_coeff, 2 * r_k))
-                            * (dt ** (1.0 / float(r_i)))
+                            abs(cpow(sw_diff_coeff, 2 * r_k)) *
+                            (dt ** (1.0 / float(r_i)))
                         )
                     elif rp_type == 'type_III':
                         dx = (
-                            abs(cpow(sw_diff_coeff, 2 * r_k - 2))
-                            * (dt ** (1.0 / float(r_i)))
+                            abs(cpow(sw_diff_coeff, 2 * r_k - 2)) *
+                            (dt ** (1.0 / float(r_i)))
                         )
                     x_accuracy = min([accuracy, dx])
 
@@ -1675,8 +1671,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                     for i, x_i in enumerate(x_s):
                         for j, x_j in enumerate(x_s):
                             if (
-                                abs(x_j - x_i) > x_accuracy
-                                and abs(x_j + x_i) > x_accuracy
+                                abs(x_j - x_i) > x_accuracy and
+                                abs(x_j + x_i) > x_accuracy
                             ):
                                 lambda_i = complex(
                                     sw.diff.num_v.subs(x, x_i).subs(z, z_1)
@@ -1685,8 +1681,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
                                 )
                                 ij_factor = (
-                                    -1.0 * exp(1j * theta)
-                                    / (lambda_j - lambda_i)
+                                    -1.0 * exp(1j * theta) /
+                                    (lambda_j - lambda_i)
                                 )
                                 x_i_x_j_phases.append(
                                     [(ij_factor) / abs(ij_factor), [x_i, x_j]]
@@ -1720,8 +1716,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
                                     sw.diff.num_v.subs(x, x_j).subs(z, z_1)
                                 )
                                 ij_factor = (
-                                    -1.0 * exp(1j * theta)
-                                    / (lambda_j - lambda_i)
+                                    -1.0 * exp(1j * theta) /
+                                    (lambda_j - lambda_i)
                                 )
                                 x_i_x_j_phases.append(
                                     [(ij_factor) / abs(ij_factor), [x_i, x_j]]
@@ -1769,8 +1765,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
 
 def z_r_distance_from_critical_loci(z, sw_data):
     critical_loci = (
-        sw_data.branch_points + sw_data.irregular_singularities
-        + sw_data.regular_punctures
+        sw_data.branch_points + sw_data.irregular_singularities +
+        sw_data.regular_punctures
     )
     return [abs(z.real - c_l.z.real)
             for c_l in critical_loci if c_l.z != oo]

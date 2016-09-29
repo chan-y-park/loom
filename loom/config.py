@@ -18,16 +18,16 @@ class LoomConfig:
         self.parser = ConfigParser.SafeConfigParser()
 
         # attribute options has the following structure:
-        # options['section']['option'] = (label, default value) 
+        # options['section']['option'] = (label, default value)
         self.options = {
             'Seiberg-Witten data': {
                 'description': ('Description', None),
                 'root_system': ('Root system', None),
                 'representation': ('Representation', None),
                 'casimir_differentials': ('Casimir differentials', None),
-                'differential_parameters': 
+                'differential_parameters':
                     ('Parameters of differentials', None),
-                'parameter_sequence': 
+                'parameter_sequence':
                     ('A sequence of values for a parameter', None),
                 'regular_punctures': ('Regular punctures', None),
                 'irregular_punctures': ('Irregular punctures', None),
@@ -179,8 +179,10 @@ class LoomConfig:
                     value = eval(parser_value)
                 elif (section == 'Seiberg-Witten data'):
                     value = parser_value
-                elif (section == 'numerical parameters'
-                      or section == 'settings'):
+                elif (
+                    section == 'numerical parameters' or
+                    section == 'settings'
+                ):
                     value = eval(parser_value)
                 else:
                     raise ValueError(

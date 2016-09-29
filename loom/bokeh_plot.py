@@ -25,8 +25,8 @@ def get_spectral_network_bokeh_plot(
     without_errors=False,
     download=False,
 ):
-    # Determine if the data set corresponds to a multi-parameter 
-    # configuration
+    # Determine if the data set corresponds to a multi-parameter
+    # configuration.
     if type(spectral_network_data.sw_data) is list:
         multi_parameter = True
     else:
@@ -160,7 +160,7 @@ def get_spectral_network_bokeh_plot(
                     root_label += str(root.tolist()) + ', '
                 bpds_i.data['root'].append(root_label[:-2])
             bpds.append(bpds_i)
-            
+
             bcds_i = ColumnDataSource({'xs': [], 'ys': []})
             for bl in swd.branch_points + swd.irregular_singularities:
                 y_r = (2j * y_max) * complex(swd.branch_cut_rotation)
@@ -168,8 +168,8 @@ def get_spectral_network_bokeh_plot(
                 bcds_i.data['ys'].append([bl.z.imag, bl.z.imag + y_r.imag])
             bcds.append(bcds_i)
 
-        # In this case the branch points and cuts will be 
-        # drawn differently for each spectral network. 
+        # In this case the branch points and cuts will be
+        # drawn differently for each spectral network.
         # Each call of the slider will deal with them.
 
     # Data source for the current plot
@@ -390,7 +390,7 @@ def get_spectral_network_bokeh_plot(
                 args={
                     'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
                     'dpds': dpds, 'pds': pds, 'hover': hover,
-                    'plot_options': plot_options_ds, 
+                    'plot_options': plot_options_ds,
                     'tree_idx_ds': tree_idx_ds
                 },
                 code=(
@@ -403,11 +403,11 @@ def get_spectral_network_bokeh_plot(
             notebook_vform_elements = (
                 [bokeh_figure, sn_slider] + notebook_vform_elements
             )
-        
+
         else:
             # TODO: implement new js routine for sn_slider when
             # there are multiple parameters.
-            # Need to draw branch points and cuts for each value of the 
+            # Need to draw branch points and cuts for each value of the
             # parameters.
             sn_slider = Slider(
                 start=0, end=num_of_plots - 1,
@@ -418,7 +418,7 @@ def get_spectral_network_bokeh_plot(
                 args={
                     'cds': cds, 'snds': snds, 'sn_idx_ds': sn_idx_ds,
                     'dpds': dpds, 'pds': pds, 'hover': hover,
-                    'plot_options': plot_options_ds, 
+                    'plot_options': plot_options_ds,
                     'tree_idx_ds': tree_idx_ds
                 },
                 code=(
@@ -470,7 +470,7 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
         g_data = sw_data.g_data
 
     for s_wall in s_walls:
-        alpha = 1.0 / s_wall.get_generation() 
+        alpha = 1.0 / s_wall.get_generation()
         z_segs = s_wall.get_segments()
         for start, stop in z_segs:
             z_r = s_wall.z[start:stop].real
@@ -479,9 +479,9 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
             # TODO: Check if the arrow is within the plot range.
             a_angle = pi
             a_angle = (
-                phase((z_r[a_i] - z_r[a_i - 1]) +
-                      1j * (z_i[a_i] - z_i[a_i - 1]))
-                - (pi / 2.0)
+                phase(
+                    (z_r[a_i] - z_r[a_i - 1]) + 1j * (z_i[a_i] - z_i[a_i - 1])
+                ) - (pi / 2.0)
             )
             data_dict['xs'].append(z_r)
             data_dict['ys'].append(z_i)
@@ -509,7 +509,6 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
                     )
                 data_dict['color'].append(color)
                 data_dict['alpha'].append(alpha)
-        #elif len(s_wall.local_roots) > 0:
         elif s_wall.is_trivialized():
             for root in s_wall.local_roots:
                 data_dict['label'].append(str(s_wall.label))
@@ -531,5 +530,5 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
             # data_dict['color'].append((0, 0, 255, 1,))
             data_dict['color'].append('#0000FF')
             data_dict['alpha'].append(alpha)
-            
+
     return data_dict

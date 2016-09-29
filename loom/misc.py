@@ -105,8 +105,7 @@ def remove_duplicate(a_list, compare):
 
 
 def n_remove_duplicate(a_list, accuracy):
-    compare = lambda a, b: abs(a - b) < accuracy
-    return gather(a_list, compare).keys()
+    return gather(a_list, lambda a, b: abs(a - b) < accuracy).keys()
 
 
 def nearest(a_list, value):
@@ -130,16 +129,18 @@ def nearest_index(a_list, value):
             min_d = d_i
             min_i = i
 
-    return min_i       
-        
+    return min_i
+
 
 def n_nearest(a_list, value, n):
     """
     Find n elements of a_list nearest to value and return them,
     by comparing the euclidean norms.
     """
-    compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
-    return sorted(a_list, cmp=compare)[:n]
+    return sorted(
+        a_list,
+        cmp=lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value)),
+    )[:n]
 
 
 def n_nearest_indices(a_list, value, n):
@@ -147,9 +148,11 @@ def n_nearest_indices(a_list, value, n):
     Find n elements of a_list nearest to value and return their indices,
     by comparing the euclidean norms.
     """
-    compare = lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value))
-    key = lambda k: a_list[k]
-    sorted_indices = sorted(range(len(a_list)), cmp=compare, key=key)
+    sorted_indices = sorted(
+        range(len(a_list)),
+        cmp=lambda v1, v2: cmp(abs(v1 - value), abs(v2 - value)),
+        key=lambda k: a_list[k]
+    )
     return sorted_indices[:n]
 
 
@@ -240,8 +243,9 @@ def delete_duplicates(l, key=None, accuracy=False):
     else:
         for x in l:
             if (
-                len(n_remove_duplicate(list(seen) + [key(x)], accuracy))
-                > len(seen)
+                len(
+                    n_remove_duplicate(list(seen) + [key(x)], accuracy)
+                ) > len(seen)
             ):
                 uniq.append(x)
                 seen.add(key(x))
@@ -256,11 +260,11 @@ def parse_sym_dict_str(string, multi_parameter=False):
         {k_str = v_str, ...}
     and return a list of
         [(k_str, v_str), ...]
-    
+
     If multi_parameter is True, instead get a sting of the form
         {k_str: [v_str_1, v_str_2, ...]}
-    or 
-        {k_str: [v_str_i, v_str_2, v_str_steps]}  
+    or
+        {k_str: [v_str_i, v_str_2, v_str_steps]}
     and return a list of
         [k_str, [v_str_i, v_str_2, v_str_steps]]
     """
@@ -366,8 +370,7 @@ def is_weyl_monodromy(sheet_permutation_matrix, g_data):
                 g_data.weyl_monodromy(
                     r, None, 'ccw', perm_matrix=sheet_permutation_matrix
                 ), g_data
-            )
-            and is_root(
+            ) and is_root(
                 g_data.weyl_monodromy(
                     r, None, 'cw', perm_matrix=sheet_permutation_matrix
                 ), g_data

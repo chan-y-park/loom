@@ -315,7 +315,7 @@ class RamificationPoint:
         if self.z != oo:
             self.z *= z_r
         # XXX: when rotating z, need to reset sw_diff_coeff.
-        # This is currently done by running 
+        # This is currently done by running
         # SWData.analyze_ffr_ramification_points() again
         # in SWData.set_z_rotation().
 
@@ -861,7 +861,7 @@ class SWDataBase(object):
 
         for pct in self.regular_punctures + self.irregular_punctures:
             logger.info('{} at z={}'.format(pct.label, pct.z))
- 
+
     def set_from_config(
         self, config, mt_params=None,
         ramification_points=None, branch_points=None,
@@ -991,11 +991,11 @@ class SWDataBase(object):
                 z=z_irr_sing, label='irregular singularity #{}'.format(j)
             )
             self.irregular_singularities.append(irr_sing)
- 
+
         # Automatically configure various sizes
         # if not configured manually.
 
-        zs = bpzs + ipzs + [p.z for p in self.regular_punctures if p.z != oo] 
+        zs = bpzs + ipzs + [p.z for p in self.regular_punctures if p.z != oo]
         if len(zs) > 1:
             min_abs_distance = min(
                 [abs(x - y) for i, x in enumerate(zs) for y in zs[i + 1:]]
@@ -1268,11 +1268,9 @@ class SWDataBase(object):
                 .format(rp.z, rp.x)
             )
 
-            #zero_threshold = self.accuracy * 100
             zero_threshold = self.accuracy * RAMIFICATION_PT_ANALYSIS_ACCURACY
             g_data = self.g_data
 
-            #if g_data.type == 'A' or g_data.type == 'D':
             if g_data.type == 'A':
                 local_curve = None
             elif g_data.type == 'D':
@@ -1319,28 +1317,28 @@ class SWDataBase(object):
                     (g_data.type == 'D' or g_data.type == 'E') and
                     abs(rp.x) > zero_threshold
                 ) or (
-                    g_data.type == 'D' and rp.i == 2
-                    and abs(rp.x) < zero_threshold
+                    g_data.type == 'D' and rp.i == 2 and
+                    abs(rp.x) < zero_threshold
                 ) or (
-                    g_data.type == 'E' and (rp.i == 2 or rp.i == 3)
-                    and abs(rp.x) < zero_threshold
+                    g_data.type == 'E' and (rp.i == 2 or rp.i == 3) and
+                    abs(rp.x) < zero_threshold
                 )
             ):
                 rp_type = 'type_I'
             elif (
-                g_data.type == 'D' and abs(rp.x) < zero_threshold
-                and 2 * g_data.rank == rp.i
-                and abs(local_curve.n().subs(dx, 0).coeff(dz)) > zero_threshold
+                g_data.type == 'D' and abs(rp.x) < zero_threshold and
+                2 * g_data.rank == rp.i and
+                abs(local_curve.n().subs(dx, 0).coeff(dz)) > zero_threshold
             ):
                 rp_type = 'type_II'
             elif (
-                g_data.type == 'D' and 2 * g_data.rank == rp.i
-                and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
+                g_data.type == 'D' and 2 * g_data.rank == rp.i and
+                abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
             ):
                 rp_type = 'type_III'
             elif (
-                g_data.type == 'E' and g_data.rank == 6
-                and abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
+                g_data.type == 'E' and g_data.rank == 6 and
+                abs(local_curve.n().subs(dx, 0).coeff(dz)) < zero_threshold
             ):
                 rp_type = 'type_IV'
             else:
@@ -1363,8 +1361,6 @@ class SWDataBase(object):
             # coordinate around the ramification point) as a function of z
             # (also intended as a local coordinate near a ramification point)
             if rp_type == 'type_I' or rp_type == 'type_II':
-                #a = local_curve.n().subs(dx, 0).coeff(dz)
-                #b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
                 curve_dx_dz = num_eq.subs(x, rp.x + dx).subs(z, rp.z + dz)
                 a = curve_dx_dz.subs(dx, 0).diff(dz).subs(dz, 0).evalf()
                 b = (
@@ -1383,12 +1379,12 @@ class SWDataBase(object):
                 a_2 = local_curve.n().coeff(dz, 2).coeff(dx, 3)
                 b = local_curve.n().subs(dz, 0).coeff(dx ** rp.i)
                 dx_dz_plus = (((
-                    -1.0 * a_1
-                    + (a_1 ** 2 - 4.0 * b * a_2) ** sympy.Rational(1, 2)
+                    -1.0 * a_1 +
+                    (a_1 ** 2 - 4.0 * b * a_2) ** sympy.Rational(1, 2)
                 ) / (2.0 * b)) * dz) ** sympy.Rational(1, 12)
                 dx_dz_minus = (((
-                    -1.0 * a_1
-                    - (a_1 ** 2 - 4.0 * b * a_2) ** sympy.Rational(1, 2)
+                    -1.0 * a_1 -
+                    (a_1 ** 2 - 4.0 * b * a_2) ** sympy.Rational(1, 2)
                 ) / (2.0 * b)) * dz) ** sympy.Rational(1, 12)
 
             # FIXME: temporary patch until type_AD is removed
@@ -1692,8 +1688,8 @@ def get_ramification_points_using_discriminant(
             # is able to do this in a fraction of a second though
             if (
                 sympy.expand(f_n / (x ** 3)) == (
-                    -108 * x**24 * z**26 - 540 * I * x**12 * z**15
-                    + 540 * I * x**12 * z**13 - z**4 + 2 * z**2 - 1
+                    -108 * x**24 * z**26 - 540 * I * x**12 * z**15 +
+                    540 * I * x**12 * z**13 - z**4 + 2 * z**2 - 1
                 )
             ):
                 D_z = z**598 * (z**2 - 1)**46
@@ -1730,7 +1726,8 @@ def get_ramification_points_using_discriminant(
             logger_name=logger_name,
         )
 
-        is_same_z = lambda a, b: abs(a - b) < accuracy
+        def is_same_z(a, b):
+            abs(a - b) < accuracy
         gathered_f_roots = gather(f_roots, is_same_z)
 
         # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
@@ -1926,8 +1923,8 @@ def align_sheets_for_e_6_ffr(
         # in two groups of 12.
 
         have_same_r = (
-            lambda a, b: abs(abs(complex(a)) - abs(complex(b)))
-            < SHEET_NULL_TOLERANCE
+            lambda a, b: abs(abs(complex(a)) - abs(complex(b))) <
+            SHEET_NULL_TOLERANCE
         )
         gathered_sheets = gather(sheets, have_same_r)
 
@@ -1950,7 +1947,8 @@ def align_sheets_for_e_6_ffr(
         g_2 = gathered_sheets.values()[2]
 
         # normalize the phase to run from 0 to 2 \pi
-        norm_phase = lambda w: phase(w) % (2 * pi)
+        def norm_phase(w):
+            phase(w) % (2 * pi)
 
         # sort sheets within each ring according to their
         # phase, counter-clockwise starting from the real axis

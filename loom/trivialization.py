@@ -96,6 +96,7 @@ class SWDataWithTrivialization(SWDataBase):
         'reference_ffr_xs', 'reference_xs',
         'z_plane_rotation', 'branch_cut_rotation',
     ]
+
     def __init__(
         self,
         config,
@@ -118,10 +119,10 @@ class SWDataWithTrivialization(SWDataBase):
         self.base_point = None
 
         # Initialize the parent attributes.
-        if sw_data_base is not None: 
+        if sw_data_base is not None:
             for name in (
-                sw_data_base.data_attributes
-                + ['data_attributes', 'accuracy', 'ffr_curve', 'diff']
+                sw_data_base.data_attributes +
+                ['data_attributes', 'accuracy', 'ffr_curve', 'diff']
             ):
                 setattr(self, name, getattr(sw_data_base, name),)
         else:
@@ -143,20 +144,14 @@ class SWDataWithTrivialization(SWDataBase):
                 )
 
         self.data_attributes += self.additional_data_attributes
-#        self.data_attributes += [
-#            'min_distance', 'min_horizontal_distance',
-#            'farthest_branching_locus', 'base_point',
-#            'reference_ffr_xs', 'reference_xs',
-#            'z_plane_rotation', 'branch_cut_rotation',
-#        ]
 
         logger.info('Seiberg-Witten data after trivialization:')
         self.print_info()
 
     def is_trivialized(self):
-        return True 
+        return True
 
-    def init_z_rotation(self):   
+    def init_z_rotation(self):
         # Introduce a clockwise rotation of the z-plane,
         # after the PSL2C transformation, by the following phase.
         # Try rotating by different increments, up to pi/max_pi_div
@@ -273,7 +268,7 @@ class SWDataWithTrivialization(SWDataBase):
         # Apply the z-rotation to numerical attributes.
         self.set_z_rotation(1 / z_plane_rotation)
         # Now all the branch cuts run vertically.
-        self.z_plane_rotation = z_plane_rotation 
+        self.z_plane_rotation = z_plane_rotation
         self.branch_cut_rotation = 1
 
     def set_z_rotation(self, z_rotation):
@@ -283,9 +278,9 @@ class SWDataWithTrivialization(SWDataBase):
             .format(z_rotation)
         )
         for p in (
-            self.regular_punctures + self.irregular_punctures
-            + self.ffr_ramification_points
-            + self.branch_points + self.irregular_singularities
+            self.regular_punctures + self.irregular_punctures +
+            self.ffr_ramification_points +
+            self.branch_points + self.irregular_singularities
         ):
             p.set_z_rotation(z_rotation)
 
@@ -684,8 +679,6 @@ class SWDataWithTrivialization(SWDataBase):
                     sorted_ffr_xs = [
                         zoom_s[-1] for zoom_s in sheets_along_zoomed_path
                     ]
-
-                #else:
                 elif len(ffr_sheets_along_path[0]) >= 2:
                     old_ffr_xs = [s[-2] for s in ffr_sheets_along_path]
                     delta_xs = [
@@ -847,11 +840,11 @@ class SWDataWithTrivialization(SWDataBase):
                 for i, u in enumerate(uniq_labels):
                     if labels_multiplicities[i] > 1:
                         if (
-                            labels_multiplicities[i] == 2
-                            and self.g_data.type == 'D'
+                            labels_multiplicities[i] == 2 and
+                            self.g_data.type == 'D'
                         ) or (
-                            labels_multiplicities[i] == 3
-                            and self.g_data.type == 'E'
+                            labels_multiplicities[i] == 3 and
+                            self.g_data.type == 'E'
                         ):
                             multiple_labels.append(u)
                         else:
@@ -889,11 +882,11 @@ class SWDataWithTrivialization(SWDataBase):
                         )
                     elif (
                         is_higher_bp is True and (
-                            higher_bp_type == 'type_II'
-                            or higher_bp_type == 'type_III'
+                            higher_bp_type == 'type_II' or
+                            higher_bp_type == 'type_III' or
                             # FIXME: remove this after removing 'type_AD'
                             # placeholder
-                            or higher_bp_type == 'type_AD'
+                            higher_bp_type == 'type_AD'
 
                         ) or is_irr_sing is True
                     ):
@@ -976,8 +969,9 @@ class SWDataWithTrivialization(SWDataBase):
                         )
 
                     elif (
-                        (is_higher_bp is True and higher_bp_type == 'type_IV')
-                        or is_irr_sing is True
+                        (is_higher_bp is True and
+                         higher_bp_type == 'type_IV') or
+                        is_irr_sing is True
                     ):
                         # Should decide case-by-case whether to employ
                         # (0,1,2) -> (1,2,0) or (0,1,2) -> (2,0,1)
@@ -1366,7 +1360,7 @@ def get_sorted_xs(
     accuracy=None,
     check_tracking=True,
     logger_name='loom',
-    index=None, z_0=None, z_1=None, 
+    index=None, z_0=None, z_1=None,
 ):
     """
     Returns a sorted version of 'new_xs'
@@ -1418,11 +1412,13 @@ def get_sorted_xs(
             # The same is true for E-type covers at the origin of the
             # Coulomb branch
             if (
-                g_data.type == 'D' and min(map(abs, sorted_xs)) < accuracy
-                and len(sorted_xs) - len(unique_sorted_xs) == 1
+                g_data.type == 'D' and
+                min(map(abs, sorted_xs)) < accuracy and
+                len(sorted_xs) - len(unique_sorted_xs) == 1
             ) or (
-                g_data.type == 'E' and min(map(abs, sorted_xs)) < accuracy
-                and len(sorted_xs) - len(unique_sorted_xs) == 2
+                g_data.type == 'E' and
+                min(map(abs, sorted_xs)) < accuracy and
+                len(sorted_xs) - len(unique_sorted_xs) == 2
             ):
                 return sorted_xs
             else:

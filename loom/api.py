@@ -31,8 +31,8 @@ from misc import parse_sym_dict_str
 # TODO: when parameter_sequence is not None, this class
 # contains a list of sw_data in self.sw_data, which conflicts
 # the assumption that SpectralNetworkData contains spectral networks
-# from a single SW geometry. 
-# Requires a system-wide refactoring, visit all XXX marked codes 
+# from a single SW geometry.
+# Requires a system-wide refactoring, visit all XXX marked codes
 # for the refactoring & for removing copied-and-pasted codes.
 class SpectralNetworkData:
     """
@@ -137,7 +137,7 @@ class SpectralNetworkData:
                     )
                 sw_data.append(sw_data_i)
 
-                # Now load the spectral network for the i-th value of the 
+                # Now load the spectral network for the i-th value of the
                 # parameter
                 data_file_i = os.path.join(
                     data_dir, 'data_' + str(i) + '.json'
@@ -477,7 +477,7 @@ class SpectralNetworkData:
                 )
 
                 spectral_networks.append(spectral_network)
-                
+
             self.spectral_networks = spectral_networks
             self.sw_data = sw_data_sequence
 
@@ -670,10 +670,6 @@ class SpectralNetworkData:
             self.sw_data.save(sw_data_file_path)
 
         # call SpectralNetwork.trivialize() for each spectral network.
-#        if two_way_streets_only:
-#            z_plane_rotation = None
-#        else:
-#            z_plane_rotation = self.sw_data.z_plane_rotation
         z_plane_rotation = self.sw_data.z_plane_rotation
 
         if len(self.spectral_networks) == 1:
@@ -699,8 +695,6 @@ class SpectralNetworkData:
                 two_way_streets_only=two_way_streets_only,
                 task='trivialize',
             )
-
-        #self.config['trivialize'] = True
 
         if logging_queue is not None:
             # Put a mark that generating spectral networks is done.
@@ -762,8 +756,6 @@ class SpectralNetworkData:
                 sw_data=sw_data,
                 spectral_network=spectral_network,
                 logger_name=logger_name,
-                #trivialized=self.config['trivialize'],
-                #trivialized=self.sw_data.is_trivialized(),
                 **kwargs
             )
             plot_legend = spectral_network_plot.get_legend(
@@ -774,7 +766,7 @@ class SpectralNetworkData:
 
         if show_plot is True:
             spectral_network_plot.show()
-        
+
         return spectral_network_plot
 
     def find_two_way_streets(
@@ -829,7 +821,7 @@ class SpectralNetworkData:
 
                 for i, trees in enumerate(soliton_tree_data):
                     if trees is None:
-                        sn_i = self.spectral_networks[i] 
+                        sn_i = self.spectral_networks[i]
                         for sn in sns:
                             if sn.phase == sn_i.phase:
                                 sn_i.soliton_trees = sn.soliton_trees
@@ -1008,7 +1000,7 @@ def get_sw_data(config, logger_name, json_data=None):
                 break
     else:
         use_trivialization = config['trivialize']
-                
+
     if use_trivialization is True:
         return SWDataWithTrivialization(
             config, logger_name,

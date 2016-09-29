@@ -266,9 +266,8 @@ def progress():
             )
             if result_queue is not None:
                 if (
-                    task == 'rotate_back'
-                    or task == 'plot_two_way_streets'
-                    #or task == 'find_two_way_streets'
+                    task == 'rotate_back' or
+                    task == 'plot_two_way_streets'
                 ):
                     # No need to load the data from files.
                     # Go directly to the plot page.
@@ -279,9 +278,9 @@ def progress():
                         )
                     )
                 elif (
-                    task == 'extend'
-                    or task == 'trivialize'
-                    or task == 'find_two_way_streets'
+                    task == 'extend' or
+                    task == 'trivialize' or
+                    task == 'find_two_way_streets'
                 ):
                     spectral_network_data = result_queue.get()
         elif data_name is None:
@@ -315,14 +314,14 @@ def progress():
             # An extended spectral network is a new data.
             kwargs['saved_data'] = False
         elif (
-            task == 'trivialize'
-            or task == 'find_two_way_streets'
+            task == 'trivialize' or
+            task == 'find_two_way_streets'
         ):
             kwargs['saved_data'] = False
         elif (
-            task == 'load'
-            or task == 'rotate_back'
-            or task == 'plot_two_way_streets'
+            task == 'load' or
+            task == 'rotate_back' or
+            task == 'plot_two_way_streets'
         ):
             pass
         else:
@@ -451,29 +450,11 @@ def plot():
     else:
         spectral_network_data.reset_z_rotation()
 
-#    if (task == 'plot_two_way_streets'):
-#        spectral_network_data.find_two_way_streets(
-#            search_radius=kwargs['search_radius'],
-#            replace=False,
-#        )
-#    elif (task == 'find_two_way_streets'):
-#        spectral_network_data.find_two_way_streets(
-#            search_radius=kwargs['search_radius'],
-#            replace=True,
-#        )
-#    if (
-#        task == 'plot_two_way_streets'
-#        or task == 'find_two_way_streets'
-#    ):
-#        spectral_network_data.find_two_way_streets(
-#            search_radius=kwargs['search_radius'],
-#            replace=True,
-#        )
     has_two_way_streets = spectral_network_data.has_two_way_streets()
     if (
-        task == 'plot_two_way_streets'
-        or task == 'find_two_way_streets'
-        or (task == 'trivialize' and has_two_way_streets)
+        task == 'plot_two_way_streets' or
+        task == 'find_two_way_streets' or
+        (task == 'trivialize' and has_two_way_streets)
     ):
         plot_two_way_streets = True
     else:
@@ -617,10 +598,8 @@ def download_plot(two_way_streets=False):
                 # Make a plot title.
                 Z = tree.Z
                 title = (
-                    'SN #{}, tree #{}, '.format(i, j)
-                    + 'Z = '
-                    + '({:.6}) + ({:.6})'.format(Z.real, Z.imag)
-                    + 'i'
+                    'SN #{}, tree #{}, '.format(i, j) +
+                    'Z = ({:.6}) + ({:.6})i'.format(Z.real, Z.imag)
                 )
                 soliton_tree_plot.draw(
                     title=title,
@@ -765,7 +744,6 @@ def render_plot_template(
 
     if plot_two_way_streets is True:
         soliton_tree_data = spectral_network_data.find_two_way_streets(
-            #search_radius=search_radius,
             replace=False,
         )
 
@@ -797,7 +775,7 @@ def render_plot_template(
         range_max = max(x_max, y_max)
         plot_x_range = plot_y_range = [range_min, range_max]
         plot_range = [plot_x_range, plot_y_range]
-    
+
     bokeh_plot_script, div = get_spectral_network_bokeh_plot(
         spectral_network_data,
         plot_range=plot_range,
