@@ -94,7 +94,7 @@ class Joint:
     def set_from_json_data(self, json_data):
         self.z = r2toc(json_data['z'])
         # XXX: The following fixes the bug in the old data.
-        if (len(json_data['M']) == 2):
+        if isinstance(json_data, list):
             self.M = json_data['M'][0]
         else:
             self.M = json_data['M']
@@ -254,8 +254,8 @@ class SWall(object):
     def set_from_json_data(self, json_data):
         self.z = numpy.array([r2toc(z_t) for z_t in json_data['z']])
         # XXX: The following fixes the bug in the old data.
-        if len(json_data['M'][0]) == 2:
-            self.M = numpy.array([M_t [0]for M_t in json_data['M']])
+        if isinstance(json_data, list):
+            self.M = numpy.array([M_t[0] for M_t in json_data['M']])
         else:
             self.M = numpy.array(json_data['M'])
         self.x = numpy.array(
