@@ -45,7 +45,7 @@ SEED_PRECISION_MAX_DEPTH = 5
 MIN_NUM_OF_DATA_PTS = 3
 
 # Maximum number of steps for the Newton method C library.
-NEWTON_MAX_STEPS = 100
+#NEWTON_MAX_STEPS = 100
 
 
 class Joint:
@@ -357,7 +357,7 @@ class SWall(object):
                 )
                 msg = libs.ctypes_s_wall.message
                 msg.s_wall_size = array_size
-                msg.rv = NEWTON_MAX_STEPS
+                msg.rv = constants.NEWTON_MAX_STEPS
 
                 libs.ctypes_s_wall.grow(
                     msg,
@@ -405,8 +405,10 @@ class SWall(object):
                 )
                 numba_rv = libs.numba_grow(
                     self.z, self.x, self.M,
-                    numba_get_x=libs.numba_get_x,
+                    #numba_get_x=libs.numba_get_x,
+                    #numba_f_df_at_zx=libs.numba_f_df_at_zx,
                     phi_k_czes=libs.phi_k_czes,
+                    max_steps=constants.NEWTON_MAX_STEPS,
                     c_dz_dt=libs.c_dz_dt,
                     bpzs=bpzs,
                     ppzs=ppzs,
@@ -1105,13 +1107,17 @@ class GrowLibs:
         self.c_dz_dt = complex(exp(phase * 1j) / c_v)
 
         N = sympy.degree(self.f, x)
-        phi_k_czes = []
-        for k in range(N + 1):
-            phi_k = self.f.coeff(x, n=k).expand()
-            for z_monomial in phi_k.as_ordered_terms():
+        phi_k_n_czes = []
+        phi_k_d_czes = []
+        for k in range(N):
+            phi_k_n, phi_k_d = self.f.coeff(x, n=k).expand().as_numer_denom()
+            for z_monomial in phi_k_n.as_ordered_terms():
                 c, e = z_monomial.as_coeff_exponent(z)
-                phi_k_czes.append((int(k), complex(c), float(e)))
-        self.phi_k_czes = phi_k_czes
+                phi_k_n_czes.append((int(k), complex(c), float(e)))
+            for z_monomial in phi_k_d.as_ordered_terms():
+                c, e = z_monomial.as_coeff_exponent(z)
+                phi_k_d_czes.append((int(k), complex(c), float(e)))
+        self.phi_k_czes = (N, phi_k_n_czes, phi_k_d_czes)
 
         # v = sympy.lambdify((z, x), self.v)
         def dz_dt(z, x1, x2):
@@ -1156,21 +1162,24 @@ class GrowLibs:
             self.numba_grow = _grow
             # XXX Failed to compile a Numba function from _grow, try later.
             # self.numba_grow = numba.jit(nopython=True)(_grow)
-            # self.numba_f_df_at_xz = numba.jit(nopython=True)(_f_df_at_xz)
-            self.numba_get_x = numba.jit(nopython=True)(_get_x)
+            #self.numba_f_df_at_zx = numba.jit(nopython=True)(_f_df_at_zx)
+            #self.numba_get_x = numba.jit(nopython=True)(_get_x)
         else:
             self.numba_grow = None
 
     def get_x(self, z_0, x_0, max_steps=100):
-        return _get_x(self.phi_k_czes, z_0, x_0, self.accuracy, max_steps)
+        return _get_x(
+            self.phi_k_czes, z_0, x_0, self.accuracy, max_steps,
+        )
 
 
-# XXX: JIT complier fails to compile the following,
-# left for future use.
+# XXX: Numba JIT complier fails to compile the following,
 def _grow(
     zs, xs, Ms,
-    numba_get_x=None,
+    #numba_get_x=None,
+    #numba_f_df_at_zx=None,
     phi_k_czes=None,
+    max_steps=constants.NEWTON_MAX_STEPS,
     c_dz_dt=None,
     bpzs=None,
     ppzs=None,
@@ -1183,7 +1192,7 @@ def _grow(
     twist_lines=None,
 ):
     step = 0
-
+    N, phi_k_n_czes, phi_k_d_czes = phi_k_czes
     array_size = len(zs)
     while step < (array_size - 1):
         z_i = zs[step]
@@ -1215,8 +1224,16 @@ def _grow(
         # z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
         Dx_i = x_i_1 - x_i_2
         z_n = z_i + dt * exp(1j * (cmath.phase(c_dz_dt) - cmath.phase(Dx_i)))
-        x_n_1 = numba_get_x(phi_k_czes, z_n, x_i_1, accuracy)
-        x_n_2 = numba_get_x(phi_k_czes, z_n, x_i_2, accuracy)
+        x_n_1 = get_x(
+            int(N), phi_k_n_czes, phi_k_d_czes, z_n, x_i_1, accuracy,
+            max_steps=max_steps,
+            #f_df_at_zx=numba_f_df_at_zx,
+        )
+        x_n_2 = get_x(
+            int(N), phi_k_n_czes, phi_k_d_czes, z_n, x_i_2, accuracy,
+            max_steps=max_steps,
+            #f_df_at_zx=numba_f_df_at_zx,
+        )
         M_n = M_i + abs(Dx_i) * dt
 
         zs[step] = z_n
@@ -1226,11 +1243,17 @@ def _grow(
             avg_z_r = (z_i.real + z_n.real) * 0.5
             for s, e in twist_lines:
                 if (s <= avg_z_r and avg_z_r <= e):
-                    x_n_1 = numba_get_x(
-                        phi_k_czes, z_n, (-1 * x_i_2), accuracy
+                    x_n_1 = get_x(
+                        int(N), phi_k_n_czes, phi_k_d_czes,
+                        z_n, (-1 * x_i_2), accuracy,
+                        max_steps=max_steps,
+                        #f_df_at_zx=numba_f_df_at_zx,
                     )
-                    x_n_2 = numba_get_x(
-                        phi_k_czes, z_n, (-1 * x_i_1), accuracy
+                    x_n_2 = get_x(
+                        int(N), phi_k_n_czes, phi_k_d_czes,
+                        z_n, (-1 * x_i_1), accuracy,
+                        max_steps=max_steps,
+                        #f_df_at_zx=numba_f_df_at_zx,
                     )
 
         if abs(x_n_1 - x_n_2) < accuracy:
@@ -1241,37 +1264,61 @@ def _grow(
     return (step + 1)
 
 
-def _f_df_at_zx(phi_k_czes, z_0, x_0):
+# XXX: Numba JIT complier fails to compile the following,
+# Left for future use.
+# if use_numba:
+#     numba_grow = numba.jit(nopython=True)(_grow)
+
+
+def _f_df_at_zx(N, phi_k_n_czes, phi_k_d_czes, z_0, x_0):
     """
     Calculate f(z_0, x_0) and df(z_0, x_0)/dx,
     which are used in Newton's method
     to find the root of f(z_0, x) near x = x_0.
 
-    phi_k_czes = [(k, c, e), ...], where
-        f(z, x) = ... + (c*z^e + ...) * x^k + ...
+    phi_k_czes = (N, phi_k_n_czes, phi_k_d_czes),
+    phi_k_n_czes = [(k, c_n, e_n), ...], 
+    phi_k_d_czes = [(k, c_d, e_d), ...], 
+    where
+        f(z, x) = x^N + ... + (c_n*z^e_n + ...) / (c_d*z^e_d + ...) * x^k + ...
     """
-    f_0 = 0
-    df_0 = 0
-    for k, c, e in phi_k_czes:
-        f_0 += (x_0 ** k) * c * (z_0 ** e)
+    f_0 = x_0 ** N
+    df_0 = N * (x_0 ** (N - 1))
+    phi_ns = numpy.zeros(N, dtype=numpy.complex128)
+    phi_ds = numpy.zeros(N, dtype=numpy.complex128)
+
+    for k, c, e in phi_k_n_czes:
+        phi_ns[k] += c * (z_0 ** e)
+
+    for k, c, e in phi_k_d_czes:
+        phi_ds[k] += c * (z_0 ** e)
+
+    for k in range(N):
+        phi_k = phi_ns[k] / phi_ds[k]
+        f_0 += phi_k * (x_0 ** k) 
         if k > 0:
-            df_0 += k * x_0 ** (k - 1) * c * (z_0 ** e)
+            df_0 += k * phi_k * x_0 ** (k - 1)
+
     return f_0, df_0
 
 
-def _get_x(phi_k_czes, z_0, x_0, accuracy, max_steps=100):
+if use_numba:
+    f_df_at_zx = numba.jit(nopython=True)(_f_df_at_zx)
+else:
+    f_df_at_zx = _f_df_at_zx
+
+def _get_x(
+    N, phi_k_n_czes, phi_k_d_czes, z_0, x_0, accuracy,
+    max_steps=100,
+    #f_df_at_zx=_f_df_at_zx,
+):
     """
     Solve f(z_0, x) = 0 using Newton's method from x = x_0.
     """
     step = 0
     x_i = x_0
     while(step < max_steps):
-        f_i = 0
-        df_i = 0
-        for k, c, e in phi_k_czes:
-            f_i += (x_i ** k) * c * (z_0 ** e)
-            if k > 0:
-                df_i += k * x_i ** (k - 1) * c * (z_0 ** e)
+        f_i, df_i = f_df_at_zx(N, phi_k_n_czes, phi_k_d_czes, z_0, x_i)
         Delta = f_i / df_i
         if abs(Delta) < accuracy:
             break
@@ -1281,26 +1328,10 @@ def _get_x(phi_k_czes, z_0, x_0, accuracy, max_steps=100):
     return x_i
 
 
-def debug_get_x(phi_k_czes, z_0, x_0, accuracy, max_steps=100):
-    """
-    Solve f(z_0, x) = 0 using Newton's method from x = x_0.
-    """
-    step = 0
-    x_i = x_0
-    while(step < max_steps):
-        f_i = 0
-        df_i = 0
-        for k, c, e in phi_k_czes:
-            f_i += (x_i ** k) * c * (z_0 ** e)
-            if k > 0:
-                df_i += k * x_i ** (k - 1) * c * (z_0 ** e)
-        Delta = f_i / df_i
-        if abs(Delta) < accuracy:
-            break
-        else:
-            x_i -= Delta
-        step += 1
-    return x_i
+if use_numba:
+    get_x = numba.jit(nopython=True)(_get_x)
+else:
+    get_x = _get_x
 
 
 def get_s_wall_root(z, ffr_xs, sw_data):

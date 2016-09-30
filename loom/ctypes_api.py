@@ -109,10 +109,17 @@ class CTypesSWall:
         self.clibs_s_wall_grow = None
         self.message = Message()
 
-        self.diff_k = None
-        self.diff_c = None
-        self.diff_e = None
-        self.n_diff = None
+        self.N = None
+
+        self.diff_n_k = None
+        self.diff_n_c = None
+        self.diff_n_e = None
+        self.n_diff_n = None
+
+        self.diff_d_k = None
+        self.diff_d_c = None
+        self.diff_d_e = None
+        self.n_diff_d = None
 
         self.c_dz_dt = None
 
@@ -143,10 +150,15 @@ class CTypesSWall:
 
         self.clibs_s_wall_grow.argtypes = [
             ctypes.POINTER(Message),
-            array_1d_int,       # int* diff_k
-            array_1d_complex,   # double complex* diff_c
-            array_1d_float,     # double* diff_e
-            ctypes.c_int,       # int n_diff
+            ctypes.c_int,       # int N
+            array_1d_int,       # int* diff_n_k
+            array_1d_complex,   # double complex* diff_n_c
+            array_1d_float,     # double* diff_n_e
+            ctypes.c_int,       # int n_diff_n
+            array_1d_int,       # int* diff_d_k
+            array_1d_complex,   # double complex* diff_d_c
+            array_1d_float,     # double* diff_d_e
+            ctypes.c_int,       # int n_diff_d
             array_1d_complex,   # double complex* c_dz_dt
             array_1d_complex,   # double complex* z
             array_2d_complex,   # double complex** x
@@ -162,16 +174,29 @@ class CTypesSWall:
 
         self.c_dz_dt = numpy.array([c_dz_dt], dtype=numpy.complex128)
 
-        self.diff_k = numpy.array(
-            [k for k, c, e in phi_k_czes], dtype=numpy.int32
+        self.N, phi_k_n_czes, phi_k_d_czes = phi_k_czes
+
+        self.diff_n_k = numpy.array(
+            [k for k, c, e in phi_k_n_czes], dtype=numpy.int32
         )
-        self.diff_c = numpy.array(
-            [c for k, c, e in phi_k_czes], dtype=numpy.complex128
+        self.diff_n_c = numpy.array(
+            [c for k, c, e in phi_k_n_czes], dtype=numpy.complex128
         )
-        self.diff_e = numpy.array(
-            [e for k, c, e in phi_k_czes], dtype=numpy.float64
+        self.diff_n_e = numpy.array(
+            [e for k, c, e in phi_k_n_czes], dtype=numpy.float64
         )
-        self.n_diff = len(phi_k_czes)
+        self.n_diff_n = len(phi_k_n_czes)
+
+        self.diff_d_k = numpy.array(
+            [k for k, c, e in phi_k_d_czes], dtype=numpy.int32
+        )
+        self.diff_d_c = numpy.array(
+            [c for k, c, e in phi_k_d_czes], dtype=numpy.complex128
+        )
+        self.diff_d_e = numpy.array(
+            [e for k, c, e in phi_k_d_czes], dtype=numpy.float64
+        )
+        self.n_diff_d = len(phi_k_d_czes)
 
         bpzs = [
             p.z for p in
@@ -213,10 +238,15 @@ class CTypesSWall:
     def grow(self, msg, z, x, M):
         return self.clibs_s_wall_grow(
             msg,
-            self.diff_k,
-            self.diff_c,
-            self.diff_e,
-            self.n_diff,
+            self.N,
+            self.diff_n_k,
+            self.diff_n_c,
+            self.diff_n_e,
+            self.n_diff_n,
+            self.diff_d_k,
+            self.diff_d_c,
+            self.diff_d_e,
+            self.n_diff_d,
             self.c_dz_dt,
             z,
             x,

@@ -5,4 +5,10 @@
 *.DS_Store
 loom/sage_scripts/*.py
 logs/*.txt
-
+.ipynb_checkpoints/
+cache/
+data/
+dropbox_loom
+logs
+loom/clibs/*o
+notebooks
