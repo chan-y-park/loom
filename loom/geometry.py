@@ -13,6 +13,8 @@ from pprint import pprint
 from matplotlib import cm as mpl_color_map
 
 import sage_subprocess
+import constants
+
 from misc import (ctor2, r2toc, PSL2C,
                   delete_duplicates, gather, parse_sym_dict_str,
                   n_remove_duplicate,)
@@ -1004,16 +1006,24 @@ class SWDataBase(object):
             min_abs_distance = DEFAULT_LARGE_STEP_SIZE
 
         if config['size_of_small_step'] is None:
-            config['size_of_small_step'] = min_abs_distance / 100.0
+            config['size_of_small_step'] = (
+                min_abs_distance * constants.F_SIZE_OF_SMALL_STEPS
+            )
 
         if config['size_of_large_step'] is None:
-            config['size_of_large_step'] = min_abs_distance / 10.0
+            config['size_of_large_step'] = (
+                min_abs_distance * constants.F_SIZE_OF_LARGE_STEPS
+            )
 
         if config['size_of_bp_neighborhood'] is None:
-            config['size_of_bp_neighborhood'] = min_abs_distance / 2.0
+            config['size_of_bp_neighborhood'] = (
+                min_abs_distance * constants.F_SIZE_OF_BP_NEIGHBORHOOD
+            )
 
         if config['size_of_puncture_cutoff'] is None:
-            config['size_of_puncture_cutoff'] = min_abs_distance / 100.0
+            config['size_of_puncture_cutoff'] = (
+                min_abs_distance * constants.F_SIZE_OF_PUNCTURE_CUTOFF
+            )
 
         logger.info('size_of_small_step = {}'
                     .format(config['size_of_small_step']))

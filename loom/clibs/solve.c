@@ -3,26 +3,49 @@
 #include "solve.h"
 
 newton_params f_df_dx_0(
-    diff_params phi,
+    int N,
+    diff_params phi_n,
+    diff_params phi_d,
     double complex z_0,
     double complex x_0
 ) {
-    double complex f_0 = 0;
-    double complex df_dx_0 = 0;
+    double complex phi_[N][2];
+    double complex f_0 = cpow(x_0, N);
+    double complex df_dx_0 = N * cpow(x_0, N - 1);
 
+    int i;
     int k;
     double complex c;
     double e;
 
+    double complex phi_k;
+
     newton_params newton;
 
-    for(int i = 0; i < phi.n; i++) {
-        k = phi.k[i];
-        c = phi.c[i];
-        e = phi.e[i];
-        f_0 += cpow(x_0, k) * c * cpow(z_0, e);
+    for(i = 0; i < N; i++) {
+        phi_[i][0] = 0;
+        phi_[i][1] = 0;
+    }
+
+    for(i = 0; i < phi_n.n; i++) {
+        k = phi_n.k[i];
+        c = phi_n.c[i];
+        e = phi_n.e[i];
+        phi_[k][0] += c * cpow(z_0, e);
+    }
+
+    for(i = 0; i < phi_d.n; i++) {
+        k = phi_d.k[i];
+        c = phi_d.c[i];
+        e = phi_d.e[i];
+        phi_[k][1] += c * cpow(z_0, e);
+    }
+
+    for(k = 0; k < N; k++) {
+        phi_k = phi_[k][0] / phi_[k][1];
+        f_0 += phi_k * cpow(x_0, k);
         if (k > 0) {
-            df_dx_0 += k * cpow(x_0, (k - 1)) * c * cpow(z_0, e); 
+            df_dx_0 += k * phi_k * cpow(x_0, (k - 1)); 
         }
     }
     newton.f = f_0;
@@ -31,7 +54,9 @@ newton_params f_df_dx_0(
 }
 
 double complex get_x(
-    diff_params phi,
+    int N,
+    diff_params phi_n,
+    diff_params phi_d,
     double complex z_0,
     double complex x_0,
     double accuracy,
@@ -42,28 +67,16 @@ double complex get_x(
     newton_params newton;
     double complex Delta;
 
-//    printf("x_0 = (%.8f)+(%.8f)I\n", creal(x_0), cimag(x_0));
     while (step < max_steps) {
-        newton = f_df_dx_0(phi, z_0, x_i);
+        newton = f_df_dx_0(N, phi_n, phi_d, z_0, x_i);
         Delta = newton.f / newton.df_dx;
         x_i -= Delta;
-/*
-        printf(
-            "%d:\tf = (%.8f)+(%.8f)I\n"
-            "\tdf_dx = (%.8f)+(%.8f)I\n"
-            "\tDelta = (%.8f)+(%.8f)I\n",
-            step,
-            creal(newton.f), cimag(newton.f),
-            creal(newton.df_dx), cimag(newton.df_dx),
-            creal(Delta), cimag(Delta)
-        );
-*/
+
         if (cabs(Delta) < accuracy) {
             break;
         } else {
             step++;
         }
     }
-//    printf("x_i = (%.8f)+(%.8f)I\n", creal(x_i), cimag(x_i));
     return x_i;
 }

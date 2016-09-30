@@ -44,9 +44,6 @@ SEED_PRECISION_MAX_DEPTH = 5
 # Minimum number of data points for each S-wall.
 MIN_NUM_OF_DATA_PTS = 3
 
-# Maximum number of steps for the Newton method C library.
-#NEWTON_MAX_STEPS = 100
-
 
 class Joint:
     def __init__(self, z=None, M=None, ode_xs=None, parents=None, roots=None,
@@ -1176,8 +1173,6 @@ class GrowLibs:
 # XXX: Numba JIT complier fails to compile the following,
 def _grow(
     zs, xs, Ms,
-    #numba_get_x=None,
-    #numba_f_df_at_zx=None,
     phi_k_czes=None,
     max_steps=constants.NEWTON_MAX_STEPS,
     c_dz_dt=None,
@@ -1224,6 +1219,18 @@ def _grow(
         # z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
         Dx_i = x_i_1 - x_i_2
         z_n = z_i + dt * exp(1j * (cmath.phase(c_dz_dt) - cmath.phase(Dx_i)))
+
+        M_n = M_i + abs(Dx_i) * dt
+
+        zs[step] = z_n
+        Ms[step] = M_n
+
+        if (twist_lines is not None and (z_i.imag * z_n.imag) < 0):
+            avg_z_r = (z_i.real + z_n.real) * 0.5
+            for s, e in twist_lines:
+                if (s <= avg_z_r and avg_z_r <= e):
+                    x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
+
         x_n_1 = get_x(
             int(N), phi_k_n_czes, phi_k_d_czes, z_n, x_i_1, accuracy,
             max_steps=max_steps,
@@ -1234,27 +1241,6 @@ def _grow(
             max_steps=max_steps,
             #f_df_at_zx=numba_f_df_at_zx,
         )
-        M_n = M_i + abs(Dx_i) * dt
-
-        zs[step] = z_n
-        Ms[step] = M_n
-
-        if (twist_lines is not None and (z_i.imag * z_n.imag) < 0):
-            avg_z_r = (z_i.real + z_n.real) * 0.5
-            for s, e in twist_lines:
-                if (s <= avg_z_r and avg_z_r <= e):
-                    x_n_1 = get_x(
-                        int(N), phi_k_n_czes, phi_k_d_czes,
-                        z_n, (-1 * x_i_2), accuracy,
-                        max_steps=max_steps,
-                        #f_df_at_zx=numba_f_df_at_zx,
-                    )
-                    x_n_2 = get_x(
-                        int(N), phi_k_n_czes, phi_k_d_czes,
-                        z_n, (-1 * x_i_1), accuracy,
-                        max_steps=max_steps,
-                        #f_df_at_zx=numba_f_df_at_zx,
-                    )
 
         if abs(x_n_1 - x_n_2) < accuracy:
             return (step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2)
@@ -1310,7 +1296,6 @@ else:
 def _get_x(
     N, phi_k_n_czes, phi_k_d_czes, z_0, x_0, accuracy,
     max_steps=100,
-    #f_df_at_zx=_f_df_at_zx,
 ):
     """
     Solve f(z_0, x) = 0 using Newton's method from x = x_0.
