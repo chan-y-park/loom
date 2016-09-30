@@ -328,10 +328,7 @@ class SWall(object):
         array_size = len(self.z)
 
         if method is None:
-            if use_scipy_ode:
-                method = constants.LIB_SCIPY_ODE
-            else:
-                method = constants.LIB_C
+            method = libs.default_lib
 
         finished = False
         count = 4
@@ -345,7 +342,7 @@ class SWall(object):
             count -= 1
             if (
                 method == constants.LIB_C and
-                libs.ctypes_s_wall.grow is not None and
+                libs.ctypes_s_wall.is_available() and
                 not failed['lib_c']
             ):
                 logger.info(
@@ -504,7 +501,6 @@ class SWall(object):
                             logger.warning(
                                 '{} grow(): ode.integrate() failed at '
                                 't = {}; z_i = {}, x_i = ({}, {}). '
-                                'Will try using a different method.'
                                 .format(
                                     self.label, step,
                                     z_i, x_i_1, x_i_2,
@@ -512,23 +508,30 @@ class SWall(object):
                             )
                             failed['scipy_ode'] = True
                             if (
-                                libs.ctypes_s_wall.grow is not None and
+                                libs.ctypes_s_wall.is_available and
                                 not failed['lib_c']
                             ):
                                 finished = False
+                                logger.warning('Try using C libraries...')
                                 method = constants.LIB_C
                             elif (
                                 libs.numba_grow is not None and
                                 not failed['lib_numba']
                             ):
                                 finished = False
+                                logger.warning('Try using Numba...')
                                 method = constants.LIB_NUMBA
                             elif not failed['lib_python']:
                                 finished = False
+                                logger.warning('Try using Python libraries...')
                                 method = constants.LIB_PYTHON
                             else:
                                 # All methods failed.
                                 self.resize(step)
+                                logger.warning(
+                                    'All methods failed, stop growing {}.'
+                                    .format(self.label)
+                                )
                                 finished = True
                             break
 
@@ -602,6 +605,10 @@ class SWall(object):
                             )
                             failed['lib_python'] = True
                             finished = False
+                            logger.warning(
+                                'Use SciPy ODE to continue growing {}.'
+                                .format(self.label)
+                            )
                             method = constants.LIB_SCIPY_ODE
                             step -= 1
                             ode.set_initial_value(self[step])
@@ -1097,6 +1104,8 @@ class GrowLibs:
         # Method using numba
         self.numba_grow = None
 
+        self.default_lib = None
+
         x, z = sympy.symbols('x z')
 
         # NOTE: The following assumes that \lambda = x dz.
@@ -1163,6 +1172,16 @@ class GrowLibs:
             #self.numba_get_x = numba.jit(nopython=True)(_get_x)
         else:
             self.numba_grow = None
+
+        if config['use_scipy_ode']:
+            self.default_lib = constants.LIB_SCIPY_ODE
+        elif self.ctypes_s_wall.is_available():
+            self.default_lib = constants.LIB_C
+        elif self.numba_grow is not None:
+            self.default_lib = constants.LIB_NUMBA
+        else:
+            # Default S-wall grow library uses SciPy ODE.
+            self.default_lib = constants.LIB_SCIPY_ODE
 
     def get_x(self, z_0, x_0, max_steps=100):
         return _get_x(

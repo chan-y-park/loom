@@ -235,6 +235,12 @@ class CTypesSWall:
                 e = constants.P_INF
             self.tl[i] = (s, e)
 
+    def is_available(self):
+        if self.clibs_s_wall_grow is None:
+            return False
+        else:
+            return True
+
     def grow(self, msg, z, x, M):
         return self.clibs_s_wall_grow(
             msg,

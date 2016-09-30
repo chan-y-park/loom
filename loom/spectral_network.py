@@ -4,6 +4,8 @@ import logging
 import itertools
 import json
 
+import constants
+
 from cmath import exp
 from sympy import oo
 
@@ -371,6 +373,24 @@ class SpectralNetwork:
             phase=self.phase,
             logger_name=self.logger_name,
         )
+
+        use_default_msg = None
+        if (
+            method == constants.LIB_C and
+            not s_wall_grow_libs.ctypes_s_wall.is_available()
+        ):
+            use_default_msg = 'C libraries'
+        elif(
+            method == constants.LIB_NUMBA and
+            s_wall_grow_libs.numba_grow is None
+        ):
+            use_default_msg = 'Numba'
+        if use_default_msg is not None:
+            logger.warning(
+                '{} not available, use a default library instead.'
+                .format(use_default_msg)
+            )
+            method = s_wall_grow_libs.default_lib
 
         # Gather z-coordinates of punctures and branch points.
         ppzs = [
