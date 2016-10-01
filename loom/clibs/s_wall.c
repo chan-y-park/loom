@@ -39,6 +39,7 @@ int grow(
     double min_d;
     double d;
     double dt;
+    double f_dt;
     double complex Dx_i;
     double avg_z_r;
 
@@ -68,21 +69,25 @@ int grow(
             }
         }
 
+        Dx_i = x_i_1 - x_i_2;
+        f_dt = cabs(Dx_i);
+        if (f_dt > 1.0) f_dt = 1.0;
+
         min_d = np.size_of_bp_neighborhood;
         for (int j = 0; j < n_bpz; j++) {
             d = cabs(z_i - bpz[j]);
             if (d < min_d) min_d = d;
         }
         if (min_d < np.size_of_bp_neighborhood) {
-            dt = np.size_of_small_step;
+            dt = np.size_of_small_step * f_dt;
         } else {
-            dt = np.size_of_large_step;
+            dt = np.size_of_large_step * f_dt;
         }
 
-        Dx_i = x_i_1 - x_i_2;
-        //z[i] = z_i + dt * c_dz_dt[0] / Dx_i;
-        z[i] = z_i + dt * cexp((carg(c_dz_dt[0]) - carg(Dx_i))*I);
-        M[i] = M_i + cabs(Dx_i) * dt;
+        //z[i] = z_i + dt * cexp((carg(c_dz_dt[0]) - carg(Dx_i))*I);
+        //M[i] = M_i + cabs(Dx_i) * dt;
+        z[i] = z_i + dt * c_dz_dt[0] / Dx_i;
+        M[i] = M_i + dt;
 
         if (n_tl > 0 && cimag(z[i]) * cimag(z_i) < 0) {
             avg_z_r = (creal(z[i]) + creal(z_i)) * 0.5;

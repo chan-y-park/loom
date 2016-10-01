@@ -399,8 +399,6 @@ class SWall(object):
                 )
                 numba_rv = libs.numba_grow(
                     self.z, self.x, self.M,
-                    #numba_get_x=libs.numba_get_x,
-                    #numba_f_df_at_zx=libs.numba_f_df_at_zx,
                     phi_k_czes=libs.phi_k_czes,
                     max_steps=constants.NEWTON_MAX_STEPS,
                     c_dz_dt=libs.c_dz_dt,
@@ -428,6 +426,8 @@ class SWall(object):
                         'Will try using SciPy ODE.'
                         .format(step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2)
                     )
+                    import pdb
+                    pdb.set_trace()
                     failed['lib_numba'] = True
                     method = constants.LIB_SCIPY_ODE
                     continue
@@ -439,7 +439,7 @@ class SWall(object):
                 step = 0
 
                 ode = libs.ode
-                # dz_dt = libs.dz_dt
+                dz_dt = libs.dz_dt
                 get_xs = libs.get_xs
 
                 if method == constants.LIB_SCIPY_ODE:
@@ -478,18 +478,15 @@ class SWall(object):
                             break
 
                     # Adjust the step size if z is near a branch point.
-                    # XXX: Is the following helpful?
-                    # step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
+                    step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
                     if (
                         len(bpzs) > 0 and
                         (min([abs(z_i - bpz) for bpz in bpzs]) <
                          size_of_bp_neighborhood)
                     ):
-                        # dt = size_of_small_step * step_size_factor
-                        dt = size_of_small_step
+                        dt = size_of_small_step * step_size_factor
                     else:
-                        # dt = size_of_large_step * step_size_factor
-                        dt = size_of_large_step
+                        dt = size_of_large_step * step_size_factor
 
                     if (
                         method == constants.LIB_SCIPY_ODE and
@@ -568,12 +565,13 @@ class SWall(object):
                                 y_n = [z_n, x_n_1, x_n_2, M_n]
                                 ode.set_initial_value(y_n)
                     else:
-                        # z_n = z_i + dt * dz_dt(z_i, x_i_1, x_i_2)
-                        Dx_i = x_i_1 - x_i_2
-                        z_n = z_i + dt * exp(
-                            1j*(cmath.phase(libs.c_dz_dt) - cmath.phase(Dx_i))
-                        )
-                        M_n = M_i + abs(Dx_i) * dt
+                        # Dx_i = x_i_1 - x_i_2
+                        # z_n = z_i + dt * exp(
+                        #     1j*(cmath.phase(libs.c_dz_dt) - cmath.phase(Dx_i))
+                        # )
+                        # M_n = M_i + abs(Dx_i) * dt
+                        z_n = z_i + dt * dz_dt(z_i, x_i_1, x_i_2)
+                        M_n = M_i + dt
 
                         if (
                             twist_lines is not None and
@@ -1229,17 +1227,19 @@ def _grow(
                     return step
 
         # Adjust the step size if z is near a branch point.
+        Dx_i = x_i_1 - x_i_2
+        f_dt = abs(Dx_i)
+        if f_dt > 1.0 : f_dt = 1.0
         if len(bpzs) > 0:
             if min(abs(bpzs - z_i)) < size_of_bp_neighborhood:
-                dt = size_of_small_step
+                dt = size_of_small_step * f_dt
             else:
-                dt = size_of_large_step
+                dt = size_of_large_step * f_dt
 
-        # z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
-        Dx_i = x_i_1 - x_i_2
-        z_n = z_i + dt * exp(1j * (cmath.phase(c_dz_dt) - cmath.phase(Dx_i)))
-
-        M_n = M_i + abs(Dx_i) * dt
+        # z_n = z_i + dt * exp(1j * (cmath.phase(c_dz_dt) - cmath.phase(Dx_i)))
+        # M_n = M_i + abs(Dx_i) * dt
+        z_n = z_i + dt * c_dz_dt / (x_i_1 - x_i_2)
+        M_n = M_i + dt
 
         zs[step] = z_n
         Ms[step] = M_n
