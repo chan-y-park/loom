@@ -426,8 +426,6 @@ class SWall(object):
                         'Will try using SciPy ODE.'
                         .format(step, z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2)
                     )
-                    import pdb
-                    pdb.set_trace()
                     failed['lib_numba'] = True
                     method = constants.LIB_SCIPY_ODE
                     continue

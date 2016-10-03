@@ -1378,6 +1378,10 @@ def get_joint_data_groups_from_xs(
         not ((g_type == 'D') and (abs(px1 - (-nx2)) < max(dpx1, dnx2)))
     ):
         ode_xs = px1, nx2
+    # XXX: Note that for a D-type network, we grow S-walls
+    # only from one of a pair of ramification points
+    # correponding to a single branch point, and this has to be
+    # taken into consideration here.
     else:
         return []
 
