@@ -3,6 +3,7 @@ import numpy
 import bokeh
 import constants
 
+from math import ceil
 from cmath import phase, pi
 from copy import deepcopy
 from sympy import oo
@@ -479,8 +480,10 @@ def get_s_wall_plot_data(
         g_data = sw_data.g_data
 
     for s_wall in s_walls:
+        n_data_pts = len(s_wall.z)
+        max_n_data_pts = constants.BOKEH_MAX_N_DATA_PTS
         if downsample_ratio is None:
-            step = len(s_wall.z) // constants.BOKEH_MAX_N_DATA_PTS
+            step = int(ceil(1.0 * n_data_pts /  max_n_data_pts))
         else:
             step = downsample_ratio
         alpha = 1.0 / s_wall.get_generation()
