@@ -314,6 +314,12 @@ class SWall(object):
             segments.append([splits[i], splits[i + 1]])
         return segments
 
+    def downsample(self, ratio=None):
+        # resample data
+        # resize arrays
+        # adjust attributes accordingly
+        raise NotImplementedError
+
     def grow(
         self,
         branch_point_zs=[],
