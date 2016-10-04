@@ -481,7 +481,7 @@ def get_s_wall_plot_data(
     for s_wall in s_walls:
         if downsample_ratio is None:
             step = len(s_wall) // constants.BOKEH_MAX_N_DATA_PTS
-        else
+        else:
             step = downsample_ratio
         alpha = 1.0 / s_wall.get_generation()
         z_segs = s_wall.get_segments()
