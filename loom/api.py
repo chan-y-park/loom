@@ -254,6 +254,10 @@ class SpectralNetworkData:
         logger.info('Finished saving data to {}.'.format(data_dir))
         return None
 
+    def downsample(self, ratio=None):
+        for sn in self.spectral_networks:
+            sn.downsample(ratio=ratio)
+
     def generate(
         self, phases=None, n_processes=0, extend=False,
         result_queue=None, logging_queue=None, cache_dir=None,

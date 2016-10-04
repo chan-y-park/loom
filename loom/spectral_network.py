@@ -336,6 +336,10 @@ class SpectralNetwork:
         except KeyError:
             self.soliton_trees = None
 
+    def downsample(self, ratio=None):
+        for s_wall in self.s_walls:
+            s_wall.downsample(ratio=ratio)
+
     def grow(
         self, config=None, sw_data=None,
         additional_iterations=0,

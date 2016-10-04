@@ -315,10 +315,21 @@ class SWall(object):
         return segments
 
     def downsample(self, ratio=None):
-        # resample data
-        # resize arrays
-        # adjust attributes accordingly
-        raise NotImplementedError
+        # Resample data.
+        n_data_pts = len(s_wall.z)
+        max_n_data_pts = constants.S_WALL_MAX_N_DATA_PTS
+        if ratio is None:
+            ratio = int(ceil(1.0 * n_data_pts /  max_n_data_pts))
+        for data_array in [self.z, self.x, self.M]:
+            data_array = data_array[::ratio]
+
+        # Adjust attributes accordingly.
+        if len(self.cuts_intersections) > 0:
+            cuts_intersections = []
+            for bp, i, chi in self.cuts_intersections:
+                cuts_intersections = [bp, i // ratio, chi]
+            self.cuts_intersections = cuts_intersections
+            self.enhance_at_cuts()
 
     def grow(
         self,
@@ -754,7 +765,8 @@ class SWall(object):
 
         # Add the actual intersection point to the S-wall
         # then update the attribute SWall.cuts_intersections accordingly
-        self.enhance_at_cuts(sw_data)
+        #self.enhance_at_cuts(sw_data)
+        self.enhance_at_cuts()
 
         # Choose a suitable point along the wall
         # we pick the one whose z coordinate's real part is
@@ -990,7 +1002,8 @@ class SWall(object):
         weight_pairs = self.get_weight_pairs_at_t(t)
         return [[xs_at_z[w_p[0]], xs_at_z[w_p[1]]] for w_p in weight_pairs]
 
-    def enhance_at_cuts(self, sw_data):
+    #def enhance_at_cuts(self, sw_data):
+    def enhance_at_cuts(self):
         """
         Add the intersection points of Swalls and branch cuts
         also update the intersection data accordingly
