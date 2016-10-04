@@ -1351,6 +1351,8 @@ def find_intersections_of_curves(a_zs, b_zs, accuracy):
 def get_joint_data_groups_from_xs(
     new_s_wall_xs, prev_s_wall_xs, g_type, x_accuracy, dxs=None,
 ):
+    ode_xs = None
+
     # dxs = (delta(n_x1), delta(n_x2), delta(p_x1), delta(p_x2)),
     # which shows the change of xi's near the intersection along the s-walls.
     if dxs is None:
@@ -1361,27 +1363,59 @@ def get_joint_data_groups_from_xs(
     nx1, nx2 = new_s_wall_xs
     px1, px2 = prev_s_wall_xs
 
-    if(
-        (abs(nx1 - px2) < max(dnx1, dpx2)) and
-        (abs(px1 - nx2) < max(dpx1, dnx2))
-    ):
-        # anti-parallel S-walls, do not form a joint.
-        return []
+    if g_type == 'A':
+        if(
+            (abs(nx1 - px2) < max(dnx1, dpx2)) and
+            (abs(px1 - nx2) < max(dpx1, dnx2))
+        ):
+            # Do not form a joint for anti-parallel S-walls.
+            return []
 
-    if(
-        (abs(nx2 - px1) < max(dnx2, dpx1)) and
-        not ((g_type == 'D') and (abs(nx1 - (-px2)) < max(dnx1, dpx2)))
-    ):
-        ode_xs = nx1, px2
-    elif(
-        (abs(px2 - nx1) < max(dpx2, dnx1)) and
-        not ((g_type == 'D') and (abs(px1 - (-nx2)) < max(dpx1, dnx2)))
-    ):
-        ode_xs = px1, nx2
+        if (abs(nx2 - px1) < max(dnx2, dpx1)):
+            ode_xs = nx1, px2
+        elif (abs(px2 - nx1) < max(dpx2, dnx1)):
+            ode_xs = px1, nx2
+
+    elif g_type == 'D':
+        # NOTE: For a D-type network, each S-wall is lifted
+        # to a pair of trajectories on the spectral cover.
+        m_nx1, m_nx2 = -nx2, -nx1
+
+        if(
+            ((abs(nx1 - px2) < max(dnx1, dpx2)) and
+             (abs(px1 - nx2) < max(dpx1, dnx2))) or
+            ((abs(m_nx1 - px2) < max(dnx2, dpx2)) and
+             (abs(px1 - m_nx2) < max(dpx1, dnx1))) 
+        ):
+            # Do not form a joint for anti-parallel S-walls.
+            return []
+        if(
+            (abs(nx2 - px1) < max(dnx2, dpx1)) and
+            not ((abs(nx1 - (-px2)) < max(dnx1, dpx2)))
+        ):
+            ode_xs = nx1, px2
+        elif(
+            (abs(px2 - nx1) < max(dpx2, dnx1)) and
+            not ((abs(px1 - (-nx2)) < max(dpx1, dnx2)))
+        ):
+            ode_xs = px1, nx2
+        elif(
+            (abs(m_nx2 - px1) < max(dnx2, dpx1)) and
+            not ((abs(m_nx1 - (-px2)) < max(dnx2, dpx2)))
+        ):
+            ode_xs = m_nx1, px2
+        elif(
+            (abs(px2 - m_nx1) < max(dpx2, dnx1)) and
+            not ((abs(px1 - (-m_nx2)) < max(dpx1, dnx1)))
+        ):
+            ode_xs = px1, m_nx2
     else:
-        return []
+        raise NotImplementedError
 
-    return [([], ode_xs)]
+    if ode_xs is None:
+        return []
+    else:
+        return [([], ode_xs)]
 
 
 def get_joint_data_groups_by_roots(descendant_roots, z, sw_data, accuracy):
