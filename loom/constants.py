@@ -16,3 +16,6 @@ LIB_PYTHON = 3
 
 # Maximum # of steps when using Newton's method.
 NEWTON_MAX_STEPS = 100
+
+# Maximum # of data points per S-wall to draw using Bokeh
+BOKEH_MAX_N_DATA_PTS = 500

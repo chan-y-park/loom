@@ -1,6 +1,7 @@
 import logging
 import numpy
 import bokeh
+import constants
 
 from cmath import phase, pi
 from copy import deepcopy
@@ -24,6 +25,7 @@ def get_spectral_network_bokeh_plot(
     marked_points=[],
     without_errors=False,
     download=False,
+    downsample_ratio=None,
 ):
     # Determine if the data set corresponds to a multi-parameter
     # configuration.
@@ -217,6 +219,7 @@ def get_spectral_network_bokeh_plot(
                 empty_data = get_s_wall_plot_data(
                     [], sw_data, logger_name,
                     spectral_networks[i].phase,
+                    downsample_ratio=downsample_ratio,
                 )
                 data_entry.append(empty_data)
             else:
@@ -224,6 +227,7 @@ def get_spectral_network_bokeh_plot(
                     tree_data = get_s_wall_plot_data(
                         tree.streets, sw_data, logger_name,
                         spectral_networks[i].phase,
+                        downsample_ratio=downsample_ratio,
                     )
                     # The first data contains all the soliton trees
                     # of the two-way streets in a spectral network.
@@ -251,6 +255,7 @@ def get_spectral_network_bokeh_plot(
 
             sn_data = get_s_wall_plot_data(
                 sn.s_walls, sw_data, logger_name, sn.phase,
+                downsample_ratio=downsample_ratio,
             )
             snds.data['spectral_networks'].append(sn_data)
 
@@ -449,7 +454,10 @@ def get_spectral_network_bokeh_plot(
         return bokeh.embed.components(bokeh_obj)
 
 
-def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
+def get_s_wall_plot_data(
+    s_walls, sw_data, logger_name, sn_phase,
+    downsample_ratio=None,
+):
     logger = logging.getLogger(logger_name)
 
     data_dict = {}
@@ -464,17 +472,22 @@ def get_s_wall_plot_data(s_walls, sw_data, logger_name, sn_phase):
     data_dict['label'] = []
     data_dict['root'] = []
 
+    # XXX
     if type(sw_data) is list:
         g_data = sw_data[0].g_data
     else:
         g_data = sw_data.g_data
 
     for s_wall in s_walls:
+        if downsample_ratio is None:
+            step = len(s_wall) // constants.BOKEH_MAX_N_DATA_PTS
+        else
+            step = downsample_ratio
         alpha = 1.0 / s_wall.get_generation()
         z_segs = s_wall.get_segments()
         for start, stop in z_segs:
-            z_r = s_wall.z[start:stop].real
-            z_i = s_wall.z[start:stop].imag
+            z_r = s_wall.z[start:stop:step].real
+            z_i = s_wall.z[start:stop:step].imag
             a_i = int(numpy.floor(len(z_r) / 2.0))
             # TODO: Check if the arrow is within the plot range.
             a_angle = pi
