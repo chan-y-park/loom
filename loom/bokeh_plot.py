@@ -480,17 +480,12 @@ def get_s_wall_plot_data(
         g_data = sw_data.g_data
 
     for s_wall in s_walls:
-        n_data_pts = len(s_wall.z)
-        max_n_data_pts = constants.S_WALL_MAX_N_DATA_PTS
-        if downsample_ratio is None:
-            step = int(ceil(1.0 * n_data_pts /  max_n_data_pts))
-        else:
-            step = downsample_ratio
+        s_wall.downsample(ratio=downsample_ratio)
         alpha = 1.0 / s_wall.get_generation()
         z_segs = s_wall.get_segments()
         for start, stop in z_segs:
-            z_r = s_wall.z[start:stop:step].real
-            z_i = s_wall.z[start:stop:step].imag
+            z_r = s_wall.z[start:stop].real
+            z_i = s_wall.z[start:stop].imag
             a_i = int(numpy.floor(len(z_r) / 2.0))
             # TODO: Check if the arrow is within the plot range.
             a_angle = pi

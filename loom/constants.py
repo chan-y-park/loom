@@ -18,4 +18,5 @@ LIB_PYTHON = 3
 NEWTON_MAX_STEPS = 100
 
 # Default maximum # of data points per S-wall.
-S_WALL_MAX_N_DATA_PTS = 500
+S_WALL_MIN_N_DATA_PTS = 100
+S_WALL_MAX_N_DATA_PTS = 200
