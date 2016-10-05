@@ -316,12 +316,13 @@ class SWall(object):
 
     def downsample(self, ratio=None):
         # Resample data.
-        n_data_pts = len(s_wall.z)
+        n_data_pts = len(self.z)
         max_n_data_pts = constants.S_WALL_MAX_N_DATA_PTS
         if ratio is None:
             ratio = int(ceil(1.0 * n_data_pts /  max_n_data_pts))
-        for data_array in [self.z, self.x, self.M]:
-            data_array = data_array[::ratio]
+        self.z = self.z[::ratio]
+        self.x = self.x[::ratio]
+        self.M = self.M[::ratio]
 
         # Adjust attributes accordingly.
         if len(self.cuts_intersections) > 0:
