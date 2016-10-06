@@ -1140,11 +1140,15 @@ class GrowLibs:
         for k in range(N):
             phi_k_n, phi_k_d = self.f.coeff(x, n=k).expand().as_numer_denom()
             for z_monomial in phi_k_n.as_ordered_terms():
-                c, e = z_monomial.as_coeff_exponent(z)
-                phi_k_n_czes.append((int(k), complex(c), float(e)))
+                c_z, e_z = z_monomial.as_coeff_exponent(z)
+                phi_k_n_czes.append(
+                    (int(k), complex(c_z.evalf()), float(e_z))
+                )
             for z_monomial in phi_k_d.as_ordered_terms():
-                c, e = z_monomial.as_coeff_exponent(z)
-                phi_k_d_czes.append((int(k), complex(c), float(e)))
+                c_z, e_z = z_monomial.as_coeff_exponent(z)
+                phi_k_d_czes.append(
+                    (int(k), complex(c_z.evalf()), float(e_z))
+                )
         self.phi_k_czes = (N, phi_k_n_czes, phi_k_d_czes)
 
         # v = sympy.lambdify((z, x), self.v)
