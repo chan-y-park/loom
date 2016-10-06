@@ -347,6 +347,8 @@ class SpectralNetwork:
         new_mass_limit=None,
         cache_file_path=None,
         method=None,
+        downsample=False,
+        downsample_ratio=None,
     ):
         """
         Grow the spectral network by seeding SWall's
@@ -750,6 +752,9 @@ class SpectralNetwork:
 
         logger.info('Finished growing a spectral network at phase = {}'
                     .format(self.phase))
+
+        if downsample:
+            self.downsample(ratio=downsample_ratio)
 
         if cache_file_path is not None:
             logger.info('Saving cache data to {}.'.format(cache_file_path))

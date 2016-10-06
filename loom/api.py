@@ -262,6 +262,7 @@ class SpectralNetworkData:
         self, phases=None, n_processes=0, extend=False,
         result_queue=None, logging_queue=None, cache_dir=None,
         method=None,
+        downsample=False, downsample_ratio=None,
     ):
         logger = logging.getLogger(self.logger_name)
 
@@ -337,6 +338,8 @@ class SpectralNetworkData:
                         config=self.config, sw_data=self.sw_data,
                         cache_file_path=cache_file_path,
                         method=method,
+                        downsample=downsample,
+                        downsample_ratio=downsample_ratio,
                     )
 
                     spectral_networks = [spectral_network]
@@ -360,6 +363,8 @@ class SpectralNetworkData:
                         cache_dir=cache_dir,
                         data_file_prefix=data_file_prefix,
                         method=method,
+                        downsample=downsample,
+                        downsample_ratio=downsample_ratio,
                     )
 
             except (KeyboardInterrupt, SystemExit) as e:
@@ -376,7 +381,7 @@ class SpectralNetworkData:
                 self.spectral_networks.sort(key=lambda sn: sn.phase)
             else:
                 self.spectral_networks = spectral_networks
-
+# XXX START
         else:
             # phase = 1.570795
             phase = 0.0
@@ -484,7 +489,7 @@ class SpectralNetworkData:
 
             self.spectral_networks = spectral_networks
             self.sw_data = sw_data_sequence
-
+# XXX END
         if extend is False:
             end_time = time.time()
             logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
@@ -520,6 +525,9 @@ class SpectralNetworkData:
         result_queue=None,
         logging_queue=None,
         cache_dir=None,
+        method=None,
+        downsample=False,
+        downsample_ratio=None,
     ):
         logger = logging.getLogger(self.logger_name)
         if cache_dir is not None and os.path.exists(cache_dir) is not True:
@@ -558,6 +566,9 @@ class SpectralNetworkData:
                         additional_iterations=additional_iterations,
                         additional_n_steps=additional_n_steps,
                         new_mass_limit=new_mass_limit,
+                        method=method,
+                        downsample=downsample,
+                        downsample_ratio=downsample_ratio,
                     )
                     if cache_dir is not None:
                         sn_data_file_path = os.path.join(
@@ -576,6 +587,9 @@ class SpectralNetworkData:
                         new_mass_limit=new_mass_limit,
                         logger_name=self.logger_name,
                         cache_dir=cache_dir,
+                        method=method,
+                        downsample=downsample,
+                        downsample_ratio=downsample_ratio,
                     )
             except (KeyboardInterrupt, SystemExit) as e:
                 logger.warning(
@@ -623,6 +637,9 @@ class SpectralNetworkData:
                 n_processes=n_processes,
                 extend=True,
                 cache_dir=cache_dir,
+                method=method,
+                downsample=downsample,
+                downsample_ratio=downsample_ratio,
             )
 
         end_time = time.time()

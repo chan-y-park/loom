@@ -285,6 +285,7 @@ class LoomDB(object):
                     result_queue=result_queue,
                     logging_queue=logging_queue,
                     cache_dir=cache_dir,
+                    downsample=True,
                 ),
             )
 
@@ -315,6 +316,7 @@ class LoomDB(object):
                         result_queue=result_queue,
                         logging_queue=logging_queue,
                         cache_dir=cache_dir,
+                        downsample=True,
                     )
                 )
             elif task == 'trivialize':
