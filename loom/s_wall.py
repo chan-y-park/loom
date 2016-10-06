@@ -16,6 +16,7 @@ from geometry import (
     find_xs_at_z_0, align_sheets_for_e_6_ffr, SHEET_NULL_TOLERANCE
 )
 from geometry import BranchPoint
+from geometry import get_x
 
 from ctypes_api import CTypesSWall
 
@@ -1134,22 +1135,23 @@ class GrowLibs:
         c_v = self.v.coeff(x, n=1)
         self.c_dz_dt = complex(exp(phase * 1j) / c_v)
 
-        N = sympy.degree(self.f, x)
-        phi_k_n_czes = []
-        phi_k_d_czes = []
-        for k in range(N):
-            phi_k_n, phi_k_d = self.f.coeff(x, n=k).expand().as_numer_denom()
-            for z_monomial in phi_k_n.as_ordered_terms():
-                c_z, e_z = z_monomial.as_coeff_exponent(z)
-                phi_k_n_czes.append(
-                    (int(k), complex(c_z.evalf()), float(e_z))
-                )
-            for z_monomial in phi_k_d.as_ordered_terms():
-                c_z, e_z = z_monomial.as_coeff_exponent(z)
-                phi_k_d_czes.append(
-                    (int(k), complex(c_z.evalf()), float(e_z))
-                )
-        self.phi_k_czes = (N, phi_k_n_czes, phi_k_d_czes)
+#        N = sympy.degree(self.f, x)
+#        phi_k_n_czes = []
+#        phi_k_d_czes = []
+#        for k in range(N):
+#            phi_k_n, phi_k_d = self.f.coeff(x, n=k).expand().as_numer_denom()
+#            for z_monomial in phi_k_n.as_ordered_terms():
+#                c_z, e_z = z_monomial.as_coeff_exponent(z)
+#                phi_k_n_czes.append(
+#                    (int(k), complex(c_z.evalf()), float(e_z))
+#                )
+#            for z_monomial in phi_k_d.as_ordered_terms():
+#                c_z, e_z = z_monomial.as_coeff_exponent(z)
+#                phi_k_d_czes.append(
+#                    (int(k), complex(c_z.evalf()), float(e_z))
+#                )
+#        self.phi_k_czes = (N, phi_k_n_czes, phi_k_d_czes)
+        self.phi_k_czes = sw_data.ffr_curve.get_phi_k_czes()
 
         # v = sympy.lambdify((z, x), self.v)
         def dz_dt(z, x1, x2):
@@ -1279,12 +1281,14 @@ def _grow(
                     x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
 
         x_n_1 = get_x(
-            int(N), phi_k_n_czes, phi_k_d_czes, z_n, x_i_1, accuracy,
+            #int(N), phi_k_n_czes, phi_k_d_czes, z_n, x_i_1, accuracy,
+            N, phi_k_n_czes, phi_k_d_czes, z_n, x_i_1, accuracy,
             max_steps=max_steps,
             #f_df_at_zx=numba_f_df_at_zx,
         )
         x_n_2 = get_x(
-            int(N), phi_k_n_czes, phi_k_d_czes, z_n, x_i_2, accuracy,
+            #int(N), phi_k_n_czes, phi_k_d_czes, z_n, x_i_2, accuracy,
+            N, phi_k_n_czes, phi_k_d_czes, z_n, x_i_2, accuracy,
             max_steps=max_steps,
             #f_df_at_zx=numba_f_df_at_zx,
         )
@@ -1303,67 +1307,89 @@ def _grow(
 #     numba_grow = numba.jit(nopython=True)(_grow)
 
 
-def _f_df_at_zx(N, phi_k_n_czes, phi_k_d_czes, z_0, x_0):
-    """
-    Calculate f(z_0, x_0) and df(z_0, x_0)/dx,
-    which are used in Newton's method
-    to find the root of f(z_0, x) near x = x_0.
-
-    phi_k_czes = (N, phi_k_n_czes, phi_k_d_czes),
-    phi_k_n_czes = [(k, c_n, e_n), ...], 
-    phi_k_d_czes = [(k, c_d, e_d), ...], 
-    where
-        f(z, x) = x^N + ... + (c_n*z^e_n + ...) / (c_d*z^e_d + ...) * x^k + ...
-    """
-    f_0 = x_0 ** N
-    df_0 = N * (x_0 ** (N - 1))
-    phi_ns = numpy.zeros(N, dtype=numpy.complex128)
-    phi_ds = numpy.zeros(N, dtype=numpy.complex128)
-
-    for k, c, e in phi_k_n_czes:
-        phi_ns[k] += c * (z_0 ** e)
-
-    for k, c, e in phi_k_d_czes:
-        phi_ds[k] += c * (z_0 ** e)
-
-    for k in range(N):
-        phi_k = phi_ns[k] / phi_ds[k]
-        f_0 += phi_k * (x_0 ** k) 
-        if k > 0:
-            df_0 += k * phi_k * x_0 ** (k - 1)
-
-    return f_0, df_0
-
-
-if use_numba:
-    f_df_at_zx = numba.jit(nopython=True)(_f_df_at_zx)
-else:
-    f_df_at_zx = _f_df_at_zx
-
-def _get_x(
-    N, phi_k_n_czes, phi_k_d_czes, z_0, x_0, accuracy,
-    max_steps=100,
-):
-    """
-    Solve f(z_0, x) = 0 using Newton's method from x = x_0.
-    """
-    step = 0
-    x_i = x_0
-    while(step < max_steps):
-        f_i, df_i = f_df_at_zx(N, phi_k_n_czes, phi_k_d_czes, z_0, x_i)
-        Delta = f_i / df_i
-        if abs(Delta) < accuracy:
-            break
-        else:
-            x_i -= Delta
-        step += 1
-    return x_i
-
-
-if use_numba:
-    get_x = numba.jit(nopython=True)(_get_x)
-else:
-    get_x = _get_x
+#def _f_df_at_zx(N, phi_k_n_czes, phi_k_d_czes, z_0, x_0):
+#    """
+#    Calculate f(z_0, x_0) and df(z_0, x_0)/dx,
+#    which are used in Newton's method
+#    to find the root of f(z_0, x) near x = x_0.
+#
+#    phi_k_czes = (N, phi_k_n_czes, phi_k_d_czes),
+#    phi_k_n_czes = [(k, c_n, e_n), ...], 
+#    phi_k_d_czes = [(k, c_d, e_d), ...], 
+#    where
+#        f(z, x) = x^N + ... + (c_n*z^e_n + ...) / (c_d*z^e_d + ...) * x^k + ...
+#    """
+#    f_0 = x_0 ** N
+#    df_0 = N * (x_0 ** (N - 1))
+#    phi_ns = numpy.zeros(N, dtype=numpy.complex128)
+#    phi_ds = numpy.zeros(N, dtype=numpy.complex128)
+#
+#    for k, c, e in phi_k_n_czes:
+#        phi_ns[k] += c * (z_0 ** e)
+#
+#    for k, c, e in phi_k_d_czes:
+#        phi_ds[k] += c * (z_0 ** e)
+#
+#    for k in range(N):
+#        phi_k = phi_ns[k] / phi_ds[k]
+#        f_0 += phi_k * (x_0 ** k) 
+#        if k > 0:
+#            df_0 += k * phi_k * x_0 ** (k - 1)
+#
+#    return f_0, df_0
+#
+#
+#if use_numba:
+#    f_df_at_zx = numba.jit(nopython=True)(_f_df_at_zx)
+#else:
+#    f_df_at_zx = _f_df_at_zx
+#
+#def _get_x(
+#    N, phi_k_n_czes, phi_k_d_czes, z_0, x_0, accuracy,
+#    max_steps=100,
+#):
+#    """
+#    Solve f(z_0, x) = 0 using Newton's method from x = x_0.
+#    """
+#    step = 0
+#    x_i = x_0
+#    while(step < max_steps):
+#        f_i, df_i = f_df_at_zx(N, phi_k_n_czes, phi_k_d_czes, z_0, x_i)
+#        Delta = f_i / df_i
+#        if abs(Delta) < accuracy:
+#            break
+#        else:
+#            x_i -= Delta
+#        step += 1
+#    return x_i
+#
+#
+#if use_numba:
+#    get_x = numba.jit(nopython=True)(_get_x)
+#else:
+#    get_x = _get_x
+#
+#
+#def _get_xs_along_zs(
+#    N, phi_k_n_czes, phi_k_d_czes, zs, xs, accuracy,
+#    max_steps=100,
+#):
+#    for i in range(len(zs) - 1):
+#        z_n = zs[i + 1]
+#        x_i_1, x_i_2 = xs[i]
+#        x_n_1 = get_x(
+#            N, phi_k_n_czes, phi_k_d_czes, z_n, x_i_1, accuracy, max_steps,
+#        )
+#        x_n_2 = get_x(
+#            N, phi_k_n_czes, phi_k_d_czes, z_n, x_i_2, accuracy, max_steps,
+#        )
+#        xs[i + 1] = x_n_1, x_n_2
+#
+#
+#if use_numba:
+#    get_xs_along_zs = numba.jit(nopython=True)(_get_xs_along_zs)
+#else:
+#    get_xs_along_zs = _get_xs_along_zs
 
 
 def get_s_wall_root(z, ffr_xs, sw_data):

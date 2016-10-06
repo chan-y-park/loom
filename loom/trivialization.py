@@ -594,40 +594,6 @@ class SWDataWithTrivialization(SWDataBase):
 
             ffr_xs_1 = self.ffr_curve.get_xs(z)
 
-#            # if it's not a path to branch point, check tracking
-#            if is_path_to_bp is False:
-#                sorted_ffr_xs = get_sorted_xs(
-#                    ffr_xs_0, ffr_xs_1,
-#                    accuracy=accuracy,
-#                    check_tracking=True, index=i,
-#                    z_0=z_path[i - 1], z_1=z_path[i],
-#                    g_data=g_data,
-#                    logger_name=self.logger_name,
-#                    sw_curve=self.ffr_curve,
-#                )
-#            # if it's a path to branch point, but we are far from it,
-#            # still check tracking
-#            elif near_degenerate_branch_locus is False:
-#                sorted_ffr_xs = get_sorted_xs(
-#                    ffr_xs_0, ffr_xs_1,
-#                    accuracy=accuracy,
-#                    check_tracking=True,
-#                    z_0=z_path[i - 1], z_1=z_path[i],
-#                    g_data=g_data,
-#                    logger_name=self.logger_name,
-#                    sw_curve=self.ffr_curve,
-#                )
-#            # if it's a path to a branch point and we are getting close to it,
-#            # don't check tracking anymore
-#            else:
-#                sorted_ffr_xs = get_sorted_xs(
-#                    ffr_xs_0, ffr_xs_1,
-#                    accuracy=accuracy,
-#                    check_tracking=False,
-#                    g_data=g_data,
-#                    logger_name=self.logger_name,
-#                    sw_curve=self.ffr_curve,
-#                )
             # if it's not a path to branch point, check tracking
             # if it's a path to branch point, but we are far from it,
             # still check tracking
@@ -747,13 +713,7 @@ class SWDataWithTrivialization(SWDataBase):
         """
         z_path = get_path_to(z_pt, self)
         sheets = self.get_sheets_along_path(z_path, ffr=ffr)
-#        try:
-#            sheets = self.get_sheets_along_path(z_path, ffr=ffr)
-#        except IndexError:
-#            raise RuntimeError(
-#                'get_sheets_at_z(): get_sheets_along_path() failed '
-#                'at z = {}.'.format(z_pt)
-#            )
+
         final_xs = [s_i[-1] for s_i in sheets]
         final_sheets = {i: x for i, x in enumerate(final_xs)}
         return final_sheets

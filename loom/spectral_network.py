@@ -3,6 +3,7 @@ import ctypes
 import logging
 import itertools
 import json
+import cmath
 
 import constants
 
@@ -23,6 +24,7 @@ from intersection import (
     NoIntersection, find_intersection_of_segments,
 )
 from geometry import BranchPoint
+from geometry import get_xs_along_zs
 from trivialization import SWDataWithTrivialization
 from ctypes_api import libcgal_get_intersections
 
@@ -123,11 +125,13 @@ class SolitonTree:
         root_s_wall_end_t=None,
         root_branch_point=None,
         phase=None,
+        logger_name='loom',
     ):
         self.phase = phase
-        # Z is the central charge, i.e. integration of the SW diff
-        # along the tree.
-        self.Z = None
+        self.logger_name = logger_name
+#        # Z is the central charge, i.e. integration of the SW diff
+#        # along the tree.
+#        self.Z = None
         self.root_branch_point = root_branch_point
         if root_s_wall is None:
             self.streets = []
@@ -141,15 +145,22 @@ class SolitonTree:
             self.streets = [root_street]
             self.grow(root_street)
 
-            # Set the value of Z from those of its streets.
-            self.Z = 0
-            for street in self.streets:
-                self.Z += street.Z
+#            # Set the value of Z from those of its streets.
+#            self.Z = 0
+#            for street in self.streets:
+#                self.Z += street.Z
+
+    def Z(self):
+        # Get the value of Z from those of its streets.
+        Z = 0
+        for street in self.streets:
+            Z += street.Z
+        return Z
 
     def get_json_data(self):
         json_data = {
             'phase': self.phase,
-            'Z': ctor2(self.Z),
+            'Z': ctor2(self.Z()),
             'root_branch_point': self.root_branch_point.label,
             'streets': [street.get_json_data() for street in self.streets],
         }
@@ -184,6 +195,118 @@ class SolitonTree:
             self.grow(parent_street)
 
         return None
+
+    def enhance(
+        self,
+        config=None,
+        sw_data=None,
+        search_radius=None,
+        max_n_enhancement=10,
+    ):
+        # logger = logging.getLogger(self.logger_name)
+        step_size = config['size_of_small_step']
+        n_steps = config['num_of_steps']
+        accuracy = config['accuracy']
+        if search_radius is None:
+            search_radius = config['size_of_bp_neighborhood']
+
+        N, phi_k_n_czes, phi_k_d_czes = sw_data.ffr_curve.get_phi_k_czes()
+
+        for nth in range(max_n_enhancement):
+            root_street = self.streets[0]
+            z_start = root_street.z[-1]
+            z_end = self.root_branch_point.z
+            min_D_z = abs(z_end - z_start)
+
+            n_pts = int(abs(z_end - z_start) / step_size)
+            dz = (z_end - z_start) / (n_pts - 1) 
+            zs = numpy.array(
+                [z_start + dz * i for i in range(n_pts)],
+                dtype=numpy.complex128,
+            )
+            xs = numpy.empty((n_pts, 2), dtype=numpy.complex128)
+            xs[0] = root_street.x[-1]
+            get_xs_along_zs(
+                N, phi_k_n_czes, phi_k_d_czes, zs, xs, accuracy
+            )
+
+            root_street.z = numpy.concatenate((root_street.z, zs))
+            root_street.x = numpy.concatenate((root_street.x, xs))
+
+            Delta_Z = numpy.sum(xs[:, 0] - xs[:, 1]) * (zs[1] - zs[0])
+            Z = self.Z() + Delta_Z
+            theta_n = cmath.phase(Z)
+            Delta_theta = theta_n - self.phase
+
+            max_gen = root_street.get_generation()
+            seed_s_walls = []
+            for street in self.streets:
+                rp_i = None
+                for parent in street.parents:
+                    if isinstance(parent, BranchPoint):
+                        bp = parent
+                        rp_i = bp.ffr_ramification_points[0].i
+                        for rp in bp.ffr_ramification_points[1:]:
+                            if rp_i != rp.i:
+                                raise NotImplementedError
+
+                if rp_i is None:
+                    continue
+
+                z_0 = street.z[0]
+                z_n = (
+                    exp(rp_i * 1.0j * Delta_theta / (rp_i + 1)) * 
+                    (z_0 - bp.z)
+                ) + bp.z
+                zs = numpy.array([z_0, z_n], dtype=numpy.complex128)
+                xs_n = numpy.empty((2, 2), dtype=numpy.complex128)
+                xs_n[0] = street.x[0]
+                get_xs_along_zs(
+                    N, phi_k_n_czes, phi_k_d_czes, zs, xs_n, accuracy
+                )
+                seed_s_walls.append(
+                    SWall(
+                        z_0=z_n,
+                        x_0=xs_n[1],
+                        M_0=0,
+                        parents=[bp],
+                        parent_roots=[],
+                        label=street.label,
+                        n_steps=n_steps,
+                        logger_name=self.logger_name,
+                    )
+                )
+
+            # Grow a mini spectral network.
+            mini_sn = SpectralNetwork(
+                phase=theta_n,
+                logger_name=self.logger_name,
+            )
+            mini_sn.grow(
+                config=config,
+                sw_data=sw_data,
+                seed_s_walls=seed_s_walls,
+                num_of_iterations=max_gen,
+            )
+            trees = mini_sn.find_two_way_streets(
+                config=config,
+                sw_data=sw_data,
+                search_radius=search_radius,
+            )
+            if len(trees) != 1:
+                raise NotImplementedError
+
+            new_tree = trees[0]
+            new_root_street = new_tree.streets[0]
+            new_z_start = new_root_street.z[-1]
+            if min_D_z < abs(z_end - new_z_start):
+                break
+
+            self.phase = new_tree.phase
+            self.streets = new_tree.streets
+
+            if abs(Delta_theta) < accuracy:
+                break
 
     def set_z_rotation(self, z_rotation):
         for street in self.streets:
@@ -349,6 +472,8 @@ class SpectralNetwork:
         method=None,
         downsample=False,
         downsample_ratio=None,
+        seed_s_walls=None,
+        num_of_iterations=None,
     ):
         """
         Grow the spectral network by seeding SWall's
@@ -410,7 +535,8 @@ class SpectralNetwork:
             if p.z != oo
         ]
 
-        num_of_iterations = config['num_of_iterations']
+        if num_of_iterations is None:
+            num_of_iterations = config['num_of_iterations']
         n_steps = config['num_of_steps']
         if(
             additional_n_steps == 0 and
@@ -439,7 +565,10 @@ class SpectralNetwork:
             """
 
             # Seed S-walls.
-            if (
+            if (seed_s_walls is not None and iteration == 1):
+                # Use given seed S-walls.
+                new_s_walls = seed_s_walls
+            elif (
                 additional_n_steps == 0 and additional_iterations == 0 and
                 new_mass_limit is None and iteration == 1
             ):
