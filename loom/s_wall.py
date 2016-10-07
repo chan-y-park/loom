@@ -1211,10 +1211,10 @@ class GrowLibs:
             # Default S-wall grow library uses SciPy ODE.
             self.default_lib = constants.LIB_SCIPY_ODE
 
-    def get_x(self, z_0, x_0, max_steps=100):
-        return _get_x(
-            self.phi_k_czes, z_0, x_0, self.accuracy, max_steps,
-        )
+#    def get_x(self, z_0, x_0, max_steps=100):
+#        return _get_x(
+#            self.phi_k_czes, z_0, x_0, self.accuracy, max_steps,
+#        )
 
 
 # XXX: Numba JIT complier fails to compile the following,

@@ -336,7 +336,7 @@ class LoomDB(object):
                     kwargs=dict(
                         n_processes=n_processes,
                         search_radius=search_radius,
-                        replace=True,
+                        #replace=True,
                         result_queue=result_queue,
                         logging_queue=logging_queue,
                         cache_dir=cache_dir,

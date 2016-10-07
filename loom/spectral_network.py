@@ -160,7 +160,7 @@ class SolitonTree:
     def get_json_data(self):
         json_data = {
             'phase': self.phase,
-            'Z': ctor2(self.Z()),
+#            'Z': ctor2(self.Z()),
             'root_branch_point': self.root_branch_point.label,
             'streets': [street.get_json_data() for street in self.streets],
         }
@@ -169,7 +169,7 @@ class SolitonTree:
 
     def set_from_json_data(self, json_data=None, obj_dict=None,):
         self.phase = json_data['phase']
-        self.Z = r2toc(json_data['Z'])
+#        self.Z = r2toc(json_data['Z'])
         self.root_branch_point = obj_dict[json_data['root_branch_point']]
         self.streets = []
         for street_data in json_data['streets']:
@@ -178,6 +178,16 @@ class SolitonTree:
                 json_data=street_data, obj_dict=obj_dict,
             )
             self.streets.append(a_street)
+
+    def save(self, file_path):
+        with open(file_path, 'wb') as fp:
+            json_data = self.get_json_data()
+            json.dump(json_data, fp,)
+
+    def load(self, file_path, sw_data):
+        with open(file_path, 'r') as fp:
+            json_data = json.load(fp)
+            self.set_from_json_data(json_data, sw_data)
 
     def grow(self, street=None):
         # TODO: use misc.build_family_tree()
@@ -196,12 +206,13 @@ class SolitonTree:
 
         return None
 
-    def enhance(
+    def get_improved_tree(
         self,
         config=None,
         sw_data=None,
         search_radius=None,
-        max_n_enhancement=10,
+        max_n_iters=constants.SOLITON_TREE_MAX_N_ITERS,
+        logger_name='loom',
     ):
         # logger = logging.getLogger(self.logger_name)
         step_size = config['size_of_small_step']
@@ -212,10 +223,11 @@ class SolitonTree:
 
         N, phi_k_n_czes, phi_k_d_czes = sw_data.ffr_curve.get_phi_k_czes()
 
-        for nth in range(max_n_enhancement):
-            root_street = self.streets[0]
+        tree = self
+        z_end = self.root_branch_point.z
+        for nth in range(max_n_iters):
+            root_street = tree.streets[0]
             z_start = root_street.z[-1]
-            z_end = self.root_branch_point.z
             min_D_z = abs(z_end - z_start)
 
             n_pts = int(abs(z_end - z_start) / step_size)
@@ -234,13 +246,13 @@ class SolitonTree:
             root_street.x = numpy.concatenate((root_street.x, xs))
 
             Delta_Z = numpy.sum(xs[:, 0] - xs[:, 1]) * (zs[1] - zs[0])
-            Z = self.Z() + Delta_Z
+            Z = tree.Z() + Delta_Z
             theta_n = cmath.phase(Z)
-            Delta_theta = theta_n - self.phase
+            Delta_theta = theta_n - tree.phase
 
             max_gen = root_street.get_generation()
             seed_s_walls = []
-            for street in self.streets:
+            for street in tree.streets:
                 rp_i = None
                 for parent in street.parents:
                     if isinstance(parent, BranchPoint):
@@ -273,7 +285,7 @@ class SolitonTree:
                         parent_roots=[],
                         label=street.label,
                         n_steps=n_steps,
-                        logger_name=self.logger_name,
+                        logger_name=logger_name,
                     )
                 )
 
@@ -302,11 +314,12 @@ class SolitonTree:
             if min_D_z < abs(z_end - new_z_start):
                 break
 
-            self.phase = new_tree.phase
-            self.streets = new_tree.streets
+            tree = new_tree
 
             if abs(Delta_theta) < accuracy:
                 break
+
+        return tree
 
     def set_z_rotation(self, z_rotation):
         for street in self.streets:
@@ -360,7 +373,8 @@ class SpectralNetwork:
         self.soliton_trees = None
         self.data_attributes = [
             'phase', 's_walls', 'joints', 'errors',
-            'n_finished_s_walls', 'soliton_trees',
+            'n_finished_s_walls',
+            'soliton_trees',
         ]
 
         self.logger_name = logger_name

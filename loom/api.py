@@ -19,6 +19,7 @@ from config import LoomConfig
 from geometry import SWDataBase
 from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
+from spectral_network import SolitonTree 
 from parallel import parallel_get_spectral_network
 # TODO: plotting.py will be deprecated; use plot_ui.py
 from plotting import NetworkPlot, NetworkPlotTk
@@ -44,6 +45,7 @@ class SpectralNetworkData:
         self,
         sw_data=None,
         spectral_networks=None,
+        soliton_trees=None,
         config=None,
         config_file_path=None,
         data_dir=None,
@@ -53,7 +55,12 @@ class SpectralNetworkData:
         self.config = config
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
-        self.data_attributes = ['sw_data', 'spectral_networks']
+        self.soliton_trees = []
+        self.data_attributes = [
+            'sw_data',
+            'spectral_networks',
+            'soliton_trees',
+        ]
 
         if config_file_path is not None:
             self.config = LoomConfig(
@@ -95,7 +102,6 @@ class SpectralNetworkData:
                          'from the current version of loom.')
 
         spectral_networks = []
-        # XXX
         if config['parameter_sequence'] is None:
             # This is a standard family of networks
             # with different phases.
@@ -116,7 +122,7 @@ class SpectralNetworkData:
             spectral_networks.sort(key=lambda sn: sn.phase)
 
             logger.info('Finished loading data from {}.'.format(data_dir))
-
+# XXX START
         else:
             # This is a family of networks with different parameters.
             var_str, val_str = parse_sym_dict_str(
@@ -148,22 +154,33 @@ class SpectralNetworkData:
                 spectral_networks.append(spectral_network)
 
                 logger.info('Finished loading data from {}.'.format(data_dir))
+# XXX END
+        soliton_trees = []
+        tree_data_files = glob.glob(os.path.join(data_dir, 'tree_*.json'))
+        for data_file in tree_data_files:
+            logger.info('Loading {}...'.format(data_file))
+            tree = SolitonTree(logger_name=logger_name)
+            tree.load(data_file)
+            soliton_trees.append(tree)
+        soliton_trees.sort(key=lambda tree: tree.phase)
 
         self.config = config
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
+        self.soliton_trees = soliton_trees
 
-        if logging_queue is not None:
-            # Put a mark that generating spectral networks is done.
-            try:
-                logging_queue.put_nowait(None)
-            except:
-                logger.warn(
-                    'Failed in putting a finish mark in the logging queue.'
-                )
-
-        if result_queue is not None:
-            result_queue.put(self)
+#        if logging_queue is not None:
+#            # Put a mark that generating spectral networks is done.
+#            try:
+#                logging_queue.put_nowait(None)
+#            except:
+#                logger.warn(
+#                    'Failed in putting a finish mark in the logging queue.'
+#                )
+#
+#        if result_queue is not None:
+#            result_queue.put(self)
+        self.finalize(result_queue=result_queue, logging_queue=logging_queue)
 
     def save(
         self, data_dir=None, make_zipped_file=False,
@@ -175,6 +192,7 @@ class SpectralNetworkData:
 
         sw_data = self.sw_data
         spectral_networks = self.spectral_networks
+        soliton_trees = self.soliton_trees
 
         if data_dir is None:
             # Prepare to save spectral network data to files.
@@ -200,47 +218,56 @@ class SpectralNetworkData:
             logger_name=logger_name
         )
 
-        # Save geometric & trivialization data.
-        # XXX
         if self.config['parameter_sequence'] is None:
+            # Save geometric & trivialization data.
             sw_data_file_path = os.path.join(data_dir, 'sw_data.json')
             logger.info('Saving data to {}.'.format(sw_data_file_path))
             sw_data.save(sw_data_file_path)
+
+            # Save spectral network data.
+            for i, spectral_network in enumerate(spectral_networks):
+                data_file_path = os.path.join(
+                    data_dir,
+                    'data_{}.json'.format(
+                        str(i).zfill(len(str(len(spectral_networks) - 1)))
+                    )
+                )
+                logger.info('Saving data to {}.'.format(data_file_path))
+                spectral_network.save(data_file_path)
         else:
+# XXX START
             for i, sw_data_i in enumerate(sw_data):
                 sw_data_file_path = os.path.join(
                     data_dir, 'sw_data_' + str(i) + '.json'
                 )
                 logger.info('Saving data to {}.'.format(sw_data_file_path))
                 sw_data_i.save(sw_data_file_path)
+            for i, spectral_network in enumerate(spectral_networks):
+                data_file_path = os.path.join(
+                    data_dir,
+                    'data_{}.json'.format(
+                        str(i).zfill(len(str(len(spectral_networks) - 1)))
+                    )
+                )
+                logger.info('Saving data to {}.'.format(data_file_path))
+                spectral_network.save(data_file_path)
+# XXX END
 
-        # Save spectral network data.
-        # XXX
-        if self.config['parameter_sequence'] is None:
-            for i, spectral_network in enumerate(spectral_networks):
-                data_file_path = os.path.join(
-                    data_dir,
-                    'data_{}.json'.format(
-                        str(i).zfill(len(str(len(spectral_networks) - 1)))
-                    )
+        for i, tree in enumerate(soliton_trees):
+            data_file_path = os.path.join(
+                data_dir,
+                'tree_{}.json'.format(
+                    str(i).zfill(len(str(len(soliton_trees) - 1)))
                 )
-                logger.info('Saving data to {}.'.format(data_file_path))
-                spectral_network.save(data_file_path)
-        else:
-            for i, spectral_network in enumerate(spectral_networks):
-                data_file_path = os.path.join(
-                    data_dir,
-                    'data_{}.json'.format(
-                        str(i).zfill(len(str(len(spectral_networks) - 1)))
-                    )
-                )
-                logger.info('Saving data to {}.'.format(data_file_path))
-                spectral_network.save(data_file_path)
+            )
+            logger.info('Saving data to {}.'.format(data_file_path))
+            tree.save(data_file_path)
 
         if make_zipped_file is True:
             # Make a compressed data file.
             file_list = [config_file_path, sw_data_file_path]
             file_list += glob.glob(os.path.join(data_dir, 'data_*.json'))
+            file_list += glob.glob(os.path.join(data_dir, 'tree_*.json'))
             # TODO: the following routine for getting zipped_file_name
             # has a bug.
             zipped_file_name = os.path.basename(os.path.normpath(data_dir))
@@ -495,17 +522,19 @@ class SpectralNetworkData:
             logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
             logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
-        if logging_queue is not None:
-            # Put a mark that generating spectral networks is done.
-            try:
-                logging_queue.put_nowait(None)
-            except:
-                logger.warn(
-                    'Failed in putting a finish mark in the logging queue.'
-                )
-
-        if result_queue is not None:
-            result_queue.put(self)
+#        if logging_queue is not None:
+#            # Put a mark that generating spectral networks is done.
+#            try:
+#                logging_queue.put_nowait(None)
+#            except:
+#                logger.warn(
+#                    'Failed in putting a finish mark in the logging queue.'
+#                )
+#
+#        if result_queue is not None:
+#            result_queue.put(self)
+#
+        self.finalize(result_queue=result_queue, logging_queue=logging_queue)
 
         if cache_dir is not None and extend is False:
             version_file_path = os.path.join(cache_dir, 'version')
@@ -529,6 +558,9 @@ class SpectralNetworkData:
         downsample=False,
         downsample_ratio=None,
     ):
+        # TODO: Think about the workflow about the case
+        # when generating spectral networks for additional phases
+        # and finding two-way streets only for the networks.
         logger = logging.getLogger(self.logger_name)
         if cache_dir is not None and os.path.exists(cache_dir) is not True:
             os.makedirs(cache_dir)
@@ -646,17 +678,18 @@ class SpectralNetworkData:
         logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
         logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
-        if logging_queue is not None:
-            # Put a mark that generating spectral networks is done.
-            try:
-                logging_queue.put_nowait(None)
-            except:
-                logger.warn(
-                    'Failed in putting a finish mark in the logging queue.'
-                )
-
-        if result_queue is not None:
-            result_queue.put(self)
+#        if logging_queue is not None:
+#            # Put a mark that generating spectral networks is done.
+#            try:
+#                logging_queue.put_nowait(None)
+#            except:
+#                logger.warn(
+#                    'Failed in putting a finish mark in the logging queue.'
+#                )
+#
+#        if result_queue is not None:
+#            result_queue.put(self)
+        self.finalize(result_queue=result_queue, logging_queue=logging_queue)
 
         if cache_dir is not None:
             version_file_path = os.path.join(cache_dir, 'version')
@@ -717,17 +750,18 @@ class SpectralNetworkData:
                 task='trivialize',
             )
 
-        if logging_queue is not None:
-            # Put a mark that generating spectral networks is done.
-            try:
-                logging_queue.put_nowait(None)
-            except:
-                logger.warn(
-                    'Failed in putting a finish mark in the logging queue.'
-                )
-
-        if result_queue is not None:
-            result_queue.put(self)
+#        if logging_queue is not None:
+#            # Put a mark that generating spectral networks is done.
+#            try:
+#                logging_queue.put_nowait(None)
+#            except:
+#                logger.warn(
+#                    'Failed in putting a finish mark in the logging queue.'
+#                )
+#
+#        if result_queue is not None:
+#            result_queue.put(self)
+        self.finalize(result_queue=result_queue, logging_queue=logging_queue)
 
         if cache_dir is not None:
             version_file_path = os.path.join(cache_dir, 'version')
@@ -791,8 +825,9 @@ class SpectralNetworkData:
         return spectral_network_plot
 
     def find_two_way_streets(
-        self, n_processes=0, search_radius=None, replace=True,
+        self, n_processes=0, search_radius=None,
         result_queue=None, logging_queue=None, cache_dir=None,
+        improve=True,
     ):
         """
         Find a street data, replacing one if it already exists.
@@ -806,23 +841,29 @@ class SpectralNetworkData:
         start_time = time.time()
         logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
-        soliton_tree_data = []
-
         if len(self.spectral_networks) == 1:
             sn = self.spectral_networks[0]
             soliton_trees = sn.soliton_trees
-            if soliton_trees is None or replace is True:
+            if cache_dir is not None:
+                cache_file_path = os.path.join(
+                    cache_dir,
+                    'tree_0.json',
+                )
+            else:
+                cache_file_path = None
+            if soliton_trees is None:
                 soliton_trees = sn.find_two_way_streets(
                     config=self.config,
                     sw_data=self.sw_data,
                     search_radius=search_radius,
+                    cache_file_path=cache_file_path,
                 )
-            soliton_tree_data.append(soliton_trees)
         else:
+            soliton_tree_data = []
             sns = []
             for sn in self.spectral_networks:
                 trees = sn.soliton_trees
-                if trees is None or replace is True:
+                if trees is None:
                     soliton_tree_data.append(None)
                     sns.append(sn)
                 else:
@@ -849,33 +890,57 @@ class SpectralNetworkData:
                                 break
                         soliton_tree_data[i] = sn_i.soliton_trees
 
+            soliton_trees = []
+            for trees in soliton_tree_data:
+                soliton_trees += trees
+
+        if improve:
+            improved_trees = []
+            for tree in soliton_trees:
+                improved_trees.append(
+                    tree.get_improved_tree(
+                        config=self.config,
+                        sw_data=self.sw_data,
+                        search_radius=search_radius,
+                        logger_name=self.logger_name,
+                    )
+                )
+            self.soliton_trees = improved_trees
+        else:
+            self.soliton_trees = soliton_trees
+
         end_time = time.time()
         logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
         logger.info('elapsed cpu time: %.3f', end_time - start_time)
 
-        if logging_queue is not None:
-            # Put a mark that generating spectral networks is done.
-            try:
-                logging_queue.put_nowait(None)
-            except:
-                logger.warn(
-                    'Failed in putting a finish mark in the logging queue.'
-                )
-
-        if result_queue is not None:
-            result_queue.put(self)
+#        if logging_queue is not None:
+#            # Put a mark that generating spectral networks is done.
+#            try:
+#                logging_queue.put_nowait(None)
+#            except:
+#                logger.warn(
+#                    'Failed in putting a finish mark in the logging queue.'
+#                )
+#
+#        if result_queue is not None:
+#            result_queue.put(self)
+        self.finalize(result_queue=result_queue, logging_queue=logging_queue)
 
         if cache_dir is not None:
             version_file_path = os.path.join(cache_dir, 'version')
             save_version(version_file_path)
             sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
             self.sw_data.save(sw_data_file_path)
+            for i, tree in enumerate(self.soliton_trees):
+                tree_data_file_path = os.path.join(
+                    cache_dir,
+                    'tree_{}.json'.format(i),
+                )
+                tree.save(tree_data_file_path)
             # NOTE: The following should be placed
             # at the last stage of spectral network generation.
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
-
-        return soliton_tree_data
 
     def get_spectral_network(self, phase=None, index=False):
         phase_diffs = [abs(sn.phase - phase) for sn in self.spectral_networks]
@@ -978,6 +1043,35 @@ class SpectralNetworkData:
             )
 
             pyplot.show()
+
+    def finalize(
+        self,
+        result_queue=None,
+        logging_queue=None,
+        cache_dir=None,
+    ):
+        logger = logging.getLogger(self.logger_name)
+
+        if result_queue is not None:
+            result_queue.put(self)
+
+        if logging_queue is not None:
+            # Put a mark that generating spectral networks is done.
+            try:
+                logging_queue.put_nowait(None)
+            except:
+                logger.warning(
+                    'Failed in putting a finish mark in the logging queue.'
+                )
+#        if cache_dir is not None:
+#            version_file_path = os.path.join(cache_dir, 'version')
+#            save_version(version_file_path)
+#            sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
+#            self.sw_data.save(sw_data_file_path)
+#            # NOTE: The following should be placed
+#            # at the last stage of spectral network generation.
+#            config_file_path = os.path.join(cache_dir, 'config.ini')
+#            self.config.save(config_file_path)
 
 
 class LoomLoggingFormatter(logging.Formatter):

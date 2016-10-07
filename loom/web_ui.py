@@ -498,7 +498,8 @@ def save_data_to_server():
         )
         files_to_copy = get_data_file_path_list(full_data_dir)
         for src in files_to_copy:
-            shutil.copy(src, data_dir_to_save)
+            # shutil.copy(src, data_dir_to_save)
+            shutil.move(src, data_dir_to_save)
         msg = 'Data successfully saved as "{}".'.format(data_name)
 
     return flask.render_template(
@@ -557,9 +558,12 @@ def download_plot(two_way_streets=False):
     else:
         raise RuntimeError
 
+    n_processes = kwargs['n_processes']
+    search_radius = kwargs['search_radius']
     process_uuid = kwargs['process_uuid']
     data_name = kwargs['data_name']
     saved_data = kwargs['saved_data']
+
     result_queue = loom_db.get_result_queue(
         process_uuid, create=False,
     )
@@ -587,30 +591,53 @@ def download_plot(two_way_streets=False):
     else:
         plot_range = eval(flask.request.form['plot_range'])
         zip_file_prefix = 'loom_streets_{}'.format(process_uuid)
-        soliton_tree_data = spectral_network_data.find_two_way_streets(
-            replace=False,
+        spectral_network_data.find_two_way_streets(
+            n_processes=n_processes,
+            search_radius=search_radius,
+            improve=True,
+            #replace=False,
         )
-        for i, trees in enumerate(soliton_tree_data):
-            for j, tree in enumerate(trees):
-                soliton_tree_plot = SolitonTreePlot(
-                    plot_range=plot_range,
-                )
-                # Make a plot title.
-                Z = tree.Z
-                title = (
-                    'SN #{}, tree #{}, '.format(i, j) +
-                    'Z = ({:.6}) + ({:.6})i'.format(Z.real, Z.imag)
-                )
-                soliton_tree_plot.draw(
-                    title=title,
-                    sw_data=spectral_network_data.sw_data,
-                    soliton_tree=soliton_tree_data[i][j],
-                )
-                fp = BytesIO()
-                soliton_tree_plot.figure.savefig(fp, format='pdf')
-                fp.seek(0)
-                file_name = '{}_{}.pdf'.format(i, j)
-                data[file_name] = fp.read()
+#        for i, trees in enumerate(soliton_tree_data):
+#            for j, tree in enumerate(trees):
+#                soliton_tree_plot = SolitonTreePlot(
+#                    plot_range=plot_range,
+#                )
+#                # Make a plot title.
+#                Z = tree.Z
+#                title = (
+#                    'SN #{}, tree #{}, '.format(i, j) +
+#                    'Z = ({:.6}) + ({:.6})i'.format(Z.real, Z.imag)
+#                )
+#                soliton_tree_plot.draw(
+#                    title=title,
+#                    sw_data=spectral_network_data.sw_data,
+#                    soliton_tree=soliton_tree_data[i][j],
+#                )
+#                fp = BytesIO()
+#                soliton_tree_plot.figure.savefig(fp, format='pdf')
+#                fp.seek(0)
+#                file_name = '{}_{}.pdf'.format(i, j)
+#                data[file_name] = fp.read()
+        for i, tree in enumerate(spectral_network_data.soliton_trees):
+            soliton_tree_plot = SolitonTreePlot(
+                plot_range=plot_range,
+            )
+            # Make a plot title.
+            Z = tree.Z()
+            title = (
+                'Soliton tree #{} @ theta = {:.4}, '.format(i, tree.phase) +
+                'Z = ({:.6}) + ({:.6})i'.format(Z.real, Z.imag)
+            )
+            soliton_tree_plot.draw(
+                title=title,
+                sw_data=spectral_network_data.sw_data,
+                soliton_tree=tree,
+            )
+            fp = BytesIO()
+            soliton_tree_plot.figure.savefig(fp, format='pdf')
+            fp.seek(0)
+            file_name = 'soliton_tree_{}.pdf'.format(i)
+            data[file_name] = fp.read()
 
     zip_fp = BytesIO()
     with zipfile.ZipFile(zip_fp, 'w') as zfp:
