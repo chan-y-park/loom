@@ -357,7 +357,7 @@ class SolitonTree:
                 break
             elif len(trees) == 0:
                 logger.warning(
-                    'Failed at improving a soliton tree.'
+                    'Failed at improving a soliton tree '
                     'with root street = {}, root branch point = {} '
                     'from a spectral network @ phase = {}.'
                     .format(

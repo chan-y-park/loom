@@ -133,30 +133,6 @@ def parallel_get_spectral_network(
             for sn_phase in phases
         ]
 
-#    n_cpu = multiprocessing.cpu_count()
-#    if (n_processes == 0):
-#        # Use all the CPUs.
-#        n_processes = n_cpu
-#    elif (n_processes < 0):
-#        # Leave |n_processes| CPUs.
-#        if(n_cpu > -n_processes):
-#            n_processes = n_cpu - (-n_processes)
-#        else:
-#            logger.warning('The number of CPUs is smaller than {}.'
-#                           .format(-n_processes))
-#            logger.warning('Set n_processes to 1.')
-#            n_processes = 1
-#    elif (n_cpu < n_processes):
-#            logger.warning('The number of CPUs is smaller than {}.'
-#                           .format(n_processes))
-#            logger.warning('Set n_processes to {}.'.format(n_cpu))
-#            n_processes = n_cpu
-#
-#    # Use n_processes CPUs.
-#    n_jobs = len(spectral_networks)
-#    if n_jobs < n_processes:
-#        n_processes = n_jobs
-
     n_jobs = len(spectral_networks)
     n_processes = get_n_processes(n_processes, n_jobs, logger_name)
 
@@ -196,26 +172,31 @@ def parallel_get_spectral_network(
 
         new_spectral_networks = []
         for result in results:
+            new_sn = SpectralNetwork(logger_name=logger_name)
             if cache_dir is None:
-                new_sn = result.get()
+                new_sn.set_from_json_data(
+                    result.get().get_json_data(),
+                    sw_data,
+                )
                 # NOTE: Need to replace all the branch points
                 # in a spectral network with those in sw_data,
                 # because a child process gets a copy of them.
-                for s_wall in new_sn.s_walls:
-                    if len(s_wall.parents) == 1:
-                        if isinstance(s_wall.parents[0], BranchPoint):
-                            bp_label = s_wall.parents[0].label
-                            s_wall.parents = [
-                                bp for bp in sw_data.branch_points
-                                if bp.label == bp_label
-                            ]
+#               new_sn = result.get()
+#                for s_wall in new_sn.s_walls:
+#                    if len(s_wall.parents) == 1:
+#                        if isinstance(s_wall.parents[0], BranchPoint):
+#                            bp_label = s_wall.parents[0].label
+#                            s_wall.parents = [
+#                                bp for bp in sw_data.branch_points
+#                                if bp.label == bp_label
+#                            ]
             else:
                 # XXX: Do we really need the following?
                 # It's probably good to use cache files
                 # just in case the internal queue size
                 # of the pool is too small.
                 new_sn_file_path = result.get()
-                new_sn = SpectralNetwork(logger_name=logger_name)
+                #new_sn = SpectralNetwork(logger_name=logger_name)
                 new_sn.load(new_sn_file_path, sw_data)
             new_spectral_networks.append(new_sn)
     except Exception as e:

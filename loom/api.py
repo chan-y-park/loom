@@ -897,18 +897,49 @@ class SpectralNetworkData:
 #            for trees in soliton_tree_data:
 #                soliton_trees += trees
 
-        sns = []
-        sn_is = []
-        for i, sn in enumerate(self.spectral_networks):
-            trees = sn.soliton_trees
-            if trees is None:
-                sns.append(sn)
-                sn_is.append(i)
+#        sns = []
+#        sn_is = []
+#        for i, sn in enumerate(self.spectral_networks):
+#            trees = sn.soliton_trees
+#            if trees is None:
+#                sns.append(sn)
+#                sn_is.append(i)
+#
+#        if len(sns) == 1 or not multiprocessing:
+#            for i, sn in enumerate(sns): 
+#                trees = sn.soliton_trees
+#
+#                if cache_dir is not None:
+#                    cache_file_path = os.path.join(
+#                        cache_dir,
+#                        'tree_{}.json'.format(i),
+#                    )
+#                else:
+#                    cache_file_path = None
+#
+#                if trees is None:
+#                    sn.find_two_way_streets(
+#                        config=self.config,
+#                        sw_data=self.sw_data,
+#                        search_radius=search_radius,
+#                        cache_file_path=cache_file_path,
+#                    )
+#        elif len(sns) > 0:
+#            sns = parallel_get_spectral_network(
+#                config=self.config,
+#                sw_data=self.sw_data,
+#                spectral_networks=sns,
+#                n_processes=n_processes,
+#                logger_name=self.logger_name,
+#                cache_dir=cache_dir,
+#                search_radius=search_radius,
+#                task='find_two_way_streets',
+#            )
+#            for i, sn_i in enumerate(sn_is):
+#                self.spectral_networks[sn_i] = sns[i]
 
-        if len(sns) == 1 or not multiprocessing:
-            for i, sn in enumerate(sns): 
-                trees = sn.soliton_trees
-
+        if len(self.spectral_networks) == 1 or not multiprocessing:
+            for i, sn in enumerate(self.spectral_networks):
                 if cache_dir is not None:
                     cache_file_path = os.path.join(
                         cache_dir,
@@ -917,26 +948,23 @@ class SpectralNetworkData:
                 else:
                     cache_file_path = None
 
-                if trees is None:
-                    sn.find_two_way_streets(
-                        config=self.config,
-                        sw_data=self.sw_data,
-                        search_radius=search_radius,
-                        cache_file_path=cache_file_path,
-                    )
-        elif len(sns) > 0:
-            sns = parallel_get_spectral_network(
+                sn.find_two_way_streets(
+                    config=self.config,
+                    sw_data=self.sw_data,
+                    search_radius=search_radius,
+                    cache_file_path=cache_file_path,
+                )
+        else:
+            self.spectral_networks = parallel_get_spectral_network(
                 config=self.config,
                 sw_data=self.sw_data,
-                spectral_networks=sns,
+                spectral_networks=self.spectral_networks,
                 n_processes=n_processes,
                 logger_name=self.logger_name,
                 cache_dir=cache_dir,
                 search_radius=search_radius,
                 task='find_two_way_streets',
             )
-            for i, sn_i in enumerate(sn_is):
-                self.spectral_networks[sn_i] = sns[i]
 
         soliton_trees = []
         for sn in self.spectral_networks:
