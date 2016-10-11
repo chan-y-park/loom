@@ -39,17 +39,21 @@ function sn_slider(
     
     current_sn_idx['i'] = sn_idx;
     tree_idx['j'] = 0;
+/*
     if (show_trees == 'true') {
         document.getElementById("current_tree_idx").innerHTML = 'All';
     }
-
+*/
     for (var key in cd) {
         if (cd.hasOwnProperty(key)) {
+/*
             if (show_trees == 'false') {
                 cd[key] = snd['spectral_networks'][sn_idx][key];
             } else {
                 cd[key] = snd['spectral_networks'][sn_idx][0][key];
             }
+*/
+        cd[key] = snd['spectral_networks'][sn_idx][key];
         }
     }
     cds.trigger('change');

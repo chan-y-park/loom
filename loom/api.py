@@ -163,7 +163,7 @@ class SpectralNetworkData:
             logger.info('Loading {}...'.format(data_file))
             #tree = SolitonTree(logger_name=logger_name)
             tree = SolitonTree()
-            tree.load(data_file, sw_data.obj_dict)
+            tree.load(data_file, sw_data)
             soliton_trees.append(tree)
         soliton_trees.sort(key=lambda tree: tree.phase)
 
@@ -905,8 +905,7 @@ class SpectralNetworkData:
                 sns.append(sn)
                 sn_is.append(i)
 
-#        if len(sns) == 1 or not multiprocessing:
-        if True:
+        if len(sns) == 1 or not multiprocessing:
             for i, sn in enumerate(sns): 
                 trees = sn.soliton_trees
 

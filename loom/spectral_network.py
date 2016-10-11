@@ -142,10 +142,27 @@ class SolitonTree:
                 #parents=root_s_wall.parents,
                 #phase=self.phase,
                 tree_label='{} @ {}'.format(self.label, self.phase),
-                label='Street #0',
+                #label='Street #0',
+                label=root_s_wall.label,
             )
             self.streets = [root_street]
             self.grow(root_street)
+
+            street_dict = {}
+            for street in self.streets:
+                street_dict[street.label] = street
+            for street in self.streets:
+                if len(street.parents) == 1:
+                    parent = street.parents[0]
+                    if isinstance(parent, BranchPoint):
+                        continue
+                else:
+                    street.parents = [
+                        street_dict[parent.label]
+                        for parent in street.parents
+                    ]
+            for i, street in enumerate(self.streets):
+                street.label = 'Street #{}'.format(i)
         # stability is the number of streets after an improvement.
         # If it is greater than one, it means an improvement will result
         # in multiple streets; if it is zero, it means the street
@@ -209,11 +226,12 @@ class SolitonTree:
                 #parents=parent.parents,
                 #phase=self.phase,
                 tree_label='{} @ {}'.format(self.label, self.phase),
-                label='Street #{}'.format(len(self.streets)),
+                #label='Street #{}'.format(len(self.streets)),
+                label=parent.label,
             )
             self.streets.append(parent_street)
             self.grow(parent_street)
-
+                
         return None
 
     def get_improved_tree(
