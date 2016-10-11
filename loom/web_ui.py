@@ -769,10 +769,10 @@ def render_plot_template(
     spectral_networks = spectral_network_data.spectral_networks
     soliton_tree_data = None
 
-    if plot_two_way_streets is True:
-        soliton_tree_data = spectral_network_data.find_two_way_streets(
-            replace=False,
-        )
+#    if plot_two_way_streets is True:
+#        soliton_tree_data = spectral_network_data.find_two_way_streets(
+#            replace=False,
+#        )
 
     # Make a Bokeh plot
     plot_range = loom_config['plot_range']

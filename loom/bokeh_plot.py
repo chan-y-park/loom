@@ -1,9 +1,8 @@
 import logging
 import numpy
 import bokeh
-import constants
+# import constants
 
-from math import ceil
 from cmath import phase, pi
 from copy import deepcopy
 from sympy import oo
@@ -28,6 +27,8 @@ def get_spectral_network_bokeh_plot(
     download=False,
     downsample_ratio=None,
 ):
+    logger = logging.getLogger(logger_name)
+
     # Determine if the data set corresponds to a multi-parameter
     # configuration.
     if type(spectral_network_data.sw_data) is list:
@@ -199,49 +200,66 @@ def get_spectral_network_bokeh_plot(
     pds = ColumnDataSource({
         'phase': [],
     })
-    for sn in spectral_networks:
-        sn_phase = '{:.3f}'.format(sn.phase / pi)
-        pds.data['phase'].append(sn_phase)
+#    for sn in spectral_networks:
+#        # sn_phase = '{:.3f}'.format(sn.phase / pi)
+#        sn_phase = '{:.3f}'.format(sn.phase)
+#        pds.data['phase'].append(sn_phase)
 
     # Data source containing all the spectral networks
     snds = ColumnDataSource({
         'spectral_networks': [],
     })
 
-    if plot_two_way_streets is True:
-        # snds['spectral_networks'] is a 2-dim array,
-        # where the first index chooses a spectral network
-        # and the second index chooses a soliton tree
-        # of the two-way streets of the spectral network.
-        for i, soliton_trees in enumerate(soliton_tree_data):
-            data_entry = []
-            if len(soliton_trees) == 0:
-                # Fill with empty data.
-                empty_data = get_s_wall_plot_data(
-                    [], sw_data, logger_name,
-                    spectral_networks[i].phase,
+    if plot_two_way_streets:
+        soliton_trees = spectral_network_data.soliton_trees
+        if soliton_trees is not None and len(soliton_trees) > 0:
+            # snds['spectral_networks'] is a 1-dim array,
+            # of soliton trees.
+            for tree in spectral_network_data.soliton_trees:
+                tree_data = get_s_wall_plot_data(
+                    tree.streets, sw_data, logger_name, tree.phase,
                     downsample_ratio=downsample_ratio,
                 )
-                data_entry.append(empty_data)
-            else:
-                for tree in soliton_trees:
-                    tree_data = get_s_wall_plot_data(
-                        tree.streets, sw_data, logger_name,
-                        spectral_networks[i].phase,
+                snds.data['spectral_networks'].append(tree_data)
+                pds.data['phase'].append('{:.3f}'.format(tree.phase))
+            init_data = snds.data['spectral_networks'][0]
+
+        elif soliton_tree_data is not None:
+            # snds['spectral_networks'] is a 2-dim array,
+            # where the first index chooses a spectral network
+            # and the second index chooses a soliton tree
+            # of the two-way streets of the spectral network.
+            for i, soliton_trees in enumerate(soliton_tree_data):
+                data_entry = []
+                theta_i = spectral_networks[i].phase
+                if len(soliton_trees) == 0:
+                    # Fill with empty data.
+                    empty_data = get_s_wall_plot_data(
+                        [], sw_data, logger_name, theta_i,
                         downsample_ratio=downsample_ratio,
                     )
-                    # The first data contains all the soliton trees
-                    # of the two-way streets in a spectral network.
-                    if len(data_entry) == 0:
-                        data_entry.append(deepcopy(tree_data))
-                    else:
-                        for key in tree_data.keys():
-                            data_entry[0][key] += tree_data[key]
-                    data_entry.append(tree_data)
+                    data_entry.append(empty_data)
+                else:
+                    for tree in soliton_trees:
+                        tree_data = get_s_wall_plot_data(
+                            tree.streets, sw_data, logger_name, theta_i,
+                            downsample_ratio=downsample_ratio,
+                        )
+                        # The first data contains all the soliton trees
+                        # of the two-way streets in a spectral network.
+                        if len(data_entry) == 0:
+                            data_entry.append(deepcopy(tree_data))
+                        else:
+                            for key in tree_data.keys():
+                                data_entry[0][key] += tree_data[key]
+                        data_entry.append(tree_data)
 
-            snds.data['spectral_networks'].append(data_entry)
+                snds.data['spectral_networks'].append(data_entry)
+                pds.data['phase'].append('{:.3f}'.format(theta_i))
 
-        init_data = snds.data['spectral_networks'][0][0]
+            init_data = snds.data['spectral_networks'][0][0]
+        else:
+            logger.warning('No soliton tree data to plot.')
     else:
         # snds['spectral_networks'] is a 1-dim array,
         # of spectral network data.
@@ -259,6 +277,7 @@ def get_spectral_network_bokeh_plot(
                 downsample_ratio=downsample_ratio,
             )
             snds.data['spectral_networks'].append(sn_data)
+            pds.data['phase'].append('{:.3f}'.format(sn.phase))
 
         init_data = snds.data['spectral_networks'][0]
 
@@ -346,7 +365,7 @@ def get_spectral_network_bokeh_plot(
         {'notebook': [notebook], 'show_trees': [plot_two_way_streets]}
     )
 
-    if plot_two_way_streets is True:
+    if plot_two_way_streets and soliton_tree_data is not None:
         prev_soliton_tree_button = Button(
             label='<',
         )
@@ -384,12 +403,20 @@ def get_spectral_network_bokeh_plot(
         notebook_vform_elements.append(next_soliton_tree_button)
 
     # Slider
+    if (
+        plot_two_way_streets and
+        soliton_trees is not None and
+        len(soliton_trees) > 0
+    ):
+        slider_title = 'soliton tree #'
+    else:
+        slider_title = 'spectral network #'
     num_of_plots = len(snds.data['spectral_networks'])
     if num_of_plots > 1:
         if multi_parameter is False:
             sn_slider = Slider(
                 start=0, end=num_of_plots - 1,
-                value=0, step=1, title="spectral network #"
+                value=0, step=1, title=slider_title,
             )
 
             sn_slider.callback = CustomJS(

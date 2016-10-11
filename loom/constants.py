@@ -17,9 +17,12 @@ LIB_PYTHON = 3
 # Maximum # of steps when using Newton's method.
 NEWTON_MAX_STEPS = 100
 
-# Default maximum # of data points per S-wall.
+# Default min/max # of data points per S-wall.
 S_WALL_MIN_N_DATA_PTS = 100
 S_WALL_MAX_N_DATA_PTS = 200
 
 # Number of iterations when improving a soliton tree
 SOLITON_TREE_MAX_N_ITERS = 10
+
+# Minimum number of dz steps when improving a soliton tree
+SOLITON_TREE_MIN_N_DZ_STEPS = 10

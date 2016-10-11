@@ -21,6 +21,8 @@ from trivialization import SWDataWithTrivialization
 from spectral_network import SpectralNetwork
 from spectral_network import SolitonTree 
 from parallel import parallel_get_spectral_network
+from parallel import parallel_get_improved_soliton_tree
+from parallel import get_improved_soliton_tree_child_process
 # TODO: plotting.py will be deprecated; use plot_ui.py
 from plotting import NetworkPlot, NetworkPlotTk
 from plot_ui import SpectralNetworkPlotUI, SpectralNetworkPlotTk
@@ -45,7 +47,7 @@ class SpectralNetworkData:
         self,
         sw_data=None,
         spectral_networks=None,
-        soliton_trees=None,
+        soliton_trees=[],
         config=None,
         config_file_path=None,
         data_dir=None,
@@ -55,7 +57,7 @@ class SpectralNetworkData:
         self.config = config
         self.sw_data = sw_data
         self.spectral_networks = spectral_networks
-        self.soliton_trees = []
+        self.soliton_trees = soliton_trees
         self.data_attributes = [
             'sw_data',
             'spectral_networks',
@@ -159,8 +161,9 @@ class SpectralNetworkData:
         tree_data_files = glob.glob(os.path.join(data_dir, 'tree_*.json'))
         for data_file in tree_data_files:
             logger.info('Loading {}...'.format(data_file))
-            tree = SolitonTree(logger_name=logger_name)
-            tree.load(data_file)
+            #tree = SolitonTree(logger_name=logger_name)
+            tree = SolitonTree()
+            tree.load(data_file, sw_data.obj_dict)
             soliton_trees.append(tree)
         soliton_trees.sort(key=lambda tree: tree.phase)
 
@@ -827,7 +830,7 @@ class SpectralNetworkData:
     def find_two_way_streets(
         self, n_processes=0, search_radius=None,
         result_queue=None, logging_queue=None, cache_dir=None,
-        improve=True,
+        improve=True, multiprocessing=True,
     ):
         """
         Find a street data, replacing one if it already exists.
@@ -841,73 +844,153 @@ class SpectralNetworkData:
         start_time = time.time()
         logger.info('Started @ {}'.format(get_date_time_str(start_time)))
 
-        if len(self.spectral_networks) == 1:
-            sn = self.spectral_networks[0]
-            soliton_trees = sn.soliton_trees
-            if cache_dir is not None:
-                cache_file_path = os.path.join(
-                    cache_dir,
-                    'tree_0.json',
-                )
-            else:
-                cache_file_path = None
-            if soliton_trees is None:
-                soliton_trees = sn.find_two_way_streets(
-                    config=self.config,
-                    sw_data=self.sw_data,
-                    search_radius=search_radius,
-                    cache_file_path=cache_file_path,
-                )
-        else:
-            soliton_tree_data = []
-            sns = []
-            for sn in self.spectral_networks:
+#        if len(self.spectral_networks) == 1:
+#            sn = self.spectral_networks[0]
+#            soliton_trees = sn.soliton_trees
+#            if cache_dir is not None:
+#                cache_file_path = os.path.join(
+#                    cache_dir,
+#                    'tree_0.json',
+#                )
+#            else:
+#                cache_file_path = None
+#            if soliton_trees is None:
+#                soliton_trees = sn.find_two_way_streets(
+#                    config=self.config,
+#                    sw_data=self.sw_data,
+#                    search_radius=search_radius,
+#                    cache_file_path=cache_file_path,
+#                )
+#        else:
+#            soliton_tree_data = []
+#            sns = []
+#            for sn in self.spectral_networks:
+#                trees = sn.soliton_trees
+#                if trees is None:
+#                    soliton_tree_data.append(None)
+#                    sns.append(sn)
+#                else:
+#                    soliton_tree_data.append(trees)
+#
+#            if len(sns) > 0:
+#                sns = parallel_get_spectral_network(
+#                    config=self.config,
+#                    sw_data=self.sw_data,
+#                    spectral_networks=sns,
+#                    n_processes=n_processes,
+#                    logger_name=self.logger_name,
+#                    cache_dir=cache_dir,
+#                    search_radius=search_radius,
+#                    task='find_two_way_streets',
+#                )
+#
+#                for i, trees in enumerate(soliton_tree_data):
+#                    if trees is None:
+#                        sn_i = self.spectral_networks[i]
+#                        for sn in sns:
+#                            if sn.phase == sn_i.phase:
+#                                sn_i.soliton_trees = sn.soliton_trees
+#                                break
+#                        soliton_tree_data[i] = sn_i.soliton_trees
+#
+#            soliton_trees = []
+#            for trees in soliton_tree_data:
+#                soliton_trees += trees
+
+        sns = []
+        sn_is = []
+        for i, sn in enumerate(self.spectral_networks):
+            trees = sn.soliton_trees
+            if trees is None:
+                sns.append(sn)
+                sn_is.append(i)
+
+#        if len(sns) == 1 or not multiprocessing:
+        if True:
+            for i, sn in enumerate(sns): 
                 trees = sn.soliton_trees
-                if trees is None:
-                    soliton_tree_data.append(None)
-                    sns.append(sn)
+
+                if cache_dir is not None:
+                    cache_file_path = os.path.join(
+                        cache_dir,
+                        'tree_{}.json'.format(i),
+                    )
                 else:
-                    soliton_tree_data.append(trees)
+                    cache_file_path = None
 
-            if len(sns) > 0:
-                sns = parallel_get_spectral_network(
-                    config=self.config,
-                    sw_data=self.sw_data,
-                    spectral_networks=sns,
-                    n_processes=n_processes,
-                    logger_name=self.logger_name,
-                    cache_dir=cache_dir,
-                    search_radius=search_radius,
-                    task='find_two_way_streets',
-                )
-
-                for i, trees in enumerate(soliton_tree_data):
-                    if trees is None:
-                        sn_i = self.spectral_networks[i]
-                        for sn in sns:
-                            if sn.phase == sn_i.phase:
-                                sn_i.soliton_trees = sn.soliton_trees
-                                break
-                        soliton_tree_data[i] = sn_i.soliton_trees
-
-            soliton_trees = []
-            for trees in soliton_tree_data:
-                soliton_trees += trees
-
-        if improve:
-            improved_trees = []
-            for tree in soliton_trees:
-                improved_trees.append(
-                    tree.get_improved_tree(
+                if trees is None:
+                    sn.find_two_way_streets(
                         config=self.config,
                         sw_data=self.sw_data,
                         search_radius=search_radius,
-                        logger_name=self.logger_name,
+                        cache_file_path=cache_file_path,
                     )
+        elif len(sns) > 0:
+            sns = parallel_get_spectral_network(
+                config=self.config,
+                sw_data=self.sw_data,
+                spectral_networks=sns,
+                n_processes=n_processes,
+                logger_name=self.logger_name,
+                cache_dir=cache_dir,
+                search_radius=search_radius,
+                task='find_two_way_streets',
+            )
+            for i, sn_i in enumerate(sn_is):
+                self.spectral_networks[sn_i] = sns[i]
+
+        soliton_trees = []
+        for sn in self.spectral_networks:
+            if sn.soliton_trees is not None:
+                soliton_trees += sn.soliton_trees
+
+        if improve:
+            if not multiprocessing:
+                improved_trees = []
+                for tree in soliton_trees:
+                    improved_trees.append(
+#                        tree.get_improved_tree(
+#                            config=self.config,
+#                            sw_data=self.sw_data,
+#                            search_radius=search_radius,
+#                            logger_name=self.logger_name,
+#                            label='Soliton Tree #{}'.format(
+#                                len(improved_trees)
+#                            ),
+#                        )
+                        get_improved_soliton_tree_child_process(
+                            config=self.config,
+                            sw_data=self.sw_data,
+                            search_radius=search_radius,
+                            tree=tree,
+                            job_id=len(improved_trees),
+                            n_jobs=len(soliton_trees),
+                            label='Soliton Tree #{}'.format(
+                                len(improved_trees)
+                            ),
+                            logger_name=self.logger_name,
+                        )
+                    )
+                self.soliton_trees = improved_trees
+            else:
+                self.soliton_trees = parallel_get_improved_soliton_tree(
+                    config=self.config,
+                    sw_data=self.sw_data,
+                    trees=soliton_trees,
+                    search_radius=search_radius,
+                    n_processes=n_processes,
+                    cache_dir=cache_dir,
+                    logger_name=self.logger_name,
                 )
-            self.soliton_trees = improved_trees
         else:
             self.soliton_trees = soliton_trees
+            if cache_dir is not None:
+                for i, tree in enumerate(self.soliton_trees):
+                    tree_data_file_path = os.path.join(
+                        cache_dir,
+                        'tree_{}.json'.format(i),
+                    )
+                    tree.save(tree_data_file_path)
 
         end_time = time.time()
         logger.info('Finished @ {}'.format(get_date_time_str(end_time)))
@@ -931,12 +1014,12 @@ class SpectralNetworkData:
             save_version(version_file_path)
             sw_data_file_path = os.path.join(cache_dir, 'sw_data.json')
             self.sw_data.save(sw_data_file_path)
-            for i, tree in enumerate(self.soliton_trees):
-                tree_data_file_path = os.path.join(
-                    cache_dir,
-                    'tree_{}.json'.format(i),
-                )
-                tree.save(tree_data_file_path)
+#            for i, tree in enumerate(self.soliton_trees):
+#                tree_data_file_path = os.path.join(
+#                    cache_dir,
+#                    'tree_{}.json'.format(i),
+#                )
+#                tree.save(tree_data_file_path)
             # NOTE: The following should be placed
             # at the last stage of spectral network generation.
             config_file_path = os.path.join(cache_dir, 'config.ini')

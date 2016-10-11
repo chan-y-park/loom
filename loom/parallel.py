@@ -4,6 +4,7 @@ import logging
 import os
 
 from spectral_network import SpectralNetwork
+from spectral_network import SolitonTree
 from geometry import BranchPoint
 
 
@@ -12,7 +13,6 @@ def child_sigint_handler(signum, frame):
 
 
 def child_sigterm_handler(signum, frame):
-    print("SIGTERM catched by a child of loom.parallel.")
     raise SystemExit("SIGTERM catched by a child of loom.parallel.")
 
 
@@ -24,7 +24,7 @@ def init_process():
     signal.signal(signal.SIGINT, child_sigint_handler)
 
 
-def a_child_process(
+def get_spectral_network_child_process(
     config=None,
     sw_data=None,
     spectral_network=None,
@@ -133,29 +133,33 @@ def parallel_get_spectral_network(
             for sn_phase in phases
         ]
 
-    n_cpu = multiprocessing.cpu_count()
-    if (n_processes == 0):
-        # Use all the CPUs.
-        n_processes = n_cpu
-    elif (n_processes < 0):
-        # Leave |n_processes| CPUs.
-        if(n_cpu > -n_processes):
-            n_processes = n_cpu - (-n_processes)
-        else:
-            logger.warning('The number of CPUs is smaller than {}.'
-                           .format(-n_processes))
-            logger.warning('Set n_processes to 1.')
-            n_processes = 1
-    elif (n_cpu < n_processes):
-            logger.warning('The number of CPUs is smaller than {}.'
-                           .format(n_processes))
-            logger.warning('Set n_processes to {}.'.format(n_cpu))
-            n_processes = n_cpu
+#    n_cpu = multiprocessing.cpu_count()
+#    if (n_processes == 0):
+#        # Use all the CPUs.
+#        n_processes = n_cpu
+#    elif (n_processes < 0):
+#        # Leave |n_processes| CPUs.
+#        if(n_cpu > -n_processes):
+#            n_processes = n_cpu - (-n_processes)
+#        else:
+#            logger.warning('The number of CPUs is smaller than {}.'
+#                           .format(-n_processes))
+#            logger.warning('Set n_processes to 1.')
+#            n_processes = 1
+#    elif (n_cpu < n_processes):
+#            logger.warning('The number of CPUs is smaller than {}.'
+#                           .format(n_processes))
+#            logger.warning('Set n_processes to {}.'.format(n_cpu))
+#            n_processes = n_cpu
+#
+#    # Use n_processes CPUs.
+#    n_jobs = len(spectral_networks)
+#    if n_jobs < n_processes:
+#        n_processes = n_jobs
 
-    # Use n_processes CPUs.
     n_jobs = len(spectral_networks)
-    if n_jobs < n_processes:
-        n_processes = n_jobs
+    n_processes = get_n_processes(n_processes, n_jobs, logger_name)
+
     multiprocessing.freeze_support()
     pool = multiprocessing.Pool(n_processes, init_process)
     logger.info('Number of processes in the pool: {}'.format(n_processes))
@@ -163,7 +167,7 @@ def parallel_get_spectral_network(
     try:
         results = [
             pool.apply_async(
-                a_child_process,
+                get_spectral_network_child_process,
                 kwds=dict(
                     config=config,
                     sw_data=sw_data,
@@ -214,18 +218,182 @@ def parallel_get_spectral_network(
                 new_sn = SpectralNetwork(logger_name=logger_name)
                 new_sn.load(new_sn_file_path, sw_data)
             new_spectral_networks.append(new_sn)
-
-    except (KeyboardInterrupt, SystemExit) as e:
-        logger.warning('loom.parallel caught {}: {}; terminates processes...'
-                       .format(type(e), e.args,))
-        pool.terminate()
-        pool.join()
-        raise e
     except Exception as e:
-        logger.warning('loom.parallel caught {}.'.format(e))
+        logger.warning(
+            'parallel_get_spectral_network() caught {}: {}; '
+            .format(type(e), e.args,)
+        )
+        if e == KeyboardInterrupt or e == SystemExit:
+            logger.warning('Terminates children processes...')
+            pool.terminate()
+            pool.join()
         raise e
+#    except (KeyboardInterrupt, SystemExit) as e:
+#        logger.warning(
+#            'parallel_get_spectral_network() caught {}: {}; '
+#            'terminates children processes...'
+#            .format(type(e), e.args,)
+#        )
+#        pool.terminate()
+#        pool.join()
+#        raise e
+#    except Exception as e:
+#        logger.warning(
+#            'parallel_get_spectral_network() caught {}.'
+#            .format(e)
+#        )
+#        raise e
 
     return new_spectral_networks
+
+
+def get_improved_soliton_tree_child_process(
+    config=None,
+    sw_data=None,
+    search_radius=None,
+    tree=None,
+    job_id=None,
+    n_jobs=None,
+    cache_file_path=None,
+    label=None,
+    logger_name='loom',
+):
+    logger = logging.getLogger(logger_name)
+    logger.info('Improve soliton tree #{}/{}: phase = {}.'
+                .format(job_id, n_jobs - 1, tree.phase))
+    try:
+        improved_tree = tree.get_improved_tree(
+            config=config,
+            sw_data=sw_data,
+            search_radius=search_radius,
+            label=label,
+            logger_name=logger_name,
+            cache_file_path=cache_file_path,
+        )
+    except Exception as e:
+        logger.warning(
+            'A child process improving soliton tree #{} @ phase = {} '
+            'caught an exception: {}'
+            .format(job_id, tree.phase, e)
+        )
+
+    logger.info('Finished improving soliton tree #{}/{}.'
+                .format(job_id, n_jobs - 1))
+
+    if cache_file_path is None:
+        return improved_tree
+    else:
+        return cache_file_path
+        
+
+def parallel_get_improved_soliton_tree(
+    config=None,
+    sw_data=None,
+    trees=[],
+    search_radius=None,
+    n_processes=0,
+    cache_dir=None,
+    logger_name='loom',
+):
+    logger = logging.getLogger(logger_name)
+
+    n_jobs = len(trees)
+    n_processes = get_n_processes(n_processes, n_jobs, logger_name)
+
+    multiprocessing.freeze_support()
+    pool = multiprocessing.Pool(n_processes, init_process)
+    logger.info('Number of processes in the pool: {}'.format(n_processes))
+
+    try:
+        results = [
+            pool.apply_async(
+                get_improved_soliton_tree_child_process,
+                kwds=dict(
+                    config=config,
+                    sw_data=sw_data,
+                    search_radius=search_radius,
+                    tree=tree,
+                    job_id=i,
+                    n_jobs=n_jobs,
+                    cache_file_path=get_cache_file_path(
+                        cache_dir, 'tree', i,
+                    ),
+                    logger_name=logger_name,
+                ),
+            ) for i, tree in enumerate(trees)
+        ]
+        pool.close()
+        pool.join()
+
+        improved_trees = []
+
+        for result in results:
+            if cache_dir is None:
+                improved_tree = result.get()
+                # NOTE: Need to replace all the branch points
+                # in a soliton tree with those in sw_data
+                # because a child process gets a copy of each.
+                improved_tree.root_branch_point = sw_data[
+                    improved_tree.root_branch_point.label
+                ]
+                for street in improved_tree.streets:
+                    if (len(street.parents) == 1):
+                        parent = street.parents[0]
+                        if isinstance(parent, BranchPoint):
+                            street.parents = [sw_data[parent.label]]
+            else:
+                # XXX: Do we really need the following?
+                # It's probably good to use cache files
+                # just in case the internal queue size
+                # of the pool is too small.
+                improved_tree_file_path = result.get()
+                #improved_tree = SolitonTree(logger_name=logger_name)
+                improved_tree = SolitonTree()
+                improved_tree.load(improved_tree_file_path, sw_data)
+
+            improved_trees.append(improved_tree)
+    except Exception as e:
+        logger.warning(
+            'parallel_get_improved_soliton_tree() caught {}: {}; '
+            .format(type(e), e.args,)
+        )
+        if e == KeyboardInterrupt or e == SystemExit:
+            logger.warning('Terminates children processes...')
+            pool.terminate()
+            pool.join()
+        raise e
+
+    return improved_trees
+
+def get_n_processes(
+    n_processes=None,
+    n_jobs=None,
+    logger_name='loom',
+):
+    logger = logging.getLogger(logger_name)
+    n_cpu = multiprocessing.cpu_count()
+    if (n_processes == 0):
+        # Use all the CPUs.
+        n_processes = n_cpu
+    elif (n_processes < 0):
+        # Leave |n_processes| CPUs.
+        if(n_cpu > -n_processes):
+            n_processes = n_cpu - (-n_processes)
+        else:
+            logger.warning('The number of CPUs is smaller than {}.'
+                           .format(-n_processes))
+            logger.warning('Set n_processes to 1.')
+            n_processes = 1
+    elif (n_cpu < n_processes):
+            logger.warning('The number of CPUs is smaller than {}.'
+                           .format(n_processes))
+            logger.warning('Set n_processes to {}.'.format(n_cpu))
+            n_processes = n_cpu
+
+    if n_jobs < n_processes:
+        n_processes = n_jobs
+
+    return n_processes
 
 
 def get_cache_file_path(cache_dir, data_file_prefix, i):

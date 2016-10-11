@@ -216,7 +216,8 @@ class LoomDB(object):
             logging_file_name = os.path.join(cache_dir, 'log')
         elif (
             task == 'load' or
-            task == 'rotate_back'
+            task == 'rotate_back' or
+            task == 'plot_two_way_streets'
         ):
             # Do not create a logging file
             logging_file_name = None

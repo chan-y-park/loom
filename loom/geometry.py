@@ -860,8 +860,22 @@ class SWDataBase(object):
                 mt_params=mt_params,
             )
 
+        self.set_obj_dict()
+
         logger.info('Seiberg-Witten data before trivialization:')
         self.print_info()
+
+    def __getitem__(self, key):
+        return self.obj_dict[key]
+
+    def set_obj_dict(self):
+        self.obj_dict = {}
+        for p in (
+            self.regular_punctures + self.irregular_punctures +
+            self.ffr_ramification_points + self.branch_points +
+            self.irregular_singularities
+        ):
+            self.obj_dict[p.label] = p
 
     def is_trivialized(self):
         return False

@@ -2,7 +2,7 @@ import logging
 import numpy
 import scipy
 import sympy
-import cmath
+# import cmath
 
 import constants
 
@@ -300,6 +300,17 @@ class SWall(object):
             ]
         except KeyError:
             pass
+
+    def set_refs(self, obj_dict):
+        self.parents = [
+            obj_dict[parent_label]
+            for parent_label in self.parents
+        ]
+        self.cuts_intersections = [
+            [obj_dict[br_loc_label], t, d]
+            for br_loc_label, t, d
+            in self.cuts_intersections
+        ]
 
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]

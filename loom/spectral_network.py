@@ -35,26 +35,27 @@ class Street(SWall):
         s_wall=None,
         end_z=None,
         end_t=None,
-        parents=None,
-        phase=None,
+        #parents=None,
+        #phase=None,
+        tree_label=None,
+        label=None,
         logger_name='loom',
     ):
         logger = logging.getLogger(logger_name)
 
         super(Street, self).__init__(logger_name=logger_name)
-        self.phase = phase
-        self.s_wall = s_wall
-        self.parents = parents
+        #self.phase = phase
+        #self.parents = parents
+        self.label = label
 
-        if self.s_wall is not None:
-            self.label = self.s_wall.label
+        if s_wall is not None:
             if end_t is None:
                 end_t = numpy.argmin(abs(s_wall.z - end_z))
 
             if end_t == 0:
                 logger.warning(
-                    'Street.__init__(): end_t == 0 for {} at phase = {}.'
-                    .format(self.label, self.phase)
+                    '{}, {}: __init__(): end_t == 0.'
+                    .format(tree_label, self.label)
                 )
                 # XXX: To draw this street, include at least two points.
                 end_t = 1
@@ -65,16 +66,15 @@ class Street(SWall):
             self.z = s_wall.z[:end_t + 1]
             self.x = s_wall.x[:end_t + 1]
             self.M = s_wall.M[:end_t + 1]
-            # Z is the central charge, i.e. integration of the SW diff
-            # along the street.
-            self.Z = self.M[-1] * exp(self.phase * 1j)
+            self.parents = s_wall.parents
+#            # Z is the central charge, i.e. integration of the SW diff
+#            # along the street.
+#            self.Z = self.M[-1] * exp(phase * 1j)
 
-            if self.s_wall.is_trivialized():
-                self.trivialize()
+            if s_wall.is_trivialized():
+                self.trivialize(s_wall)
 
-    def trivialize(self):
-        s_wall = self.s_wall
-
+    def trivialize(self, s_wall):
         if not s_wall.is_trivialized():
             return None
 
@@ -92,30 +92,30 @@ class Street(SWall):
             )
         self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
-    def get_json_data(self):
-        json_data = super(Street, self).get_json_data()
-        json_data['phase'] = self.phase
-        json_data['s_wall'] = self.s_wall.label
-        json_data['Z'] = ctor2(self.Z)
-
-        return json_data
-
-    def set_from_json_data(self, json_data=None, obj_dict=None,):
-        super(Street, self).set_from_json_data(json_data)
-        self.parents = [
-            obj_dict[parent_label]
-            for parent_label in self.parents
-        ]
-        self.cuts_intersections = [
-            [obj_dict[br_loc_label], t, d]
-            for br_loc_label, t, d
-            in self.cuts_intersections
-        ]
-
-        self.phase = json_data['phase']
-        self.s_wall = obj_dict[json_data['s_wall']]
-        self.label = self.s_wall.label
-        self.Z = r2toc(json_data['Z'])
+#    def get_json_data(self):
+#        json_data = super(Street, self).get_json_data()
+#        json_data['phase'] = self.phase
+#        json_data['s_wall'] = self.s_wall.label
+#        json_data['Z'] = ctor2(self.Z)
+#
+#        return json_data
+#
+#    def set_from_json_data(self, json_data):
+#        super(Street, self).set_from_json_data(json_data)
+#        self.parents = [
+#            obj_dict[parent_label]
+#            for parent_label in self.parents
+#        ]
+#        self.cuts_intersections = [
+#            [obj_dict[br_loc_label], t, d]
+#            for br_loc_label, t, d
+#            in self.cuts_intersections
+#        ]
+#
+#        self.phase = json_data['phase']
+#        self.s_wall = obj_dict[json_data['s_wall']]
+#        self.label = self.s_wall.label
+#        self.Z = r2toc(json_data['Z'])
 
 
 class SolitonTree:
@@ -125,59 +125,67 @@ class SolitonTree:
         root_s_wall_end_t=None,
         root_branch_point=None,
         phase=None,
+        label=None,
         logger_name='loom',
     ):
         self.phase = phase
         self.logger_name = logger_name
-#        # Z is the central charge, i.e. integration of the SW diff
-#        # along the tree.
-#        self.Z = None
         self.root_branch_point = root_branch_point
+        self.label = label
+
         if root_s_wall is None:
             self.streets = []
         else:
             root_street = Street(
                 s_wall=root_s_wall,
                 end_t=root_s_wall_end_t,
-                parents=root_s_wall.parents,
-                phase=self.phase,
+                #parents=root_s_wall.parents,
+                #phase=self.phase,
+                tree_label='{} @ {}'.format(self.label, self.phase),
+                label='Street #0',
             )
             self.streets = [root_street]
             self.grow(root_street)
-
-#            # Set the value of Z from those of its streets.
-#            self.Z = 0
-#            for street in self.streets:
-#                self.Z += street.Z
+        # stability is the number of streets after an improvement.
+        # If it is greater than one, it means an improvement will result
+        # in multiple streets; if it is zero, it means the street
+        # will disappear after an improvement
+        self.stability = None
 
     def Z(self):
         # Get the value of Z from those of its streets.
         Z = 0
         for street in self.streets:
-            Z += street.Z
+            Z += street.M[-1] * exp(self.phase * 1j)
         return Z
 
     def get_json_data(self):
         json_data = {
             'phase': self.phase,
-#            'Z': ctor2(self.Z()),
             'root_branch_point': self.root_branch_point.label,
             'streets': [street.get_json_data() for street in self.streets],
+            'stability': self.stability
         }
 
         return json_data
 
-    def set_from_json_data(self, json_data=None, obj_dict=None,):
+    def set_from_json_data(self, json_data=None, sw_data=None,):
         self.phase = json_data['phase']
-#        self.Z = r2toc(json_data['Z'])
-        self.root_branch_point = obj_dict[json_data['root_branch_point']]
+        self.root_branch_point = sw_data[json_data['root_branch_point']]
+
+        obj_dict = sw_data.obj_dict.copy()
+
         self.streets = []
         for street_data in json_data['streets']:
             a_street = Street()
-            a_street.set_from_json_data(
-                json_data=street_data, obj_dict=obj_dict,
-            )
+            a_street.set_from_json_data(street_data)
             self.streets.append(a_street)
+            obj_dict[a_street.label] = a_street
+
+        for street in self.streets: 
+            street.set_refs(obj_dict)
+
+        self.stability = json_data['stability']
 
     def save(self, file_path):
         with open(file_path, 'wb') as fp:
@@ -198,8 +206,10 @@ class SolitonTree:
             parent_street = Street(
                 s_wall=parent,
                 end_z=street.z[0],
-                parents=parent.parents,
-                phase=self.phase,
+                #parents=parent.parents,
+                #phase=self.phase,
+                tree_label='{} @ {}'.format(self.label, self.phase),
+                label='Street #{}'.format(len(self.streets)),
             )
             self.streets.append(parent_street)
             self.grow(parent_street)
@@ -212,9 +222,11 @@ class SolitonTree:
         sw_data=None,
         search_radius=None,
         max_n_iters=constants.SOLITON_TREE_MAX_N_ITERS,
+        cache_file_path=None,
         logger_name='loom',
+        label=None,
     ):
-        # logger = logging.getLogger(self.logger_name)
+        logger = logging.getLogger(self.logger_name)
         step_size = config['size_of_small_step']
         n_steps = config['num_of_steps']
         accuracy = config['accuracy']
@@ -224,13 +236,16 @@ class SolitonTree:
         N, phi_k_n_czes, phi_k_d_czes = sw_data.ffr_curve.get_phi_k_czes()
 
         tree = self
+        root_street = tree.streets[0]
+        z_start = root_street.z[-1]
         z_end = self.root_branch_point.z
         for nth in range(max_n_iters):
-            root_street = tree.streets[0]
-            z_start = root_street.z[-1]
             min_D_z = abs(z_end - z_start)
 
-            n_pts = int(abs(z_end - z_start) / step_size)
+            n_pts = int(min_D_z / step_size)
+            if n_pts < constants.SOLITON_TREE_MIN_N_DZ_STEPS:
+                n_pts = constants.SOLITON_TREE_MIN_N_DZ_STEPS
+
             dz = (z_end - z_start) / (n_pts - 1) 
             zs = numpy.array(
                 [z_start + dz * i for i in range(n_pts)],
@@ -283,7 +298,7 @@ class SolitonTree:
                         M_0=0,
                         parents=[bp],
                         parent_roots=[],
-                        label=street.label,
+                        label='Street #{}'.format(len(seed_s_walls)),
                         n_steps=n_steps,
                         logger_name=logger_name,
                     )
@@ -299,25 +314,61 @@ class SolitonTree:
                 sw_data=sw_data,
                 seed_s_walls=seed_s_walls,
                 num_of_iterations=max_gen,
+                s_wall_label_prefix='Street',
             )
             trees = mini_sn.find_two_way_streets(
                 config=config,
                 sw_data=sw_data,
                 search_radius=search_radius,
             )
-            if len(trees) != 1:
-                raise NotImplementedError
-
-            new_tree = trees[0]
-            new_root_street = new_tree.streets[0]
-            new_z_start = new_root_street.z[-1]
-            if min_D_z < abs(z_end - new_z_start):
+            stability = len(trees)
+            if len(trees) == 1:
+                tree = trees[0]
+            elif len(trees) > 1:
+                logger.warning(
+                    'More than one soliton tree are obtained '
+                    'while improving a soliton tree '
+                    'with root street = {}, root branch point = {} '
+                    'from a spectral network @ phase = {}.'
+                    .format(
+                        self.streets[0].label,
+                        self.root_branch_point.label,
+                        self.phase,
+                    )
+                )
+                break
+            elif len(trees) == 0:
+                logger.warning(
+                    'Failed at improving a soliton tree.'
+                    'with root street = {}, root branch point = {} '
+                    'from a spectral network @ phase = {}.'
+                    .format(
+                        self.streets[0].label,
+                        self.root_branch_point.label,
+                        self.phase,
+                    )
+                )
                 break
 
-            tree = new_tree
+            root_street = tree.streets[0]
+            z_start = root_street.z[-1]
 
+            logger.debug('min_D_z = {}'.format(min_D_z))
+            logger.debug('abs(z_end - z_start) = {}'
+                         .format(abs(z_end - z_start)))
+#            if min_D_z < abs(z_end - z_start):
+#                break
+
+            logger.debug('Delta_theta = {}'.format(Delta_theta))
             if abs(Delta_theta) < accuracy:
                 break
+
+        tree.stability = stability
+        tree.label = label
+
+        if cache_file_path is not None:
+            logger.info('Saving cache data to {}.'.format(cache_file_path))
+            self.save(cache_file_path)
 
         return tree
 
@@ -325,9 +376,9 @@ class SolitonTree:
         for street in self.streets:
             street.set_z_rotation(z_rotation)
 
-    def trivialize(self):
-        for street in self.streets:
-            street.trivialize()
+#    def trivialize(self):
+#        for street in self.streets:
+#            street.trivialize()
 
     def is_trivialized(self):
         for street in self.streets:
@@ -443,15 +494,16 @@ class SpectralNetwork:
 
         # Substitute labels with objects
         for s_wall in self.s_walls:
-            s_wall.parents = [
-                obj_dict[parent_label]
-                for parent_label in s_wall.parents
-            ]
-            s_wall.cuts_intersections = [
-                [obj_dict[br_loc_label], t, d]
-                for br_loc_label, t, d
-                in s_wall.cuts_intersections
-            ]
+#            s_wall.parents = [
+#                obj_dict[parent_label]
+#                for parent_label in s_wall.parents
+#            ]
+#            s_wall.cuts_intersections = [
+#                [obj_dict[br_loc_label], t, d]
+#                for br_loc_label, t, d
+#                in s_wall.cuts_intersections
+#            ]
+            s_wall.set_refs(obj_dict)
 
         for joint_data in json_data['joints']:
             a_joint = Joint()
@@ -467,7 +519,7 @@ class SpectralNetwork:
             for tree_data in json_data['soliton_trees']:
                 a_tree = SolitonTree()
                 a_tree.set_from_json_data(
-                    json_data=tree_data, obj_dict=obj_dict,
+                    json_data=tree_data, sw_data=sw_data,
                 )
                 self.soliton_trees.append(a_tree)
         except KeyError:
@@ -488,6 +540,7 @@ class SpectralNetwork:
         downsample_ratio=None,
         seed_s_walls=None,
         num_of_iterations=None,
+        s_wall_label_prefix='S-wall'
     ):
         """
         Grow the spectral network by seeding SWall's
@@ -596,7 +649,9 @@ class SpectralNetwork:
                             sw_data, self.phase, bp, config, self.logger_name,
                         )
                         for z_0, x_0, M_0 in s_wall_seeds:
-                            label = 'S-wall #{}'.format(len(new_s_walls))
+                            label = '{} #{}'.format(
+                                s_wall_label_prefix, len(new_s_walls)
+                            )
                             new_s_walls.append(
                                 SWall(
                                     z_0=z_0,
@@ -867,8 +922,9 @@ class SpectralNetwork:
             for joint in new_joints:
                 joint.label = 'joint #{}'.format(len(self.joints))
                 self.joints.append(joint)
-                label = 'S-wall #{}'.format(
-                    len(self.s_walls) + len(new_s_walls)
+                label = '{} #{}'.format(
+                    s_wall_label_prefix,
+                    len(self.s_walls) + len(new_s_walls),
                 )
                 if (
                     config['mass_limit'] is None or
@@ -1351,6 +1407,7 @@ class SpectralNetwork:
                         root_s_wall_end_t=min_t,
                         root_branch_point=bp,
                         phase=self.phase,
+                        label='Soliton Tree #{}'.format(len(soliton_trees)),
                     )
                 except RuntimeError as e:
                     logger.warning(str(e))
