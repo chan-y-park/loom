@@ -174,9 +174,9 @@ def parallel_get_spectral_network(
         for result in results:
             new_sn = SpectralNetwork(logger_name=logger_name)
             if cache_dir is None:
+                json_data = result.get().get_json_data()
                 new_sn.set_from_json_data(
-                    result.get().get_json_data(),
-                    sw_data,
+                    json_data, sw_data,
                 )
                 # NOTE: Need to replace all the branch points
                 # in a spectral network with those in sw_data,
@@ -309,27 +309,32 @@ def parallel_get_improved_soliton_tree(
         improved_trees = []
 
         for result in results:
+            improved_tree = SolitonTree(logger_name=logger_name)
             if cache_dir is None:
-                improved_tree = result.get()
-                # NOTE: Need to replace all the branch points
-                # in a soliton tree with those in sw_data
-                # because a child process gets a copy of each.
-                improved_tree.root_branch_point = sw_data[
-                    improved_tree.root_branch_point.label
-                ]
-                for street in improved_tree.streets:
-                    if (len(street.parents) == 1):
-                        parent = street.parents[0]
-                        if isinstance(parent, BranchPoint):
-                            street.parents = [sw_data[parent.label]]
+                json_data = result.get().get_json_data()
+                improved_tree.set_from_json_data(
+                    json_data, sw_data,
+                )
+
+#                improved_tree = result.get()
+#                # NOTE: Need to replace all the branch points
+#                # in a soliton tree with those in sw_data
+#                # because a child process gets a copy of each.
+#                improved_tree.root_branch_point = sw_data[
+#                    improved_tree.root_branch_point.label
+#                ]
+#                for street in improved_tree.streets:
+#                    if (len(street.parents) == 1):
+#                        parent = street.parents[0]
+#                        if isinstance(parent, BranchPoint):
+#                            street.parents = [sw_data[parent.label]]
             else:
                 # XXX: Do we really need the following?
                 # It's probably good to use cache files
                 # just in case the internal queue size
                 # of the pool is too small.
                 improved_tree_file_path = result.get()
-                #improved_tree = SolitonTree(logger_name=logger_name)
-                improved_tree = SolitonTree()
+                #improved_tree = SolitonTree()
                 improved_tree.load(improved_tree_file_path, sw_data)
 
             improved_trees.append(improved_tree)

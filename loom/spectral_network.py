@@ -386,7 +386,7 @@ class SolitonTree:
 
         if cache_file_path is not None:
             logger.info('Saving cache data to {}.'.format(cache_file_path))
-            self.save(cache_file_path)
+            tree.save(cache_file_path)
 
         return tree
 
