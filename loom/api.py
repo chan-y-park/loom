@@ -1164,9 +1164,6 @@ class SpectralNetworkData:
     ):
         logger = logging.getLogger(self.logger_name)
 
-        if result_queue is not None:
-            result_queue.put(self)
-
         if logging_queue is not None:
             # Put a mark that generating spectral networks is done.
             try:
@@ -1175,6 +1172,10 @@ class SpectralNetworkData:
                 logger.warning(
                     'Failed in putting a finish mark in the logging queue.'
                 )
+
+        if result_queue is not None:
+            result_queue.put(self)
+
 #        if cache_dir is not None:
 #            version_file_path = os.path.join(cache_dir, 'version')
 #            save_version(version_file_path)
