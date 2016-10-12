@@ -616,7 +616,8 @@ class SpectralNetwork:
         ]
         bpzs = [
             p.z for p in
-            sw_data.ffr_ramification_points + sw_data.irregular_punctures
+            #sw_data.ffr_ramification_points + sw_data.irregular_punctures
+            sw_data.ffr_ramification_points
             if p.z != oo
         ]
 
@@ -1188,7 +1189,8 @@ class SpectralNetwork:
         ]
         bpzs = [
             p.z for p in
-            sw_data.ffr_ramification_points + sw_data.irregular_punctures
+            #sw_data.ffr_ramification_points + sw_data.irregular_punctures
+            sw_data.ffr_ramification_points
             if p.z != oo
         ]
 

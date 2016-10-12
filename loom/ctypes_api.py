@@ -200,7 +200,8 @@ class CTypesSWall:
 
         bpzs = [
             p.z for p in
-            sw_data.ffr_ramification_points + sw_data.irregular_punctures
+            #sw_data.ffr_ramification_points + sw_data.irregular_punctures
+            sw_data.ffr_ramification_points
             if p.z != oo
         ]
         self.bpz = numpy.array(bpzs, dtype=numpy.complex128)

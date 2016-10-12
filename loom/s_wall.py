@@ -407,7 +407,7 @@ class SWall(object):
                     continue
                 else:
                     if msg.s_wall_size < array_size:
-                        logger.debug(
+                        logger.info(
                             'Growing {} stopped at t = {}: {}.'
                             .format(self.label, msg.s_wall_size, msg)
                         )

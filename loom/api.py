@@ -292,7 +292,9 @@ class SpectralNetworkData:
         self, phases=None, n_processes=0, extend=False,
         result_queue=None, logging_queue=None, cache_dir=None,
         method=None,
-        downsample=False, downsample_ratio=None,
+        #downsample=False,
+        downsample=True,
+        downsample_ratio=None,
     ):
         logger = logging.getLogger(self.logger_name)
 
