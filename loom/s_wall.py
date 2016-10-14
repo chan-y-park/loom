@@ -544,7 +544,7 @@ class SWall(object):
 
         root_0 = self.local_roots[0]
         if len(self.cuts_intersections) > 0:
-            t_0 = floor(self.cuts_intersections[0][1] / 2)
+            t_0 = int(floor(self.cuts_intersections[0][1] / 2))
         z_0 = self.z[t_0]
         ode_xs_0 = self.x[t_0]
         Dx_0 = ode_xs_0[0] - ode_xs_0[1]

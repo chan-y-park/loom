@@ -285,7 +285,9 @@ def get_descendant_roots(parent_roots, g_data):
 #        descendant_roots += root_buffer
 
     for root_1, root_2 in itertools.combinations(parent_roots, 2):
-        descendant_roots.append(root_1 + root_2)
+        root_sum = root_1 + root_2
+        if is_root(root_sum, g_data):
+            descendant_roots.append(root_sum)
 
     return descendant_roots
 

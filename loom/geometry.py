@@ -1478,6 +1478,8 @@ def get_ramification_points_multiplicity(
         # Check if z_i is one of the punctures.
         is_puncture = False
         for p in punctures:
+            if p.z == oo:
+                continue
             if abs(z_i - p.Ciz) < accuracy:
                 is_puncture = True
         if is_puncture:

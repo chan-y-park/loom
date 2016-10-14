@@ -10,6 +10,8 @@ import json
 
 from cmath import exp
 from scipy import integrate
+from sympy import oo
+
 from s_wall import (
     SWall, Joint, get_s_wall_seeds, MIN_NUM_OF_DATA_PTS,
 )
@@ -311,9 +313,10 @@ class SpectralNetwork:
 
         # Gather singularities of the ODE.
         punctures = sw_data.regular_punctures + sw_data.irregular_punctures
-        ppzs = [p.z for p in punctures]
+        ppzs = [p.z for p in punctures if p.z != oo]
         bpzs = [bp.z for bp in sw_data.branch_points +
-                sw_data.irregular_singularities]
+                sw_data.irregular_singularities
+                if bp.z != oo]
 
         num_of_iterations = config['num_of_iterations']
         n_steps = config['num_of_steps']
