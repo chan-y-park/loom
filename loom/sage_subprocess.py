@@ -1,7 +1,8 @@
 # Force integer division to give a float, i.e. 1/2 = 0.5.
 from __future__ import division
 from sympy import sympify, poly
-from sympy.mpmath import mp, mpc
+#from sympy.mpmath import mp, mpc
+from mpmath import mp, mpc
 import logging
 import os
 import subprocess
