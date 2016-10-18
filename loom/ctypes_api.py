@@ -44,11 +44,17 @@ array_2d_complex = numpy.ctypeslib.ndpointer(
 class Message(ctypes.Structure):
     _fields_ = [
         ('s_wall_size', ctypes.c_int),
+        ('step', ctypes.c_int),
+        ('step_size', ctypes.c_double),
         ('rv', ctypes.c_int),
     ]
     ERROR_SAME_XS = -1
     NEAR_PUNCTURE = 1
     MASS_LIMIT = 2
+    NEAR_BRANCH_POINT = 3
+
+    def near_branch_point(self):
+        return self.rv == self.NEAR_BRANCH_POINT
 
     def __str__(self):
         if self.rv == self.ERROR_SAME_XS:
@@ -57,6 +63,8 @@ class Message(ctypes.Structure):
             msg = 'near a puncture'
         elif self.rv == self.MASS_LIMIT:
             msg = 'reached the mass limit'
+        elif self.near_branch_point():
+            msg = 'near a branch point'
 
         return msg
 

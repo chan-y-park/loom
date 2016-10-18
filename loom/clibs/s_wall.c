@@ -18,6 +18,8 @@ int grow(
     twist_line* tl, int n_tl
 ) {
     int s_wall_size = msg->s_wall_size;
+    int i = msg->step;
+    double dt = msg->step_size;
     int max_steps = msg->rv;
 
     diff_params phi_n;
@@ -35,13 +37,15 @@ int grow(
     double complex z_i, x_i_1, x_i_2, x_tmp;
     double M_i;
 
-    int i = 0;
+    //int i = 0;
     double min_d;
     double d;
-    double dt;
-    double f_dt;
+    //double dt;
+    //double f_dt;
     double complex Dx_i;
     double avg_z_r;
+
+    msg->rv = 0;
 
     while (i < (s_wall_size - 1)) {
         z_i = z[i];
@@ -49,7 +53,7 @@ int grow(
         x_i_2 = x[i]._2;
         M_i = M[i];
 
-        i++;
+        //i++;
         if (i > MIN_NUM_OF_DATA_PTS) {
             min_d = np.size_of_puncture_cutoff;
             for (int j = 0; j < n_ppz; j++) {
@@ -57,21 +61,23 @@ int grow(
                 if (d < min_d) min_d = d;
             }
             if (min_d < np.size_of_puncture_cutoff) {
-                msg->s_wall_size = i;
+                //msg->s_wall_size = i;
+                //msg->step = i
                 msg->rv = NEAR_PUNCTURE;
-                return 0;
+                //return 0;
+                break;
             }
 
             if (M_i > np.mass_limit) {
-                msg->s_wall_size = i;
+                //msg->s_wall_size = i;
+                //msg->step = i
                 msg->rv = MASS_LIMIT;
-                return 0;
+                //return 0;
+                break;
             }
         }
 
         Dx_i = x_i_1 - x_i_2;
-        f_dt = cabs(Dx_i);
-        if (f_dt > 1.0) f_dt = 1.0;
 
         min_d = np.size_of_bp_neighborhood;
         for (int j = 0; j < n_bpz; j++) {
@@ -79,13 +85,25 @@ int grow(
             if (d < min_d) min_d = d;
         }
         if (min_d < np.size_of_bp_neighborhood) {
+            //msg->step = i;
+            msg->rv = NEAR_BRANCH_POINT;
+            //return 0;
+            break;
+        }
+/*
+        f_dt = cabs(Dx_i);
+        if (f_dt > 1.0) f_dt = 1.0;
+        if (min_d < np.size_of_bp_neighborhood) {
             dt = np.size_of_small_step * f_dt;
-        } else {
+        } 
+        else {
             dt = np.size_of_large_step * f_dt;
         }
-
+*/
         //z[i] = z_i + dt * cexp((carg(c_dz_dt[0]) - carg(Dx_i))*I);
         //M[i] = M_i + cabs(Dx_i) * dt;
+
+        i++;
         z[i] = z_i + dt * c_dz_dt[0] / Dx_i;
         M[i] = M_i + dt;
 
@@ -105,12 +123,14 @@ int grow(
         x[i]._2 = get_x(N, phi_n, phi_d, z[i], x_i_2, np.accuracy, max_steps);
 
         if (cabs(x[i]._1 - x[i]._2) < np.accuracy) {
-            msg->s_wall_size = i;
+            //msg->step = i;
             msg->rv = ERROR_SAME_XS;
-            return 0;
+            //return 0;
+            break;
         }
 
     }
 
+    msg->step = i;
     return 0;
 }

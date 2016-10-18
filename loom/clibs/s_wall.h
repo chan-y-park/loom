@@ -1,4 +1,4 @@
-typedef struct {int s_wall_size; int rv;} message;
+typedef struct {int s_wall_size; int step; double step_size; int rv;} message;
 typedef struct {double complex _1; double complex _2;} ode_xs; 
 typedef struct {
     double size_of_small_step;
@@ -13,6 +13,7 @@ typedef struct {double start; double end;} twist_line;
 #define ERROR_SAME_XS -1
 #define NEAR_PUNCTURE 1
 #define MASS_LIMIT 2
+#define NEAR_BRANCH_POINT 3
 
 #define MIN_NUM_OF_DATA_PTS 3
 
