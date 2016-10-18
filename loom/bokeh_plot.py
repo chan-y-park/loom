@@ -25,6 +25,7 @@ def get_spectral_network_bokeh_plot(
     marked_points=[],
     without_errors=False,
     download=False,
+    downsample=True,
     downsample_ratio=None,
 ):
     logger = logging.getLogger(logger_name)
@@ -218,7 +219,7 @@ def get_spectral_network_bokeh_plot(
             for tree in spectral_network_data.soliton_trees:
                 tree_data = get_s_wall_plot_data(
                     tree.streets, sw_data, logger_name, tree.phase,
-                    downsample_ratio=downsample_ratio,
+                    downsample=downsample, downsample_ratio=downsample_ratio,
                 )
                 snds.data['spectral_networks'].append(tree_data)
                 pds.data['phase'].append('{:.3f}'.format(tree.phase))
@@ -236,6 +237,7 @@ def get_spectral_network_bokeh_plot(
                     # Fill with empty data.
                     empty_data = get_s_wall_plot_data(
                         [], sw_data, logger_name, theta_i,
+                        downsample=downsample,
                         downsample_ratio=downsample_ratio,
                     )
                     data_entry.append(empty_data)
@@ -243,6 +245,7 @@ def get_spectral_network_bokeh_plot(
                     for tree in soliton_trees:
                         tree_data = get_s_wall_plot_data(
                             tree.streets, sw_data, logger_name, theta_i,
+                            downsample=downsample,
                             downsample_ratio=downsample_ratio,
                         )
                         # The first data contains all the soliton trees
@@ -274,6 +277,7 @@ def get_spectral_network_bokeh_plot(
 
             sn_data = get_s_wall_plot_data(
                 sn.s_walls, sw_data, logger_name, sn.phase,
+                downsample=downsample,
                 downsample_ratio=downsample_ratio,
             )
             snds.data['spectral_networks'].append(sn_data)
@@ -484,7 +488,7 @@ def get_spectral_network_bokeh_plot(
 
 def get_s_wall_plot_data(
     s_walls, sw_data, logger_name, sn_phase,
-    downsample_ratio=None,
+    downsample=True, downsample_ratio=None,
 ):
     logger = logging.getLogger(logger_name)
 
@@ -507,7 +511,8 @@ def get_s_wall_plot_data(
         g_data = sw_data.g_data
 
     for s_wall in s_walls:
-        s_wall.downsample(ratio=downsample_ratio)
+        if downsample:
+            s_wall.downsample(ratio=downsample_ratio)
         alpha = 1.0 / s_wall.get_generation()
         z_segs = s_wall.get_segments()
         for start, stop in z_segs:
