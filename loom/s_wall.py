@@ -429,7 +429,7 @@ class SWall(object):
                     self.M,
                 )
 
-            elif current_method == constants.LIB_NUMBA
+            elif current_method == constants.LIB_NUMBA:
                 logger.debug(
                     'Growing {} using Numba...'
                     .format(self.label)
@@ -504,13 +504,13 @@ class SWall(object):
                         (min([abs(z_i - bpz) for bpz in bpzs]) <
                          size_of_bp_neighborhood)
                     ):
-                        if stop_condition == constants.IN_BP_NBHD
+                        if stop_condition == constants.IN_BP_NBHD:
                             msg.rv = constants.IN_BP_NBHD
                             break
                         else:
                             dt = size_of_small_step * step_size_factor
                     else:
-                        if stop_condition == constants.OUT_BP_NBHD
+                        if stop_condition == constants.OUT_BP_NBHD:
                             msg.rv = constants.OUT_BP_NBHD
                             break
                         else:
@@ -1631,7 +1631,7 @@ def _grow(
     msg.stop_condition = stop_condition
     msg.rv = numba_rv
 
-    return rv 
+    return msg 
 
 
 # XXX: Numba JIT complier fails to compile the following,

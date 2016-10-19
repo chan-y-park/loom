@@ -25,7 +25,8 @@ def get_spectral_network_bokeh_plot(
     marked_points=[],
     without_errors=False,
     download=False,
-    downsample=True,
+    #downsample=True,
+    downsample=False,
     downsample_ratio=None,
 ):
     logger = logging.getLogger(logger_name)
@@ -488,7 +489,9 @@ def get_spectral_network_bokeh_plot(
 
 def get_s_wall_plot_data(
     s_walls, sw_data, logger_name, sn_phase,
-    downsample=True, downsample_ratio=None,
+    #downsample=True,
+    downsample=False,
+    downsample_ratio=None,
 ):
     logger = logging.getLogger(logger_name)
 
