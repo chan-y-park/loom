@@ -45,26 +45,36 @@ class Message(ctypes.Structure):
     _fields_ = [
         ('s_wall_size', ctypes.c_int),
         ('step', ctypes.c_int),
-        ('step_size', ctypes.c_double),
+        ('stop_condition', ctypes.c_int),
         ('rv', ctypes.c_int),
     ]
-    ERROR_SAME_XS = -1
-    NEAR_PUNCTURE = 1
-    MASS_LIMIT = 2
-    NEAR_BRANCH_POINT = 3
 
-    def near_branch_point(self):
-        return self.rv == self.NEAR_BRANCH_POINT
+    def error_same_xs(self):
+        return self.rv == constants.ERROR_SAME_XS
+
+    def near_puncture(self):
+        return self.rv == constants.NEAR_PUNCTURE
+
+    def mass_limit(self):
+        return self.rv == constants.MASS_LIMIT
+
+    def in_bp_nbhd(self):
+        return self.rv == constants.IN_BP_NBHD
+
+    def out_bp_nbhd(self):
+        return self.rv == constants.OUT_BP_NBHD
 
     def __str__(self):
-        if self.rv == self.ERROR_SAME_XS:
+        if self.error_same_xs():
             msg = 'x1 == x2'
-        elif self.rv == self.NEAR_PUNCTURE:
+        elif self.near_puncture():
             msg = 'near a puncture'
-        elif self.rv == self.MASS_LIMIT:
+        elif self.mass_limit():
             msg = 'reached the mass limit'
-        elif self.near_branch_point():
-            msg = 'near a branch point'
+        elif self.in_bp_nbhd():
+            msg = 'inside the neighborhood of a branch point'
+        elif self.out_bp_nbhd():
+            msg = 'outside the neighborhood of a branch point'
 
         return msg
 

@@ -16,6 +16,16 @@ LIB_SCIPY_ODE = 1
 LIB_NUMBA = 2
 LIB_PYTHON = 3
 
+# NOTE: The following should have the same values as those in clibs/s_wall.h
+ERROR_SAME_XS = -1
+NEAR_PUNCTURE = 1
+MASS_LIMIT = 2
+IN_BP_NBHD = 3
+OUT_BP_NBHD = 4
+
+# Additional error code for SciPy ODE
+ERROR_SCIPY_ODE = -2
+
 # Maximum # of steps when using Newton's method.
 NEWTON_MAX_STEPS = 100
 
