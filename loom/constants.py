@@ -3,7 +3,7 @@
 F_SIZE_OF_SMALL_STEPS = 1e-2
 # F_SIZE_OF_LARGE_STEPS = 1e-2
 F_SIZE_OF_LARGE_STEPS = 1e-1
-F_SIZE_OF_BP_NEIGHBORHOOD = .5
+F_SIZE_OF_BP_NEIGHBORHOOD = .2
 F_SIZE_OF_PUNCTURE_CUTOFF = 1e-2
 
 # Large numbers for infinity.
@@ -28,6 +28,8 @@ ERROR_SCIPY_ODE = -2
 
 # Maximum # of steps when using Newton's method.
 NEWTON_MAX_STEPS = 100
+# Max # of steps to resolve the error of getting the same x's.
+SAME_XS_MAX_STEPS = 5
 
 # Default min/max # of data points per S-wall.
 S_WALL_MIN_N_DATA_PTS = 100

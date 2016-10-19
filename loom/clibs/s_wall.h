@@ -23,5 +23,7 @@ typedef struct {double start; double end;} twist_line;
 
 #define MIN_NUM_OF_DATA_PTS 3
 
+#define SAME_XS_MAX_STEPS 5
+
 #define N_INF -1e308
 #define P_INF +1e308

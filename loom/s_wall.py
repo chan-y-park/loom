@@ -376,7 +376,8 @@ class SWall(object):
         array_size = len(self.z)
         
         if method is not None:
-            method_in_bp_nbhd = method
+            method_in_bp_nbhd = constants.LIB_SCIPY_ODE
+            #method_in_bp_nbhd = method
             method_out_bp_nbhd = method
         else:
             method_in_bp_nbhd = constants.LIB_SCIPY_ODE
@@ -607,8 +608,6 @@ class SWall(object):
 
                 # End of inner while()
 
-
-
                 if step == (array_size - 1):
                     finished = True
             else:
@@ -648,7 +647,7 @@ class SWall(object):
                 count -= 1
                 logger.warning(
                     'Failed in growing {}: {} at t = {}.'
-                    .format(self.label, msg, msg.step)
+                   .format(self.label, msg, msg.step)
                 )
 
                 logger.warning('Try using SciPy ODE.')
@@ -1601,36 +1600,58 @@ def _grow(
                 else:
                     dt = size_of_large_step * f_dt
 
-        # z_n = z_i + dt * exp(1j * (cmath.phase(c_dz_dt) - cmath.phase(Dx_i)))
-        # M_n = M_i + abs(Dx_i) * dt
-        z_n = z_i + dt * c_dz_dt / Dx_i
-        M_n = M_i + dt
+        count = 0
+        same_xs = False
+        while count < constants.SAME_XS_MAX_STEPS:
+            # z_n = z_i + dt * exp(1j * (cmath.phase(c_dz_dt) - 
+            #                      cmath.phase(Dx_i)))
+            # M_n = M_i + abs(Dx_i) * dt
+            z_n = z_i + dt * c_dz_dt / Dx_i / (2.0 ** count)
+            M_n = M_i + dt / (2.0 ** count)
+#            import warnings
+#            warnings.filterwarnings('error')
+#            try:
+#                z_n = z_i + dt * c_dz_dt / Dx_i / (2.0 ** count)
+#                M_n = M_i + dt / (2.0 ** count)
+#            except RuntimeWarning:
+#                import pdb
+#                pdb.set_trace()
+
+            if (twist_lines is not None and (z_i.imag * z_n.imag) < 0):
+                avg_z_r = (z_i.real + z_n.real) * 0.5
+                for s, e in twist_lines:
+                    if (s <= avg_z_r and avg_z_r <= e):
+                        x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
+
+            x_n_1 = get_x(
+                N, phi_k_n_czes, phi_k_d_czes, z_n, x_i_1, accuracy,
+                max_steps=max_steps,
+            )
+            x_n_2 = get_x(
+                N, phi_k_n_czes, phi_k_d_czes, z_n, x_i_2, accuracy,
+                max_steps=max_steps,
+            )
+            if abs(x_n_1 - x_n_2) < accuracy:
+                same_xs = True
+            else:
+                break
+            count += 1
 
         step += 1
         zs[step] = z_n
         Ms[step] = M_n
-
-        if (twist_lines is not None and (z_i.imag * z_n.imag) < 0):
-            avg_z_r = (z_i.real + z_n.real) * 0.5
-            for s, e in twist_lines:
-                if (s <= avg_z_r and avg_z_r <= e):
-                    x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
-
-        x_n_1 = get_x(
-            N, phi_k_n_czes, phi_k_d_czes, z_n, x_i_1, accuracy,
-            max_steps=max_steps,
-        )
-        x_n_2 = get_x(
-            N, phi_k_n_czes, phi_k_d_czes, z_n, x_i_2, accuracy,
-            max_steps=max_steps,
-        )
         xs[step] = (x_n_1, x_n_2)
 
-        if abs(x_n_1 - x_n_2) < accuracy:
+        if same_xs and count >= constants.SAME_XS_MAX_STEPS:
+#            def __get_x(z, x, max_steps):
+#                return get_x(
+#                    N, phi_k_n_czes, phi_k_d_czes, complex(z), 
+#                    complex(x), accuracy, max_steps=int(max_steps),
+#                )
+#            import pdb
+#            pdb.set_trace()
             numba_rv = constants.ERROR_SAME_XS
             break
-
-    # return (step, numba_rv, (z_i, x_i_1, x_i_2, z_n, x_n_1, x_n_2))
 
     msg = Message()
     msg.s_wall_size = array_size

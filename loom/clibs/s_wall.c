@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <complex.h>
+#include <stdbool.h>
 #include "s_wall.h"
 #include "solve.h"
 
@@ -106,29 +107,41 @@ int grow(
         z[i] = z_i + dt * cexp((carg(c_dz_dt[0]) - carg(Dx_i))*I);
         M[i] = M_i + cabs(Dx_i) * dt;
 */
-        z[i] = z_i + dt * c_dz_dt[0] / Dx_i;
-        M[i] = M_i + dt;
+        int count = 0;
+        bool same_xs = false; 
+        while (count < SAME_XS_MAX_STEPS) {
+            z[i] = z_i + dt * c_dz_dt[0] / Dx_i;
+            M[i] = M_i + dt;
 
-        if (n_tl > 0 && cimag(z[i]) * cimag(z_i) < 0) {
-            avg_z_r = (creal(z[i]) + creal(z_i)) * 0.5;
-            for (int j = 0; j < n_tl; j++) {
-                if (tl[j].start < avg_z_r && avg_z_r < tl[j].end) {
-                    x_tmp = x_i_1;
-                    x_i_1 = -1.0 * x_i_2;
-                    x_i_2 = -1.0 * x_tmp;
-                    break;
+            if (n_tl > 0 && cimag(z[i]) * cimag(z_i) < 0) {
+                avg_z_r = (creal(z[i]) + creal(z_i)) * 0.5;
+                for (int j = 0; j < n_tl; j++) {
+                    if (tl[j].start < avg_z_r && avg_z_r < tl[j].end) {
+                        x_tmp = x_i_1;
+                        x_i_1 = -1.0 * x_i_2;
+                        x_i_2 = -1.0 * x_tmp;
+                        break;
+                    }
                 }
             }
+
+            x[i]._1 = get_x(N, phi_n, phi_d, z[i], x_i_1, np.accuracy,
+                            max_steps);
+            x[i]._2 = get_x(N, phi_n, phi_d, z[i], x_i_2, np.accuracy,
+                            max_steps);
+
+            if (cabs(x[i]._1 - x[i]._2) < np.accuracy) {
+                same_xs = true;
+            } else {
+                break;
+            }
+            count++;
         }
 
-        x[i]._1 = get_x(N, phi_n, phi_d, z[i], x_i_1, np.accuracy, max_steps);
-        x[i]._2 = get_x(N, phi_n, phi_d, z[i], x_i_2, np.accuracy, max_steps);
-
-        if (cabs(x[i]._1 - x[i]._2) < np.accuracy) {
+        if (same_xs == true && count == SAME_XS_MAX_STEPS) {
             msg->rv = ERROR_SAME_XS;
             break;
         }
-
     }
 
     msg->step = i;

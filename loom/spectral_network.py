@@ -1007,7 +1007,6 @@ class SpectralNetwork:
             # 1. Check if the new S-wall is a descendant
             # of an existing S-wall.
             if prev_s_wall in new_s_wall.parents:
-                "the wall {} is a parent of this one".format(prev_s_wall.label)
                 continue
 
             # 2. Split the two S-walls into segments
@@ -1042,6 +1041,14 @@ class SpectralNetwork:
                 if use_cgal is True:
                     buffer_size = 10
                     intersection_search_finished = False
+                    logger.debug(
+                        'Findind intersections between {} [{}:{}] '
+                        'and {} [{}:{}].'
+                        .format(
+                            new_s_wall.label, n_z_i, n_z_f + 1,
+                            prev_s_wall.label, p_z_i, p_z_f + 1,
+                        )
+                    )
 
                     while not intersection_search_finished:
                         intersections = numpy.empty((buffer_size, 2),
