@@ -505,12 +505,14 @@ class SWall(object):
                          size_of_bp_neighborhood)
                     ):
                         if stop_condition == constants.IN_BP_NBHD:
+                            msg.step = step
                             msg.rv = constants.IN_BP_NBHD
                             break
                         else:
                             dt = size_of_small_step * step_size_factor
                     else:
                         if stop_condition == constants.OUT_BP_NBHD:
+                            msg.step = step
                             msg.rv = constants.OUT_BP_NBHD
                             break
                         else:
