@@ -75,6 +75,10 @@ class Message(ctypes.Structure):
             msg = 'inside the neighborhood of a branch point'
         elif self.out_bp_nbhd():
             msg = 'outside the neighborhood of a branch point'
+        elif self.rv == 0:
+            msg = 'successfully finished'
+        else:
+            raise RuntimeError
 
         return msg
 

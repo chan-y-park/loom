@@ -621,7 +621,12 @@ class SWall(object):
                 .format(self.label, msg.step, msg)
             )
 
-            if msg.out_bp_nbhd():
+            if msg.rv == 0:
+                # Sucessfully finished.
+                finished = True
+                step = msg.step
+
+            elif msg.out_bp_nbhd():
                 finished = False
                 current_method = method_out_bp_nbhd
                 step = msg.step
