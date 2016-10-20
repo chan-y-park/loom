@@ -219,11 +219,17 @@ def get_spectral_network_bokeh_plot(
             # snds['spectral_networks'] is a 1-dim array,
             # of soliton trees.
             for tree in spectral_network_data.soliton_trees:
-                if no_unstable_streets:
-                    if tree.stability > 1:
+                if no_unstable_streets and tree.stability != 1:
                         continue
+                elif tree.stability == 1:
+                    s_wall_color = '#0000FF'
+                elif tree.stability == 0:
+                    s_wall_color = '#00FF00'
+                elif tree.stability > 1:
+                    s_wall_color = '#FF0000'
                 tree_data = get_s_wall_plot_data(
                     tree.streets, sw_data, logger_name, tree.phase,
+                    s_wall_color=s_wall_color,
                     downsample=downsample, downsample_ratio=downsample_ratio,
                 )
                 snds.data['spectral_networks'].append(tree_data)
@@ -493,6 +499,7 @@ def get_spectral_network_bokeh_plot(
 
 def get_s_wall_plot_data(
     s_walls, sw_data, logger_name, sn_phase,
+    s_wall_color='#0000FF',
     #downsample=True,
     downsample=False,
     downsample_ratio=None,
@@ -578,7 +585,8 @@ def get_s_wall_plot_data(
             data_dict['root'].append([])
             # (R, G, B, A)
             # data_dict['color'].append((0, 0, 255, 1,))
-            data_dict['color'].append('#0000FF')
+            # data_dict['color'].append('#0000FF')
+            data_dict['color'].append(s_wall_color)
             data_dict['alpha'].append(alpha)
 
     return data_dict
