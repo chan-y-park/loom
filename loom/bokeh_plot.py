@@ -17,6 +17,7 @@ def get_spectral_network_bokeh_plot(
     spectral_network_data, plot_range=None,
     plot_joints=False, plot_data_points=False, plot_on_cylinder=False,
     plot_two_way_streets=False,
+    no_unstable_streets=False,
     soliton_tree_data=None,
     plot_width=800, plot_height=800,
     notebook=False,
@@ -218,6 +219,9 @@ def get_spectral_network_bokeh_plot(
             # snds['spectral_networks'] is a 1-dim array,
             # of soliton trees.
             for tree in spectral_network_data.soliton_trees:
+                if no_unstable_streets:
+                    if tree.stability > 1:
+                        continue
                 tree_data = get_s_wall_plot_data(
                     tree.streets, sw_data, logger_name, tree.phase,
                     downsample=downsample, downsample_ratio=downsample_ratio,
