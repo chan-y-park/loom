@@ -17,6 +17,7 @@ def get_spectral_network_bokeh_plot(
     spectral_network_data, plot_range=None,
     plot_joints=False, plot_data_points=False, plot_on_cylinder=False,
     plot_two_way_streets=False,
+    soliton_trees=None,
     no_unstable_streets=False,
     soliton_tree_data=None,
     plot_width=800, plot_height=800,
@@ -213,30 +214,32 @@ def get_spectral_network_bokeh_plot(
         'spectral_networks': [],
     })
 
-    if plot_two_way_streets:
+    if soliton_trees is None:
         soliton_trees = spectral_network_data.soliton_trees
-        if soliton_trees is not None and len(soliton_trees) > 0:
-            # snds['spectral_networks'] is a 1-dim array,
-            # of soliton trees.
-            for tree in spectral_network_data.soliton_trees:
-                if no_unstable_streets and tree.stability != 1:
-                        continue
-                elif tree.stability == 1:
-                    s_wall_color = '#0000FF'
-                elif tree.stability == 0:
-                    s_wall_color = '#00FF00'
-                elif tree.stability > 1:
-                    s_wall_color = '#FF0000'
-                tree_data = get_s_wall_plot_data(
-                    tree.streets, sw_data, logger_name, tree.phase,
-                    s_wall_color=s_wall_color,
-                    downsample=downsample, downsample_ratio=downsample_ratio,
-                )
-                snds.data['spectral_networks'].append(tree_data)
-                pds.data['phase'].append('{:.3f}'.format(tree.phase))
-            init_data = snds.data['spectral_networks'][0]
 
-        elif soliton_tree_data is not None:
+    if soliton_trees is not None and len(soliton_trees) > 0:
+        # snds['spectral_networks'] is a 1-dim array,
+        # of soliton trees.
+        for tree in spectral_network_data.soliton_trees:
+            if no_unstable_streets and tree.stability != 1:
+                    continue
+            elif tree.stability == 1:
+                s_wall_color = '#0000FF'
+            elif tree.stability == 0:
+                s_wall_color = '#00FF00'
+            elif tree.stability > 1:
+                s_wall_color = '#FF0000'
+            tree_data = get_s_wall_plot_data(
+                tree.streets, sw_data, logger_name, tree.phase,
+                s_wall_color=s_wall_color,
+                downsample=downsample, downsample_ratio=downsample_ratio,
+            )
+            snds.data['spectral_networks'].append(tree_data)
+            pds.data['phase'].append('{:.3f}'.format(tree.phase))
+        init_data = snds.data['spectral_networks'][0]
+
+    elif plot_two_way_streets:
+        if soliton_tree_data is not None:
             # snds['spectral_networks'] is a 2-dim array,
             # where the first index chooses a spectral network
             # and the second index chooses a soliton tree
@@ -273,7 +276,7 @@ def get_spectral_network_bokeh_plot(
 
             init_data = snds.data['spectral_networks'][0][0]
         else:
-            logger.warning('No soliton tree data to plot.')
+            logger.warning('No data to plot.')
     else:
         # snds['spectral_networks'] is a 1-dim array,
         # of spectral network data.

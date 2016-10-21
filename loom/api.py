@@ -26,6 +26,7 @@ from parallel import get_improved_soliton_tree_child_process
 # TODO: plotting.py will be deprecated; use plot_ui.py
 from plotting import NetworkPlot, NetworkPlotTk
 from plot_ui import SpectralNetworkPlotUI, SpectralNetworkPlotTk
+from bokeh_plot import get_spectral_network_bokeh_plot
 from misc import get_phases_from_dict
 from misc import get_phase_dict
 from misc import parse_sym_dict_str
@@ -45,10 +46,10 @@ class SpectralNetworkData:
     """
     def __init__(
         self,
+        config=None,
         sw_data=None,
         spectral_networks=None,
         soliton_trees=[],
-        config=None,
         config_file_path=None,
         data_dir=None,
         logger_name='loom',
@@ -70,7 +71,10 @@ class SpectralNetworkData:
                 logger_name=self.logger_name,
             )
         elif data_dir is not None:
-            self.load(data_dir=data_dir)
+            self.load(
+                data_dir=data_dir,
+                logger_name=self.logger_name,
+            )
 
     def load(
         self, data_dir=None, logger_name=None,
@@ -775,6 +779,9 @@ class SpectralNetworkData:
             # at the last stage of spectral network generation.
             config_file_path = os.path.join(cache_dir, 'config.ini')
             self.config.save(config_file_path)
+
+    def get_bokeh_plot(self, **kwargs):
+        return get_spectral_network_bokeh_plot(self, **kwargs)
 
     def plot(
         self,
