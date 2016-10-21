@@ -48,7 +48,13 @@ def get_spectral_network_bokeh_plot(
     else:
         spectral_networks = spectral_network_data.spectral_networks
 
-    if len(spectral_networks) == 0:
+    if soliton_trees is None:
+        soliton_trees = spectral_network_data.soliton_trees
+
+    if (
+        len(spectral_networks) == 0 and
+        (soliton_trees is None or len(soliton_trees) == 0)
+    ):
         raise RuntimeError(
             'get_spectral_network_bokeh_plot(): '
             'No spectral network to plot.'
@@ -214,13 +220,10 @@ def get_spectral_network_bokeh_plot(
         'spectral_networks': [],
     })
 
-    if soliton_trees is None:
-        soliton_trees = spectral_network_data.soliton_trees
-
     if soliton_trees is not None and len(soliton_trees) > 0:
         # snds['spectral_networks'] is a 1-dim array,
         # of soliton trees.
-        for tree in spectral_network_data.soliton_trees:
+        for tree in soliton_trees:
             if no_unstable_streets and tree.stability != 1:
                     continue
             elif tree.stability == 1:

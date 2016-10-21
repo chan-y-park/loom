@@ -92,31 +92,6 @@ class Street(SWall):
             )
         self.local_weight_pairs = s_wall.local_weight_pairs[:n_segs]
 
-#    def get_json_data(self):
-#        json_data = super(Street, self).get_json_data()
-#        json_data['phase'] = self.phase
-#        json_data['s_wall'] = self.s_wall.label
-#        json_data['Z'] = ctor2(self.Z)
-#
-#        return json_data
-#
-#    def set_from_json_data(self, json_data):
-#        super(Street, self).set_from_json_data(json_data)
-#        self.parents = [
-#            obj_dict[parent_label]
-#            for parent_label in self.parents
-#        ]
-#        self.cuts_intersections = [
-#            [obj_dict[br_loc_label], t, d]
-#            for br_loc_label, t, d
-#            in self.cuts_intersections
-#        ]
-#
-#        self.phase = json_data['phase']
-#        self.s_wall = obj_dict[json_data['s_wall']]
-#        self.label = self.s_wall.label
-#        self.Z = r2toc(json_data['Z'])
-
 
 class SolitonTree:
     def __init__(
@@ -173,7 +148,8 @@ class SolitonTree:
         # Get the value of Z from those of its streets.
         Z = 0
         for street in self.streets:
-            Z += street.M[-1] * exp(self.phase * 1j)
+            #Z += (street.M[-1] - street.M[0]) * exp(self.phase * 1j)
+            Z += street.Z()
         return Z
 
     def get_json_data(self):
@@ -274,12 +250,16 @@ class SolitonTree:
             get_xs_along_zs(
                 N, phi_k_n_czes, phi_k_d_czes, zs, xs, accuracy
             )
+            Zs = numpy.empty(n_pts, dtype=numpy.complex128)
+            Zs[0] = root_street.M[-1] * cmath.exp(tree.phase * 1j)
+            for i in range(len(zs[1:])):
+                Zs[i + 1] = Zs[i] + (xs[i][0] - xs[i][1]) * dz
 
-            root_street.z = numpy.concatenate((root_street.z, zs))
-            root_street.x = numpy.concatenate((root_street.x, xs))
+            root_street.z = numpy.concatenate((root_street.z, zs[1:]))
+            root_street.x = numpy.concatenate((root_street.x, xs[1:]))
+            root_street.M = numpy.concatenate((root_street.M, abs(Zs[1:])))
 
-            Delta_Z = numpy.sum(xs[:, 0] - xs[:, 1]) * (zs[1] - zs[0])
-            Z = tree.Z() + Delta_Z
+            Z = tree.Z()
             theta_n = cmath.phase(Z)
             Delta_theta = theta_n - tree.phase
 
@@ -422,6 +402,37 @@ class SolitonTree:
         soliton_tree_graph.layout(args='-Goverlap=false')
         soliton_tree_graph.draw(file_name)
 
+    def get_bps(self):
+        my_bps = set([self.root_branch_point])
+        for street in self.streets:
+            if street.is_primary():
+                my_bps.add(street.parents[0])
+        return my_bps
+
+    def simeq(self, other, accuracy):
+        my_bps = self.get_bps()
+        your_bps = other.get_bps()
+        
+        if my_bps != your_bps:
+            return False
+        
+        d = self.diff(other)
+        if d > accuracy:
+            return False
+        else:
+            return True
+
+    def diff(self, other):
+        delta_theta = abs((self.phase - other.phase) / cmath.pi )
+        delta_Z = abs((self.Z() - other.Z()) / self.Z())
+        return (delta_theta, delta_Z)
+
+    def d_l1(self, other):
+        d_l1 = 0
+        for x in self.diff(other):
+            d_l1 += x
+        return d_l1
+            
 
 class SpectralNetwork:
     def __init__(

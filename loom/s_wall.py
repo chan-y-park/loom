@@ -313,6 +313,20 @@ class SWall(object):
             in self.cuts_intersections
         ]
 
+    def Z(self):
+        Z = 0
+        for i in range(len(self.z) - 1):
+            dz = self.z[i + 1] - self.z[i]
+            Dx = self.x[i][0] - self.x[i][1]
+            Z += Dx * dz
+        return Z
+
+    def is_primary(self):
+        return (
+            len(self.parents) == 1 and
+            isinstance(self.parents[0], BranchPoint)
+        )
+
     def get_splits(self, endpoints=False):
         splits = [t for bp, t, d in self.cuts_intersections]
         if endpoints is True:
