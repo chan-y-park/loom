@@ -1060,6 +1060,11 @@ class SWDataBase(object):
                 min_abs_distance * constants.F_SIZE_OF_BP_NEIGHBORHOOD
             )
 
+        if config['size_of_pp_neighborhood'] is None:
+            config['size_of_pp_neighborhood'] = (
+                min_abs_distance * constants.F_SIZE_OF_PP_NEIGHBORHOOD
+            )
+
         if config['size_of_puncture_cutoff'] is None:
             config['size_of_puncture_cutoff'] = (
                 min_abs_distance * constants.F_SIZE_OF_PUNCTURE_CUTOFF
@@ -1071,6 +1076,8 @@ class SWDataBase(object):
                     .format(config['size_of_large_step']))
         logger.info('size_of_bp_neighborhood = {}'
                     .format(config['size_of_bp_neighborhood']))
+        logger.info('size_of_pp_neighborhood = {}'
+                    .format(config['size_of_pp_neighborhood']))
         logger.info('size_of_puncture_cutoff = {}'
                     .format(config['size_of_puncture_cutoff']))
 

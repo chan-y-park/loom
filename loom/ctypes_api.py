@@ -58,11 +58,11 @@ class Message(ctypes.Structure):
     def mass_limit(self):
         return self.rv == constants.MASS_LIMIT
 
-    def in_bp_nbhd(self):
-        return self.rv == constants.IN_BP_NBHD
+    def in_p_nbhd(self):
+        return self.rv == constants.IN_P_NBHD
 
-    def out_bp_nbhd(self):
-        return self.rv == constants.OUT_BP_NBHD
+    def out_p_nbhd(self):
+        return self.rv == constants.OUT_P_NBHD
 
     def __str__(self):
         if self.error_same_xs():
@@ -71,10 +71,10 @@ class Message(ctypes.Structure):
             msg = 'near a puncture'
         elif self.mass_limit():
             msg = 'reached the mass limit'
-        elif self.in_bp_nbhd():
-            msg = 'inside the neighborhood of a branch point'
-        elif self.out_bp_nbhd():
-            msg = 'outside the neighborhood of a branch point'
+        elif self.in_p_nbhd():
+            msg = 'inside the neighborhood of a point'
+        elif self.out_p_nbhd():
+            msg = 'outside the neighborhood of a point'
         elif self.rv == 0:
             msg = 'successfully finished'
         else:
@@ -104,6 +104,7 @@ class NumericalParameters(ctypes.Structure):
         ('size_of_small_step', ctypes.c_double),
         ('size_of_large_step', ctypes.c_double),
         ('size_of_bp_neighborhood', ctypes.c_double),
+        ('size_of_pp_neighborhood', ctypes.c_double),
         ('size_of_puncture_cutoff', ctypes.c_double),
         ('mass_limit', ctypes.c_double),
         ('accuracy', ctypes.c_double)
@@ -240,6 +241,7 @@ class CTypesSWall:
         self.np.size_of_small_step = config['size_of_small_step']
         self.np.size_of_large_step = config['size_of_large_step']
         self.np.size_of_bp_neighborhood = config['size_of_bp_neighborhood']
+        self.np.size_of_pp_neighborhood = config['size_of_pp_neighborhood']
         self.np.size_of_puncture_cutoff = config['size_of_puncture_cutoff']
         self.np.mass_limit = config['mass_limit']
         self.np.accuracy = config['accuracy']

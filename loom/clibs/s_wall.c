@@ -38,8 +38,9 @@ int grow(
     double complex z_i, x_i_1, x_i_2, x_tmp;
     double M_i;
 
-    double min_d;
-    double d;
+    double min_d_from_bps;
+    double min_d_from_pps;
+    //double d;
     double dt;
     double f_dt;
     double complex Dx_i;
@@ -53,13 +54,18 @@ int grow(
         x_i_2 = x[i]._2;
         M_i = M[i];
 
+        min_d_from_pps = get_min_d(z_i, ppz, n_ppz);
+        min_d_from_bps = get_min_d(z_i, bpz, n_bpz);
+
         if (i > (MIN_NUM_OF_DATA_PTS - 1)) {
+/*
             min_d = np.size_of_puncture_cutoff;
             for (int j = 0; j < n_ppz; j++) {
                 d = cabs(z_i - ppz[j]);
                 if (d < min_d) min_d = d;
             }
-            if (min_d < np.size_of_puncture_cutoff) {
+*/
+            if (min_d_from_pps < np.size_of_puncture_cutoff) {
                 msg->rv = NEAR_PUNCTURE;
                 break;
             }
@@ -70,32 +76,35 @@ int grow(
             }
         }
 
-        Dx_i = x_i_1 - x_i_2;
-
+/*
         min_d = np.size_of_bp_neighborhood;
         for (int j = 0; j < n_bpz; j++) {
             d = cabs(z_i - bpz[j]);
             if (d < min_d) min_d = d;
         }
-/*
         if (min_d < np.size_of_bp_neighborhood) {
             msg->rv = NEAR_BRANCH_POINT;
             break;
         }
 */
+
+        Dx_i = x_i_1 - x_i_2;
         f_dt = cabs(Dx_i);
         if (f_dt > 1.0) f_dt = 1.0;
-        if (min_d < np.size_of_bp_neighborhood) {
-            if (stop_condition == IN_BP_NBHD) {
-                msg->rv = IN_BP_NBHD;
+        if (
+            (min_d_from_bps < np.size_of_bp_neighborhood) ||
+            (min_d_from_pps < np.size_of_pp_neighborhood)
+        ) {
+            if (stop_condition == IN_P_NBHD) {
+                msg->rv = IN_P_NBHD;
                 break;
             } else {
                 dt = np.size_of_small_step * f_dt;
             }
         } 
         else {
-            if (stop_condition == OUT_BP_NBHD) {
-                msg->rv = OUT_BP_NBHD;
+            if (stop_condition == OUT_P_NBHD) {
+                msg->rv = OUT_P_NBHD;
                 break;
             } else {
                 dt = np.size_of_large_step * f_dt;
@@ -147,3 +156,15 @@ int grow(
     msg->step = i;
     return 0;
 }
+
+double get_min_d(double complex z, double complex* pz, int n_pz) {
+    double d;
+    double min_d_from_ps;
+    min_d_from_ps = P_INF;
+    for (int j = 0; j < n_pz; j++) {
+        d = cabs(z - pz[j]);
+        if (d < min_d_from_ps) min_d_from_ps = d;
+    }
+    return min_d_from_ps;
+}
+

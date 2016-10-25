@@ -48,6 +48,8 @@ class LoomConfig:
                 'size_of_large_step': ('Size of a large step', None),
                 'size_of_bp_neighborhood':
                     ('Size of a branch point neighborhood', None),
+                'size_of_pp_neighborhood':
+                    ('Size of a puncture neighborhood', None),
                 'size_of_puncture_cutoff': ('Size of a puncture cutoff', None),
                 'mass_limit': ('Mass limit', None),
                 'phase': ('Phase (single value or range)', None),
