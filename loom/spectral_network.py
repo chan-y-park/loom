@@ -233,8 +233,31 @@ class SolitonTree:
         root_street = tree.streets[0]
         z_start = root_street.z[-1]
         z_end = self.root_branch_point.z
+        min_D_z = abs(z_end - z_start)
+
+        max_gen = root_street.get_generation()
+        theta_0 = self.phase
+        seed_data = []
+        for street in self.streets:
+            rp_i = None
+            for parent in street.parents:
+                if isinstance(parent, BranchPoint):
+                    bp = parent
+                    rp_i = bp.ffr_ramification_points[0].i
+                    for rp in bp.ffr_ramification_points[1:]:
+                        if rp_i != rp.i:
+                            raise NotImplementedError
+
+            if rp_i is None:
+                continue
+
+            z_0 = street.z[0]
+            xs_0 = street.x[0]
+            seed_data.append([z_0, xs_0, rp_i, bp])
+
         for nth in range(max_n_iters):
-            min_D_z = abs(z_end - z_start)
+            #min_D_z = abs(z_end - z_start)
+            prev_min_D_z = min_D_z
 
             n_pts = int(min_D_z / step_size)
             if n_pts < constants.SOLITON_TREE_MIN_N_DZ_STEPS:
@@ -262,30 +285,56 @@ class SolitonTree:
             Z = tree.Z()
             theta_n = cmath.phase(Z)
             Delta_theta = theta_n - tree.phase
+            logger.debug('Delta_theta = {}'.format(Delta_theta))
 
-            max_gen = root_street.get_generation()
+#            max_gen = root_street.get_generation()
+#            seed_s_walls = []
+#            for street in tree.streets:
+#                rp_i = None
+#                for parent in street.parents:
+#                    if isinstance(parent, BranchPoint):
+#                        bp = parent
+#                        rp_i = bp.ffr_ramification_points[0].i
+#                        for rp in bp.ffr_ramification_points[1:]:
+#                            if rp_i != rp.i:
+#                                raise NotImplementedError
+#
+#                if rp_i is None:
+#                    continue
+#
+#                z_0 = street.z[0]
+#                z_n = (
+#                    exp(rp_i * 1.0j * Delta_theta / (rp_i + 1)) * 
+#                    (z_0 - bp.z)
+#                ) + bp.z
+#                zs = numpy.array([z_0, z_n], dtype=numpy.complex128)
+#                xs_n = numpy.empty((2, 2), dtype=numpy.complex128)
+#                xs_n[0] = street.x[0]
+#                get_xs_along_zs(
+#                    N, phi_k_n_czes, phi_k_d_czes, zs, xs_n, accuracy
+#                )
+#                seed_s_walls.append(
+#                    SWall(
+#                        z_0=z_n,
+#                        x_0=xs_n[1],
+#                        M_0=0,
+#                        parents=[bp],
+#                        parent_roots=[],
+#                        label='Street #{}'.format(len(seed_s_walls)),
+#                        n_steps=n_steps,
+#                        logger_name=logger_name,
+#                    )
+#                )
+
             seed_s_walls = []
-            for street in tree.streets:
-                rp_i = None
-                for parent in street.parents:
-                    if isinstance(parent, BranchPoint):
-                        bp = parent
-                        rp_i = bp.ffr_ramification_points[0].i
-                        for rp in bp.ffr_ramification_points[1:]:
-                            if rp_i != rp.i:
-                                raise NotImplementedError
-
-                if rp_i is None:
-                    continue
-
-                z_0 = street.z[0]
+            for z_0, xs_0, rp_i, bp in seed_data:
                 z_n = (
-                    exp(rp_i * 1.0j * Delta_theta / (rp_i + 1)) * 
+                    exp(rp_i * 1.0j * (theta_n - theta_0) / (rp_i + 1)) * 
                     (z_0 - bp.z)
                 ) + bp.z
                 zs = numpy.array([z_0, z_n], dtype=numpy.complex128)
                 xs_n = numpy.empty((2, 2), dtype=numpy.complex128)
-                xs_n[0] = street.x[0]
+                xs_n[0] = xs_0
                 get_xs_along_zs(
                     N, phi_k_n_czes, phi_k_d_czes, zs, xs_n, accuracy
                 )
@@ -320,9 +369,9 @@ class SolitonTree:
                 search_radius=search_radius,
             )
             stability = len(trees)
-            if len(trees) == 1:
-                tree = trees[0]
-            elif len(trees) > 1:
+            if stability == 1:
+                new_tree = trees[0]
+            elif stability > 1:
                 logger.warning(
                     'More than one soliton tree are obtained '
                     'while improving a soliton tree '
@@ -334,8 +383,10 @@ class SolitonTree:
                         self.phase,
                     )
                 )
+                # XXX
                 break
-            elif len(trees) == 0:
+                #return (mini_sn, trees)
+            elif stability == 0:
                 logger.warning(
                     'Failed at improving a soliton tree '
                     'with root street = {}, root branch point = {} '
@@ -346,20 +397,30 @@ class SolitonTree:
                         self.phase,
                     )
                 )
+                # XXX
                 break
+                #return (mini_sn, None)
+
+            z_start = new_tree.streets[0].z[-1]
+            min_D_z = abs(z_end - z_start)
+            logger.debug('prev_min_D_z = {}, min_D_z = {}.'
+                         .format(prev_min_D_z, min_D_z))
+            if min_D_z > prev_min_D_z:
+                break
+            else:
+                tree = new_tree
 
             root_street = tree.streets[0]
-            z_start = root_street.z[-1]
+            #z_start = root_street.z[-1]
 
-            logger.debug('min_D_z = {}'.format(min_D_z))
-            logger.debug('abs(z_end - z_start) = {}'
-                         .format(abs(z_end - z_start)))
+#            logger.debug('abs(z_end - z_start) = {}'
+#                         .format(abs(z_end - z_start)))
 #            if min_D_z < abs(z_end - z_start):
 #                break
-
-            logger.debug('Delta_theta = {}'.format(Delta_theta))
             if abs(Delta_theta) < accuracy:
                 break
+#            if min_D_z < step_size:
+#                break
 
         tree.stability = stability
         tree.label = label
@@ -1053,7 +1114,7 @@ class SpectralNetwork:
                     buffer_size = 10
                     intersection_search_finished = False
                     logger.debug(
-                        'Findind intersections between {} [{}:{}] '
+                        'Finding intersections between {} [{}:{}] '
                         'and {} [{}:{}].'
                         .format(
                             new_s_wall.label, n_z_i, n_z_f + 1,
