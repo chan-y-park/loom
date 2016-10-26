@@ -226,7 +226,7 @@ def get_spectral_network_bokeh_plot(
         for tree in soliton_trees:
             if no_unstable_streets and tree.stability != 1:
                     continue
-            elif tree.stability == 1:
+            elif tree.stability == 1 or tree.stability is None:
                 s_wall_color = '#0000FF'
             elif tree.stability == 0:
                 s_wall_color = '#00FF00'

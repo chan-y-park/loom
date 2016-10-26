@@ -479,13 +479,14 @@ class SWall(object):
                 msg.stop_condition = stop_condition
                 msg.rv = 0
 
+                get_xs = libs.get_xs
+
                 if current_method == constants.LIB_SCIPY_ODE:
                     ode = libs.ode
                     ode.set_initial_value(self[step])
                     name = 'SciPy ODE'
                 else:
                     dz_dt = libs.dz_dt
-                    get_xs = libs.get_xs
                     name = 'Python libraries'
 
                 logger.debug(
@@ -512,19 +513,24 @@ class SWall(object):
                             # Stop if M exceeds mass limit.
                             msg.step = step
                             msg.rv = constants.MASS_LIMIT
+                            break
 
                     # Adjust the step size if z is near a branch point.
                     step_size_factor = min([1.0, abs(x_i_1 - x_i_2)])
-                    if (
-                        min_d_from_bps < size_of_bp_neighborhood or
-                        min_d_from_pps < size_of_pp_neighborhood
-                    ):
+                    if min_d_from_bps < size_of_bp_neighborhood:
                         if stop_condition == constants.IN_P_NBHD:
                             msg.step = step
                             msg.rv = constants.IN_P_NBHD
                             break
                         else:
                             dt = size_of_small_step * step_size_factor
+                    elif min_d_from_pps < size_of_pp_neighborhood:
+                        if stop_condition == constants.IN_P_NBHD:
+                            msg.step = step
+                            msg.rv = constants.IN_P_NBHD
+                            break
+                        else:
+                            dt = size_of_large_step * step_size_factor
                     else:
                         if stop_condition == constants.OUT_P_NBHD:
                             msg.step = step
@@ -623,6 +629,7 @@ class SWall(object):
                 # End of inner while()
 
                 if step == (array_size - 1):
+                    msg.step = step
                     finished = True
             else:
                 logger.warning('SWall.grow(): no grow method specified.')
@@ -1491,7 +1498,8 @@ def get_s_wall_seeds(sw, theta, branch_point, config, logger_name):
     # see previous versions of this function, left above in comment.
 
     accuracy = config['accuracy']
-    initial_seed_size = config['size_of_small_step']
+    # initial_seed_size = config['size_of_small_step']
+    initial_seed_size = accuracy 
     seeds = []
     min_dt = 1.0
 

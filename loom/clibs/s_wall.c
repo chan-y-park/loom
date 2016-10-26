@@ -91,6 +91,7 @@ int grow(
         Dx_i = x_i_1 - x_i_2;
         f_dt = cabs(Dx_i);
         if (f_dt > 1.0) f_dt = 1.0;
+/*
         if (
             (min_d_from_bps < np.size_of_bp_neighborhood) ||
             (min_d_from_pps < np.size_of_pp_neighborhood)
@@ -110,7 +111,29 @@ int grow(
                 dt = np.size_of_large_step * f_dt;
             }
         }
-
+*/
+        if (min_d_from_bps < np.size_of_bp_neighborhood) {
+            if (stop_condition == IN_P_NBHD) {
+                msg->rv = IN_P_NBHD;
+                break;
+            } else {
+                dt = np.size_of_small_step * f_dt;
+            }
+        } else if (min_d_from_pps < np.size_of_pp_neighborhood) {
+            if (stop_condition == IN_P_NBHD) {
+                msg->rv = IN_P_NBHD;
+                break;
+            } else {
+                dt = np.size_of_large_step * f_dt;
+            }
+        } else {
+            if (stop_condition == OUT_P_NBHD) {
+                msg->rv = OUT_P_NBHD;
+                break;
+            } else {
+                dt = np.size_of_large_step * f_dt;
+            }
+        }
         i++;
 /*
         z[i] = z_i + dt * cexp((carg(c_dz_dt[0]) - carg(Dx_i))*I);

@@ -417,7 +417,7 @@ class SolitonTree:
 #                         .format(abs(z_end - z_start)))
 #            if min_D_z < abs(z_end - z_start):
 #                break
-            if abs(Delta_theta) < accuracy:
+            if (abs(Delta_theta) < accuracy) and min_D_z < step_size:
                 break
 #            if min_D_z < step_size:
 #                break
@@ -1113,14 +1113,14 @@ class SpectralNetwork:
                 if use_cgal is True:
                     buffer_size = 10
                     intersection_search_finished = False
-                    logger.debug(
-                        'Finding intersections between {} [{}:{}] '
-                        'and {} [{}:{}].'
-                        .format(
-                            new_s_wall.label, n_z_i, n_z_f + 1,
-                            prev_s_wall.label, p_z_i, p_z_f + 1,
-                        )
-                    )
+                    # logger.debug(
+                    #     'Finding intersections between {} [{}:{}] '
+                    #     'and {} [{}:{}].'
+                    #     .format(
+                    #         new_s_wall.label, n_z_i, n_z_f + 1,
+                    #         prev_s_wall.label, p_z_i, p_z_f + 1,
+                    #     )
+                    # )
 
                     while not intersection_search_finished:
                         intersections = numpy.empty((buffer_size, 2),
@@ -1189,7 +1189,7 @@ class SpectralNetwork:
                     # TODO: need to put the joint into the parent
                     # S-walls?
 
-                    logger.debug('Intersection at z = {}'.format(ip_z))
+                    # logger.debug('Intersection at z = {}'.format(ip_z))
 
                     dxs = (get_delta(new_s_wall.x, t_n).tolist() +
                            get_delta(prev_s_wall.x, t_p).tolist())
