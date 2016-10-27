@@ -219,6 +219,8 @@ class SolitonTree:
         cache_file_path=None,
         logger_name='loom',
         label=None,
+        # XXX
+        debug=False,
     ):
         logger = logging.getLogger(self.logger_name)
         step_size = config['size_of_small_step']
@@ -273,16 +275,20 @@ class SolitonTree:
             get_xs_along_zs(
                 N, phi_k_n_czes, phi_k_d_czes, zs, xs, accuracy
             )
-            Zs = numpy.empty(n_pts, dtype=numpy.complex128)
-            Zs[0] = root_street.M[-1] * cmath.exp(tree.phase * 1j)
-            for i in range(len(zs[1:])):
-                Zs[i + 1] = Zs[i] + (xs[i][0] - xs[i][1]) * dz
+#            Zs = numpy.empty(n_pts, dtype=numpy.complex128)
+#            Zs[0] = root_street.M[-1] * cmath.exp(tree.phase * 1j)
+#            for i in range(len(zs[1:])):
+#                Zs[i + 1] = Zs[i] + (xs[i][0] - xs[i][1]) * dz
+#
+#            root_street.z = numpy.concatenate((root_street.z, zs[1:]))
+#            root_street.x = numpy.concatenate((root_street.x, xs[1:]))
+#            root_street.M = numpy.concatenate((root_street.M, abs(Zs[1:])))
 
-            root_street.z = numpy.concatenate((root_street.z, zs[1:]))
-            root_street.x = numpy.concatenate((root_street.x, xs[1:]))
-            root_street.M = numpy.concatenate((root_street.M, abs(Zs[1:])))
+            leg = SWall()
+            leg.z = zs
+            leg.x = xs
 
-            Z = tree.Z()
+            Z = tree.Z() + leg.Z()
             theta_n = cmath.phase(Z)
             Delta_theta = theta_n - tree.phase
             logger.debug('Delta_theta = {}'.format(Delta_theta))
@@ -384,8 +390,16 @@ class SolitonTree:
                     )
                 )
                 # XXX
-                break
-                #return (mini_sn, trees)
+                if debug:
+                    return (mini_sn, trees)
+                #break
+                min_Delta_Z = constants.P_INF
+                for i, a_tree in enumerate(trees):
+                    Delta_Z = abs(a_tree.Z() - Z)
+                    if Delta_Z < min_Delta_Z:
+                        new_tree = a_tree
+                        min_Delta_Z = Delta_Z
+                    
             elif stability == 0:
                 logger.warning(
                     'Failed at improving a soliton tree '
@@ -398,14 +412,16 @@ class SolitonTree:
                     )
                 )
                 # XXX
-                break
-                #return (mini_sn, None)
+                if debug:
+                    return (mini_sn, None)
+                #break
 
             z_start = new_tree.streets[0].z[-1]
             min_D_z = abs(z_end - z_start)
             logger.debug('prev_min_D_z = {}, min_D_z = {}.'
                          .format(prev_min_D_z, min_D_z))
-            if min_D_z > prev_min_D_z:
+            #if min_D_z > prev_min_D_z:
+            if min_D_z > prev_min_D_z and min_D_z < search_radius:
                 break
             else:
                 tree = new_tree
