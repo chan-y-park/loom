@@ -1,3 +1,6 @@
+# Default sytem configruations.
+DEFAULT_N_PROCESSES = 8
+
 # Factors regarding various sizes.
 # F_SIZE_OF_SMALL_STEPS = 1e-3
 F_SIZE_OF_SMALL_STEPS = 1e-2

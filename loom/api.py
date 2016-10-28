@@ -9,6 +9,7 @@ import logging
 import subprocess
 import matplotlib
 import mpldatacursor
+import constants
 
 from logging.handlers import RotatingFileHandler
 from matplotlib import pyplot
@@ -293,7 +294,10 @@ class SpectralNetworkData:
             sn.downsample(ratio=ratio)
 
     def generate(
-        self, phases=None, n_processes=0, extend=False,
+        self,
+        phases=None,
+        n_processes=constants.DEFAULT_N_PROCESSES,
+        extend=False,
         result_queue=None, logging_queue=None, cache_dir=None,
         method=None,
         downsample=False,
@@ -559,7 +563,7 @@ class SpectralNetworkData:
         new_mass_limit=None,
         additional_iterations=0,
         additional_phases=None,
-        n_processes=0,
+        n_processes=constants.DEFAULT_N_PROCESSES,
         result_queue=None,
         logging_queue=None,
         cache_dir=None,
@@ -711,7 +715,8 @@ class SpectralNetworkData:
             self.config.save(config_file_path)
 
     def trivialize(
-        self, n_processes=0,
+        self,
+        n_processes=constants.DEFAULT_N_PROCESSES,
         result_queue=None, logging_queue=None, cache_dir=None,
         two_way_streets_only=False,
     ):
@@ -837,7 +842,8 @@ class SpectralNetworkData:
         return spectral_network_plot
 
     def find_two_way_streets(
-        self, n_processes=0, search_radius=None,
+        self, search_radius=None,
+        n_processes=constants.DEFAULT_N_PROCESSES,
         result_queue=None, logging_queue=None, cache_dir=None,
         improve=True, multiprocessing=True, soliton_trees=None,
     ):
@@ -1074,7 +1080,10 @@ class SpectralNetworkData:
         # XXX: Currently check only if the first spectral network
         # has two-way streets stored in it. May need to implement
         # a more refined test.
-        return (self.spectral_networks[0].soliton_trees is not None)
+        return (
+            self.soliton_trees is not None or
+            self.spectral_networks[0].soliton_trees is not None
+        )
 
     def set_z_rotation(self, z_rotation):
         self.sw_data.set_z_rotation(z_rotation)

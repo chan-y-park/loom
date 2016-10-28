@@ -561,24 +561,25 @@ class SWall(object):
                         y_n = [z_n, x_n_1, x_n_2, M_n]
 
                         # Check if this S-wall is near a twist line.
-                        if twist_lines is not None:
-                            if (
-                                (z_i.imag * z_n.imag) < 0 and
-                                twist_lines.contains(
-                                    (z_i.real + z_n.real) * 0.5
-                                )
-                            ):
-                                xs_at_z_n = get_xs(z_n)
-                                i_1 = nearest_index(xs_at_z_n, (-1 * x_i_2))
-                                i_2 = nearest_index(xs_at_z_n, (-1 * x_i_1))
-                                x_n_1 = xs_at_z_n[i_1]
-                                x_n_2 = xs_at_z_n[i_2]
-                                y_n = [z_n, x_n_1, x_n_2, M_n]
-
-                                if i_1 == i_2:
-                                    msg.rv = constants.ERROR_SAME_XS
-                                else:
-                                    ode.set_initial_value(y_n)
+                        if (
+                            twist_lines is not None and
+                            (z_i.imag * z_n.imag) < 0 and
+                            twist_lines.contains(
+                                (z_i.real + z_n.real) * 0.5
+                            )
+                        ):
+                            # xs_at_z_n = get_xs(z_n)
+                            # i_1 = nearest_index(xs_at_z_n, (-1 * x_i_2))
+                            # i_2 = nearest_index(xs_at_z_n, (-1 * x_i_1))
+                            # x_n_1 = xs_at_z_n[i_1]
+                            # x_n_2 = xs_at_z_n[i_2]
+                            # y_n = [z_n, x_n_1, x_n_2, M_n]
+                            #
+                            # if i_1 == i_2:
+                            #     msg.rv = constants.ERROR_SAME_XS
+                            # else:
+                            #     ode.set_initial_value(y_n)
+                            pass
 
                     elif(current_method == constants.LIB_PYTHON):
                         # Dx_i = x_i_1 - x_i_2
@@ -596,7 +597,8 @@ class SWall(object):
                                 (z_i.real + z_n.real) * 0.5
                             )
                         ):
-                            x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
+                            # x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
+                            pass
 
                         xs_at_z_n = get_xs(z_n)
                         i_1 = nearest_index(xs_at_z_n, x_i_1)
@@ -1327,7 +1329,8 @@ def _grow(
                 avg_z_r = (z_i.real + z_n.real) * 0.5
                 for s, e in twist_lines:
                     if (s <= avg_z_r and avg_z_r <= e):
-                        x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
+                        # x_i_1, x_i_2 = (-1 * x_i_2), (-1 * x_i_1)
+                        pass
 
             x_n_1 = get_x(
                 N, phi_k_n_czes, phi_k_d_czes, z_n, x_i_1, accuracy,
@@ -1349,13 +1352,6 @@ def _grow(
         xs[step] = (x_n_1, x_n_2)
 
         if same_xs and count >= constants.SAME_XS_MAX_STEPS:
-#            def __get_x(z, x, max_steps):
-#                return get_x(
-#                    N, phi_k_n_czes, phi_k_d_czes, complex(z), 
-#                    complex(x), accuracy, max_steps=int(max_steps),
-#                )
-#            import pdb
-#            pdb.set_trace()
             numba_rv = constants.ERROR_SAME_XS
             break
 

@@ -767,7 +767,8 @@ def render_plot_template(
     loom_config = spectral_network_data.config
     sw_data = spectral_network_data.sw_data
     spectral_networks = spectral_network_data.spectral_networks
-    soliton_tree_data = None
+    #soliton_tree_data = None
+    soliton_trees = spectral_network_data.soliton_trees
 
 #    if plot_two_way_streets is True:
 #        soliton_tree_data = spectral_network_data.find_two_way_streets(
@@ -807,7 +808,7 @@ def render_plot_template(
         spectral_network_data,
         plot_range=plot_range,
         plot_two_way_streets=plot_two_way_streets,
-        soliton_tree_data=soliton_tree_data,
+        #soliton_tree_data=soliton_tree_data,
         logger_name=get_logger_name(),
         download=download,
     )
@@ -824,9 +825,13 @@ def render_plot_template(
 #        initial_phase = '{:.3f}'.format(
 #            spectral_network_data.spectral_networks[0].phase / pi
 #        )
-    initial_phase = '{:.3f}'.format(
-        spectral_network_data.spectral_networks[0].phase / pi
-    )
+    if (spectral_networks is not None and len(spectral_networks) > 0):
+        theta_0 = spectral_networks[0].phase
+    elif (soliton_trees is not None and len(soliton_trees) > 0):
+        theta_0 = soliton_trees[0].phase
+    else:
+        raise RuntimeError('No data to plot.')
+    initial_phase = '{:.3f}'.format(theta_0 / pi)
 
     # XXX
     if loom_config['parameter_sequence'] is None:

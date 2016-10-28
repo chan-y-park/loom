@@ -35,8 +35,6 @@ class Street(SWall):
         s_wall=None,
         end_z=None,
         end_t=None,
-        #parents=None,
-        #phase=None,
         tree_label=None,
         label=None,
         logger_name='loom',
@@ -44,8 +42,6 @@ class Street(SWall):
         logger = logging.getLogger(logger_name)
 
         super(Street, self).__init__(logger_name=logger_name)
-        #self.phase = phase
-        #self.parents = parents
         self.label = label
 
         if s_wall is not None:
@@ -67,9 +63,6 @@ class Street(SWall):
             self.x = s_wall.x[:end_t + 1]
             self.M = s_wall.M[:end_t + 1]
             self.parents = s_wall.parents
-#            # Z is the central charge, i.e. integration of the SW diff
-#            # along the street.
-#            self.Z = self.M[-1] * exp(phase * 1j)
 
             if s_wall.is_trivialized():
                 self.trivialize(s_wall)
@@ -114,10 +107,7 @@ class SolitonTree:
             root_street = Street(
                 s_wall=root_s_wall,
                 end_t=root_s_wall_end_t,
-                #parents=root_s_wall.parents,
-                #phase=self.phase,
                 tree_label='{} @ {}'.format(self.label, self.phase),
-                #label='Street #0',
                 label=root_s_wall.label,
             )
             self.streets = [root_street]
@@ -148,7 +138,6 @@ class SolitonTree:
         # Get the value of Z from those of its streets.
         Z = 0
         for street in self.streets:
-            #Z += (street.M[-1] - street.M[0]) * exp(self.phase * 1j)
             Z += street.Z()
         return Z
 
@@ -199,10 +188,7 @@ class SolitonTree:
             parent_street = Street(
                 s_wall=parent,
                 end_z=street.z[0],
-                #parents=parent.parents,
-                #phase=self.phase,
                 tree_label='{} @ {}'.format(self.label, self.phase),
-                #label='Street #{}'.format(len(self.streets)),
                 label=parent.label,
             )
             self.streets.append(parent_street)
@@ -258,7 +244,6 @@ class SolitonTree:
             seed_data.append([z_0, xs_0, rp_i, bp])
 
         for nth in range(max_n_iters):
-            #min_D_z = abs(z_end - z_start)
             prev_min_D_z = min_D_z
 
             n_pts = int(min_D_z / step_size)
@@ -292,45 +277,6 @@ class SolitonTree:
             theta_n = cmath.phase(Z)
             Delta_theta = theta_n - tree.phase
             logger.debug('Delta_theta = {}'.format(Delta_theta))
-
-#            max_gen = root_street.get_generation()
-#            seed_s_walls = []
-#            for street in tree.streets:
-#                rp_i = None
-#                for parent in street.parents:
-#                    if isinstance(parent, BranchPoint):
-#                        bp = parent
-#                        rp_i = bp.ffr_ramification_points[0].i
-#                        for rp in bp.ffr_ramification_points[1:]:
-#                            if rp_i != rp.i:
-#                                raise NotImplementedError
-#
-#                if rp_i is None:
-#                    continue
-#
-#                z_0 = street.z[0]
-#                z_n = (
-#                    exp(rp_i * 1.0j * Delta_theta / (rp_i + 1)) * 
-#                    (z_0 - bp.z)
-#                ) + bp.z
-#                zs = numpy.array([z_0, z_n], dtype=numpy.complex128)
-#                xs_n = numpy.empty((2, 2), dtype=numpy.complex128)
-#                xs_n[0] = street.x[0]
-#                get_xs_along_zs(
-#                    N, phi_k_n_czes, phi_k_d_czes, zs, xs_n, accuracy
-#                )
-#                seed_s_walls.append(
-#                    SWall(
-#                        z_0=z_n,
-#                        x_0=xs_n[1],
-#                        M_0=0,
-#                        parents=[bp],
-#                        parent_roots=[],
-#                        label='Street #{}'.format(len(seed_s_walls)),
-#                        n_steps=n_steps,
-#                        logger_name=logger_name,
-#                    )
-#                )
 
             seed_s_walls = []
             for z_0, xs_0, rp_i, bp in seed_data:
@@ -389,10 +335,9 @@ class SolitonTree:
                         self.phase,
                     )
                 )
-                # XXX
                 if debug:
                     return (mini_sn, trees)
-                #break
+
                 min_Delta_Z = constants.P_INF
                 for i, a_tree in enumerate(trees):
                     Delta_Z = abs(a_tree.Z() - Z)
@@ -411,10 +356,10 @@ class SolitonTree:
                         self.phase,
                     )
                 )
-                # XXX
                 if debug:
                     return (mini_sn, None)
-                #break
+
+                break
 
             z_start = new_tree.streets[0].z[-1]
             min_D_z = abs(z_end - z_start)
@@ -427,12 +372,7 @@ class SolitonTree:
                 tree = new_tree
 
             root_street = tree.streets[0]
-            #z_start = root_street.z[-1]
 
-#            logger.debug('abs(z_end - z_start) = {}'
-#                         .format(abs(z_end - z_start)))
-#            if min_D_z < abs(z_end - z_start):
-#                break
             if (abs(Delta_theta) < accuracy) and min_D_z < step_size:
                 break
 #            if min_D_z < step_size:
@@ -451,9 +391,9 @@ class SolitonTree:
         for street in self.streets:
             street.set_z_rotation(z_rotation)
 
-#    def trivialize(self):
-#        for street in self.streets:
-#            street.trivialize()
+    def trivialize(self):
+        for street in self.streets:
+            street.trivialize()
 
     def is_trivialized(self):
         for street in self.streets:
@@ -486,15 +426,16 @@ class SolitonTree:
                 my_bps.add(street.parents[0])
         return my_bps
 
-    def simeq(self, other, accuracy):
+    def simeq(self, other, Z_r):
         my_bps = self.get_bps()
         your_bps = other.get_bps()
         
         if my_bps != your_bps:
             return False
         
-        d = self.diff(other)
-        if d > accuracy:
+        #d = self.diff(other)
+        delta_Z = abs(self.Z() - other.Z())
+        if delta_Z > Z_r:
             return False
         else:
             return True
@@ -600,15 +541,6 @@ class SpectralNetwork:
 
         # Substitute labels with objects
         for s_wall in self.s_walls:
-#            s_wall.parents = [
-#                obj_dict[parent_label]
-#                for parent_label in s_wall.parents
-#            ]
-#            s_wall.cuts_intersections = [
-#                [obj_dict[br_loc_label], t, d]
-#                for br_loc_label, t, d
-#                in s_wall.cuts_intersections
-#            ]
             s_wall.set_refs(obj_dict)
 
         for joint_data in json_data['joints']:
