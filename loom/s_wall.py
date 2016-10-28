@@ -1369,19 +1369,29 @@ def _grow(
 # if use_numba:
 #     numba_grow = numba.jit(nopython=True)(_grow)
 
-def _get_min_d(z, pzs):
-    min_d = constants.P_INF
-    for pz in pzs:
-        d = abs(z - pz)
-        if d < min_d:
-            min_d = d
-    return min_d
 
-
-if use_numba:
-    get_min_d = numba.jit(nopython=True)(_get_min_d)
-else:
-    get_min_d = _get_min_d
+# XXX: Numba JIT complier fails to compile the following
+# when given an empty list,
+# Left for future use.
+# def _get_min_d(z, pzs):
+#     min_d = constants.P_INF
+#     for pz in pzs:
+#         d = abs(z - pz)
+#         if d < min_d:
+#             min_d = d
+#     return min_d
+# if use_numba:
+#     get_min_d = numba.jit(
+#         'double(complex128, complex128[:])',
+#         nopython=True,
+#     )(_get_min_d)
+# else:
+#     get_min_d = _get_min_d
+def get_min_d(z, pzs):
+    if len(pzs) == 0:
+        return constants.P_INF
+    else:
+        return abs(numpy.array(pzs) - z).min()
 
 
 def get_s_wall_root(z, ffr_xs, sw_data):
