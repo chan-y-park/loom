@@ -684,7 +684,10 @@ class SWall(object):
                 use_scipy_ode = False
 
             else:
-                raise RuntimeError
+                raise RuntimeError(
+                    'Unknown return value while growing {}.'
+                    .format(self.label)
+                )
 
         # End of outer while()
 
@@ -909,10 +912,13 @@ class SWall(object):
                 self.local_roots.insert(0, new_root)
                 self.local_weight_pairs.insert(0, new_weight_pairs)
 
+        # XXX: The following does not work for higher-order branch points,
+        # for example order-6 branch point of SO(6). Disable this for now.
         # check that the roots obtained through comparison with the
         # trivialization coincides with the roots of the joint
         # or branch point sourcing the S-wall.
-        if self.parent_roots is not None:
+        if (self.parent_roots is not None and
+            len(self.parent_roots) == 1):
             if not (
                 any(
                     (
