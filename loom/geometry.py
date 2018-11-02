@@ -3,11 +3,11 @@ import numpy
 import logging
 import copy
 import json
-import sympy.mpmath as mpmath
+import mpmath
 # import pdb
 
 from sympy import oo, I
-from sympy.mpmath import mp
+from mpmath import mp
 from itertools import combinations
 from cmath import phase, pi
 from matplotlib import cm as mpl_color_map
