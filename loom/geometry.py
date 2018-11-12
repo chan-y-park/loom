@@ -348,11 +348,12 @@ class RamificationPoint:
         self.ramification_type = json_data['ramification_type']
 
         if json_data['sw_diff_coeff'] is not None:
-            if self.ramification_type == 'type_IV':
-                # In the case of type IV there are two coefficients to unpack
-                sw_diff_coeff = [r2toc(x) for x in json_data['sw_diff_coeff']]
-            else:
-                sw_diff_coeff = r2toc(json_data['sw_diff_coeff'])
+#            if self.ramification_type == 'type_IV':
+#                # In the case of type IV there are two coefficients to unpack
+#                sw_diff_coeff = [r2toc(x) for x in json_data['sw_diff_coeff']]
+#            else:
+#                sw_diff_coeff = r2toc(json_data['sw_diff_coeff'])
+            sw_diff_coeff = r2toc(json_data['sw_diff_coeff'])
         else:
             sw_diff_coeff = None
         self.sw_diff_coeff = sw_diff_coeff
