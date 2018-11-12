@@ -8,7 +8,7 @@
         </ul>
     </p>
     <p><code>loom</code> is an open-source project. </p>
-    <p>The source code of <code>loom</code> can be found at <a href=http://github.com/chan-y-park/loom>http://github.com/chan-y-park/loom</a>.</p>
+    <p>The source code of <code>loom</code> can be found at <a href=https://github.com/chan-y-park/loom>https://github.com/chan-y-park/loom</a>.</p>
     <p>List of contributors to <code>loom</code> in the order of the date of their first contribution:
         <ul>
 {% for name in loom_contributors %}
@@ -22,7 +22,7 @@
     <h2>How to use <code>loom</code> using a web user interface</h2>
     <ul>
     	<li>We recommend using Mozilla Firefox or Google Chrome for best experience. Microsoft Internet Explorer is not supported.</li>
-        <li>See <a href="http://github.com/chan-y-park/loom/blob/master/README.md#how-to-use-loom-web-ui" target="_blank">How to use <code>loom</code> web UI </a> for a detailed guide.</li>
+        <li>See <a href="https://github.com/chan-y-park/loom/blob/master/README.md#how-to-use-loom-web-ui" target="_blank">How to use <code>loom</code> web UI </a> for a detailed guide.</li>
         <li>Go to the <a href="{{ url_for('config') }}">configuration page</a>
             to generate spectral networks.</li>
         <li>In the <a href="{{ url_for('config') }}">configuration page</a> 
@@ -55,6 +55,8 @@
         <br/><img src="static/pure_SU_2.png" height=200 width=200>
         <li><a href="{{ url_for('plot') }}?data=pure_SU_3">Pure \(\mathrm{SU}(3)\) gauge theory at the origin of the Coulomb branch</a>
         <br/><img src="static/pure_SU_3.png" height=200 width=200>
+        <li><a href="/html/SO_8_semiclassical.html">Semiclassical limit of pure \(\mathrm{SO}(8)\) gauge theory</a>
+        <br/><img src="static/SO_8_semiclassical.png" height=200 width=200>
         <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3">An Argyres-Douglas fixed point theory from pure \(\mathrm{SU}(3)\) gauge theory, with the minimal BPS spectrum</a>
         <br/><img src="static/AD_from_pure_SU_3.png" height=200 width=200>
         <li><a href="{{ url_for('plot') }}?data=AD_from_pure_SU_3_after_wc">An Argyres-Douglas fixed point theory from pure \(\mathrm{SU}(3)\) gauge theory, with the maximal BPS spectrum</a>

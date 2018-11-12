@@ -5,4 +5,6 @@
 *.DS_Store
 loom/sage_scripts/*.py
 logs/*.txt
-
+logs/webmain_pid
+cache/
+data/

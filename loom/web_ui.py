@@ -118,7 +118,7 @@ def index():
             if 'Chan Y. Park' not in loom_contributors:
                 loom_contributors.append('Chan Y. Park')
         else:
-            loom_contributors.append(name)
+            loom_contributors.append(name.decode('utf-8'))
 
     return flask.render_template(
         'index.html',

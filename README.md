@@ -109,6 +109,8 @@ where ``v_2`` and ``v_3`` are complex parameters whose numerical values are to b
 
 To run ``loom``'s web frontend, the preparation is more involved. Please contact https://github.com/chan-y-park for the detail.
 
+To run ``loom``'s web frontend on Ubuntu 18.04, see [INSTALL.md](INSTALL.md).
+
 ### Installation
 * The following instruction is based on Ubuntu 14.04 LTS.
 * Install Anaconda 2.3.0
