@@ -36,13 +36,13 @@ Configure apache2:
 ```apache
 <VirtualHost *:80>
   ServerAdmin webmaster@localhost
-  DocumentRoot /var/www/html
+  DocumentRoot /var/www
   ErrorLog ${APACHE_LOG_DIR}/error.log
   CustomLog ${APACHE_LOG_DIR}/access.log combined
 
-  WSGIDaemonProcess loom home=/var/www/html/loom python-path=/var/www/html/loom
-  WSGIScriptAlias /loom /var/www/html/loom/webmain.wsgi
-  <Directory /var/www/html/loom/>
+  WSGIDaemonProcess loom home=/var/www/loom python-path=/var/www/loom
+  WSGIScriptAlias /loom /var/www/loom/webmain.wsgi
+  <Directory /var/www/loom/>
     WSGIApplicationGroup %{GLOBAL}
     WSGIProcessGroup loom
     WSGIScriptReloading On
@@ -51,7 +51,7 @@ Configure apache2:
 </VirtualHost>
 ```
 
-Clone the repo to `/var/www/html/loom` and checkout branch `stable_v3_2`.
+Clone the repo to `/var/www/loom` and checkout branch `stable_v3_2`.
 
 Start WSGI website:
 
