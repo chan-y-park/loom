@@ -19,6 +19,7 @@ apt install python-tk
 apt install tk-dev
 apt install apache2
 apt install libapache2-mod-wsgi
+apt install sagemath
 ```
 
 Specific python module versions:
