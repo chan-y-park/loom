@@ -14,6 +14,7 @@ apt install python3-matplotlib
 apt install python3-scipy
 apt install python3-sympy
 apt install python3-tk
+apt install python3-flask
 ```
 
 Clone `loom` to your document root:
@@ -57,6 +58,13 @@ Alias "/static" "/var/www/loom/static"
 WSGIDaemonProcess loom user=loom group=loom processes=2 threads=5 display-name=%{GROUP} home=/var/www/loom
 WSGIProcessGroup loom
 WSGIScriptAlias / /var/www/loom/wwwloom.wsgi
+```
+
+Start WSGI website:
+
+```bash
+a2enmod wsgi
+systemctl restart apache2
 ```
 
 ## Ubuntu 18.04 Bionic (Python 2)
