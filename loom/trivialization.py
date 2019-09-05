@@ -181,7 +181,7 @@ class BranchPoint:
             "---------------------------------------------------------"
             .format(self.z)
         )
-        for key, value in vars(self).iteritems():
+        for key, value in vars(self).items():
             logger.info("{}:".format(key))
             pprint(value)
 
@@ -228,7 +228,7 @@ class IrregularSingularity:
             "---------------------------------------------------------"
             .format(self.z)
         )
-        for key, value in vars(self).iteritems():
+        for key, value in vars(self).items():
             logger.info("{}:".format(key))
             pprint(value)
 

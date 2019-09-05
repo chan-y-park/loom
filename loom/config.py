@@ -1,4 +1,4 @@
-import ConfigParser
+import configparser
 import logging
 # import pdb
 
@@ -14,7 +14,7 @@ class LoomConfig:
         # The data dict has option values as Python objects,
         # some of them being strings.
         self.data = {}
-        self.parser = ConfigParser.SafeConfigParser()
+        self.parser = configparser.SafeConfigParser()
         # attribute options has the following structure:
         # options['section']['option'] = 'label'
         self.options = {
@@ -105,7 +105,7 @@ class LoomConfig:
         return self.data.keys()
 
     def iteritems(self):
-        return self.data.iteritems()
+        return self.data.items()
 
     def read(self, config_file):
         """
@@ -117,7 +117,7 @@ class LoomConfig:
 
         for section in self.parser.sections():
             try:
-                not_configured_options = self.options[section].keys()
+                not_configured_options = list(self.options[section].keys())
             except KeyError:
                 self.parser.remove_section(section)
                 raise ValueError('Unknown section \'{}\'. in the config file.'

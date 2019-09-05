@@ -234,6 +234,8 @@ def parse_sym_dict_str(string):
         [(k_str, v_str), ...]
     """
     result = []
+    if string is None:
+        return result
     for k_v_str in string.lstrip('{').rstrip('}').split(','):
         if not k_v_str.strip():
             continue

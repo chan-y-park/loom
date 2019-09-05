@@ -106,7 +106,7 @@ def index():
     loom_contributors_str = subprocess.check_output(
         ['awk', '!x[$0]++'],
         stdin=ps.stdout
-    ).strip().split("\n")
+    ).decode('utf8').strip().split("\n")
     ps.wait()
 
     loom_contributors = []
@@ -118,7 +118,7 @@ def index():
             if 'Chan Y. Park' not in loom_contributors:
                 loom_contributors.append('Chan Y. Park')
         else:
-            loom_contributors.append(name.decode('utf-8'))
+            loom_contributors.append(name)
 
     return flask.render_template(
         'index.html',
@@ -604,11 +604,11 @@ def download_plot(two_way_streets=False):
 
     zip_fp = BytesIO()
     with zipfile.ZipFile(zip_fp, 'w') as zfp:
-        for file_name, data_str in data.iteritems():
+        for file_name, data_str in data.items():
             zip_info = zipfile.ZipInfo(file_name)
             zip_info.date_time = time.localtime(time.time())[:6]
             zip_info.compress_type = zipfile.ZIP_DEFLATED
-            zip_info.external_attr = 040664 << 16L
+            zip_info.external_attr = 0o040664 << 16
             zfp.writestr(zip_info, data_str)
     zip_fp.seek(0)
 

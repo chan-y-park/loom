@@ -1,13 +1,12 @@
 import os
 import numpy
 import logging
-# import pdb
-import Tkinter as tk
+import tkinter as tk
 
 import matplotlib
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg as FigureCanvas,
-    NavigationToolbar2TkAgg as NavigationToolbar,
+    NavigationToolbar2Tk as NavigationToolbar,
 )
 from matplotlib.widgets import Button
 from matplotlib import pyplot
@@ -400,7 +399,7 @@ def get_label(value, dictionary):
 
     if is_in_dictionary:
         return [
-            k for k, v in dictionary.iteritems() if numpy.array_equal(v, value)
+            k for k, v in dictionary.items() if numpy.array_equal(v, value)
         ][0]
     else:
         return 'Not a root: {}'.format(value)

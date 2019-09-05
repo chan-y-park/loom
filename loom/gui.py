@@ -1,12 +1,11 @@
 import os
 import logging
-import Tkinter as tk
+import tkinter as tk
 import tkFileDialog
 import multiprocessing
-# import pdb
 
-from StringIO import StringIO
-from Queue import Empty as QueueEmpty
+from io import StringIO
+from queue import Empty as QueueEmpty
 
 from api import (set_logging, get_logging_handler,
                  generate_spectral_network, load_config, load_spectral_network,
@@ -497,9 +496,9 @@ class GUILoom:
             tk_state = tk.DISABLED
         else:
             tk_state = state
-        for name, button_widget in self.button.iteritems():
+        for name, button_widget in self.button.items():
             button_widget.config(state=tk_state)
-        for name, entry_widget in self.entry.iteritems():
+        for name, entry_widget in self.entry.items():
             entry_widget.config(state=tk_state)
         self.mb.config(state=tk_state)
 
@@ -517,7 +516,7 @@ class GUILoom:
                 )
 
         print("config :")
-        for option, value in self.config.iteritems():
+        for option, value in self.config.items():
             print("{} = {}".format(option, value))
 
     def check_plot_on_cylinder(self):
