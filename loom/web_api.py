@@ -334,7 +334,7 @@ class LoomDB(object):
             result_queue = self.result_queues[process_uuid]
         except KeyError:
             yield 'event: key_error\ndata: \n\n'
-            raise StopIteration
+            return
 
         while result_queue.empty() is True:
             try:
@@ -347,7 +347,7 @@ class LoomDB(object):
                 raise
             except KeyError:
                 yield 'event: key_error\ndata: \n\n'
-                raise StopIteration
+                return
             except:
                 import traceback
                 print >> sys.stderr, 'logging_listener_process:'
@@ -365,11 +365,11 @@ class LoomDB(object):
                 raise
             except KeyError:
                 yield 'event: finish\ndata: \n\n'
-                raise StopIteration
+                return
 
         # Recevied all the logs, finish the SSE stream.
         yield 'event: finish\ndata: \n\n'
-        raise StopIteration
+        return
 
     def get_result(self, process_uuid):
         logger_name = get_logger_name(process_uuid)
