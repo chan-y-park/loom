@@ -1,5 +1,5 @@
 import multiprocessing
-import signal
+#import signal
 import threading
 import logging
 import time
@@ -10,9 +10,9 @@ import glob
 
 import flask
 
-from cStringIO import StringIO
+from io import StringIO
 
-from Queue import Empty as QueueEmpty
+from queue import Empty as QueueEmpty
 
 from api import (
     SpectralNetworkData,
@@ -37,8 +37,8 @@ LOOM_CACHE_DIR = 'cache'
 DB_CLEANUP_CYCLE_SECS = 3600
 RESULT_QUEUE_LIFETIME_SECS = (24 * 3600)
 # Set RESULT_QUEUES_MAXSIZE > 0 to set the maximum number of queues.
-RESULT_QUEUES_MAXSIZE = 0
-#RESULT_QUEUES_MAXSIZE = 10
+#RESULT_QUEUES_MAXSIZE = 0
+RESULT_QUEUES_MAXSIZE = 10
 
 
 class LoomDBQueue(object):
@@ -76,7 +76,7 @@ class LoomDB(object):
         self.result_queues_maxsize = RESULT_QUEUES_MAXSIZE
         self.logging_level = logging_level
 
-        signal.signal(signal.SIGINT, self.loom_db_stop_signal_handler)
+#        signal.signal(signal.SIGINT, self.loom_db_stop_signal_handler)
 
         self.db_manager = threading.Thread(
             target=self.db_manager,
@@ -85,17 +85,17 @@ class LoomDB(object):
         self.db_manager_stop.clear()
         self.db_manager.start()
 
-    def loom_db_stop_signal_handler(self, signum, frame):
-        logger_name = get_logger_name()
-        logger = logging.getLogger(logger_name)
-
-        if signum == signal.SIGINT:
-            msg = 'LoomDB caught SIGINT; raises KeyboardInterrrupt.'
-            e = KeyboardInterrupt
-
-        logger.warning(msg)
-        self.db_manager_stop.set()
-        raise e
+#    def loom_db_stop_signal_handler(self, signum, frame):
+#        logger_name = get_logger_name()
+#        logger = logging.getLogger(logger_name)
+#
+#        if signum == signal.SIGINT:
+#            msg = 'LoomDB caught SIGINT; raises KeyboardInterrrupt.'
+#            e = KeyboardInterrupt
+#
+#        logger.warning(msg)
+#        self.db_manager_stop.set()
+#        raise e
 
     def db_manager(self):
         """
@@ -111,7 +111,7 @@ class LoomDB(object):
         result_queues = self.result_queues
         while not self.db_manager_stop.wait(DB_CLEANUP_CYCLE_SECS):
             to_delete = []
-            for process_uuid, result_queue in result_queues.iteritems():
+            for process_uuid, result_queue in result_queues.items():
                 timestamp = result_queue.timestamp
                 if timestamp is None:
                     continue
@@ -334,7 +334,7 @@ class LoomDB(object):
             result_queue = self.result_queues[process_uuid]
         except KeyError:
             yield 'event: key_error\ndata: \n\n'
-            raise StopIteration
+            return
 
         while result_queue.empty() is True:
             try:
@@ -347,7 +347,7 @@ class LoomDB(object):
                 raise
             except KeyError:
                 yield 'event: key_error\ndata: \n\n'
-                raise StopIteration
+                return
             except:
                 import traceback
                 print >> sys.stderr, 'logging_listener_process:'
@@ -365,11 +365,11 @@ class LoomDB(object):
                 raise
             except KeyError:
                 yield 'event: finish\ndata: \n\n'
-                raise StopIteration
+                return
 
         # Recevied all the logs, finish the SSE stream.
         yield 'event: finish\ndata: \n\n'
-        raise StopIteration
+        return
 
     def get_result(self, process_uuid):
         logger_name = get_logger_name(process_uuid)

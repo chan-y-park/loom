@@ -1605,7 +1605,7 @@ def get_ramification_points_using_discriminant(
         gathered_f_roots = gather(f_roots, is_same_z)
 
         # Find the roots of f(x, z=z_i) for the roots {z_i} of D(z).
-        for z_i, zs in gathered_f_roots.iteritems():
+        for z_i, zs in gathered_f_roots.items():
             # Check if z_i is one of the punctures.
             is_puncture = False
             for p in punctures:
@@ -1662,7 +1662,7 @@ def get_ramification_points_from_branch_points(
             lambda a, b: abs(a - b) < accuracy / X_ROOTS_ACCURACY_FACTOR
         )
         gathered_f_x_roots = gather(f_x_roots, is_same_x)
-        for x_j, xs in gathered_f_x_roots.iteritems():
+        for x_j, xs in gathered_f_x_roots.items():
             no_ramification = True
             # m_x is the multiplicity of x_j.
             m_x = len(xs)

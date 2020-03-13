@@ -334,7 +334,7 @@ def get_label(value, dictionary):
 
     if is_in_dictionary:
         return [
-            k for k, v in dictionary.iteritems() if numpy.array_equal(v, value)
+            k for k, v in dictionary.items() if numpy.array_equal(v, value)
         ][0]
     else:
         return 'Not a root: {}'.format(value)
@@ -360,15 +360,15 @@ def get_sw_data_legend(sw_data):
 
     root_dictionary = make_root_dictionary(g_data)
     weight_dictionary = make_weight_dictionary(g_data)
-    root_labels = root_dictionary.keys()
-    roots = root_dictionary.values()
+    root_labels = list(root_dictionary.keys())
+    roots = list(root_dictionary.values())
     weight_pairs = [
         [str('(mu_' + str(p[0]) + ', mu_' + str(p[1]) + ')')
          for p in g_data.ordered_weight_pairs(rt)]
         for rt in roots
     ]
-    weight_labels = weight_dictionary.keys()
-    weights = weight_dictionary.values()
+    weight_labels = list(weight_dictionary.keys())
+    weights = list(weight_dictionary.values())
 
     legend = ('\t--- Root System ---\n')
     for i in range(len(roots)):

@@ -1,11 +1,10 @@
 import os
-import Tkinter as tk
-# import pdb
+import tkinter as tk
 import matplotlib
 
 from matplotlib.backends.backend_tkagg import (
     FigureCanvasTkAgg as FigureCanvas,
-    NavigationToolbar2TkAgg as NavigationToolbar,
+    NavigationToolbar2Tk as NavigationToolbar,
 )
 from matplotlib.widgets import Button
 from matplotlib import pyplot

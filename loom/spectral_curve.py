@@ -5,7 +5,7 @@ def get_A_D_curve_string(casimir_differentials, N):
     # g_type == 'A' or g_type == 'D':
     curve_str = 'x^{} '.format(N)
 
-    for k, phi_k in casimir_differentials.iteritems():
+    for k, phi_k in casimir_differentials.items():
         curve_str += ' + ({}) '.format(phi_k)
         if k != N:
             curve_str += ' * x^{}'.format(N - k)
@@ -25,7 +25,7 @@ def get_A_D_curve_string(casimir_differentials, N):
 # by dz^N, which is a common factor.
 def get_E_6_curve_string(casimir_differentials):
     phi_dict = {}
-    for k, phi_k in casimir_differentials.iteritems():
+    for k, phi_k in casimir_differentials.items():
         phi_dict['phi_{}'.format(k)] = phi_k
 
     p_1 = (
@@ -65,7 +65,7 @@ def get_E_6_curve_string(casimir_differentials):
 
 def get_E_7_curve_string(casimir_differentials):
     phi_dict = {}
-    for k, phi_k in casimir_differentials.iteritems():
+    for k, phi_k in casimir_differentials.items():
         phi_dict['phi_{}'.format(k)] = phi_k
 
     p_1 = (
@@ -145,7 +145,7 @@ def get_E_7_curve_string(casimir_differentials):
 # We should prevent the wrong casimirs from being inserted at all.
 def check_casimir_differentials(casimir_differentials, g_type, g_rank):
     if g_type == 'D':
-        for k, phi_k in casimir_differentials.iteritems():
+        for k, phi_k in casimir_differentials.items():
             if k % 2 != 0:
                 raise RuntimeError(
                     'check_casimir_differentials(): '

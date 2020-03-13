@@ -8,3 +8,9 @@ logs/*.txt
 logs/webmain_pid
 cache/
 data/
+bin/
+static/html/
+static/loom_docs/
+static/loom_plots/
+.venv/
+.sage/
